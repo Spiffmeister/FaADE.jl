@@ -1,0 +1,4 @@
+name = "SBP_operators"
+uuid = "2a38a53b-f4bb-477b-bf52-089ecd1fc230"
+authors = ["spiffmeister <robospiff@gmail.com>"]
+version = "0.1.0"
