@@ -2,10 +2,12 @@
 #====== FIRST DERIVATIVE METHODS =====#
 # 
 # 
+# TODO: Add 3D methods
 #=====================================#
 
 function Dₓ(u::Array{Float64},n::Int64,Δx::Float64;order::Int64=2)
     #= First derivative for 1D systems =#
+    # Computes the first derivative for 1D systems, the default order is 2
     
     Dₓ!(u,u,n,Δx,order=order)
     
@@ -13,21 +15,27 @@ function Dₓ(u::Array{Float64},n::Int64,Δx::Float64;order::Int64=2)
 end
 
 
-function Dₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64;order::Int64=2,dim::Int64=1)
+function Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,dims::Union{Int64,Vector{Int64}}=1)
     #= First derivative for multidimensional systems =#
-    
     # TODO: Fix the way this is handled
-    if dim == 1
+
+    # try axes(u)[3]
+    # catch
+    # end
+    
+    if 1 ∈ dims
         # Derivative in the 1st dimension
         # Dₓ_m!(uₓ,u) = Dₓ!(uₓ,u,nx,Δx,order=order)
-        for i = 1:ny
+        for i = 1:n[2]
             # u[i,:] = Dₓ_m!(u[i,:],u[i,:])
             u[:,i] = Dₓ!(u[:,i],u[:,i],nx,Δx,order=order)
         end
-    elseif dim == 2
+    end
+
+    if 2 ∈ dims
         # Derivative in the 2nd dimension
         # Dₓ_m!(uₓ,u) = Dₓ!(uₓ,u,ny,Δx,order=order)
-        for i = 1:nx
+        for i = 1:n[1]
             # u[:,i] = Dₓ_m!(u[:,i],u[:,i])
             u[:,i] = Dₓ!(u[:,i],u[:,i],ny,Δx,order=order)
         end
@@ -41,7 +49,7 @@ end
 #=== FIRST ORDER ITERATOR ===#
 
 function Dₓ!(uₓ::Vector{Float64},u::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
-    # Iterator for first order SBP operators
+    # Iterator for first derivative SBP operators
     
     if order == 2
         # Second order FD operator
