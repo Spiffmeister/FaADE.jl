@@ -133,7 +133,7 @@ function Dₓ!(uₓ::Vector{Float64},u::Vector{Float64},n::Int64,Δx::Float64;or
     end
 
     # Elementwise division by Δx
-    uₓ .÷= Δx
+    uₓ ./= Δx
 
     return uₓ
 end
