@@ -2,3 +2,6 @@ name = "SBP_operators"
 uuid = "2a38a53b-f4bb-477b-bf52-089ecd1fc230"
 authors = ["spiffmeister <robospiff@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

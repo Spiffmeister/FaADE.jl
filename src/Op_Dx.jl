@@ -5,13 +5,13 @@
 # TODO: Add 3D methods
 #=====================================#
 
-function Dₓ(u::Array{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓ(u::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     #= First derivative for 1D systems =#
     # Computes the first derivative for 1D systems, the default order is 2
+    uₓ = zeros(n)
+    Dₓ!(uₓ,u,n,Δx,order=order)
     
-    Dₓ!(u,u,n,Δx,order=order)
-    
-    return u
+    return uₓ
 end
 
 
@@ -22,13 +22,15 @@ function Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,di
     # try axes(u)[3]
     # catch
     # end
+
+    uₓ = zeros(n)
     
     if 1 ∈ dims
         # Derivative in the 1st dimension
         # Dₓ_m!(uₓ,u) = Dₓ!(uₓ,u,nx,Δx,order=order)
         for i = 1:n[2]
             # u[i,:] = Dₓ_m!(u[i,:],u[i,:])
-            u[:,i] = Dₓ!(u[:,i],u[:,i],nx,Δx,order=order)
+            Dₓ!(uₓ[:,i],u[:,i],nx,Δx,order=order)
         end
     end
 
@@ -37,7 +39,7 @@ function Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,di
         # Dₓ_m!(uₓ,u) = Dₓ!(uₓ,u,ny,Δx,order=order)
         for i = 1:n[1]
             # u[:,i] = Dₓ_m!(u[:,i],u[:,i])
-            u[:,i] = Dₓ!(u[:,i],u[:,i],ny,Δx,order=order)
+            Dₓ!(uₓ[:,i],u[:,i],ny,Δx,order=order)
         end
     end
 
@@ -60,7 +62,7 @@ function Dₓ!(uₓ::Vector{Float64},u::Vector{Float64},n::Int64,Δx::Float64;or
         uₓ[n]   = u[n] - u[n-1]
         # Body
         for j = 2:n-1
-            uₓ[j]   = 1/2*u[j+1] - 1/2*u[j-1]
+            uₓ[j]   = 1/2*(u[j+1] - u[j-1])
         end
 
     elseif order == 4

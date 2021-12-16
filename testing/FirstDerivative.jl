@@ -1,7 +1,33 @@
 # == TESTING FIRST DERIVATIVE ==#
-using Test
+# using Test
+
+using LinearAlgebra
+using Plots
+using Pkg
+
+Pkg.activate(".")
+using SBP_operators
 
 
+function buildgrid(n)
+    x = collect(range(0,stop=1,length=n+1))
+    Δx = x[2]-x[1]
+    return n, x, Δx
+end
+
+
+n, x, Δx = buildgrid(10)
+
+u = x.^2
+
+∂ₓuₑ = 2x
+
+
+∂ₓu = Dₓ!(u,n,Δx)
+
+
+
+#=
 
 #== 2nd order method ==#
 # In the interior we should be able to exactly compute the soln to a quadratic
@@ -47,3 +73,5 @@ function sixth_order()
     soln = x.^6
 
 end
+
+=#
