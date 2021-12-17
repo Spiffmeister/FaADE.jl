@@ -6,9 +6,10 @@ module SBP_operators
 
     # Include the files (add as completed)
     include("Op_Dx.jl")
+    include("Op_Dxx.jl")
 
 
     # Export the functions for direct user interaction
-    export Dₓ
+    export Dₓ, Dₓₓ
 
 end # module

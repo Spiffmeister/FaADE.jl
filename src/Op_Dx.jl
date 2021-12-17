@@ -8,7 +8,7 @@
 function Dₓ(u::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     #= First derivative for 1D systems =#
     # Computes the first derivative for 1D systems, the default order is 2
-    uₓ = zeros(n)
+    uₓ = zeros(Float64,n)
     Dₓ!(uₓ,u,n,Δx,order=order)
     
     return uₓ
@@ -23,7 +23,7 @@ function Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,di
     # catch
     # end
 
-    uₓ = zeros(n)
+    uₓ = zeros(Float64,n)
     
     if 1 ∈ dims
         # Derivative in the 1st dimension

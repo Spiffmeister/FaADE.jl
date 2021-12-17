@@ -9,16 +9,20 @@
 #======================================#
 
 
-function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};order::Int64=2,boundary::Symbol=:Dirichlet)
+function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};order::Int64=2)
     # Function call for the first order SBP operator
 
-    Dₓₓ!(u,u,c,n,Δx,order=order)
+    uxx = zeros(Float64,n)
 
-    return u
+    Dₓₓ!(uxx,u,c,n,Δx,order=order)
+
+    return uxx
 end
 
 
 function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64;order::Int64=2,boundary::Symbol=:Dirichlet)
+
+    
 
     if dim == 1
         for i = 1:ny
@@ -26,7 +30,9 @@ function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64;order::Int6
         end
     elseif dim == 2
         for i = 1:ny
-            u[:,i] = Dₓₓ!(u[:,i],u[:,i],c,nx,Δx)
+            for j = 1:nz
+                u[:,i,j] = Dₓₓ!(u[:,i,j],u[:,i],c,nx,Δx)
+            end
         end
     end
     
@@ -43,10 +49,10 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         #==== Second order FD operator ====#
 
         for j = 2:n-1
-            uₓₓ[j] = 1/2*( (c[j] + c[j-1])*u[j-1] - (c[j-1] + 2c[j-1])*u[j] + (c[j] + c[j+1])*u[j+1])/Δx^2
+            uₓₓ[j] = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
         end
     
-        uₓₓ ./= Δx^2
+        uₓₓ ./= (Δx^2)
 
     elseif order == 4
         #==== Fourth order FD operator ====#
