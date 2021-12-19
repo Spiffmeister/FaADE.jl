@@ -1,5 +1,5 @@
 # == TESTING FIRST DERIVATIVE ==#
-# using Test
+using Test
 
 using LinearAlgebra
 using Plots
@@ -16,91 +16,134 @@ function buildgrid(n)
 end
 
 
+#=
+
+#== 2nd order method ==#
+# In the interior we should be able to exactly compute the soln to a quadratic
+# On the boundary there should be some error since we have first order
+
+# Linear function #1
+
 n, x, Δx = buildgrid(10)
+u = x
+∂ₓuₑ = ones(n)
+∂ₓu = Dₓ(u,n,Δx)
+
+
+# Linear function #2
+
+n, x, Δx = buildgrid(10)
+u = 2x
+∂ₓuₑ = 2ones(n)
+∂ₓu = Dₓ(u,n,Δx)
+
+
+# Quadratic function
+
+n, x, Δx = buildgrid(20)
+u = x.^2
+∂ₓuₑ = 2x
+∂ₓu = Dₓ(u,n,Δx)
+
+
+=#
+
+#== 4th order method ==#
+
+# Linear function #1
+
+n, x, Δx = buildgrid(15)
+u = x
+∂ₓuₑ = ones(n)
+∂ₓu = Dₓ(u,n,Δx,order=4)
+
+
+
+# Quadratic function
+
+n, x, Δx = buildgrid(15)
+u = x.^2
+∂ₓuₑ = 2x
+∂ₓu = Dₓ(u,n,Δx,order=4)
+
+
+
+
+# Cubic
+
+n, x, Δx = buildgrid(20)
+u = x.^3
+∂ₓuₑ = 3x.^2
+∂ₓu = Dₓ(u,n,Δx,order=4)
+
+
+
+# Quartic
+
+n, x, Δx = buildgrid(20)
+u = x.^4
+∂ₓuₑ = 4x.^3
+∂ₓu = Dₓ(u,n,Δx,order=4)
+
+
+
+
+
+
+#=
+
+#== 6th order method ==# 
+
+
+# Linear function #1
+
+n, x, Δx = buildgrid(15)
 
 u = x
 
 ∂ₓuₑ = ones(n)
 
+∂ₓu = Dₓ(u,n,Δx,order=4)
+
+∂ₓuₑ .≈ ∂ₓu
+
+
+# Quadratic function
+
+n, x, Δx = buildgrid(15)
+
+u = x.^2
+
+∂ₓuₑ = 2x
 
 ∂ₓu = Dₓ(u,n,Δx)
 
+∂ₓuₑ .≈ ∂ₓu
 
 
+# Cubic
 
-##
+n, x, Δx = buildgrid(15)
 
-c = ones(n)
+u = x.^3
 
-u = x.^2
-∂ₓₓuₑ = 2*ones(n)
+∂ₓuₑ = 3x.^2
 
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
+∂ₓu = Dₓ(u,n,Δx)
 
-
-##
-
-n, x, Δx = buildgrid(10)
+norm(∂ₓu .- ∂ₓuₑ)
 
 
-c = x
-u = x.^2
+# Quartic
 
-# c = ones(n)
-# u = x.^3
+n, x, Δx = buildgrid(15)
 
-∂ₓₓuₑ = 6x
+u = x.^4
 
+∂ₓuₑ = 4x.^3
 
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
+∂ₓu = Dₓ(u,n,Δx)
 
-∂ₓₓuₑ .- ∂ₓₓu
-
-#=
-
-#== 2nd order method ==#
-# In the interior we should be able to exactly compute the soln to a quadratic
-# On the boundary there should be some error since we have first order 
-function second_order(u)
-    # Compute the solution for ∂ₓu = 0 where u=x²
-
-    
-end
-
-function second_order_soln()
-    return x.^2
-end
-
-
-
-n = 100
-
-
-u = second_order(x)
-uₑ = second_order_soln(x)
-
-# Test the interior
-@test u[2:n-1] .- uₑ[2:n-1] .== 0
-
-# Test the boundaries
-@test u[1] - uₑ[1] < 1.0e-1
-@test u[n] - uₑ[n] < 1.0e-1
-
-
-#== 4th order method ==#
-function forth_order()
-    # Compute the solution for ∂ₓu = 0 where u=x⁴
-
-    soln = x.^4
-
-end
-
-#== 6th order method ==# 
-function sixth_order()
-    # Compute the solution for ∂ₓu = 0 where u=x⁶
-
-    soln = x.^6
-
-end
+∂ₓuₑ .≈ ∂ₓu
 
 =#
