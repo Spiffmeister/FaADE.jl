@@ -19,35 +19,55 @@ function buildgrid(n)
 end
 
 
+
+
+
+
+##======##
+# SECOND ORDER
+##======##
+
+# Quadratic function
+## Constant coefficient
 n, x, Δx = buildgrid(10)
-
-
-
-
-##
-
 c = ones(n)
-
 u = x.^2
 ∂ₓₓuₑ = 2*ones(n)
-
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-
-##
+## Variable coefficient
 
 n, x, Δx = buildgrid(10)
-
-
 c = x
 u = x.^2
-
-# c = ones(n)
-# u = x.^3
-
-∂ₓₓuₑ = 6x
-
-
+∂ₓₓuₑ = 4x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-∂ₓₓuₑ .- ∂ₓₓu
+# Cubic function
+## Constant coefficient
+
+n, x, Δx = buildgrid(10)
+c = ones(n)
+u = x.^3
+∂ₓₓuₑ = 4x
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+## Constant coefficient
+
+n, x, Δx = buildgrid(10)
+c = x
+u = x.^3
+∂ₓₓuₑ = 4x
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+
+
+#= VARIABLE COEFFICIENT =#
+
+
+
+n, x, Δx = buildgrid(10)
+c = x
+u = x.^2
+∂ₓₓuₑ = 4x
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
