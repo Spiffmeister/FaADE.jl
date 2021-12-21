@@ -108,7 +108,7 @@ u = x.^3
 ∂ₓₓuₑ = 9x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+@test_broken norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
 
@@ -126,7 +126,7 @@ n, x, Δx = buildgrid(15)
 c = ones(n)
 u = x
 ∂ₓₓuₑ = zeros(n)
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
 
 norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
 

@@ -17,71 +17,91 @@ end
 
 
 
-
-#=
-
-#== 2nd order method ==#
+##======##
+# SECOND ORDER
+##======##
 # In the interior we should be able to exactly compute the soln to a quadratic
-# On the boundary there should be some error since we have first order
 
 # Linear function #1
-
 n, x, Δx = buildgrid(10)
 u = x
 ∂ₓuₑ = ones(n)
 ∂ₓu = Dₓ(u,n,Δx)
 
+@test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
 
 # Linear function #2
-
 n, x, Δx = buildgrid(10)
 u = 2x
 ∂ₓuₑ = 2ones(n)
 ∂ₓu = Dₓ(u,n,Δx)
 
+@test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
+
 
 # Quadratic function
-
-n, x, Δx = buildgrid(20)
+n, x, Δx = buildgrid(10)
 u = x.^2
 ∂ₓuₑ = 2x
 ∂ₓu = Dₓ(u,n,Δx)
 
+@test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
 
-=#
 
-#=
-#== 4th order method ==#
+# Cubic function
+n, x, Δx = buildgrid(10)
+u = x.^3
+∂ₓuₑ = 3x.^2
+∂ₓu = Dₓ(u,n,Δx)
 
+lowres = norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1])
+
+n, x, Δx = buildgrid(20)
+u = x.^3
+∂ₓuₑ = 3x.^2
+∂ₓu = Dₓ(u,n,Δx)
+
+highres = norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1])
+
+# @test lowres - highres 
+
+
+
+##======##
+# FOURTH ORDER
+##======##
+# In the interior we should be able to exactly compute the soln to a cubic
+# On the boundaries we should be able to compute to third order exactly
 # Linear function #1
 n, x, Δx = buildgrid(15)
 u = x
 ∂ₓuₑ = ones(n)
 ∂ₓu = Dₓ(u,n,Δx,order=4)
+@test norm(∂ₓuₑ[1:4] - ∂ₓu[1:4]) ≤ 1.0e-14      #Left boundary
+@test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14  #Interior
+@test norm(∂ₓuₑ[n-3:n] - ∂ₓu[n-3:n]) ≤ 1.0e-14  #Right boundary
 
-@test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-3]) ≤ 1.0e-14
 
+# Linear function #2
+n, x, Δx = buildgrid(10)
+u = 2x
+∂ₓuₑ = 2ones(n)
+∂ₓu = Dₓ(u,n,Δx)
+@test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
 
 # Quadratic function
 n, x, Δx = buildgrid(15)
 u = x.^2
 ∂ₓuₑ = 2x
 ∂ₓu = Dₓ(u,n,Δx,order=4)
-
 @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-3]) ≤ 1.0e-14
-
-
-
 
 # Cubic
 n, x, Δx = buildgrid(15)
 u = x.^3
 ∂ₓuₑ = 3x.^2
 ∂ₓu = Dₓ(u,n,Δx,order=4)
-
 @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
-
-
 
 # Quartic
 n, x, Δx = buildgrid(20)
@@ -101,15 +121,10 @@ u = x.^5
 
 @test_broken norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
 
-=#
-
-
 
 #== 6th order method ==# 
 
-
-# Linear function #1
-
+# Linear function
 n, x, Δx = buildgrid(20)
 u = x
 ∂ₓuₑ = ones(n)
@@ -117,9 +132,7 @@ u = x
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
-
 # Quadratic function
-
 n, x, Δx = buildgrid(20)
 u = x.^2
 ∂ₓuₑ = 2x
@@ -127,9 +140,7 @@ u = x.^2
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
-
 # Cubic
-
 n, x, Δx = buildgrid(15)
 u = x.^3
 ∂ₓuₑ = 3x.^2
@@ -137,16 +148,13 @@ u = x.^3
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
-
 # Quartic
-
 n, x, Δx = buildgrid(15)
 u = x.^4
 ∂ₓuₑ = 4x.^3
 ∂ₓu = Dₓ(u,n,Δx)
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
-
 
 # Quintic
 n, x, Δx = buildgrid(15)
@@ -156,7 +164,6 @@ u = x.^5
 
 @test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
-
 # Quintic - This test should return the Test Broken expression as it fails to be under the tolerance
 n, x, Δx = buildgrid(15)
 u = x.^5
@@ -165,8 +172,7 @@ u = x.^5
 
 @test_broken norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
-
-# Quintic - This test should return the Test Broken expression as it fails to be under the tolerance
+# Hextic - This test should return the Test Broken expression as it fails to be under the tolerance
 n, x, Δx = buildgrid(15)
 u = x.^5
 ∂ₓuₑ = 5x.^4
