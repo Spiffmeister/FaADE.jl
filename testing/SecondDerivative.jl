@@ -1,5 +1,5 @@
 # == TESTING FIRST DERIVATIVE ==#
-# using Test
+using Test
 
 using LinearAlgebra
 using Plots
@@ -27,65 +27,93 @@ end
 # SECOND ORDER
 ##======##
 
-# Linear Function
-## Constant coefficient
+### CONSTANT COEFFICIENT
+# Linear Function, ∂ₓ(1 ∂ₓx) = 0
 n, x, Δx = buildgrid(10)
 c = ones(n)
 u = x
 ∂ₓₓuₑ = zeros(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Constant coefficient
-n, x, Δx = buildgrid(10)
-c = x
-u = x
-∂ₓₓuₑ = ones(n)
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
-# Quadratic function
-## Constant coefficient
+# Quadratic function, ∂ₓ(1 ∂ₓx²) = 2
 n, x, Δx = buildgrid(10)
 c = ones(n)
 u = x.^2
 ∂ₓₓuₑ = 2*ones(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
-## Variable coefficient
 
+# Cubic function, ∂ₓ(1 ∂ₓx³) = 3x²
+n, x, Δx = buildgrid(10)
+c = ones(n)
+u = x.^3
+∂ₓₓuₑ = 6x
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+@test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+
+
+# Quartic function, ∂ₓ(1 ∂ₓx³) = 3x²
+n, x, Δx = buildgrid(10)
+c = ones(n)
+u = x.^4
+∂ₓₓuₑ = 12x.^2
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+lowres = norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1])
+
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^4
+∂ₓₓuₑ = 12x.^2
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+highres = norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1])
+
+
+(lowres-highres)/highres
+
+
+### VARIABLE COEFFICIENT
+
+# Linear Funciton, ∂ₓ(x ∂ₓx) = 1
+n, x, Δx = buildgrid(10)
+c = x
+u = x
+∂ₓₓuₑ =  ones(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+@test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+
+
+# Quadratic Function, ∂ₓ(x ∂ₓx²) = 4x
 n, x, Δx = buildgrid(10)
 c = x
 u = x.^2
 ∂ₓₓuₑ = 4x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
 
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
-# Cubic function
-## Constant coefficient
-
-n, x, Δx = buildgrid(10)
-c = ones(n)
-u = x.^3
-∂ₓₓuₑ = 3x.^2
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Variable coefficient
-
+# Cubic Function, ∂ₓ(x ∂ₓx³) = 9x²
 n, x, Δx = buildgrid(10)
 c = x
 u = x.^3
 ∂ₓₓuₑ = 9x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
+
+norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+
+
+
+
+
 
 
 ##======##
