@@ -34,9 +34,7 @@ c = ones(n)
 u = x
 ∂ₓₓuₑ = zeros(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
-
 
 # Quadratic function, ∂ₓ(1 ∂ₓx²) = 2
 n, x, Δx = buildgrid(10)
@@ -44,7 +42,6 @@ c = ones(n)
 u = x.^2
 ∂ₓₓuₑ = 2*ones(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
@@ -54,11 +51,10 @@ c = ones(n)
 u = x.^3
 ∂ₓₓuₑ = 6x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
-# Quartic function, ∂ₓ(1 ∂ₓx³) = 3x²
+# Quartic function, ∂ₓ(1 ∂ₓx⁴) = 12x²
 n, x, Δx = buildgrid(10)
 c = ones(n)
 u = x.^4
@@ -80,16 +76,13 @@ highres = norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1])
 
 
 ### VARIABLE COEFFICIENT
-
 # Linear Funciton, ∂ₓ(x ∂ₓx) = 1
 n, x, Δx = buildgrid(10)
 c = x
 u = x
-∂ₓₓuₑ =  ones(n)
+∂ₓₓuₑ = ones(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
-
 
 # Quadratic Function, ∂ₓ(x ∂ₓx²) = 4x
 n, x, Δx = buildgrid(10)
@@ -97,9 +90,7 @@ c = x
 u = x.^2
 ∂ₓₓuₑ = 4x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
-
 
 # Cubic Function, ∂ₓ(x ∂ₓx³) = 9x²
 n, x, Δx = buildgrid(10)
@@ -107,7 +98,6 @@ c = x
 u = x.^3
 ∂ₓₓuₑ = 9x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
 @test_broken norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
 
@@ -120,132 +110,88 @@ u = x.^3
 # FOURTH ORDER
 ##======##
 
+### Constant coefficient
 # Linear Function
-## Constant coefficient
 n, x, Δx = buildgrid(15)
 c = ones(n)
 u = x
 ∂ₓₓuₑ = zeros(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Constant coefficient
-n, x, Δx = buildgrid(15)
-c = x
-u = x
-∂ₓₓuₑ = ones(n)
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
 # Quadratic function
-## Constant coefficient
 n, x, Δx = buildgrid(15)
 c = ones(n)
 u = x.^2
 ∂ₓₓuₑ = 2*ones(n)
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
+# Cubic function
+n, x, Δx = buildgrid(15)
+c = ones(n)
+u = x.^3
+∂ₓₓuₑ = 6x
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
-## Variable coefficient
+# Quartic function
+n, x, Δx = buildgrid(15)
+c = ones(n)
+u = x.^4
+∂ₓₓuₑ = 12x.^2
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
+# Quintic function
+n, x, Δx = buildgrid(15)
+c = ones(n)
+u = x.^5
+∂ₓₓuₑ = 5x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
+
+
+### Variable coefficient
+# Linear function
+n, x, Δx = buildgrid(15)
+c = x
+u = x
+∂ₓₓuₑ = ones(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
+
+# Quadratic function
 n, x, Δx = buildgrid(15)
 c = x
 u = x.^2
 ∂ₓₓuₑ = 4x
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
 
 # Cubic function
-## Constant coefficient
-
-n, x, Δx = buildgrid(15)
-c = ones(n)
-u = x.^3
-∂ₓₓuₑ = 3x.^2
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Variable coefficient
-
 n, x, Δx = buildgrid(15)
 c = x
 u = x.^3
 ∂ₓₓuₑ = 9x.^2
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
 
 # Quartic function
-## Constant coefficient
-
-n, x, Δx = buildgrid(15)
-c = ones(n)
-u = x.^4
-∂ₓₓuₑ = 4x.^3
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Variable coefficient
-
 n, x, Δx = buildgrid(15)
 c = x
 u = x.^4
 ∂ₓₓuₑ = 16x.^3
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
+norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
 
 # Quintic function
-## Constant coefficient
-
-n, x, Δx = buildgrid(15)
-c = ones(n)
-u = x.^5
-∂ₓₓuₑ = 5x.^4
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Variable coefficient
-
 n, x, Δx = buildgrid(15)
 c = x
 u = x.^5
 ∂ₓₓuₑ = 25x.^4
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-
-# Quintic function
-## Constant coefficient
-
-n, x, Δx = buildgrid(15)
-c = ones(n)
-u = x.^5
-∂ₓₓuₑ = 5x.^4
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
-## Variable coefficient
-
-n, x, Δx = buildgrid(15)
-c = x
-u = x.^5
-∂ₓₓuₑ = 25x.^4
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-
-norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
-
+norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
 
 
 
@@ -253,3 +199,121 @@ norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-14
 # SIXTH ORDER
 ##======##
 
+### Constant coefficient
+# Linear Function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x
+∂ₓₓuₑ = zeros(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quadratic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^2
+∂ₓₓuₑ = 2*ones(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Cubic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^3
+∂ₓₓuₑ = 6x
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quartic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^4
+∂ₓₓuₑ = 12x.^2
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quintic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^5
+∂ₓₓuₑ = 5x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Hextic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^5
+∂ₓₓuₑ = 5x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Heptic coefficient
+n, x, Δx = buildgrid(20)
+c = x
+u = x.^5
+∂ₓₓuₑ = 25x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+
+norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-14
+
+
+
+### VARIABLE COEFFICIENT
+# Linear Function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x
+∂ₓₓuₑ = zeros(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quadratic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^2
+∂ₓₓuₑ = 2*ones(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Cubic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^3
+∂ₓₓuₑ = 6x
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quartic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^4
+∂ₓₓuₑ = 12x.^2
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Quintic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^5
+∂ₓₓuₑ = 5x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Hextic function
+n, x, Δx = buildgrid(20)
+c = ones(n)
+u = x.^5
+∂ₓₓuₑ = 5x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+
+# Heptic coefficient
+n, x, Δx = buildgrid(20)
+c = x
+u = x.^5
+∂ₓₓuₑ = 25x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
+norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-14

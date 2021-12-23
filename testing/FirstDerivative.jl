@@ -94,7 +94,7 @@ n, x, Δx = buildgrid(15)
 u = x.^2
 ∂ₓuₑ = 2x
 ∂ₓu = Dₓ(u,n,Δx,order=4)
-@test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-3]) ≤ 1.0e-14
+@test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
 
 # Cubic
 n, x, Δx = buildgrid(15)
@@ -122,7 +122,11 @@ u = x.^5
 @test_broken norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
 
 
-#== 6th order method ==# 
+##======##
+# SIXTH ORDER
+##======##
+# In the interior we should be able to exactly compute the soln to a hextic polynomial
+# 
 
 # Linear function
 n, x, Δx = buildgrid(20)
@@ -136,47 +140,47 @@ u = x
 n, x, Δx = buildgrid(20)
 u = x.^2
 ∂ₓuₑ = 2x
-∂ₓu = Dₓ(u,n,Δx)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
 # Cubic
-n, x, Δx = buildgrid(15)
+n, x, Δx = buildgrid(20)
 u = x.^3
 ∂ₓuₑ = 3x.^2
-∂ₓu = Dₓ(u,n,Δx)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
 # Quartic
-n, x, Δx = buildgrid(15)
+n, x, Δx = buildgrid(20)
 u = x.^4
 ∂ₓuₑ = 4x.^3
-∂ₓu = Dₓ(u,n,Δx)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 ∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
 
 # Quintic
-n, x, Δx = buildgrid(15)
+n, x, Δx = buildgrid(20)
 u = x.^5
 ∂ₓuₑ = 5x.^4
-∂ₓu = Dₓ(u,n,Δx,order=4)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
 # Quintic - This test should return the Test Broken expression as it fails to be under the tolerance
-n, x, Δx = buildgrid(15)
-u = x.^5
-∂ₓuₑ = 5x.^4
-∂ₓu = Dₓ(u,n,Δx,order=4)
+n, x, Δx = buildgrid(20)
+u = x.^6
+∂ₓuₑ = 6x.^5
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
-@test_broken norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
+@test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
 # Hextic - This test should return the Test Broken expression as it fails to be under the tolerance
-n, x, Δx = buildgrid(15)
-u = x.^5
-∂ₓuₑ = 5x.^4
-∂ₓu = Dₓ(u,n,Δx,order=4)
+n, x, Δx = buildgrid(20)
+u = x.^7
+∂ₓuₑ = 7x.^6
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test_broken norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
