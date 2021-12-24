@@ -147,7 +147,7 @@ u = x.^4
 n, x, Δx = buildgrid(15)
 c = ones(n)
 u = x.^5
-∂ₓₓuₑ = 5x.^4
+∂ₓₓuₑ = 20x.^3
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
 @test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
