@@ -191,7 +191,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
                 (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
                 (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3]
             
-            uₓₓ[j] /= Δx
+            uₓₓ[j] /= -Δx
         end
 
         # Left boundary
