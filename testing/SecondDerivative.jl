@@ -117,7 +117,7 @@ c = ones(n)
 u = x
 ∂ₓₓuₑ = zeros(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 # Quadratic function
 n, x, Δx = buildgrid(15)
@@ -133,7 +133,7 @@ c = ones(n)
 u = x.^3
 ∂ₓₓuₑ = 6x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 # Quartic function
 n, x, Δx = buildgrid(15)
@@ -141,7 +141,7 @@ c = ones(n)
 u = x.^4
 ∂ₓₓuₑ = 12x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 # Quintic function
 n, x, Δx = buildgrid(15)
@@ -149,7 +149,15 @@ c = ones(n)
 u = x.^5
 ∂ₓₓuₑ = 20x.^3
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
+
+# Hextic function
+n, x, Δx = buildgrid(15)
+c = ones(n)
+u = x.^6
+∂ₓₓuₑ = 30x.^4
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test_broken norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-12
 
 
 ### Variable coefficient
@@ -159,7 +167,7 @@ c = x
 u = x
 ∂ₓₓuₑ = ones(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 # Quadratic function
 n, x, Δx = buildgrid(15)
@@ -167,7 +175,7 @@ c = x
 u = x.^2
 ∂ₓₓuₑ = 4x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 # Cubic function
 n, x, Δx = buildgrid(15)
@@ -175,24 +183,25 @@ c = x
 u = x.^3
 ∂ₓₓuₑ = 9x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
-@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
+@test norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
+# BROKEN TESTS
 # Quartic function
 n, x, Δx = buildgrid(15)
 c = x
 u = x.^4
 ∂ₓₓuₑ = 16x.^3
 ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
+@test_broken norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
 
-# Quintic function
+
+# Quadratic coefficient
 n, x, Δx = buildgrid(15)
-c = x
-u = x.^5
-∂ₓₓuₑ = 25x.^4
-∂ₓₓu = Dₓₓ(u,n,Δx,c)
-norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-14
-
+c = x.^2
+u = x
+∂ₓₓuₑ = ones(n)
+∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
+@test_broken norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
 
 ##======##
