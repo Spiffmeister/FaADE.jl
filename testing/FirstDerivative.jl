@@ -134,15 +134,15 @@ u = x
 ∂ₓuₑ = ones(n)
 ∂ₓu = Dₓ(u,n,Δx,order=6)
 
-∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
+@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:end-6]) ≤ 1.0e-14
 
-# Quadratic function
+# Quadratic
 n, x, Δx = buildgrid(20)
 u = x.^2
 ∂ₓuₑ = 2x
 ∂ₓu = Dₓ(u,n,Δx,order=6)
 
-∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
+@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
 # Cubic
 n, x, Δx = buildgrid(20)
@@ -150,7 +150,7 @@ u = x.^3
 ∂ₓuₑ = 3x.^2
 ∂ₓu = Dₓ(u,n,Δx,order=6)
 
-∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
+@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
 # Quartic
 n, x, Δx = buildgrid(20)
@@ -158,7 +158,7 @@ u = x.^4
 ∂ₓuₑ = 4x.^3
 ∂ₓu = Dₓ(u,n,Δx,order=6)
 
-∂ₓuₑ[7:end-6] .≈ ∂ₓu[7:n-6]
+@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
 # Quintic
 n, x, Δx = buildgrid(20)
