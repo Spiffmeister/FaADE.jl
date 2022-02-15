@@ -10,6 +10,6 @@ module SBP_operators
 
 
     # Export the functions for direct user interaction
-    export Dₓ, Dₓₓ
+    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!
 
 end # module

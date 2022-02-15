@@ -10,7 +10,7 @@
 
 
 function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};order::Int64=2)
-    # Function call for the first order SBP operator
+    # Function call for the 1D 2nd derivative SBP operator
 
     uxx = zeros(Float64,n)
 
@@ -21,8 +21,7 @@ end
 
 
 function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64;order::Int64=2,boundary::Symbol=:Dirichlet)
-
-    
+    # Multidimensional call for 2nd derivative SBP operator 
 
     if dim == 1
         for i = 1:ny
@@ -43,7 +42,7 @@ end
 #=== SECOND ORDER ITERATOR ===#
 
 function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
-    # Iterator for second order SBP operators
+    # Iterator for second derivative SBP operators
     
     if order == 2
         #==== Second order FD operator ====#
