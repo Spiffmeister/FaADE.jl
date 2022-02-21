@@ -46,11 +46,16 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
     
     if order == 2
         #==== Second order FD operator ====#
+        # uₓₓ[1] = c[1]*(u[1] - 2*u[2] + u[3]);
+        # uₓₓ[n] = c[n]*(u[n] - 2*u[n-1] + u[n-2]);
 
         for j = 2:n-1
             uₓₓ[j] = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
         end
-    
+        uₓₓ[1] = 0.0
+        uₓₓ[n] = 0.0
+
+
         uₓₓ ./= (Δx^2)
 
     elseif order == 4
