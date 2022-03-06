@@ -223,7 +223,7 @@ c = ones(n)
 u = x.^2
 ∂ₓₓuₑ = 2*ones(n)
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
-@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-10
 
 # Cubic function
 n, x, Δx = buildgrid(20)
@@ -231,7 +231,7 @@ c = ones(n)
 u = x.^3
 ∂ₓₓuₑ = 6x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
-@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-10
 
 # Quartic function
 n, x, Δx = buildgrid(20)
@@ -239,7 +239,7 @@ c = ones(n)
 u = x.^4
 ∂ₓₓuₑ = 12x.^2
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
-@test norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-12
 
 # Quintic function
 n, x, Δx = buildgrid(20)
@@ -247,7 +247,7 @@ c = ones(n)
 u = x.^5
 ∂ₓₓuₑ = 20x.^3
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
-@test norm(∂ₓₓuₑ[7:n-6] .- ∂ₓₓu[7:n-6]) ≤ 1.0e-12
+@test norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-12
 
 # Hextic function - only body is 6th order
 n, x, Δx = buildgrid(20)
@@ -255,7 +255,7 @@ c = ones(n)
 u = x.^6
 ∂ₓₓuₑ = 30x.^4
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
-@test norm(∂ₓₓuₑ[7:n-6] .- ∂ₓₓu[7:n-6]) ≤ 1.0e-13
+@test norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-13
 
 # Heptic coefficient
 n, x, Δx = buildgrid(20)
@@ -264,7 +264,7 @@ u = x.^7
 ∂ₓₓuₑ = 42x.^5
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
 
-@test_broken norm(∂ₓₓuₑ[6:n-5] .- ∂ₓₓu[6:n-5]) ≤ 1.0e-13
+@test_broken norm(∂ₓₓuₑ .- ∂ₓₓu) ≤ 1.0e-13
 
 
 
