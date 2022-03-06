@@ -4,7 +4,7 @@
 
 
 
-function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0)
+function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0)
     # Left side SAT
 
     if type == :Dirichlet
@@ -12,7 +12,7 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Unio
     elseif type == :Neumann
         SAT = Neumann_left(u,Δx,g,c=c,order=order)
     elseif type == :Robin
-        # Robin_left()
+        Robin_left(u,Δx,g,order=order,a=a,b=b)
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the SAT() function")
     end
@@ -21,14 +21,14 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Unio
 end
 
 
-function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0)
+function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0)
     # Right side SAT
     if type == :Dirichlet
         SAT = Dirichlet_right(u,Δx,g,c=c,order=order)
     elseif type == :Neumann
         SAT = Neumann_right(u,Δx,g,c=c,order=order)
     elseif type == :Robin
-        # Robin_left()
+        SAT = Robin_right(u,Δx,g,order=order,a=a,b=b)
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the SAT() function")
     end
@@ -212,32 +212,88 @@ function Robin(u::Vector{Float64},Δx::Float64,g;c::Union{Float64,Vector{Float64
     return SAT
 end
 
-function Robin_left()
+function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
 
-    τ = 1.0/a[1]
-    # τ, α = Robin_penalties(Δx,order)
+    # Get penalties
+    h = hval(order)
+    if typeof(a) <: Vector
+        a = a[1]
+    end
+    if typeof(b) <: Vector
+        b = b[1]
+    end
+    τ = 1.0/(a * h * Δx)
 
+    # Preallocate SAT
     SAT = zeros(Float64,order)
 
+    # Compute the SAT
     Du = boundary_Dₓ(u,Δx,order)
-
     SAT[1] = τ * (b*u[1] + a*Du[1] - g[1])
 
     return SAT
 end
 
-function Robin_penalties(Δx,order)
+function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
 
+    # Get penalties
     h = hval(order)
+    if typeof(a) <: Vector
+        a = a[end]
+    end
+    if typeof(b) <: Vector
+        b = b[end]
+    end
+    τ = 1.0/(a * h * Δx)
 
-    τ = 1.0/(h * Δx)
-    α = 1.0/(h * Δx)
+    SAT = zeros(Float64,order)
 
-    return τ, α
+    Du = boundary_Dₓ(u,Δx,order)
+    SAT[end] = τ * (b*u[end] + a*Du[end] - g[end])
 
+    SAT
 end
 
 
+#=
+====================== Periodic boundary conditions ======================
+=#
+
+
+function Periodic()
+
+    # Get h value
+    h = hval(order)
+
+    # Penalties
+    α₀ = 0.5 # Derivative penatly
+    τ₁ = -0.5 # Symmeteriser penalty
+
+    τ₂ = max(k[1]/2h,k[end]/2h) # Function penalty
+    τ₀ = -τ₂
+
+    
+    SAT₀ = zeros(Float64,2order)
+    SAT₁ = zeros(Float64,2order)
+    SAT₂ = zeros(Float64,2order)
+
+
+    SAT₀[1] = τ₀/(h * Δx) * u[1]
+    SAT₀[end] = τ₀/(h * Δx) * u[end]
+
+    Dᵀu = boundary_Dₓᵀ(u)
+
+    SAT₁[1:order] = τ₁/(h * Δx) * c[1] * Dᵀu[1:order]
+    SAT₁[order+1:end] = τ₁/(h * Δx) * c[end] * Dᵀu[end-order+1:end]
+
+    Du = boundary_Dₓ(u)
+    SAT₂[1] = α₀/(h * Δx) * c[1] * Du[1]
+    SAT₂[end] = α₀/(h * Δx) * c[1] * Du[end]
+
+    SAT = SAT₀ + SAT₁ + SAT₂
+
+    return SAT
+end
 
 
 #=
