@@ -12,7 +12,7 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Unio
     elseif type == :Neumann
         SAT = Neumann_left(u,Δx,g,c=c,order=order)
     elseif type == :Robin
-        Robin_left(u,Δx,g,order=order,a=a,b=b)
+        SAT = Robin_left(u,Δx,g,order=order,a=a,b=b)
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the SAT() function")
     end
@@ -38,8 +38,9 @@ end
 
 
 
+
 #=
-====================== Dirichlet boundary conditions ======================
+====================== Dirichletee boundary conditions ======================
 =#
 
 function Dirichlet(u::Vector{Float64},Δx::Float64,g::Vector{Float64};c::Union{Float64,Vector{Float64}}=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
@@ -249,7 +250,7 @@ function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
     SAT = zeros(Float64,order)
 
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[end] = τ * (b*u[end] + a*Du[end] - g[end])
+    SAT[end] = τ * (b*u[end] - a*Du[end] - g[end]) #-Du for directional derivative
 
     SAT
 end
@@ -260,37 +261,43 @@ end
 =#
 
 
-function Periodic()
+function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
 
     # Get h value
     h = hval(order)
 
     # Penalties
-    α₀ = 0.5 # Derivative penatly
-    τ₁ = -0.5 # Symmeteriser penalty
+    α₀ = 0.5/(h * Δx) # Derivative penatly
+    τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
 
-    τ₂ = max(k[1]/2h,k[end]/2h) # Function penalty
-    τ₀ = -τ₂
+    τ₀ = -max(c[1]/2h,c[end]/2h)/(h * Δx) # Function penalty
 
-    
+
     SAT₀ = zeros(Float64,2order)
     SAT₁ = zeros(Float64,2order)
     SAT₂ = zeros(Float64,2order)
 
 
-    SAT₀[1] = τ₀/(h * Δx) * u[1]
-    SAT₀[end] = τ₀/(h * Δx) * u[end]
+    SAT₀[1] = τ₀/(h * Δx) * (u[1] - u[end])
+    SAT₀[end] = τ₀/(h * Δx) * (u[end] - u[1])
 
-    Dᵀu = boundary_Dₓᵀ(u)
+    L₁u = zeros(Float64,2order) .+ (u[1] - u[end])
+    Dᵀu = boundary_Dₓᵀ(L₁u,Δx,order)
 
     SAT₁[1:order] = τ₁/(h * Δx) * c[1] * Dᵀu[1:order]
-    SAT₁[order+1:end] = τ₁/(h * Δx) * c[end] * Dᵀu[end-order+1:end]
+    SAT₁[order+1:end] = -τ₁/(h * Δx) * c[end] * Dᵀu[end-order+1:end] # negative for directional derivative
 
-    Du = boundary_Dₓ(u)
-    SAT₂[1] = α₀/(h * Δx) * c[1] * Du[1]
-    SAT₂[end] = α₀/(h * Δx) * c[1] * Du[end]
+    Du = boundary_Dₓ(u,Δx,order)
+    SAT₂[1] = α₀ * (c[1]*Du[1] + c[end]*Du[end]) # corrected for directional derivative
+    SAT₂[end] = α₀ * (c[1]*Du[1] + c[end]*Du[end]) # corrected directional derivative
 
-    SAT = SAT₀ + SAT₁ + SAT₂
+    println(Du)
+
+    println(SAT₀)
+    println(SAT₁)
+    println(SAT₂)
+
+    SAT = SAT₀ + SAT₁ * 0.0 + SAT₂
 
     return SAT
 end
