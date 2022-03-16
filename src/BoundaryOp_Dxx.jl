@@ -44,7 +44,7 @@ end
 =#
 
 
-function Dirichlet_left(u::Vector{Float64},Δx,g;c=1.0,order=2,penalty=[-1.0,-1.0])
+function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=[-1.0,-1.0])
 
     # Fix up the coefficient 
     if typeof(c) <: Float64
@@ -278,32 +278,22 @@ function Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order_left=2,ord
     L₀u[order+1] += (u⁻[end] - u⁺[1])
 
     SAT₀[1:order] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order]
-    SAT₀[1:order] = τ₀/(h⁺ * Δx⁺) * L₀u[order+1:end]
+    SAT₀[order+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order+1:end]
 
     
     # Symmeteriser
-    DₓᵀL₀u = zeros(Float64,2order)
-
     DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order],Δx⁻,order)
-    DₓᵀL₀u[1:order] = DₓᵀL₀u⁻[order+1:end]
     DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order+1:end],Δx⁺,order)
-    DₓᵀL₀u[order+1:end] = DₓᵀL₀u⁺[1:order]
 
-    SAT₁[1:order] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u[1:order]
-    SAT₁[order+1:end] = τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u[order+1:end]
+    SAT₁[1:order] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order+1:end]
+    SAT₁[order+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order]
 
     # Derivative condition
     Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order)
     Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order)
 
     SAT₂[1:order] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order+1:end]
-    SAT₂[order+1:end] = -α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order]
-
-    # println("Du+: ",Dₓu⁺[1:order])
-    # println("Du+/Deltax: ",c⁺[1] .* Dₓu⁺[1:order] ./ Δx⁺)
-    # println("SAT_0: ",SAT₀[order+1:end])
-    # println("SAT_1: ",SAT₁[order+1:end])
-    # println("SAT_2: ",SAT₂[order+1:end])
+    SAT₂[order+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order]
 
     SAT = SAT₀ + SAT₁ + SAT₂
     

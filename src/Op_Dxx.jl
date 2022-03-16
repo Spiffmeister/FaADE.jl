@@ -12,32 +12,30 @@
 function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
 
-    uxx = zeros(Float64,n)
+    uₓₓ = zeros(Float64,n)
 
-    Dₓₓ!(uxx,u,c,n,Δx,order=order)
+    Dₓₓ!(uₓₓ,u,c,n,Δx,order=order)
 
-    return uxx
+    return uₓₓ
 end
 
 
-function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64,c::Vector{Float64};dim::Int64=1,order::Int64=2,boundary::Symbol=:Dirichlet)
-    # Multidimensional call for 2nd derivative SBP operator 
-
+function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
+    # Multidimensional call for 2nd derivative SBP operator
+    
+    uₓₓ = zeros(Float64,nx,ny)
     if dim == 1
-        for i = 1:ny
-            u[i,:] = Dₓₓ!(u[i,:],u[i,:],c,nx,Δx)
+        for i = 1:nx
+            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δx,order=order)
         end
     elseif dim == 2
         for i = 1:ny
-            for j = 1:nz
-                u[:,i,j] = Dₓₓ!(u[:,i,j],u[:,i],c,nx,Δx)
-            end
+            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δx,order=order)
         end
     end
-    
-    return u
 
-end    
+    return uₓₓ
+end
 
 
 
@@ -439,8 +437,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         uₓₓ[7:n-6] = 1/Δx*(-uₓₓ[7:n-6])
         
     end
-
-
+    
     return uₓₓ
 end
 
