@@ -128,7 +128,7 @@ function Neumann_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.
     end
     
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[1] += τ * c[1] * Du[1]
+    SAT[1] += τ * (c[1] * Du[1] - g[1])
 
     return SAT
 end
@@ -145,7 +145,7 @@ function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1
     end
 
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[end] -= τ * c[end] * Du[end]
+    SAT[end] -= τ * (c[end] * Du[end] - g[end])
 
     return SAT
 end
@@ -239,7 +239,7 @@ function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
     Dᵀu = boundary_Dₓᵀ(L₁u,Δx,order)
 
     SAT₁[1:order] = τ₁ * c[1] * Dᵀu[1:order]
-    SAT₁[order+1:end] = τ₁ * c[end] * Dᵀu[end-order+1:end] # negative for directional derivative
+    SAT₁[order+1:end] = -τ₁ * c[end] * Dᵀu[end-order+1:end] # negative for directional derivative
 
     Du = boundary_Dₓ(u,Δx,order)
     SAT₂[1] = α₀ * (c[1]*Du[1] - c[end]*Du[end]) # corrected for directional derivative
@@ -268,37 +268,37 @@ function Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order_left=2,ord
     τ₁ = 0.5
     τ₀ = max(c⁻[end]/(2*h⁻*Δx⁻), c⁺[1]/(2*h⁺*Δx⁺))
 
-    SAT₀ = zeros(Float64,2order)
-    SAT₁ = zeros(Float64,2order)
-    SAT₂ = zeros(Float64,2order)
+    SAT₀ = zeros(Float64,order_left+order_right)
+    SAT₁ = zeros(Float64,order_left+order_right)
+    SAT₂ = zeros(Float64,order_left+order_right)
     
     # Function condition
-    L₀u = zeros(Float64,2order)
-    L₀u[order] += (u⁻[end] - u⁺[1])
-    L₀u[order+1] += (u⁻[end] - u⁺[1])
+    L₀u = zeros(Float64,order_left+order_right)
+    L₀u[order_left] += (u⁻[end] - u⁺[1])
+    L₀u[order_left+1] += (u⁻[end] - u⁺[1])
 
-    SAT₀[1:order] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order]
-    SAT₀[order+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order+1:end]
+    SAT₀[1:order_left] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order_left]
+    SAT₀[order_left+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order_left+1:end]
 
     
     # Symmeteriser
-    DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order],Δx⁻,order)
-    DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order+1:end],Δx⁺,order)
+    DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order_left],Δx⁻,order_left)
+    DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order_left+1:end],Δx⁺,order_right)
 
-    SAT₁[1:order] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order+1:end]
-    SAT₁[order+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order]
+    SAT₁[1:order_left] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order_left+1:end]
+    SAT₁[order_left+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order_right]
 
     # Derivative condition
-    Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order)
-    Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order)
+    Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order_left)
+    Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order_right)
 
-    SAT₂[1:order] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order+1:end]
-    SAT₂[order+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order]
+    SAT₂[1:order_left] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order_left+1:end]
+    SAT₂[order_left+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order_right]
 
     SAT = SAT₀ + SAT₁ + SAT₂
     
-    SAT⁻ = SAT[1:order]
-    SAT⁺ = SAT[order+1:end]
+    SAT⁻ = SAT[1:order_left]
+    SAT⁺ = SAT[order_left+1:end]
 
 
 
