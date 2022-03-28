@@ -4,6 +4,17 @@ Testing
 
 ∂ₜu = ∂ₓ(k ∂ₓu) = ∂ₓk ∂ₓu + k ∂ₓ∂ₓu
 =#
+using Distributed
+
+addprocs(4)
+@everywhere using Pkg
+@everywhere Pkg.activate(".")
+@everywhere using SBP_operators
+
+@everywhere using DifferentialEquations
+
+
+
 
 
 # Initalise the things
@@ -52,7 +63,29 @@ end
 
 
 
-function construct_grid(x,y,mnk,grid_fn;symmetry=true)
+function construct_grid(x,y,nx,ny,grid_fn;start=0.0,stop=2π)
+    # Constructs a ψ,θ plane by tracing a given plane in a given direction from a given start point
+
+    # X = zeros(Float64,ny,ny)
+    # Y = zeros(Float64,nx,ny)
+    plane = zeros(Float64,2,nx*ny)
+
+    x₀ = [[y₀,x₀] for y₀ in y for x₀ in x]
+
+    function prob_fn(prob,i,repeat)
+        remake(prob,u₀=x₀[i])
+    end
+
+    P = ODEProblem(grid_fn,x₀[1],(start,stop))
+    EP = EnsembleProblem(P,prob_func=prob_fn)
+
+    sim = solve(EP,Tsit5(),EnsembleDistributed(),trajectories=nx*ny,batch_size=floor(Int64,nx*ny/nworkers()),save_on=false,save_end=true)
+
+    for i = 1:length(sim.u)
+        plane[:,i] = mod.(sim.u[i][2:-1:1,2],2π)
+    end
+
+    return plane
 end
 
 
