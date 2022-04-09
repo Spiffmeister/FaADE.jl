@@ -63,36 +63,6 @@ end
 
 
 
-function construct_grid(x,y,nx,ny,grid_fn;start=0.0,stop=2π)
-    # Constructs a ψ,θ plane by tracing a given plane in a given direction from a given start point
-
-    # X = zeros(Float64,ny,ny)
-    # Y = zeros(Float64,nx,ny)
-    plane = zeros(Float64,2,nx*ny)
-
-    x₀ = [[y₀,x₀] for y₀ in y for x₀ in x]
-
-    function prob_fn(prob,i,repeat)
-        remake(prob,u₀=x₀[i])
-    end
-
-    P = ODEProblem(grid_fn,x₀[1],(start,stop))
-    EP = EnsembleProblem(P,prob_func=prob_fn)
-
-    sim = solve(EP,Tsit5(),EnsembleDistributed(),trajectories=nx*ny,batch_size=floor(Int64,nx*ny/nworkers()),save_on=false,save_end=true)
-
-    for i = 1:length(sim.u)
-        plane[:,i] = mod.(sim.u[i][2:-1:1,2],2π)
-    end
-
-    return plane
-end
-
-
-
-
-
-
 function timesolve()
 end
 
@@ -111,6 +81,14 @@ SET SIMULATION PARAMS
 # Grid spacing
 xₙ = 20
 yₙ = 20
+zₙ = 1
+
+Δx = (𝒟x[2] - 𝒟x[1])/xₙ
+Δy = (𝒟y[2] - 𝒟y[2])/yₙ
+
+
+x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
+y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
 
@@ -122,5 +100,14 @@ k = 2.1e-3
 ϵₘₙ = [k/2.0, k/3.0]
 m = [2.0, 3.0]
 n = [1.0, 2.0]
+
+
+H(χ,x,t) = field_line_hamiltonian(χ,x,ϵₘₙ,m,n,t)
+B(x) = magnetic_field(x,ϵₘₙ,m,n)
+
+construct_grid(x,y,xₙ,yₙ,zₙ,Δx,Δy,H,B)
+
+
+
 
 
