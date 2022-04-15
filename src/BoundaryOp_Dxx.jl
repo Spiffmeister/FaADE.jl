@@ -56,14 +56,18 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=
 
     # Construct the SATs
     SAT = zeros(Float64,order)
-
+    F = zeros(Float64,order)
+    
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
-
-    SAT[1] += τ * (u[1] - g[1]) 
-    SAT .+= α * c[1] * (Dᵀu[1:order] - Dᵀf[1:order])
-
-    return SAT
+    # SAT
+    SAT[1] += τ * u[1] 
+    SAT .+= α * c[1] * Dᵀu[1:order]
+    # Forcing terms
+    F[1] += -τ*g[1]
+    F .+= -α*c[1]*Dᵀf[1:order]
+    
+    return SAT, F
 end
 
 
@@ -79,14 +83,19 @@ function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order=2,penalty=[-1.0,-1
     
     # Construct the SATs
     SAT = zeros(Float64,order)
-    
+    F = zeros(Float64,order)
+
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
     
     # Right SAT
-    SAT[end] += τ*(u[end] - g[end])
-    SAT .+= α * c[end] * (Dᵀu[end-order+1:end] - Dᵀf[end-order+1:end])
-    return SAT
+    SAT[end] += τ*u[end]
+    SAT .+= α * c[end] * Dᵀu[end-order+1:end]
+    # Forcing terms
+    F[end] += -τ*u[end]
+    F .+= -α*c[end]*Dᵀf[end-order+1:end]
+
+    return SAT, F
 end
 
 
@@ -122,15 +131,17 @@ function Neumann_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.
     τ = Neumann_penalties(Δx,order)
 
     SAT = zeros(Float64,order)
+    F = zeros(Float64,order)
     # If k is a scalar, vectorise it
     if typeof(c) <: Float64
         c = zeros(2*order) .+ c
     end
     
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[1] += τ * (c[1] * Du[1] - g[1])
+    SAT[1] += τ * c[1] * Du[1]
+    F[1] += -τ*g[1]
 
-    return SAT
+    return SAT, F
 end
 
 function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.0)
@@ -138,16 +149,17 @@ function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1
     τ = Neumann_penalties(Δx,order)
 
     SAT = zeros(Float64,order)
-
+    F = zeros(Float64,order)
     # If k is a scalar, vectorise it
     if typeof(c) <: Float64
         c = zeros(2*order) .+ c
     end
 
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[end] -= τ * (c[end] * Du[end] - g[end])
+    SAT[end] -= τ * c[end] * Du[end]
+    F[end] -= -τ*g[end]
 
-    return SAT
+    return SAT, F
 end
 
 
@@ -178,12 +190,14 @@ function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
 
     # Preallocate SAT
     SAT = zeros(Float64,order)
+    F = zeros(Float64,order)
 
     # Compute the SAT
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[1] = τ * (b*u[1] + a*Du[1] - g[1])
+    SAT[1] = τ * b*u[1] + a*Du[1]
+    F[1] = -τ*g[1]
 
-    return SAT
+    return SAT, F
 end
 
 function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
@@ -199,11 +213,13 @@ function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
     τ = 1.0/(a * h * Δx)
 
     SAT = zeros(Float64,order)
+    F = zeros(Float64,order)
 
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[end] = τ * (b*u[end] - a*Du[end] - g[end]) #-Du for directional derivative
+    SAT[end] = τ * b*u[end] - a*Du[end] #-Du for directional derivative
+    F[end] = -τ * g[end]
 
-    SAT
+    SAT, F
 end
 
 
@@ -228,9 +244,13 @@ function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
     SAT₁ = zeros(Float64,2order)
     SAT₂ = zeros(Float64,2order)
 
+    F = zeros(Float64,2order)
 
-    SAT₀[1] = τ₀ * (u[1] - u[end])
-    SAT₀[end] = τ₀ * (u[end] - u[1])
+    SAT₀[1] = τ₀ * u[1]
+    SAT₀[end] = τ₀ * u[end]
+
+    F[1] = -τ₀*u[end]
+    F[1] = -τ₀*u[1]
 
 
     L₁u = zeros(Float64,2order)
@@ -245,10 +265,9 @@ function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
     SAT₂[1] = α₀ * (c[1]*Du[1] - c[end]*Du[end]) # corrected for directional derivative
     SAT₂[end] = α₀ * (c[1]*Du[1] - c[end]*Du[end]) # corrected directional derivative
 
-
     SAT = SAT₀ + SAT₁ + SAT₂
 
-    return SAT[1:order], SAT[order+1:end]
+    return SAT[1:order], SAT[order+1:end], F[1:order], F[order+1:end]
 end
 
 
@@ -272,13 +291,18 @@ function Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order_left=2,ord
     SAT₁ = zeros(Float64,order_left+order_right)
     SAT₂ = zeros(Float64,order_left+order_right)
     
+    F = zeros(Float64,order_left+order_right)
+
     # Function condition
     L₀u = zeros(Float64,order_left+order_right)
-    L₀u[order_left] += (u⁻[end] - u⁺[1])
-    L₀u[order_left+1] += (u⁻[end] - u⁺[1])
+    L₀u[order_left] += u⁻[end]
+    L₀u[order_left+1] += u⁻[end]
 
     SAT₀[1:order_left] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order_left]
     SAT₀[order_left+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order_left+1:end]
+
+    F[1:order_left] = -τ₀/(h⁻ * Δx⁻) * u⁺[1]
+    F[order_left+1:end] = τ₀/(h⁺ * Δx⁺) * u⁻[end]
 
     
     # Symmeteriser
@@ -302,7 +326,7 @@ function Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order_left=2,ord
 
 
 
-    return SAT⁻, SAT⁺
+    return SAT⁻, SAT⁺, F[1:order_left], F[order_left+1:end]
 
 end
 
