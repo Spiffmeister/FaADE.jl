@@ -116,9 +116,10 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
 end
 
 
-function conj_grad(xₖ,b,uⱼ,RHS,n,Δx,Δt,k,t,x,H;order=2,tol=1e-5,maxIT=10)
-    # xₖ = zeros(length(b))
 
+
+function conj_grad(b,uⱼ,RHS,n,Δx,Δt,k,t,x,H;order=2,tol=1e-5,maxIT=10)
+    xₖ = zeros(length(b)) #Initial guess
     rₖ = A(uⱼ,RHS,n,Δx,Δt,k,t,x,order=order) - b
     dₖ = -rₖ
     i = 0
@@ -139,6 +140,31 @@ function conj_grad(xₖ,b,uⱼ,RHS,n,Δx,Δt,k,t,x,H;order=2,tol=1e-5,maxIT=10)
     end
     return xₖ
 end
+
+function conj_grad(b,uⱼ,RHS,nx,ny,Δx,x,Δy,y,Δt,t,k,Hx,Hy;order=2,tol=1e-5,maxIT=10)
+    xₖ = zeros(length(b)) #Initial guess
+    rₖ = A(uⱼ,RHS,n,Δx,Δt,k,t,x,order=order) - b
+    dₖ = -rₖ
+    i = 0
+    rnorm = sqrt(innerH(rₖ,H,rₖ))
+    while (norm(rₖ) > tol) & (i < maxIT)
+        Adₖ = A(dₖ,RHS,n,Δx,Δt,k,t,x,order=order)
+        dₖAdₖ = innerH(dₖ,H,Adₖ)
+        αₖ = -innerH(rₖ,H,dₖ)/dₖAdₖ
+        xₖ = xₖ + αₖ*dₖ
+        rₖ = A(xₖ,RHS,n,Δx,Δt,k,t,x,order=order) - b
+        βₖ = innerH(rₖ,H,A(rₖ,RHS,n,Δx,Δt,k,t,x,order=order))/dₖAdₖ
+        dₖ = - rₖ + βₖ*dₖ
+        i += 1
+    end
+    if (norm(rₖ)>tol)
+        warnstr = string("CG did not converge at t=",t)
+        @warn warnstr
+    end
+    return xₖ
+end
+
+
 
 
 end
