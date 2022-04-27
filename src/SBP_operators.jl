@@ -8,9 +8,10 @@ module SBP_operators
     include("Op_Dx.jl")
     include("Op_Dxx.jl")
     include("BoundaryOp_Dxx.jl")
+    include("TimeSolver.jl")
 
 
     # Export the functions for direct user interaction
-    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!, SAT_left, SAT_right, Periodic, Split_domain
+    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!, SAT_left, SAT_right, Periodic, Split_domain, time_solver
 
 end # module

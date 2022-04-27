@@ -4,43 +4,95 @@
 
 
 
-function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0)
+function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0,seperate_forcing=false)
     # Left side SAT
-
     if type == :Dirichlet
+        if typeof(c) <: Float64
+            c = zeros(Float64,order) .+ c
+        end
         SAT = Dirichlet_left(u,Δx,g,c=c,order=order)
-    elseif type == :Neumann
-        SAT = Neumann_left(u,Δx,g,c=c,order=order)
+
+    elseif type == :Neumann # Neumann boundary conditions
+
+        # Ensure coefficient is correct type
+        if typeof(c) <: Vector
+            k = c[1]
+        else
+            k = c
+        end
+        SAT,F = Neumann_left(u,Δx,g,c=k,order=order)
+        
     elseif type == :Robin
+        if typeof(a) <: Vector
+            a = a[end]
+        end
+        if typeof(b) <: Vector
+            b = b[end]
+        end
         SAT = Robin_left(u,Δx,g,order=order,a=a,b=b)
+        
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the Periodic() function")
     end
-
-    return SAT
+    
+    if !seperate_forcing
+        # If the forcing term is part of the SAT (i.e. not using GC method)
+        # SAT += F
+        return SAT
+    else
+        return SAT, F
+    end
 end
 
 
-function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0)
+function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order::Int=2,c::Union{Float64,Vector{Float64}}=1.0,a::Float64=1.0,b::Float64=1.0,seperate_forcing=false)
+
     # Right side SAT
     if type == :Dirichlet
-        SAT = Dirichlet_right(u,Δx,g,c=c,order=order)
-    elseif type == :Neumann
-        SAT = Neumann_right(u,Δx,g,c=c,order=order)
+        if typeof(c) <: Float64
+            c = zeros(Float64,order) .+ c
+        end
+        # SAT, F = Dirichlet_right(u,Δx,g,c=c,order=order)
+        SAT, F = Dirichlet_right(u,Δx,g,c=c,order=order)
+
+    elseif type == :Neumann # Neumann boundary conditions
+
+        # Ensure coefficient is correct type
+        if typeof(c) <: Vector
+            k = c[end]
+        else
+            k = c
+        end
+
+        SAT, F = Neumann_right(u,Δx,g,c=c,order=order)
+        
     elseif type == :Robin
+        if typeof(a) <: Vector
+            a = a[end]
+        end
+        if typeof(b) <: Vector
+            b = b[end]
+        end
         SAT = Robin_right(u,Δx,g,order=order,a=a,b=b)
+
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the SAT() function")
     end
 
-    return SAT
+    if !seperate_forcing
+        # If the forcing term is part of the SAT (i.e. not using GC method)
+        SAT += F
+        return SAT
+    else
+        return SAT, F
+    end
 end
 
 
 
 
 #=
-====================== Dirichletee boundary conditions ======================
+====================== Dirichlet boundary conditions ======================
 =#
 
 
@@ -55,19 +107,27 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=
     α,τ = Dirichlet_penalties(Δx,order)
 
     # Construct the SATs
-    SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
+    # SAT = zeros(Float64,order)
+    # Dᵀu = boundary_Dₓᵀ(u,Δx,order)
+    # SAT[1] += τ * u[1] 
+    # SAT .+= α * c[1] * Dᵀu[1:order]
     
+    # # Forcing terms
+    # F = zeros(Float64,order)
+    # Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+    # F[1] += -τ*g[1]
+    # F .+= -α * c[1] * Dᵀf[1:order]
+
+    # Construct the SATs
+    SAT = zeros(Float64,order)
+
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
-    # SAT
-    SAT[1] += τ * u[1] 
-    SAT .+= α * c[1] * Dᵀu[1:order]
-    # Forcing terms
-    F[1] += -τ*g[1]
-    F .+= -α*c[1]*Dᵀf[1:order]
+
+    SAT[1] += τ * (u[1] - g[1]) 
+    SAT .+= α * c[1] * (Dᵀu[1:order] - Dᵀf[1:order])
     
-    return SAT, F
+    return SAT
 end
 
 
@@ -83,17 +143,15 @@ function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order=2,penalty=[-1.0,-1
     
     # Construct the SATs
     SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
-
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
-    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
-    
-    # Right SAT
     SAT[end] += τ*u[end]
     SAT .+= α * c[end] * Dᵀu[end-order+1:end]
+    
     # Forcing terms
-    F[end] += -τ*u[end]
-    F .+= -α*c[end]*Dᵀf[end-order+1:end]
+    F = zeros(Float64,order)
+    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+    F[end] += -τ*g[end]
+    F .+= -α * c[end] * Dᵀf[end-order+1:end]
 
     return SAT, F
 end
@@ -126,19 +184,15 @@ end
 =#
 
 
-function Neumann_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.0)
+function Neumann_left(u::Vector{Float64},Δx::Float64,g;c::Float64=1.0,order=2,penalty=1.0)
 
     τ = Neumann_penalties(Δx,order)
 
     SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
-    # If k is a scalar, vectorise it
-    if typeof(c) <: Float64
-        c = zeros(2*order) .+ c
-    end
-    
     Du = boundary_Dₓ(u,Δx,order)
-    SAT[1] += τ * c[1] * Du[1]
+    SAT[1] += τ * c * Du[1]
+    
+    F = zeros(Float64,order)
     F[1] += -τ*g[1]
 
     return SAT, F
@@ -149,14 +203,10 @@ function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1
     τ = Neumann_penalties(Δx,order)
 
     SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
-    # If k is a scalar, vectorise it
-    if typeof(c) <: Float64
-        c = zeros(2*order) .+ c
-    end
-
     Du = boundary_Dₓ(u,Δx,order)
     SAT[end] -= τ * c[end] * Du[end]
+
+    F = zeros(Float64,order)
     F[end] -= -τ*g[end]
 
     return SAT, F
@@ -178,45 +228,36 @@ end
 
 function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
 
+
     # Get penalties
     h = hval(order)
-    if typeof(a) <: Vector
-        a = a[1]
-    end
-    if typeof(b) <: Vector
-        b = b[1]
-    end
     τ = 1.0/(a * h * Δx)
-
-    # Preallocate SAT
-    SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
-
+    
     # Compute the SAT
+    SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
     SAT[1] = τ * b*u[1] + a*Du[1]
+    
+    # Forcing terms
+    F = zeros(Float64,order)
     F[1] = -τ*g[1]
-
+    
     return SAT, F
 end
 
 function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
-
+    
     # Get penalties
     h = hval(order)
-    if typeof(a) <: Vector
-        a = a[end]
-    end
-    if typeof(b) <: Vector
-        b = b[end]
-    end
     τ = 1.0/(a * h * Δx)
 
+    # Compute the SAT
     SAT = zeros(Float64,order)
-    F = zeros(Float64,order)
-
     Du = boundary_Dₓ(u,Δx,order)
     SAT[end] = τ * b*u[end] - a*Du[end] #-Du for directional derivative
+    
+    # Forcing terms
+    F = zeros(Float64,order)
     F[end] = -τ * g[end]
 
     SAT, F
