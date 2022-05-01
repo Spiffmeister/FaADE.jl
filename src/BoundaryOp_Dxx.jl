@@ -3,14 +3,31 @@
 =#
 
 
+"""
+    SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ=[1.0,1.0],seperate_forcing=false)
 
-function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,a=1.0,b=1.0,seperate_forcing=false)
+Returns the left SAT+Forcing term as a vector or SAT and Forcing term as seperate vectors
+
+Inputs: 
+- type: :Dirichlet, :Neumann, :Robin
+- u: Solution vector
+- Δx: step size
+- g: boundary value
+Optional inputs:
+- order: 2, 4, 6
+- coefficient: ∂ₓ(c∂ₓu)
+- αβ: 
+- seperate_forcing: true, false -- controls the return type
+
+For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
+"""
+function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
     # Left side SAT
-    if type == :Dirichlet
+    if type == :Dirichlet #Check to make sure 
         if typeof(c) <: Float64
             c = zeros(Float64,order) .+ c
         end
-        SAT = Dirichlet_left(u,Δx,g,c=c,order=order)
+        SAT, F = Dirichlet_left(u,Δx,g,c=c,order=order)
 
     elseif type == :Neumann # Neumann boundary conditions
 
@@ -24,10 +41,10 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c:
         
     elseif type == :Robin
         if typeof(a) <: Vector
-            a = a[end]
+            a = αβ[1]
         end
         if typeof(b) <: Vector
-            b = b[end]
+            b = αβ[end]
         end
         SAT = Robin_left(u,Δx,g,order=order,a=a,b=b)
         
@@ -37,7 +54,7 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c:
     
     if !seperate_forcing
         # If the forcing term is part of the SAT (i.e. not using GC method)
-        # SAT += F
+        SAT += F
         return SAT
     else
         return SAT, F
@@ -95,48 +112,30 @@ end
 ====================== Dirichlet boundary conditions ======================
 =#
 
-
-function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=[-1.0,-1.0])
-
-    # Fix up the coefficient 
-    if typeof(c) <: Float64
-        c = zeros(Float64,order) .+ c
-    end
+"""
+    Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
+"""
+function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
     
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
-
-    # Construct the SATs
-    # SAT = zeros(Float64,order)
-    # Dᵀu = boundary_Dₓᵀ(u,Δx,order)
-    # SAT[1] += τ * u[1] 
-    # SAT .+= α * c[1] * Dᵀu[1:order]
     
-    # # Forcing terms
-    # F = zeros(Float64,order)
-    # Dᵀf = boundary_Dₓᵀ(g,Δx,order)
-    # F[1] += -τ*g[1]
-    # F .+= -α * c[1] * Dᵀf[1:order]
-
     # Construct the SATs
     SAT = zeros(Float64,order)
-
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
-    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
-
-    SAT[1] += τ * (u[1] - g[1]) 
-    SAT .+= α * c[1] * (Dᵀu[1:order] - Dᵀf[1:order])
+    SAT[1] += τ * u[1] 
+    SAT .+= α * c[1] * Dᵀu[1:order]
     
-    return SAT
+    # Forcing terms
+    F = zeros(Float64,order)
+    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+    F[1] += -τ*g[1]
+    F .+= -α * c[1] * Dᵀf[1:order]
+
+    return SAT, F
 end
 
-
-function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order=2,penalty=[-1.0,-1.0])
-    
-    # Fix up the coefficient 
-    if typeof(c) <: Float64
-        c = zeros(Float64,order) .+ c
-    end
+function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
     
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
@@ -157,13 +156,12 @@ function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order=2,penalty=[-1.0,-1
 end
 
 
-function Dirichlet_penalties(Δx,order;penalty=[-1.0,-1.0])
+function Dirichlet_penalties(Δx::Float64,order::Int64;penalty::Vector{Float64}=[-1.0,-1.0])
     # For reading in penalty parameters for Dirichlet SATs
 
     h = hval(order)
 
-    α = penalty[1]
-    τ = penalty[2]
+    α,τ = penalty
 
     if α == -1.0
         α = 1.0 * (h * Δx)^-1
@@ -213,7 +211,7 @@ function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1
 end
 
 
-function Neumann_penalties(Δx,order;penalties=-1.0)
+function Neumann_penalties(Δx::Float64,order::Int64;penalties::Float64=-1.0)
 
     h = hval(order)
 
@@ -318,56 +316,56 @@ end
 =#
 
 
-function Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order_left=2,order_right=2)
+function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2)
 
-    h⁻ = hval(order_left)
-    h⁺ = hval(order_right)
+    h⁻ = hval(order⁻)
+    h⁺ = hval(order⁺)
     
     # Left side
     α₀ = -0.5
     τ₁ = 0.5
     τ₀ = max(c⁻[end]/(2*h⁻*Δx⁻), c⁺[1]/(2*h⁺*Δx⁺))
 
-    SAT₀ = zeros(Float64,order_left+order_right)
-    SAT₁ = zeros(Float64,order_left+order_right)
-    SAT₂ = zeros(Float64,order_left+order_right)
+    SAT₀ = zeros(Float64,order⁻+order⁺)
+    SAT₁ = zeros(Float64,order⁻+order⁺)
+    SAT₂ = zeros(Float64,order⁻+order⁺)
     
-    F = zeros(Float64,order_left+order_right)
+    F = zeros(Float64,order⁻+order⁺)
 
     # Function condition
-    L₀u = zeros(Float64,order_left+order_right)
-    L₀u[order_left] += u⁻[end]
-    L₀u[order_left+1] += u⁻[end]
+    L₀u = zeros(Float64,order⁻+order⁺)
+    L₀u[order⁻] += u⁻[end]
+    L₀u[order⁻+1] += u⁻[end]
 
-    SAT₀[1:order_left] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order_left]
-    SAT₀[order_left+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order_left+1:end]
+    SAT₀[1:order⁻] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order⁻]
+    SAT₀[order⁻+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order⁻+1:end]
 
-    F[1:order_left] = -τ₀/(h⁻ * Δx⁻) * u⁺[1]
-    F[order_left+1:end] = τ₀/(h⁺ * Δx⁺) * u⁻[end]
+    F[1:order⁻] = -τ₀/(h⁻ * Δx⁻) * u⁺[1]
+    F[order⁻+1:end] = τ₀/(h⁺ * Δx⁺) * u⁻[end]
 
     
     # Symmeteriser
-    DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order_left],Δx⁻,order_left)
-    DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order_left+1:end],Δx⁺,order_right)
+    DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order⁻],Δx⁻,order⁻)
+    DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order⁻+1:end],Δx⁺,order⁺)
 
-    SAT₁[1:order_left] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order_left+1:end]
-    SAT₁[order_left+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order_right]
+    SAT₁[1:order⁻] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order⁻+1:end]
+    SAT₁[order⁻+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order⁺]
 
     # Derivative condition
-    Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order_left)
-    Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order_right)
+    Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order⁻)
+    Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order⁺)
 
-    SAT₂[1:order_left] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order_left+1:end]
-    SAT₂[order_left+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order_right]
+    SAT₂[1:order⁻] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order⁻+1:end]
+    SAT₂[order⁻+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order⁺]
 
     SAT = SAT₀ + SAT₁ + SAT₂
     
-    SAT⁻ = SAT[1:order_left]
-    SAT⁺ = SAT[order_left+1:end]
+    SAT⁻ = SAT[1:order⁻]
+    SAT⁺ = SAT[order⁻+1:end]
 
 
 
-    return SAT⁻, SAT⁺, F[1:order_left], F[order_left+1:end]
+    return SAT⁻, SAT⁺, F[1:order⁻], F[order⁻+1:end]
 
 end
 
