@@ -1,46 +1,70 @@
 
 
 struct prob
-    PDE         :: Function
-    RHS         :: Function
-    order       :: Int64
-    forcing     :: Bool
+    RHS             :: Function
+    boundary_left   :: Symbol
+    boundary_right  :: Symbol
+    boundary        :: Union{Vector{Float64},Function}
+    order           :: Int64
+    k               :: Union{Vector{Float64},Float64}
 end
 
-mutable struct soln
-    u           :: Array{Float64}
-    x           :: Array{Float64}
+mutable struct solution
+    u       :: Array{Float64}
+    x       :: Array{Float64}
+    Δx      :: Float64
+    n       :: Int64
+    t_f     :: Float64
+    Δt      :: Float64
+    solver  :: Symbol
+
+    function solution(u₀,x,Δx,t_f,Δt,solver)
+        N = ceil(Int64,t_f/Δt)
+        n = length(x)
+
+        u = zeros(Float64,n,N)
+        u[:,1] = u₀(x)
+
+        new(u,x,Δx,n,t_f,Δt,solver)
+    end
 end
 
 
 
-
-# function rate(uₓₓ,P)
-#     uₓₓ = P.PDE()
-#     uₓₓ
-# end
-
-
-
-function time_solver(u,PDE::Function,SAT::Function,n,x,Δt,Δx,k,t_f,boundary,boundary_left,boundary_right;method=:euler,order=2)
+"""
+"""
+function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
     #=
     Expects two functions PDE and SAT from the SBP_operators package
 
     =#
 
+    # Initialise solution
+    soln = solution(u₀,x,Δx,t_f,Δt,method)
+
+    # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
 
-    function RHS(uₓₓ,u,n,Δx,Δt,k,t,x,g;order=2)
-        # Combines the PDE and SATs (forcing term included)
-        uₓₓ = PDE(uₓₓ,u,n,Δx,Δt,k,t,x,order=order)
-        uₓₓ = SAT(boundary_left,boundary_right,uₓₓ,u,Δx,g,t,k,order=order)
-        return uₓₓ
+    if method != :cgie
+        function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
+            # Combines the PDE and SATs (forcing term included)
+            uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
+
+            uₓₓ[1:order] .+= SAT_left(boundary_left,u,Δx,g(t),c=k,order=order)
+            uₓₓ[end-order+1:end] .+= SAT_right(boundary_right,u,Δx,g(t),c=k,order=order)
+            
+            return uₓₓ
+        end
+    # else
+        # function RHS(uₓₓ,u,n,Δx,k,t,x,g)
+
+        # end
     end
-    
+
     if method == :euler
         for i = 1:N-1
             t = i*Δt
-            u[:,i+1] = forward_euler(u[:,i+1],u[:,i],RHS,n,Δx,Δt,k,t,x,boundary,order=order)
+            soln.u[:,i+1] = forward_euler(soln.u[:,i+1],soln.u[:,i],RHS,n,Δx,Δt,k,t,x,boundary)
         end
     elseif method == :rk4
         for i = 1:N-1
@@ -87,20 +111,20 @@ function time_solver(u,PDE::Function,SAT::Function,n,x,Δt,Δx,k,t_f,boundary,bo
     else
         error("Method must be :euler, :rk4, :impliciteuler or :cgie")
     end
-    return u
+    return soln
 end
 
 
-function time_solver(u,PDE,SAT,nx,ny,Δx,Δy,x,y,Δt,k,boundary_x,boundary_y;method=:euler,order=2,maxIT=5)
-end
+# function time_solver(u,PDE,SAT,nx,ny,Δx,Δy,x,y,Δt,k,boundary_x,boundary_y;method=:euler,order=2,maxIT=5)
+# end
 
 
 
 #= EXPLICIT METHODS =#
 
-function forward_euler(uₙ,uₒ,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k,t,x::Vector,g;order=2)
+function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t,x::Vector,g)
     # Simple forward euler method
-    uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,Δx,Δt,k,t,x,g,order=order)
+    uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
     return uₙ
 end
 

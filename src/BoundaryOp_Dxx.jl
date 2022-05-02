@@ -267,7 +267,7 @@ end
 =#
 
 
-function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
+function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2,seperate_forcing::Bool=false)
 
     # Get h value
     h = hval(order)
@@ -306,7 +306,15 @@ function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order=2)
 
     SAT = SAT₀ + SAT₁ + SAT₂
 
-    return SAT[1:order], SAT[order+1:end], F[1:order], F[order+1:end]
+
+    if !seperate_forcing
+        SAT[1:order] += F[1:order]
+        SAT[order+1:end] += F[order+1:end]
+        return SAT[1:order], SAT[order+1:end]
+    else
+        return SAT[1:order], SAT[order+1:end], F[1:order], F[order+1:end]
+    end
+
 end
 
 
@@ -316,7 +324,7 @@ end
 =#
 
 
-function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2)
+function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,seperate_forcing::Bool=false)
 
     h⁻ = hval(order⁻)
     h⁺ = hval(order⁺)
@@ -364,8 +372,13 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
     SAT⁺ = SAT[order⁻+1:end]
 
 
-
-    return SAT⁻, SAT⁺, F[1:order⁻], F[order⁻+1:end]
+    if !seperate_forcing
+        SAT⁻ += F[1:order⁻]
+        SAT⁺ += F[order⁻+1:end]
+        return SAT⁻, SAT⁺
+    else
+        return SAT⁻, SAT⁺, F[1:order⁻], F[order⁻+1:end]
+    end
 
 end
 
