@@ -69,48 +69,50 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     elseif method == :rk4
         for i = 1:N-1
             t = i*Δt
-            u[:,i+1] = RK4(u[:,i+1],u[:,i],RHS,n,Δx,Δt,k,t,x,boundary,order=order)
+            soln.u[:,i+1] = RK4(soln.u[:,i+1],soln.u[:,i],RHS,n,Δx,Δt,k,t,x,boundary)
         end
     elseif method == :impliciteuler
         for i = 1:N-1
             t = i*Δt
-            u[:,i+1] = implicit_euler(u[:,i+1],u[:,i],RHS,n,Δx,Δt,t,k,x,order=order)
+            soln.u[:,i+1] = implicit_euler(soln.u[:,i+1],soln.u[:,i],RHS,n,Δx,Δt,k,t,x,boundary)
         end
     elseif method == :cgie
 
-        function RHS()
-            uₓₓ = PDE(uₓₓ,u,n,Δx,Δt,k,t,x,order=order)
-            SATₗ, = SAT_left(boundary_left,u,Δx,g,order=order,seperate_forcing=true)
-            SATᵣ, = SAT_right(boundary_left,u,Δx,g,order=order,seperate_forcing=true)
-            uₓₓ[1:order] = SAT(boundary_left,boundary_right,uₓₓ,u,Δx,g,t,k,order=order,seperate_forcing=true)
+        function cgRHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
+            uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
+            SATₗ, = SAT_left(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
+            SATᵣ, = SAT_right(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
+            uₓₓ[1:order] += SATₗ
+            uₓₓ[end-order+1:end] += SATᵣ
             return uₓₓ
         end
 
         if order == 2
-            H = diagm(ones(length(u)))
+            H = diagm(ones(length(x)))
             H[1,1] = H[end,end] = 0.5
         elseif order == 4
-            H = diagm(ones(length(u)))
+            H = diagm(ones(length(x)))
             H[1,1] = H[end,end] = 0.5
             H[2,2] = H[end-1,end-1] = 0.5
             H[3,3] = H[end-2,end-2] = 0.5
         elseif order == 6
-            H = diagm(ones(length(u)))
+            H = diagm(ones(length(x)))
         end
         H = Δx*H
 
         for i = 1:N-1
             t = i*Δt
-            uⱼ = u[:,i]
-            u[:,i+1] = conj_grad(uⱼ,uⱼ,RHS,n,Δx,Δt,k,t,x,boundary;order=2,tol=1e-5,maxIT=20)
-            SATₗ,Fₗ = SAT_left(boundary_left,u,Δx,g,order=order,seperate_forcing=true)
-            SATᵣ,Fᵣ = SAT_right(boundary_right,u,Δx,g,order=order,seperate_forcing=true)
-            u[1:order,i+1] += Fₗ
-            u[order,i+1] += Fₗ
+            uⱼ = soln.u[:,i]
+            soln.u[:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,n,Δx,Δt,k,t,x,H,boundary;tol=1e-5,maxIT=20)
+            SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+            SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+            soln.u[1:order,i+1] += Fₗ
+            soln.u[end-order+1:end,i+1] += Fᵣ
         end
     else
         error("Method must be :euler, :rk4, :impliciteuler or :cgie")
     end
+
     return soln
 end
 
@@ -122,17 +124,17 @@ end
 
 #= EXPLICIT METHODS =#
 
-function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t,x::Vector,g)
+function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
     return uₙ
 end
 
-function RK4(uₙ,uₒ,RHS,n,Δx,Δt,k,t,x,boundary;order=2)
-    k1 = RHS(uₙ,uₒ        ,n,Δx,Δt,k,t        ,x,boundary,order=order)
-    k2 = RHS(uₙ,uₒ+Δt/2*k1,n,Δx,Δt,k,t+0.5Δt  ,x,boundary,order=order)
-    k3 = RHS(uₙ,uₒ+Δt/2*k2,n,Δx,Δt,k,t+0.5Δt  ,x,boundary,order=order)
-    k4 = RHS(uₙ,uₒ+Δt*k3  ,n,Δx,Δt,k,t+Δt     ,x,boundary,order=order)
+function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
+    k1 = RHS(uₙ,uₒ        ,n,x,Δx,t,Δt,k,       boundary)
+    k2 = RHS(uₙ,uₒ+Δt/2*k1,n,x,Δx,t+0.5Δt,Δt,k, boundary)
+    k3 = RHS(uₙ,uₒ+Δt/2*k2,n,x,Δx,t+0.5Δt,Δt,k, boundary)
+    k4 = RHS(uₙ,uₒ+Δt*k3  ,n,x,Δx,t+Δt,Δt,k,    boundary)
     uₙ = uₒ + Δt/6 * (k1 + 2k2 + 2k3 + k4)
     return uₙ
 end
@@ -140,12 +142,12 @@ end
 
 #= IMPLICIT METHODS =#
 
-function implicit_euler(uₙ,uₒ,RHS,n,Δx,Δt,k,t,x;order=2,maxIT=100,α=1.5)
+function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
     uⱼ = uₒ
     for j = 1:maxIT
-        uⱼ = uⱼ - α * Δt * (uⱼ - uₒ - Δt*RHS(uₙ,uⱼ,n,Δx,Δt,k,t,x,order=order))
+        uⱼ = uⱼ - α * Δt * (uⱼ - uₒ - Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary))
     end
-    uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,n,Δx,Δt,k,t,x,order=order)
+    uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary)
     return uⱼ
 end
 
@@ -153,22 +155,22 @@ end
 
 
 #= SUPPORT =#
-function A(uⱼ,PDE::Function,n,Δx,x,Δt,t,k;order=2)
+function A(uⱼ,PDE::Function,n,Δx,x,Δt,t,k,g)
     # tmp can be any vector of length(uⱼ)
-    tmp = uⱼ
-    tmp -= Δt*PDE(tmp,uⱼ,n,Δx,Δt,k,t,x,order=order)
+    tmp = zeros(length(uⱼ))
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
 
-function A(uⱼ,PDE::Function,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y;order=2)
+function A(uⱼ,PDE::Function,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y)
     # A for 2D arrays
     tmp = uⱼ
-    tmp -= Δt*PDE(tmp,uⱼ,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y,order=order)
+    tmp -= Δt*PDE(tmp,uⱼ,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y)
     return tmp
 end
 
 
-function innerH(u::Vector,H::Matrix,v::Vector)
+function innerH(u::Vector,H::Array,v::Vector)
     # H inner product for 1D problems
     return dot(u,H*v)
 end
@@ -186,23 +188,23 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
 end
 
 
-
-
-function conj_grad(b,uⱼ,RHS,n,Δx,Δt,k,t,x,H;order=2,tol=1e-5,maxIT=10)
+function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10)
+    # VECTOR FORM
     xₖ = zeros(length(b)) #Initial guess
-    rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,order=order) - b
+    rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,boundary) - b
     dₖ = -rₖ
     i = 0
     rnorm = sqrt(innerH(rₖ,H,rₖ))
     while (rnorm > tol) & (i < maxIT)
-        Adₖ = A(dₖ,RHS,n,Δx,Δt,k,t,x,order=order)
+        Adₖ = A(dₖ,RHS,n,Δx,x,Δt,t,k,boundary)
         dₖAdₖ = innerH(dₖ,H,Adₖ)
         αₖ = -innerH(rₖ,H,dₖ)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
-        rₖ = A(xₖ,RHS,n,Δx,x,Δt,t,k,order=order) - b
-        βₖ = innerH(rₖ,H,A(rₖ,RHS,n,Δx,Δt,k,t,x,order=order))/dₖAdₖ
+        rₖ = A(xₖ,RHS,n,Δx,x,Δt,t,k,boundary) - b
+        βₖ = innerH(rₖ,H,A(rₖ,RHS,n,Δx,x,Δt,t,k,boundary))/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
         rnorm = sqrt(innerH(rₖ,H,rₖ))
+        # rnorm = norm(rₖ)
         i += 1
     end
     if (norm(rₖ)>tol)
