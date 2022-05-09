@@ -32,12 +32,9 @@ end
 
 
 """
+    time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
 """
 function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
-    #=
-    Expects two functions PDE and SAT from the SBP_operators package
-
-    =#
 
     # Initialise solution
     soln = solution(u₀,x,Δx,t_f,Δt,method)
@@ -45,7 +42,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
 
-    if method != :cgie
+    if method != :cgie # Not using conjugate gradient
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             # Combines the PDE and SATs (forcing term included)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
@@ -55,10 +52,6 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
             
             return uₓₓ
         end
-    # else
-        # function RHS(uₓₓ,u,n,Δx,k,t,x,g)
-
-        # end
     end
 
     if method == :euler
@@ -103,11 +96,11 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         for i = 1:N-1
             t = i*Δt
             uⱼ = soln.u[:,i]
-            soln.u[:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,n,Δx,Δt,k,t,x,H,boundary;tol=1e-5,maxIT=20)
             SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
             SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
-            soln.u[1:order,i+1] += Fₗ
-            soln.u[end-order+1:end,i+1] += Fᵣ
+            uⱼ[1:order] += Δt*Fₗ
+            uⱼ[end-order+1:end] += Δt*Fᵣ
+            soln.u[:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,n,Δx,Δt,k,t,x,H,boundary;tol=1e-5,maxIT=20)
         end
     else
         error("Method must be :euler, :rk4, :impliciteuler or :cgie")
@@ -188,7 +181,7 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
 end
 
 
-function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10)
+function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
     # VECTOR FORM
     xₖ = zeros(length(b)) #Initial guess
     rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,boundary) - b
@@ -207,7 +200,7 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
         # rnorm = norm(rₖ)
         i += 1
     end
-    if (norm(rₖ)>tol)
+    if (norm(rₖ)>tol) & warnings
         warnstr = string("CG did not converge at t=",t)
         @warn warnstr
     end

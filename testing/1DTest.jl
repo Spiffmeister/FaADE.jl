@@ -23,13 +23,13 @@ x = collect(range(𝒟[1],𝒟[2],step=Δx))
 
 k = zeros(Float64,n) .+ 1.0
 
-Δt = 0.1 * Δx^2
-t_f = 2Δt
+Δt = 1.0 * Δx^2
+t_f = 1000Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g(t) = [0.0, 0.0]
+g(t) = [0.0, 1.0]
 
 order = 2
 method = :cgie
@@ -46,4 +46,4 @@ anim = @animate for i=1:N
     plot(soln.x,soln.u[:,i],label="t=$(@sprintf("%.5f",i*Δt))")
 end
 
-gif(anim,"yes.gif",fps=1)
+gif(anim,"yes.gif",fps=50)
