@@ -16,21 +16,21 @@ Inputs:
 Optional inputs:
 - order: 2, 4, 6
 - coefficient: ∂ₓ(c∂ₓu)
-- αβ: 
+- αβ: Robin boundary coefficient αdₓu + βu = f
 - seperate_forcing: true, false -- controls the return type
 
 For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
-function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
-    # Left side SAT
-    if type == :Dirichlet #Check to make sure 
+function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;
+    order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
+    if type == :Dirichlet # Dirichlet boundaries
+        # Ensure coefficient is correct type
         if typeof(c) <: Float64
             c = zeros(Float64,order) .+ c
         end
         SAT, F = Dirichlet_left(u,Δx,g,c=c,order=order)
 
     elseif type == :Neumann # Neumann boundary conditions
-
         # Ensure coefficient is correct type
         if typeof(c) <: Vector
             k = c[1]
@@ -39,7 +39,8 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c:
         end
         SAT,F = Neumann_left(u,Δx,g,c=k,order=order)
         
-    elseif type == :Robin
+    elseif type == :Robin # Robin boundaries
+        # Ensure coefficient is correct type
         if typeof(a) <: Vector
             a = αβ[1]
         end
@@ -49,17 +50,39 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c:
         SAT = Robin_left(u,Δx,g,order=order,a=a,b=b)
         
     else
-        error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the Periodic() function")
+        error("Must specify either :Dirichlet, :Neumann or :Robin. For periodic boundaries use the Periodic() function")
     end
     
-    if !seperate_forcing
-        # If the forcing term is part of the SAT (i.e. not using GC method)
+    if !seperate_forcing # If the forcing term is part of the SAT
         SAT += F
         return SAT
     else
         return SAT, F
     end
 end
+
+
+function SAT_left(type::Symbol,u::Matrix{Float64},Δx::Float64,Δy::Float64,nx::Int64,ny::Int64,g_x,g_y,dim;
+    order_x::Int64=2,order_y::Int64=2,c_x::Union{Float64,Vector{Float64}}=1.0,c_y::Union{Float64,Vector{Float64}}=1.0,αβ_x::Vector{Float64}=[1.0,1.0],αβ_y::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
+    # Matrix variant of SAT_left
+    
+    if dim == 1
+        SAT = zeros(Float64,nx,order)
+        F = zeros(Float64,nx,order)
+        for i = 1:nx
+            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δx,g_x,order=order_x,c=c_x,αβ=αβ_x,seperate_forcing=seperate_forcing)
+        end
+    elseif dim == 2
+        SAT = zeros(Float64,ny,order)
+        F = zeros(Float64,ny,order)
+        for i = 1:ny
+            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δy,g_y,order=order_y,c=c_y,αβ=αβ_y,seperate_forcing=seperate_forcing)
+        end
+    end
+
+
+end
+
 
 
 function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order::Int=2,c::Union{Float64,Vector{Float64}}=1.0,a::Float64=1.0,b::Float64=1.0,seperate_forcing=false)
@@ -116,7 +139,6 @@ end
     Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
 """
 function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
-    
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -136,7 +158,6 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,p
 end
 
 function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
-    
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -158,19 +179,17 @@ end
 
 function Dirichlet_penalties(Δx::Float64,order::Int64;penalty::Vector{Float64}=[-1.0,-1.0])
     # For reading in penalty parameters for Dirichlet SATs
-
     h = hval(order)
-
     α,τ = penalty
 
-    if α == -1.0
-        α = 1.0 * (h * Δx)^-1
-    end
+    # if α == -1.0
+    #     α = 1.0 * (h * Δx)^-1
+    # end
 
-    if τ == -1.0
-        τ = 1.0
-        τ = -(1.0 + τ) * (h * Δx)^-2
-    end
+    # if τ == -1.0
+    #     τ = 1.0
+    #     τ = -(1.0 + τ) * (h * Δx)^-2
+    # end
 
     return α, τ
 end
@@ -183,13 +202,13 @@ end
 
 
 function Neumann_left(u::Vector{Float64},Δx::Float64,g;c::Float64=1.0,order=2,penalty=1.0)
-
+    # Penalties
     τ = Neumann_penalties(Δx,order)
-
+    # SAT construction
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
     SAT[1] += τ * c * Du[1]
-    
+    # Forcing term
     F = zeros(Float64,order)
     F[1] += -τ*g[1]
 
@@ -197,13 +216,13 @@ function Neumann_left(u::Vector{Float64},Δx::Float64,g;c::Float64=1.0,order=2,p
 end
 
 function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.0)
-
+    # Penalties
     τ = Neumann_penalties(Δx,order)
-
+    # SAT construction
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
     SAT[end] -= τ * c[end] * Du[end]
-
+    # Forcing term
     F = zeros(Float64,order)
     F[end] -= -τ*g[end]
 
@@ -212,9 +231,8 @@ end
 
 
 function Neumann_penalties(Δx::Float64,order::Int64;penalties::Float64=-1.0)
-
+    # For reading in penalty parameters for Neumann SATs
     h = hval(order)
-
     τ = 1.0/(h * Δx)
 
     return τ
@@ -224,9 +242,11 @@ end
 ====================== Robin boundary conditions ======================
 =#
 
+"""
+    function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
+
+"""
 function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
-
-
     # Get penalties
     h = hval(order)
     τ = 1.0/(a * h * Δx)
@@ -244,7 +264,6 @@ function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
 end
 
 function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
-    
     # Get penalties
     h = hval(order)
     τ = 1.0/(a * h * Δx)
@@ -277,7 +296,6 @@ function Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int6
     τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
 
     τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h * Δx) # Function penalty
-
 
     SAT₀ = zeros(Float64,2order)
     SAT₁ = zeros(Float64,2order)
