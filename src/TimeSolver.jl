@@ -149,12 +149,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             for i = 1:ny #x boundaries
-                uₓₓ[i,1:order] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx,order=order_x)
-                uₓₓ[i,end-order+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx,order=order_x)
+                uₓₓ[i,1:order_x] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
+                uₓₓ[i,end-order_x+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
             end
             for i = 1:nx
-                uₓₓ[1:order,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky,order=order_y)
-                uₓₓ[end-order+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky,order=order_y)
+                uₓₓ[1:order_y,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
+                uₓₓ[end-order_y+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
             end
             return uₓₓ
         end
@@ -163,7 +163,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     if method == :euler
         for i = 1:N-1
             t = i*Δt
-            u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
+            u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+        end
+    elseif method == :cgie
+        for i = 1:N-1
+            t = i*Δt
         end
     end
     return u
@@ -172,18 +176,16 @@ end
 
 
 #= EXPLICIT METHODS =#
-
 function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
     return uₙ
 end
-function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Vector,ky::Vector,gx,gy)
+function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return uₙ
 end
-
 
 function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
     k1 = RHS(uₙ,uₒ        ,n,x,Δx,t,Δt,k,       boundary)
@@ -194,9 +196,7 @@ function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Fl
     return uₙ
 end
 
-
 #= IMPLICIT METHODS =#
-
 function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
     uⱼ = uₒ
     for j = 1:maxIT
@@ -205,8 +205,6 @@ function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Floa
     uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary)
     return uⱼ
 end
-
-
 
 
 #= SUPPORT =#
@@ -269,7 +267,7 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     return xₖ
 end
 
-function conj_grad(b,uⱼ,RHS,nx,ny,Δx,x,Δy,y,Δt,t,k,Hx,Hy;order=2,tol=1e-5,maxIT=10)
+function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,x::Vector,Δy::Float64,y::Vector,Δt::Float64,t::Float64,kx,ky,Hx,Hy;order=2,tol=1e-5,maxIT=10)
     xₖ = zeros(length(b)) #Initial guess
     rₖ = A(uⱼ,RHS,n,Δx,Δt,k,t,x,order=order) - b
     dₖ = -rₖ
