@@ -49,7 +49,6 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 
     # Initialise solution
     soln = solution(u₀,x,Δx,t_f,Δt,method)
-
     # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
 
@@ -134,39 +133,40 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 
-function time_solver(PDE::Function,u₀::Function,nx,ny,Δx,Δy,x,y,Δt,kx,ky,boundary_x::Symbol,boundary_y::Symbol;method=:euler,order=2)
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;method=:euler,order_x=2,order_y=order_x)
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
-    u = zeros(Float64,ny,nx,N)
+    u = zeros(Float64,nx,ny,N)
     for i = 1:nx
         for j = 1:ny
-            u[i,j,1] = u₀.(x,y)
+            u[i,j,1] = u₀(x[i],y[j])
         end
     end
 
 
     if method != :cgie
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
-            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order=order)
-
+            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             for i = 1:ny #x boundaries
-                uₓₓ[i,1:order] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx)
-                uₓₓ[i,end-order+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx)
+                uₓₓ[i,1:order] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx,order=order_x)
+                uₓₓ[i,end-order+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx,order=order_x)
             end
             for i = 1:nx
-                uₓₓ[1:order,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky)
-                uₓₓ[end-order+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky)
+                uₓₓ[1:order,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky,order=order_y)
+                uₓₓ[end-order+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky,order=order_y)
             end
             return uₓₓ
         end
     end
     
     if method == :euler
-        t = i*Δt
-        u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
+        for i = 1:N-1
+            t = i*Δt
+            u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
+        end
     end
-
+    return u
 end
 
 
@@ -180,7 +180,7 @@ function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float
 end
 function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Vector,ky::Vector,gx,gy)
     # Simple forward euler method
-    uₙ = uₒ + Δt*RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    uₙ = uₒ + Δt*RHS(uₙ,uₒ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return uₙ
 end
 
