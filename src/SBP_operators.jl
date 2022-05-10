@@ -12,6 +12,6 @@ module SBP_operators
 
 
     # Export the functions for direct user interaction
-    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!, SAT_left, SAT_right, Periodic, Split_domain, time_solver
+    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!, SAT_left, SAT_right, SAT_Periodic, Split_domain, time_solver
 
 end # module

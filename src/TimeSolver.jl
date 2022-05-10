@@ -29,7 +29,17 @@ mutable struct solution
     end
 end
 
+struct grid
+    x   :: Array{Float64}
+    Δx  :: Float64
+    n   :: Int64
 
+    function grid(𝒟,n)
+        Δx = (𝒟[2] - 𝒟[1])/(n-1)
+        x = collect(range(𝒟[1],𝒟[2],step=Δx))
+        new(x,Δx,n)
+    end
+end
 
 """
     time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
@@ -47,8 +57,15 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             # Combines the PDE and SATs (forcing term included)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
-            uₓₓ[1:order] .+= SAT_left(boundary_left,u,Δx,g(t),c=k,order=order)
-            uₓₓ[end-order+1:end] .+= SAT_right(boundary_right,u,Δx,g(t),c=k,order=order)
+
+            if boundary_left != :Periodic
+                uₓₓ[1:order] .+= SAT_left(boundary_left,u,Δx,g(t),c=k,order=order)
+                uₓₓ[end-order+1:end] .+= SAT_right(boundary_right,u,Δx,g(t),c=k,order=order)
+            else
+                SATₗ,SATᵣ = SAT_Periodic(u,Δx,k,order=order)
+                uₓₓ[1:order] += SATₗ
+                uₓₓ[end-order+1:end] += SATᵣ
+            end
             return uₓₓ
         end
     end
@@ -117,8 +134,40 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 
-# function time_solver(u,PDE,SAT,nx,ny,Δx,Δy,x,y,Δt,k,boundary_x,boundary_y;method=:euler,order=2,maxIT=5)
-# end
+function time_solver(PDE::Function,u₀::Function,nx,ny,Δx,Δy,x,y,Δt,kx,ky,boundary_x::Symbol,boundary_y::Symbol;method=:euler,order=2)
+
+    # Preallocate and set initial
+    N = ceil(Int64,t_f/Δt)
+    u = zeros(Float64,ny,nx,N)
+    for i = 1:nx
+        for j = 1:ny
+            u[i,j,1] = u₀.(x,y)
+        end
+    end
+
+
+    if method != :cgie
+        function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order=order)
+
+            for i = 1:ny #x boundaries
+                uₓₓ[i,1:order] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx)
+                uₓₓ[i,end-order+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx)
+            end
+            for i = 1:nx
+                uₓₓ[1:order,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky)
+                uₓₓ[end-order+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky)
+            end
+            return uₓₓ
+        end
+    end
+    
+    if method == :euler
+        t = i*Δt
+        u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
+    end
+
+end
 
 
 
@@ -129,6 +178,12 @@ function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
     return uₙ
 end
+function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Vector,ky::Vector,gx,gy)
+    # Simple forward euler method
+    uₙ = uₒ + Δt*RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    return uₙ
+end
+
 
 function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
     k1 = RHS(uₙ,uₒ        ,n,x,Δx,t,Δt,k,       boundary)
