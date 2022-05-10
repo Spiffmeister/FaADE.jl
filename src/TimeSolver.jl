@@ -46,6 +46,7 @@ end
 """
 function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;
     boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false)
+    #===== 1D TIME SOLVER =====#
 
     # Initialise solution
     soln = solution(u₀,x,Δx,t_f,Δt,method)
@@ -132,8 +133,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     return soln
 end
 
-
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;method=:euler,order_x=2,order_y=order_x)
+    #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
@@ -143,6 +144,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             u[i,j,1] = u₀(x[i],y[j])
         end
     end
+    u[:,1,:]  .= gx(0)[1]
+    u[:,end,1].= gx(0)[end]
+    u[1,:,:]  .= gy(0)[1]
+    u[end,:,:].= gy(0)[end]
 
 
     if method != :cgie
@@ -166,8 +171,39 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
         end
     elseif method == :cgie
+        maxIT == -1 ? maxIT = 15 : nothing
+
+        function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,order_x=order_x,order_y=order_y)
+            for i = 1:ny
+                SATₗ, = SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
+                SATᵣ, = SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
+                uₓₓ[i,1:order_x] += SATₗ
+                uₓₓ[i,end-order_x+1:end] += SATᵣ
+            end
+            for i = 1:nx
+                SATₗ, = SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
+                SATᵣ, = SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
+                uₓₓ[1:order_y,i] += SATₗ
+                uₓₓ[end-order_y+1:end,i] += SATᵣ
+            end
+            return uₓₓ
+        end
+
+        if order == 2
+            Hx = ones(nx)
+            Hy = ones(ny)
+            Hx[1] = Hx[end] = 0.5
+            Hy[1] = Hy[end] = 0.5
+        else
+            error("order must be 2 ATM")
+        end
+        Hx *= Δx
+        Hy *= Δy
         for i = 1:N-1
             t = i*Δt
+            uⱼ = u[:,:,i]
+            u[:,:,i+1] = conj_grad(uⱼ,uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y,Hx,Hy,tol=1e-5,maxIT=20)
         end
     end
     return u
@@ -214,11 +250,10 @@ function A(uⱼ,PDE::Function,n,Δx,x,Δt,t,k,g)
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
-
-function A(uⱼ,PDE::Function,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y)
+function A(uⱼ,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
-    tmp = uⱼ
-    tmp -= Δt*PDE(tmp,uⱼ,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y)
+    tmp = zeros(size(uⱼ))
+    tmp -= Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return tmp
 end
 
@@ -227,7 +262,6 @@ function innerH(u::Vector,H::Array,v::Vector)
     # H inner product for 1D problems
     return dot(u,H*v)
 end
-
 function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     # H inner product for 2D problems
     nx,ny = size(u)
@@ -266,25 +300,25 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     end
     return xₖ
 end
-
-function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,x::Vector,Δy::Float64,y::Vector,Δt::Float64,t::Float64,kx,ky,Hx,Hy;order=2,tol=1e-5,maxIT=10)
+function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx,ky,Hx,Hy;tol=1e-5,maxIT=10,warnings=false)
+    # MATRIX FORM
     xₖ = zeros(length(b)) #Initial guess
-    rₖ = A(uⱼ,RHS,n,Δx,Δt,k,t,x,order=order) - b
+    rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
     dₖ = -rₖ
     i = 0
     rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
     while (rnorm > tol) & (i < maxIT)
-        Adₖ = A(dₖ,RHS,nx,ny,Δx,x,Δy,y,Δt,t,k,boundary_x,boundary_y,order=order)
+        Adₖ = A(dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
         dₖAdₖ = innerH(dₖ,H,Adₖ)
         αₖ = -innerH(rₖ,H,dₖ)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
-        rₖ = A(xₖ,RHS,n,Δx,Δt,k,t,x,order=order) - b
-        βₖ = innerH(rₖ,H,A(rₖ,RHS,n,Δx,Δt,k,t,x,order=order))/dₖAdₖ
+        rₖ = A(xₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
+        βₖ = innerH(rₖ,H,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy))/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
         rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
         i += 1
     end
-    if (norm(rₖ)>tol)
+    if (norm(rₖ)>tol) & warnings
         warnstr = string("CG did not converge at t=",t)
         @warn warnstr
     end
