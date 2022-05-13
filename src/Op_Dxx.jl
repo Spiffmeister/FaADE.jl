@@ -24,11 +24,11 @@ function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64,c::Matrix{F
     # Multidimensional call for 2nd derivative SBP operator
     
     uₓₓ = zeros(Float64,nx,ny)
-    if dim == 1
+    if dim == 1 #y derivatives
         for i = 1:nx
             uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δx,order=order)
         end
-    elseif dim == 2
+    elseif dim == 2 #x derivatives
         for i = 1:ny
             uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δx,order=order)
         end
@@ -50,7 +50,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         # uₓₓ[n] = c[n]*(u[n] - 2*u[n-1] + u[n-2]);
 
         for j = 2:n-1
-            @inbounds uₓₓ[j] = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
+            uₓₓ[j] = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
         end
         uₓₓ[1] = 0.0
         uₓₓ[n] = 0.0
@@ -65,7 +65,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n])
 
         for j = 5:n-4
-            @inbounds uₓₓ[j] = (-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
+            uₓₓ[j] = (-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
                 (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
                 (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
                 (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
@@ -195,7 +195,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         Bₙuₓ = c[n]/Δx*(1.582533518939116*u[n] - 2.033378678700676*u[n-1] + 0.141512858744873*u[n-2] + 0.450398306578272*u[n-3] - 0.104488069284042*u[n-4] - 0.036577936277544*u[n-5])
 
         for j = 6:n-5
-            @inbounds uₓₓ[j] = (c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
+            uₓₓ[j] = (c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
                 (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
                 (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
                 (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 

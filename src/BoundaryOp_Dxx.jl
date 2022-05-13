@@ -138,13 +138,14 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,p
     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     SAT[1] += τ * u[1] 
     SAT .+= α * c[1] * Dᵀu[1:order]
+
     
     # Forcing terms
     F = zeros(Float64,order)
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
     F[1] += -τ*g[1]
     F .+= -α * c[1] * Dᵀf[1:order]
-
+    
     return SAT, F
 end
 
@@ -173,14 +174,14 @@ function Dirichlet_penalties(Δx::Float64,order::Int64;penalty::Vector{Float64}=
     h = hval(order)
     α,τ = penalty
 
-    # if α == -1.0
-    #     α = 1.0 * (h * Δx)^-1
-    # end
+    if α == -1.0
+        α = 1.0 * (h * Δx)^-1
+    end
 
-    # if τ == -1.0
-    #     τ = 1.0
-    #     τ = -(1.0 + τ) * (h * Δx)^-2
-    # end
+    if τ == -1.0
+        τ = 1.0
+        τ = -(1.0 + τ) * (h * Δx)^-2
+    end
 
     return α, τ
 end
@@ -275,8 +276,6 @@ end
 #=
 ====================== Periodic boundary conditions ======================
 =#
-
-
 function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2,seperate_forcing::Bool=false)
 
     # Get h value
@@ -341,8 +340,6 @@ end
 #=
 ====================== Interface boundary ======================
 =#
-
-
 function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,seperate_forcing::Bool=false)
 
     h⁻ = hval(order⁻)

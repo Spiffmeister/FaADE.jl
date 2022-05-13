@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+pyplot()
 
 using Pkg
 Pkg.activate(".")
@@ -29,7 +29,7 @@ N = ceil(Int64,t_f/Δt)
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g(t) = [0.0, 0.0]
+g(t) = [0.0, 1.0]
 
 order = 2
 method = :euler
@@ -38,7 +38,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Periodic,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Dirichlet,method=method,order=order)
 
 
 ###

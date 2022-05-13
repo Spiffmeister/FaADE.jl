@@ -52,6 +52,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     soln = solution(u₀,x,Δx,t_f,Δt,method)
     # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
+    soln.u[1,1] = boundary(0)[1]
+    soln.u[end,1] = boundary(0)[end]
 
     if method != :cgie # Not using conjugate gradient
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
@@ -97,10 +99,16 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         end
         function cgRHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
-            SATₗ, = SAT_left(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
-            SATᵣ, = SAT_right(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
-            uₓₓ[1:order] += SATₗ
-            uₓₓ[end-order+1:end] += SATᵣ
+            if boundary_left != :Periodic
+                SATₗ, = SAT_left(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
+                SATᵣ, = SAT_right(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
+                uₓₓ[1:order] += SATₗ
+                uₓₓ[end-order+1:end] += SATᵣ
+            else
+                SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order)
+                uₓₓ[1:order] += SATₗ
+                uₓₓ[end-order+1:end] += SATᵣ
+            end
             return uₓₓ
         end
 
@@ -120,8 +128,12 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         for i = 1:N-1
             t = i*Δt
             uⱼ = soln.u[:,i]
-            SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
-            SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+            if boundary_left != :Periodic
+                SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+                SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+            else
+                SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ,Δx,k,order=order,seperate_forcing=true)
+            end
             uⱼ[1:order] += Δt*Fₗ
             uⱼ[end-order+1:end] += Δt*Fᵣ
             soln.u[:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,n,Δx,Δt,k,t,x,H,boundary;tol=1e-5,maxIT=20)
@@ -144,22 +156,24 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             u[i,j,1] = u₀(x[i],y[j])
         end
     end
-    u[:,1,:]  .= gx(0)[1]
-    u[:,end,1].= gx(0)[end]
-    u[1,:,:]  .= gy(0)[1]
-    u[end,:,:].= gy(0)[end]
-
-
-    if method != :cgie
+    # u[2:end-1,1,1]  .= gx(0)[1]
+    # u[2:end-1,end,1].= gx(0)[end]
+    # u[1,2:end-1,1]  .= gy(0)[1]
+    # u[end,2:end-1,1].= gy(0)[end]
+    if method != :cgie #Not using CG
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             for i = 1:ny #x boundaries
-                uₓₓ[i,1:order_x] += SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
-                uₓₓ[i,end-order_x+1:end] += SAT_right(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
+                SATₗ = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x)
+                SATᵣ = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x)
+                uₓₓ[1:order_x,i] += SATₗ
+                uₓₓ[end-order_x+1:end,i] += SATᵣ
             end
-            for i = 1:nx
-                uₓₓ[1:order_y,i] += SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
-                uₓₓ[end-order_y+1:end,i] += SAT_right(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
+            for i = 1:nx #y boundaries
+                SATₗ = SAT_left(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y)
+                SATᵣ = SAT_right(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y)
+                uₓₓ[i,1:order_y] += SATₗ
+                uₓₓ[i,end-order_y+1:end] += SATᵣ
             end
             return uₓₓ
         end
@@ -169,6 +183,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         for i = 1:N-1
             t = i*Δt
             u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+        end
+    elseif method == :impliciteuler
+        for i = 1:N-1
+            t = i*Δt
+            u[:,:,i+1] = implicit_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,Δx,Δy,Δt,kx,ky,t,x,y,gx,gy)
         end
     elseif method == :cgie
         maxIT == -1 ? maxIT = 15 : nothing
@@ -241,6 +260,15 @@ function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Floa
     uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary)
     return uⱼ
 end
+function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,Δy::Float64,Δt::Float64,kx::Matrix,ky::Matrix,t::Float64,x::Vector,y::Vector,boundary_x,boundary_y;maxIT::Int=100,α::Float64=1.5)
+    uⱼ = uₒ
+    for j = 1:maxIT
+        uⱼ = uⱼ - α * Δt * (uⱼ - uₒ - Δt*RHS(uₙ,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y))
+    end
+    uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
+    return uⱼ
+end
+    
 
 
 #= SUPPORT =#
