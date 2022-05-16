@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
 
 using Pkg
 Pkg.activate(".")
@@ -28,8 +28,8 @@ x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
-kx = zeros(Float64,nx,ny) .+ 2.0
-ky = zeros(Float64,nx,ny) .+ 2.0
+kx = zeros(Float64,nx,ny) .+ 1.0
+ky = zeros(Float64,nx,ny) .+ 1.0
 
 Δt = 0.1 * min(Δx^2,Δy^2)
 t_f = 100Δt
@@ -41,7 +41,7 @@ gx(t) = [0.0, 1.0]
 gy(t) = [0.0, 0.0]
 
 order = 2
-method = :euler
+method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 

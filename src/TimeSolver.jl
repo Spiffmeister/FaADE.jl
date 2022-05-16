@@ -100,8 +100,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         function cgRHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
             if boundary_left != :Periodic
-                SATₗ, = SAT_left(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
-                SATᵣ, = SAT_right(boundary_left,u,Δx,g(t),order=order,seperate_forcing=true)
+                SATₗ, = SAT_left(boundary_left,u,Δx,g(t),order=order,separate_forcing=true)
+                SATᵣ, = SAT_right(boundary_left,u,Δx,g(t),order=order,separate_forcing=true)
                 uₓₓ[1:order] += SATₗ
                 uₓₓ[end-order+1:end] += SATᵣ
             else
@@ -129,10 +129,10 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
             t = i*Δt
             uⱼ = soln.u[:,i]
             if boundary_left != :Periodic
-                SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
-                SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,seperate_forcing=true)
+                SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
+                SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
             else
-                SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ,Δx,k,order=order,seperate_forcing=true)
+                SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ,Δx,k,order=order,separate_forcing=true)
             end
             uⱼ[1:order] += Δt*Fₗ
             uⱼ[end-order+1:end] += Δt*Fᵣ
@@ -145,7 +145,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     return soln
 end
 
-function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;method=:euler,order_x=2,order_y=order_x)
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
+    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -164,8 +165,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             for i = 1:ny #x boundaries
-                SATₗ = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x)
-                SATᵣ = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x)
+                SATₗ = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x)
+                SATᵣ = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x)
                 uₓₓ[1:order_x,i] += SATₗ
                 uₓₓ[end-order_x+1:end,i] += SATᵣ
             end
@@ -193,23 +194,23 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         maxIT == -1 ? maxIT = 15 : nothing
 
         function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
-            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,order_x=order_x,order_y=order_y)
+            uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             for i = 1:ny
-                SATₗ, = SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
-                SATᵣ, = SAT_left(boundary_x,u[i,:],Δx,gx(t),c=kx[i,:],order=order_x)
-                uₓₓ[i,1:order_x] += SATₗ
-                uₓₓ[i,end-order_x+1:end] += SATᵣ
+                SATₗ, = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
+                SATᵣ, = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
+                uₓₓ[1:order_x,i] += SATₗ
+                uₓₓ[end-order_x+1:end,i] += SATᵣ
             end
             for i = 1:nx
-                SATₗ, = SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
-                SATᵣ, = SAT_left(boundary_y,u[:,i],Δy,gy(t),c=ky[:,i],order=order_y)
-                uₓₓ[1:order_y,i] += SATₗ
-                uₓₓ[end-order_y+1:end,i] += SATᵣ
+                SATₗ, = SAT_left(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                SATᵣ, = SAT_right(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                uₓₓ[i,1:order_y] += SATₗ
+                uₓₓ[i,end-order_y+1:end] += SATᵣ
             end
             return uₓₓ
         end
 
-        if order == 2
+        if order_x == 2
             Hx = ones(nx)
             Hy = ones(ny)
             Hx[1] = Hx[end] = 0.5
@@ -222,7 +223,19 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         for i = 1:N-1
             t = i*Δt
             uⱼ = u[:,:,i]
-            u[:,:,i+1] = conj_grad(uⱼ,uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y,Hx,Hy,tol=1e-5,maxIT=20)
+            for i = 1:ny
+                SATx,Fₗ = SAT_left(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
+                SATx,Fᵣ = SAT_right(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
+                uⱼ[1:order_x,i] += Δt*Fₗ
+                uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
+            end
+            for i = 1:nx
+                SATy,Fₗ = SAT_left(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                SATy,Fᵣ = SAT_right(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                uⱼ[i,1:order_y] += Δt*Fₗ
+                uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
+            end
+            u[:,:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=1e-5,maxIT=20)
         end
     end
     return u
@@ -281,7 +294,7 @@ end
 function A(uⱼ,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
     tmp = zeros(size(uⱼ))
-    tmp -= Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return tmp
 end
 
@@ -328,20 +341,20 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     end
     return xₖ
 end
-function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx,ky,Hx,Hy;tol=1e-5,maxIT=10,warnings=false)
+function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64};tol=1e-5,maxIT=10,warnings=false)
     # MATRIX FORM
-    xₖ = zeros(length(b)) #Initial guess
+    xₖ = zeros(size(b)) #Initial guess
     rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
     dₖ = -rₖ
     i = 0
     rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
     while (rnorm > tol) & (i < maxIT)
         Adₖ = A(dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
-        dₖAdₖ = innerH(dₖ,H,Adₖ)
-        αₖ = -innerH(rₖ,H,dₖ)/dₖAdₖ
+        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ)
+        αₖ = -innerH(rₖ,Hx,Hy,dₖ)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
         rₖ = A(xₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
-        βₖ = innerH(rₖ,H,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy))/dₖAdₖ
+        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy))/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
         rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
         i += 1

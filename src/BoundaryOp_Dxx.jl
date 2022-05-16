@@ -4,9 +4,9 @@
 
 
 """
-    SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ=[1.0,1.0],seperate_forcing=false)
+    SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ=[1.0,1.0],separate_forcing=false)
 
-Returns the left SAT+Forcing term as a vector or SAT and Forcing term as seperate vectors
+Returns the left SAT+Forcing term as a vector or SAT and Forcing term as separate vectors
 
 Inputs: 
 - type: :Dirichlet, :Neumann, :Robin
@@ -18,14 +18,14 @@ Optional inputs:
 - coefficient: c in ∂ₓ(c∂ₓu)
     c=1.0 (default) integer for
 - αβ: [α,β] Robin boundary coefficient αdₓu + βu = f
-- seperate_forcing: true, false (default) -- controls the return type.
+- separate_forcing: true, false (default) -- controls the return type.
     false; returns a single vector of the SAT
     true; returns SAT and F(orcing) vectors individually
 
 For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
 function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;
-    order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
+    order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     if type == :Dirichlet # Dirichlet boundaries
         # Ensure coefficient is correct type
         if typeof(c) <: Float64
@@ -49,8 +49,8 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;
     else
         error("Must specify either :Dirichlet, :Neumann or :Robin. For periodic boundaries use the SAT_Periodic() function")
     end
-    
-    if !seperate_forcing # If the forcing term is part of the SAT
+
+    if !separate_forcing # If the forcing term is part of the SAT
         SAT += F
         return SAT
     else
@@ -60,19 +60,19 @@ end
 
 
 function SAT_left(type::Symbol,u::Matrix{Float64},Δx::Float64,Δy::Float64,nx::Int64,ny::Int64,g,dim;
-    order::Int64=2,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],seperate_forcing::Bool=false)
+    order::Int64=2,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     # Matrix variant of SAT_left
     if dim == 1
         SAT = zeros(Float64,ny,order)
         F = zeros(Float64,ny,order)
         for i = 1:ny
-            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δx,g,order=order,c=c,αβ=αβ,seperate_forcing=seperate_forcing)
+            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δx,g,order=order,c=c,αβ=αβ,separate_forcing=separate_forcing)
         end
     elseif dim == 2
         SAT = zeros(Float64,nx,order)
         F = zeros(Float64,nx,order)
         for i = 1:nx
-            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δy,g,order=order,c=c,αβ=αβ,seperate_forcing=seperate_forcing)
+            SAT[i,:],F[i,:] = SAT_left(type=type,u[i,:],Δy,g,order=order,c=c,αβ=αβ,separate_forcing=separate_forcing)
         end
     end
     SAT += F
@@ -81,7 +81,7 @@ end
 
 
 
-function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order::Int=2,c::Union{Float64,Vector{Float64}}=1.0,a::Float64=1.0,b::Float64=1.0,seperate_forcing=false)
+function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order::Int=2,c::Union{Float64,Vector{Float64}}=1.0,a::Float64=1.0,b::Float64=1.0,separate_forcing=false)
 
     # Right side SAT
     if type == :Dirichlet
@@ -110,7 +110,7 @@ function SAT_right(type::Symbol,u::Vector{Float64},Δx::Float64,g;order::Int=2,c
         error("Must specify either :Dirichlet, :Neumann or :Robin. For :Periodic use the SAT_Periodic() function")
     end
 
-    if !seperate_forcing
+    if !separate_forcing
         # If the forcing term is part of the SAT (i.e. not using GC method)
         SAT += F
         return SAT
@@ -276,7 +276,7 @@ end
 #=
 ====================== Periodic boundary conditions ======================
 =#
-function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2,seperate_forcing::Bool=false)
+function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2,separate_forcing::Bool=false)
 
     # Get h value
     h = hval(order)
@@ -325,7 +325,7 @@ function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::
     # F[1] += α₀ * -c[end]*Du[end]
     # F[end] += α₀ * c[1]*Du[1]
 
-    if !seperate_forcing
+    if !separate_forcing
         SAT[1:order] += F[1:order]
         SAT[order+1:end] += F[order+1:end]
         return SAT[1:order], SAT[order+1:end]
@@ -340,7 +340,7 @@ end
 #=
 ====================== Interface boundary ======================
 =#
-function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,seperate_forcing::Bool=false)
+function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
 
     h⁻ = hval(order⁻)
     h⁺ = hval(order⁺)
@@ -388,7 +388,7 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
     SAT⁺ = SAT[order⁻+1:end]
 
 
-    if !seperate_forcing
+    if !separate_forcing
         SAT⁻ += F[1:order⁻]
         SAT⁺ += F[order⁻+1:end]
         return SAT⁻, SAT⁺

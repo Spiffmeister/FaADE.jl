@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
 
 using Pkg
 Pkg.activate(".")
@@ -32,7 +32,7 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 g(t) = [0.0, 1.0]
 
 order = 2
-method = :euler
+method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
