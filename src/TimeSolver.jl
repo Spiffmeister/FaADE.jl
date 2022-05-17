@@ -52,6 +52,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     soln = solution(u₀,x,Δx,t_f,Δt,method)
     # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
+
     soln.u[1,1] = boundary(0)[1]
     soln.u[end,1] = boundary(0)[end]
 
@@ -105,7 +106,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
                 uₓₓ[1:order] += SATₗ
                 uₓₓ[end-order+1:end] += SATᵣ
             else
-                SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order)
+                SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order,separate_forcing=true)
                 uₓₓ[1:order] += SATₗ
                 uₓₓ[end-order+1:end] += SATᵣ
             end
@@ -195,17 +196,33 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
 
         function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
-            for i = 1:ny
-                SATₗ, = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
-                SATᵣ, = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
-                uₓₓ[1:order_x,i] += SATₗ
-                uₓₓ[end-order_x+1:end,i] += SATᵣ
+            if boundary_x != :Periodic
+                for i = 1:ny
+                    SATₗ, = SAT_left(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x,separate_forcing=true)
+                    SATᵣ, = SAT_right(boundary_x,u[:,i],Δx,gx(t),c=kx[:,i],order=order_x,separate_forcing=true)
+                    uₓₓ[1:order_x,i] += SATₗ
+                    uₓₓ[end-order_x+1:end,i] += SATᵣ
+                end
+            else
+                for i = 1:ny
+                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(u[:,i],Δx,kx[:,i],order=order_x,separate_forcing=true)
+                    u[1:order_x,i] += SATₗ
+                    u[end-order_x+1:end,i] += SATᵣ
+                end
             end
-            for i = 1:nx
-                SATₗ, = SAT_left(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
-                SATᵣ, = SAT_right(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
-                uₓₓ[i,1:order_y] += SATₗ
-                uₓₓ[i,end-order_y+1:end] += SATᵣ
+            if boundary_y != :Periodic
+                for i = 1:nx
+                    SATₗ, = SAT_left(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                    SATᵣ, = SAT_right(boundary_y,u[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                    uₓₓ[i,1:order_y] += SATₗ
+                    uₓₓ[i,end-order_y+1:end] += SATᵣ
+                end
+            else
+                for i = 1:nx
+                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(u[i,:],Δy,ky[i,:],order=order_y,separate_forcing=true)
+                    u[i,1:order_y] += SATₗ
+                    u[i,end-order_y+1:end] += SATᵣ
+                end
             end
             return uₓₓ
         end
@@ -223,18 +240,37 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         for i = 1:N-1
             t = i*Δt
             uⱼ = u[:,:,i]
-            for i = 1:ny
-                SATx,Fₗ = SAT_left(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
-                SATx,Fᵣ = SAT_right(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[i,:],order=order_x,separate_forcing=true)
-                uⱼ[1:order_x,i] += Δt*Fₗ
-                uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
+            if boundary_x != :Periodic
+                for i = 1:ny
+                    SATx,Fₗ = SAT_left(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[:,i],order=order_x,separate_forcing=true)
+                    SATx,Fᵣ = SAT_right(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[:,i],order=order_x,separate_forcing=true)
+                    uⱼ[1:order_x,i] += Δt*Fₗ
+                    uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
+                end
+            else
+                for i = 1:ny
+                    println("x",i)
+                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ[:,i],Δx,kx[i,:],order=order_x,separate_forcing=true)
+                    uⱼ[1:order_x,i] += Δt*Fₗ
+                    uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
+                end
             end
-            for i = 1:nx
-                SATy,Fₗ = SAT_left(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
-                SATy,Fᵣ = SAT_right(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
-                uⱼ[i,1:order_y] += Δt*Fₗ
-                uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
+            if boundary_y != :Periodic
+                for i = 1:nx
+                    SATy,Fₗ = SAT_left(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                    SATy,Fᵣ = SAT_right(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
+                    uⱼ[i,1:order_y] += Δt*Fₗ
+                    uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
+                end
+            else
+                for i = 1:nx
+                    println("y",i)
+                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ[i,:],Δy,ky[i,:],order=order_y,separate_forcing=true)
+                    uⱼ[i,1:order_y] += Δt*Fₗ
+                    uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
+                end
             end
+            println("t",i)
             u[:,:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=1e-5,maxIT=20)
         end
     end
