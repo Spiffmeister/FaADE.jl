@@ -286,7 +286,6 @@ function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::
     τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
     τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h * Δx) # Dirichlet penalty
 
-    
     SAT = zeros(Float64,2order)
     F = zeros(Float64,2order)
 

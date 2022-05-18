@@ -32,7 +32,7 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 g(t) = [0.0, 0.0]
 
 order = 2
-method = :cgie
+method = :impliciteuler
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
@@ -43,7 +43,7 @@ soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Periodic,method=
 
 ###
 anim = @animate for i=1:N
-    plot(soln.x,soln.u[:,i],label="t=$(@sprintf("%.5f",i*Δt))")
+    plot(soln.x,soln.u[:,i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.,1.))
 end
 
 gif(anim,"yes.gif",fps=50)
