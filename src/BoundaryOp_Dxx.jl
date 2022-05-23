@@ -284,53 +284,31 @@ function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::
     # Penalties
     α₀ = 0.5/(h * Δx) # Derivative penatly
     τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
-    τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h * Δx) # Dirichlet penalty
+    τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h*Δx) # Dirichlet penalty
 
     SAT = zeros(Float64,2order)
-    F = zeros(Float64,2order)
 
     # Dirichlet terms
-    SAT[1] = τ₀ * (u[1])
-    SAT[end] = τ₀ * (u[end])
-
-    F[1] = -τ₀*u[end]
-    F[end] = -τ₀*u[1]
+    SAT[1] += τ₀ * (u[1] - u[end])
+    SAT[end] += τ₀ * (u[end] - u[1])
 
     # Symmeteriser
     L₁u = zeros(Float64,2order)
-    L₁f = zeros(Float64,2order)
     
     L₁u[1] = (u[1] - u[end])
     L₁u[end] = (u[1] - u[end])
-
-    L₁f[1] = -u[end]
-    L₁f[end] = u[end]
-
+    
     Dᵀu = boundary_Dₓᵀ(L₁u,Δx,order)
-    # Dᵀf = boundary_Dₓᵀ(L₁f,Δx,order)
 
     SAT[1:order] += τ₁ * c[1] * Dᵀu[1:order]
     SAT[order+1:end] += -τ₁ * c[end] * Dᵀu[end-order+1:end] # negative for directional derivative
-
-    # F[1:order] += τ₁ * c[1] * Dᵀf[1:order]
-    # F[order+1:end] += τ₁ * c[end] * Dᵀf[end-order+1:end]
 
     # Neumann term
     Du = boundary_Dₓ(u,Δx,order)
     SAT[1] += α₀ * (c[1]*Du[1] - c[end]*Du[end]) # corrected for directional derivative
     SAT[end] += α₀ * (c[1]*Du[1] - c[end]*Du[end]) # corrected directional derivative
 
-
-    # F[1] += α₀ * -c[end]*Du[end]
-    # F[end] += α₀ * c[1]*Du[1]
-
-    if !separate_forcing
-        SAT[1:order] += F[1:order]
-        SAT[order+1:end] += F[order+1:end]
-        return SAT[1:order], SAT[order+1:end]
-    else
-        return SAT[1:order], SAT[order+1:end], F[1:order], F[order+1:end]
-    end
+    return SAT[1:order], SAT[order+1:end]
 
 end
 

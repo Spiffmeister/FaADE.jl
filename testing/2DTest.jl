@@ -11,7 +11,7 @@ using SBP_operators
 ###
 function rate(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky;order_x=2,order_y=2)
     uₓₓ = zeros(Float64,nx,ny)
-    uₓₓ = Dₓₓ(u,nx,ny,Δx,kx,dim=1,order=order_x) + Dₓₓ(u,nx,ny,Δy,ky,dim=2,order=order_y)
+    uₓₓ = Dₓₓ(u,nx,ny,Δy,ky,dim=1,order=order_y) + Dₓₓ(u,nx,ny,Δx,kx,dim=2,order=order_x)
     return uₓₓ
 end
 
@@ -32,7 +32,7 @@ kx = zeros(Float64,nx,ny) .+ 1.0
 ky = zeros(Float64,nx,ny) .+ 1.0
 
 Δt = 0.1 * min(Δx^2,Δy^2)
-t_f = 500Δt
+t_f = 200Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
@@ -40,29 +40,33 @@ u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 gx(t) = [0.0, 0.0]
 gy(t) = [0.0, 0.0]
 
-order = 2
-method = :impliciteuler
+order = 6
+method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Periodic,method=method,order_x=order,order_y=order)
+@time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order)
 
 ###
-@time anim = @animate for i=1:5:N
+
+skip = 1
+fps = 20
+
+@time anim = @animate for i=1:skip:N
     surface(u[:,:,i]',label="t=$(@sprintf("%.5f",i*Δt))",zlims=(-0.3,1.3),xlabel="x",ylabel="y",camera=(20+5*cos(200*π*i*Δt),50))
 end
 
-gif(anim,"yes.gif",fps=20)
+gif(anim,"yes.gif",fps=fps)
 
 
 ###
-@time anim = @animate for i=1:5:N
+@time anim = @animate for i=1:skip:N
     plot(u[25,:,i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.0,1.0))
 end
 
-gif(anim,"yes2.gif",fps=5)
+gif(anim,"yes2.gif",fps=fps)
 #=
 anim = @animate for i = 1:1:N
     l = @layout [a b; c d]

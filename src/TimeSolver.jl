@@ -158,10 +158,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             u[i,j,1] = u₀(x[i],y[j])
         end
     end
-    # u[2:end-1,1,1]  .= gx(0)[1]
-    # u[2:end-1,end,1].= gx(0)[end]
-    # u[1,2:end-1,1]  .= gy(0)[1]
-    # u[end,2:end-1,1].= gy(0)[end]
+
     if method != :cgie #Not using CG
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
@@ -221,9 +218,9 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             else
                 for i = 1:ny
-                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(u[:,i],Δx,kx[:,i],order=order_x,separate_forcing=true)
-                    u[1:order_x,i] += SATₗ
-                    u[end-order_x+1:end,i] += SATᵣ
+                    SATₗ,SATᵣ = SAT_Periodic(u[:,i],Δx,kx[:,i],order=order_x,separate_forcing=true)
+                    uₓₓ[1:order_x,i] += SATₗ
+                    uₓₓ[end-order_x+1:end,i] += SATᵣ
                 end
             end
             if boundary_y != :Periodic
@@ -235,24 +232,17 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             else
                 for i = 1:nx
-                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(u[i,:],Δy,ky[i,:],order=order_y,separate_forcing=true)
-                    u[i,1:order_y] += SATₗ
-                    u[i,end-order_y+1:end] += SATᵣ
+                    SATₗ,SATᵣ = SAT_Periodic(u[i,:],Δy,ky[i,:],order=order_y,separate_forcing=true)
+                    uₓₓ[i,1:order_y] += SATₗ
+                    uₓₓ[i,end-order_y+1:end] += SATᵣ
                 end
             end
             return uₓₓ
         end
 
-        if order_x == 2
-            Hx = ones(nx)
-            Hy = ones(ny)
-            Hx[1] = Hx[end] = 0.5
-            Hy[1] = Hy[end] = 0.5
-        else
-            error("order must be 2 ATM")
-        end
-        Hx *= Δx
-        Hy *= Δy
+        Hx = build_H(nx,order_x)*Δx
+        Hy = build_H(ny,order_y)*Δy
+
         for i = 1:N-1
             t = i*Δt
             uⱼ = u[:,:,i]
@@ -263,25 +253,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     uⱼ[1:order_x,i] += Δt*Fₗ
                     uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
                 end
-            else
-                for i = 1:ny
-                    # println("x",i)
-                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ[:,i],Δx,kx[i,:],order=order_x,separate_forcing=true)
-                    uⱼ[1:order_x,i] += Δt*Fₗ
-                    uⱼ[end-order_x+1:end,i] += Δt*Fᵣ
-                end
             end
             if boundary_y != :Periodic
                 for i = 1:nx
                     SATy,Fₗ = SAT_left(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
                     SATy,Fᵣ = SAT_right(boundary_y,uⱼ[i,:],Δy,gy(t),c=ky[i,:],order=order_y,separate_forcing=true)
-                    uⱼ[i,1:order_y] += Δt*Fₗ
-                    uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
-                end
-            else
-                for i = 1:nx
-                    # println("y",i)
-                    SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ[i,:],Δy,ky[i,:],order=order_y,separate_forcing=true)
                     uⱼ[i,1:order_y] += Δt*Fₗ
                     uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
                 end
@@ -337,6 +313,29 @@ end
 
 
 #= SUPPORT =#
+function build_H(n::Int64,order::Int64)
+    H = ones(n)
+    if order == 2
+        H[1] = H[end] = 0.5
+    elseif order == 4
+        H[1] = H[end] = 17.0/48.0
+        H[2] = H[end-1] = 59.0/48.0
+        H[3] = H[end-2] = 43.0/48.0
+        H[4] = H[end-3] = 49.0/48.0
+    elseif order == 6
+        H[1] = H[end] = 13649.0/43200.0
+        H[2] = H[end-1] = 12013.0/8640.0
+        H[3] = H[end-2] = 2711.0/4320.0
+        H[4] = H[end-3] = 5359.0/4320.0
+        H[5] = H[end-4] = 7877.0/8640.0
+        H[6] = H[end-5] = 43801.0/43200.0
+    else
+        error("Order must be 2,4 or 6")
+    end
+    return H
+end
+
+
 function A(uⱼ,PDE::Function,n,Δx,x,Δt,t,k,g)
     # tmp can be any vector of length(uⱼ)
     tmp = zeros(length(uⱼ))
@@ -358,10 +357,10 @@ end
 function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     # H inner product for 2D problems
     nx,ny = size(u)
-    tmp = 0
+    tmp = 0.0
     for i = 1:nx
         for j = 1:ny
-            tmp += u[i,j]*v[i,j]*Hx[i]*Hy[j]
+            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
         end
     end
     return tmp
