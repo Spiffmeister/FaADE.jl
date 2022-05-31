@@ -10,7 +10,7 @@ using SBP_operators
 
 ###
 function rate(uₓₓ,u,n,x,Δx,t,Δt,k;order=2)
-    uₓₓ = Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
+    uₓₓ = SBP_operators.Dₓₓt!(uₓₓ,u,k,n,Δx,order=order)
     return uₓₓ
 end
 
@@ -24,21 +24,21 @@ x = collect(range(𝒟[1],𝒟[2],step=Δx))
 k = zeros(Float64,n) .+ 1.0
 
 Δt = 0.1 * Δx^2
-t_f = 1000Δt
+t_f = 100Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
 g(t) = [0.0, 0.0]
 
-order = 2
-method = :impliciteuler
+order = 6
+method = :euler
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Periodic,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Dirichlet,method=method,order=order)
 
 
 ###

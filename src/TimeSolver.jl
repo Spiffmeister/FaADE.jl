@@ -53,8 +53,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     # Get the length of the time array
     N = ceil(Int64,t_f/Δt)
 
-    soln.u[1,1] = boundary(0)[1]
-    soln.u[end,1] = boundary(0)[end]
+    # soln.u[1,1] = boundary(0)[1]
+    # soln.u[end,1] = boundary(0)[end]
 
     if method != :cgie # Not using conjugate gradient
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
