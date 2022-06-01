@@ -147,17 +147,29 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false)
+    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
-    u = zeros(Float64,nx,ny,N)
+    soln = zeros(Float64,nx,ny,ceil(Int64,N/samplefactor))
+    uₙ = zeros(Float64,nx,ny)
+    uₒ = zeros(Float64,nx,ny)
     for i = 1:nx
         for j = 1:ny
-            u[i,j,1] = u₀(x[i],y[j])
+            uₒ[i,j] = u₀(x[i],y[j])
         end
     end
+
+    function storage!(soln,tmp,sample,k)
+        if mod(sample,samplefactor) == 0
+            soln[:,:,k] = tmp
+            k += 1
+        end
+        return soln, k
+    end
+
+    k = 1
 
     if method != :cgie #Not using CG
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
@@ -193,16 +205,20 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             return uₓₓ
         end
     end
-    
+
     if method == :euler
         for i = 1:N-1
             t = i*Δt
-            u[:,:,i+1] = forward_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+            uₙ = forward_euler(uₙ,uₒ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+            soln,k = storage!(soln,uₙ,i,k)
+            uₒ = uₙ
         end
     elseif method == :impliciteuler
         for i = 1:N-1
             t = i*Δt
             u[:,:,i+1] = implicit_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,Δx,Δy,Δt,kx,ky,t,x,y,gx,gy)
+            soln,k=storage!(soln,uₙ,i,k)
+            uₒ = uₙ
         end
     elseif method == :cgie
         maxIT == -1 ? maxIT = 15 : nothing
@@ -245,7 +261,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
 
         for i = 1:N-1
             t = i*Δt
-            uⱼ = u[:,:,i]
+            uⱼ = uₒ
             if boundary_x != :Periodic
                 for i = 1:ny
                     SATx,Fₗ = SAT_left(boundary_x,uⱼ[:,i],Δx,gx(t),c=kx[:,i],order=order_x,separate_forcing=true)
@@ -263,10 +279,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             end
             # println("t",i)
-            u[:,:,i+1] = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=1e-5,maxIT=20)
+            uₙ = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=1e-5,maxIT=20)
+            soln,k = storage!(soln,uₙ,i,k)
+            uₒ = uₙ
         end
     end
-    return u
+    return soln
 end
 
 

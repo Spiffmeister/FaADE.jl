@@ -26,11 +26,11 @@ function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64,c::Matrix{F
     uₓₓ = zeros(Float64,nx,ny)
     if dim == 1 #y derivatives
         for i = 1:nx
-            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δx,order=order)
+            uₓₓ[i,:] = Dₓₓt!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δx,order=order)
         end
     elseif dim == 2 #x derivatives
         for i = 1:ny
-            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δx,order=order)
+            uₓₓ[:,i] = Dₓₓt!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δx,order=order)
         end
     end
 
@@ -49,16 +49,19 @@ function Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64
     
     adj = floor(Int64,order/2)
 
-    for i = order:n-order
+    for i = order:n-order+1
         uₓₓ[i] = internal_Dₓₓ(u[i-adj:i+adj],c[i-adj:i+adj],Δx,order=order)
     end
 
     adj += order
 
-    uₓₓ[1:adj] = left_boundary_Dₓₓ(u[1:2order],c[1:2order],Δx,order=order)
-
-    uₓₓ[n-adj+1:n] = right_boundary_Dₓₓ(u[n-2order+1:n],c[n-2order+1:n],Δx,order=order)
-
+    if order == 2
+        uₓₓ[1] = 0.0
+        uₓₓ[n] = 0.0
+    else
+        uₓₓ[1:adj] = left_boundary_Dₓₓ(u[1:2order],c[1:2order],Δx,order=order)
+        uₓₓ[n-adj+1:n] = right_boundary_Dₓₓ(u[n-2order+1:n],c[n-2order+1:n],Δx,order=order)
+    end
 
     return uₓₓ
 end
@@ -506,8 +509,8 @@ Optional inputs:
 function left_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
 
     if order == 2
-        uₓₓ = zeros(Float64,3)
-        return uₓₓ
+        uₓₓ = zeros(Float64,1)
+        return 0.0
     elseif order == 4
         uₓₓ = zeros(Float64,6)
         
@@ -700,8 +703,8 @@ Optional inputs:
 """
 function right_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
     if order == 2
-        uₓₓ = zeros(Float64,2)
-        return uₓₓ
+        uₓₓ = zeros(Float64,1)
+        return 0.0
     elseif order == 4
         n = 8
         m = 6

@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+pyplot()
 
 using Pkg
 Pkg.activate(".")
@@ -10,7 +10,10 @@ using SBP_operators
 
 ###
 function rate(uₓₓ,u,n,x,Δx,t,Δt,k;order=2)
+    # uₓₓ = SBP_operators.Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
+    # println("yes",uₓₓ[1:10])
     uₓₓ = SBP_operators.Dₓₓt!(uₓₓ,u,k,n,Δx,order=order)
+    # println("yos",uₓₓ[1:10])
     return uₓₓ
 end
 
@@ -23,7 +26,7 @@ x = collect(range(𝒟[1],𝒟[2],step=Δx))
 
 k = zeros(Float64,n) .+ 1.0
 
-Δt = 0.1 * Δx^2
+Δt = 0.05 * Δx^2
 t_f = 100Δt
 N = ceil(Int64,t_f/Δt)
 
@@ -31,7 +34,7 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
 g(t) = [0.0, 0.0]
 
-order = 6
+order = 2
 method = :euler
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
