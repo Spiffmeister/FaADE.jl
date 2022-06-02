@@ -47,7 +47,7 @@ Call this when using distributed arrays
 """
 function Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     
-    adj = floor(Int64,order/2)
+    adj = Int64(order/2)
 
     for i = order:n-order+1
         uₓₓ[i] = internal_Dₓₓ(u[i-adj:i+adj],c[i-adj:i+adj],Δx,order=order)

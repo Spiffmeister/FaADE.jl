@@ -1,7 +1,9 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
+
+using BenchmarkTools
 
 using Pkg
 Pkg.activate(".")
@@ -29,10 +31,10 @@ y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
 kx = zeros(Float64,nx,ny) .+ 1.0
-ky = zeros(Float64,nx,ny) .+ 1.0
+ky = zeros(Float64,nx,ny) .+ 1.0e-14
 
 Δt = 1.00 * min(Δx^2,Δy^2)
-t_f = 100Δt
+t_f = 500Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
@@ -52,7 +54,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 ###
 
 skip = 1
-fps = 20
+fps = 10
 #=
 @time anim = @animate for i=1:skip:size(u)[3]
     surface(u[:,:,i]',label="t=$(@sprintf("%.5f",i*Δt))",zlims=(-0.3,1.3),xlabel="x",ylabel="y",camera=(20+5*cos(100*π*i*Δt),50))
@@ -60,14 +62,14 @@ end
 
 gif(anim,"yes.gif",fps=fps)
 
-=#
+
 ###
 @time anim = @animate for i=1:skip:size(u)[3]
     plot(u[:,25,i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.0,1.0))
 end
 
 gif(anim,"yes2.gif",fps=fps)
-#=
+
 anim = @animate for i = 1:1:N
     l = @layout [a b; c d]
     p = plot(u[1,:,i],layout=l,label="t=$(@sprintf("%.5f",i*Δt))")
