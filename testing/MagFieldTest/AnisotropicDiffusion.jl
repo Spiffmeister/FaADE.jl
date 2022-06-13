@@ -4,40 +4,9 @@ Testing
 
 ∂ₜu = ∂ₓ(k ∂ₓu) = ∂ₓk ∂ₓu + k ∂ₓ∂ₓu
 =#
-using Distributed
-
-addprocs(4)
-@everywhere using Pkg
-@everywhere Pkg.activate(".")
-@everywhere using SBP_operators
-
-@everywhere using DifferentialEquations
-
-
-
-
-
-# Initalise the things
-n = 100
-
-domain = [0,2π]
-
-x = collect(range(domain[1],domain[2],length=n))
-
-u = InitialCondition(x)
-
-struct sim
-    u   :: Matrix{Float64}  # Solution
-    x   :: Vector{Float64}  # x grid
-    y   :: Vector{Float64}  # y grid
-    xy  :: Matrix{Float64}  # xyz grid
-    Δx  :: Float64          # Spatial scale
-    Δy  :: Float64          # Spatial scale
-    Δz  :: Float64          # Spatial scale
-    Δt  :: Float64          # Time step size
-end
-
-
+Pkg.activate(".")
+using SBP_operators
+using makeplane
 
 
 
@@ -61,10 +30,6 @@ end
 
 
 
-
-
-function timesolve()
-end
 
 
 

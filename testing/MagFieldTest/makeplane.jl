@@ -2,172 +2,126 @@ module makeplane
     
 
     
-    function construct_grid(ψ,θ,nx,ny,nz,Δψ,Δθ,H,Bfield;bc=[0.,1.])
+    struct z_plane
+        # plane_data      :: Array{Float64}
+        z       :: Float64
+        x       :: Matrix{Float64}
+        y       :: Matrix{Float64}
+        B       :: Matrix{Float64}
+        xproj    :: Matrix{Int64}
+        yproj    :: Matrix{Int64}
+    end
+
+    struct grid_data
         #=
-            Domain is [0,1]×[0,2π), ψ and θ inputs zoom in on region
+        Holding grid and interpolation data
+        =#
+        # Arrays for ψ and θ grid points
+        x                   :: Array{Float64}
+        y                   :: Array{Float64}
+        # Grid size
+        Δx                  :: Float64
+        Δy                  :: Float64
+        Δz                  :: Float64
+        # Size of the grid
+        nx                   :: Int64 #x
+        ny                   :: Int64 #y
+        nz                   :: Int64 #z
+        # x and y on the z_{k+1} and z_{k-1} planes
+        z_planes            :: Vector{z_plane}
+    end
+
+
+    function construct_grid(𝒟x::Vector{Float64},𝒟y::Vector{Float64},nx::Int64,ny::Int64,nz::Int64,H::Function,params;
+        method=:nearestneighbours)
+        #=
+        Take ψ₀,θ₀ on ζ=0 plane and form backward and forward interpolation grid points
+        ψ₀ and θ₀ can be non-equidistant arrays of grid of points
+            
+            Requires: the field line Hamiltonian χ -- see FieldLines.jl for example
         =#
 
-        ψ = range(ψ[1],stop=ψ[2],length=nx)[2:end-1]
-        θ = range(θ[1],stop=θ[2],length=ny)
-        Δψ = (ψ[2]-ψ[1])
-        Δθ = (θ[2]-θ[1])
-        
-        if mnk[3] == 0
-            error("Number of planes cannot be zero.")
+        # Set step sizes
+        Δx = (𝒟x[end]-𝒟x[1])/(nx-1)
+        Δy = (𝒟y[end]-𝒟y[1])/(ny-1)
+        # Build arrays
+        x = collect(range(𝒟x[1],stop=𝒟x[2],length=nx))
+        y = collect(range(𝒟y[1],stop=𝒟y[2],length=ny))
+
+        # Perform field line tracing
+        if nz == 1
+            # Forward plane
+            z = 2π
+            planex,planey = trace(H,x,y,z,params,nx,ny)
+            xproj,yproj = nearest_neighbours(x,y,planex,planey,nx,ny)
+            zf_plane = z_plane(z,planex,planey,ones(nx,ny),xproj,yproj)
+            # Backward plane
+            z = -2π
+            planex,planey = trace(H,x,y,z,params,nx,ny)
+            xproj,yproj = nearest_neighbours(x,y,planex,planey,nx,ny)
+            zb_plane = z_plane(z,planex,planey,ones(nx,ny),xproj,yproj)
+
+            gdata = grid_data(x,y,Δx,Δy,2π,nx,ny,nz,[zf_plane,zb_plane])
         end
-        
-        Δζ = 2π #HARD CODED
 
-        #=
-            Load fns to avoid variable passing
-        =#
-        ini(pt) = internal_node_interp(pt,ψ,θ,Δψ,Δθ,m,n)
-        
-        B = zeros(m*n)
-        for i = 1:m
-            for j = 1:n
-                ind = i + (j-1)*m
-                B[ind] = norm(Bfield([ψ[i],θ[j],1.0]))
-            end
-        end
-        # Preallocate planes
-
-        ζ = 2π
-        plane = trace(H,ψ,θ,ζ,m,n)
-        f_plane = grid_interpolate(plane,ψ,bc,ζ,ini)
-        
-        ζ = -2π
-        plane = trace(H,ψ,θ,ζ,m,n)
-        b_plane = grid_interpolate(plane,ψ,bc,ζ,ini)
-
-        gdata = grid_data(ψ,θ,Δψ,Δθ,Δζ,m,n,f_plane,b_plane,B)
-
-        # Form an interpolation grid for recoving T data on
-        # Pack grid data
-        # f_plane = plane_parallel(Δζ,f_points,f_plane[2:-1:1,:],f_weights,f_modB)
-        # b_plane = plane_parallel(-Δζ,b_points,b_plane[2:-1:1,:],b_weights,b_modB)
-        
-        # rgrid = RectangleGrid(Δψ:Δψ:ψ[1]-Δψ,θ[1]:Δθ:θ[2])
-        
-        # gdata = grid_data(ψ,θ,Δψ,Δθ,m,n,f_plane,b_plane,rgrid,modB)
-        # Return points and interpolation data
         return gdata
     end
 
 
-    function trace(H,ψ,θ,ζ,m,n)
+
+    #= FIELD LINE TRACING =#
+
+    function trace(H::Function,x::Vector{Float64},y::Vector{Float64},z::Float64,params::H_params,nx::Int64,ny::Int64)
         # Returns an array of [ψ,θ] points on the desired ζ plane
-        plane = zeros(2,m*n)
-        for i = 1:m
-            for j = 1:n
-                P = ODEProblem(H,[θ[j],ψ[i]],(0.0,ζ))
-                sol = solve(P)
-                plane[:,i+(j-1)*m] = mod.(sol.u[end],2π)[[2,1]] #flip to ψ,θ
+        plane = zeros(2,nx*ny)
+        x₀ = [[θ,ψ] for θ in y for ψ in x]
+
+        function prob_fn(prob,i,repeat)
+            remake(prob,u0=x₀[i])
+        end
+        P = ODEProblem(H,x₀[1],(0.0,z),params)
+        EP = EnsembleProblem(P,prob_func=prob_fn)
+
+        # dispatch_size = floor(Int64,m*n/nworkers())
+        dispatch_size = nx*ny/nworkers()
+        isinteger(dispatch_size) ? dispatch_size += 1 : nothing
+
+        sim = solve(EP,Tsit5(),EnsembleDistributed(),trajectories=ny*nx,batch_size=floor(Int64,ny*nx/nworkers()),save_on=false,save_end=true)
+
+        for i = 1:length(sim.u)
+            plane[:,i] = mod.(sim.u[i][2:-1:1,2],2π)
+        end
+
+        planex = zeros(Float64,nx,ny)
+        planey = zeros(Float64,nx,ny)
+
+        for i = 1:length(sim.u)
+            planex[i] = mod.(sim.u[i][2,2],2π)
+            planey[i] = mod.(sim.u[i][1,2],2π)
+        end
+
+        return planex,planey
+    end
+
+
+    #= Weighting functions =#
+
+    function nearest_neighbours(x,y,trace_x,trace_y,nx,ny)
+        # Find the nearest neighbours for a set of points
+        maptox = zeros(Int64,nx,ny)
+        maptoy = zeros(Int64,nx,ny)
+        
+        for i = 1:nx
+            for j = 1:ny
+                ii = argmin(abs.(x.-trace_x[i,j]))
+                jj = argmin(abs.(y.-trace_y[i,j]))
+                maptox[i,j] = ii
+                maptoy[i,j] = jj
             end
         end
-        return plane
+
+        return maptox, maptoy
     end
-
-
-    
-
-    function grid_interpolate(plane,ψ,bc,ζ,ini)
-        ind_inner = findall(x-> ψ[1] < x < ψ[end], plane[1,:])
-        ind_exterior = collect(1:1:size(plane)[2])[filter(x->!(x in ind_inner),eachindex(ind_inner))]
-
-        # boarder_inner = 
-        # boarder_exterior = 
-
-        i_points = zeros(Int64,5,length(ind_inner)) #Need 5 to store the row# and col#'s
-        i_weights = zeros(Float64,4,length(ind_inner))
-
-        e_points = zeros(Int64,length(ind_exterior)) #only need 1 for RHS storage
-        e_weights = zeros(Float64,length(ind_exterior))
-        for i = 1:length(ind_inner)
-            i_points[1,i] = ind_inner[i]
-            i_points[2:5,i],i_weights[:,i] = ini(plane[:,ind_inner[i]])
-        end
-
-        for i = 1:length(ind_exterior)
-            # Need to convert from ind back to i,j
-            e_points[i] = ind_exterior[i]
-            # e_points[2,i] = mod1(ind_exterior[i],m)
-            if ψ[end] > plane[1,ind_exterior[i]]
-                e_weights[i] = bc[1]
-            elseif ψ[1] < plane[1,ind_exterior[i]]
-                e_weights[i] = bc[2]
-            end
-        end
-
-        return plane_parallel(ζ,plane,i_points,i_weights,e_points,e_weights,ones(size(plane)[2]))
-    end
-
-
-        
-    function internal_node_locate(pt,x,y,n)
-        # pt = [ψ,θ]
-        i₁ = findall(x-> x>=0.0, pt[1].-x)
-        i₂ = i₁ + 1
-        # Loopback on periodic
-        j₁ = mod1(findall(x->x>=0.0, pt[2].-y)[end],n)
-        j₂ = mod1(j₁ + 1,n)
-        return i₁,i₂,j₁,j₂
-    end
-
-    function internal_node_interp(pt::Vector{Float64},x::StepRangeLen,y::StepRangeLen,Δx::Float64,Δy::Float64,m::Int64,n::Int64)
-        # pt = [ψ,θ]
-        li(i,j) = LinInd(i,j,m,n)
-
-        Δ = Δx*Δy
-        i₁ = findall(x-> x>=0.0, pt[1].-x)[end]
-        i₂ = i₁ + 1
-        # Loopback on periodic
-        j₁ = mod1(findall(x->x>=0.0, pt[2].-y)[end],n)
-        j₂ = mod1(j₁ + 1,n)
-        
-        # BUILD WEIGHTS
-        x₁ = (pt[1] - x[i₁])
-
-        if i₂ <= m
-            x₂ = (x[i₂] - pt[1])
-        else
-            x₂ = (x[i₁]+Δx)-pt[1]
-        end
-        y₁ = (pt[2] - y[j₁])
-        y₂ = (y[j₂] - pt[2])
-        w₁₁ = x₂*y₂/Δ #Bottom left
-        w₂₁ = x₁*y₂/Δ #Bottom right
-        w₂₂ = x₁*y₁/Δ #Top right
-        w₁₂ = x₂*y₁/Δ #Top left
-
-        pts = [li(i₁,j₁),li(i₂,j₁),li(i₂,j₂),li(i₁,j₂)]
-        weights = [w₁₁,w₂₁,w₂₂,w₁₂]
-
-        return pts,weights
-    end
-
-    #=
-        EXTERIOR NODES
-    =#
-    function external_node_interp(ij,bc)
-        pts = [LinInd(ij[1],ij[2])]
-        weights = [bc[2]]
-        return pts, weights
-    end
-
-
-
-
-    #=
-        LINEAR INDICES
-    =#
-
-
-    function LinInd(i,j,m,n)
-        i < n ? j : j = 1
-        return i + (j-1)*m
-    end
-
 
 
 
