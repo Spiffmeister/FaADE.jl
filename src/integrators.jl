@@ -149,7 +149,7 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     tmp = 0.0
     for i = 1:nx
         for j = 1:ny
-            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
+            tmp += u[i,j]*Hx[j]*Hy[i]*v[i,j]
         end
     end
     return tmp

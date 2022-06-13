@@ -1,9 +1,9 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+pyplot()
 
-using BenchmarkTools
+# using BenchmarkTools
 
 using Pkg
 Pkg.activate(".")
@@ -22,7 +22,7 @@ end
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
 nx = 51
-ny = 51
+ny = 41
 
 Δx = 𝒟x[2]/(nx-1)
 Δy = 𝒟y[2]/(ny-1)
@@ -30,8 +30,8 @@ x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
-kx = zeros(Float64,nx,ny) .+ 1.0
-ky = zeros(Float64,nx,ny) .+ 1.0e-14
+kx = zeros(Float64,ny,nx) .+ 1.0
+ky = zeros(Float64,ny,nx) .+ 1.0e-14
 
 Δt = 1.00 * min(Δx^2,Δy^2)
 t_f = 500Δt

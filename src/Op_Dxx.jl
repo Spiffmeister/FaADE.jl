@@ -23,14 +23,14 @@ end
 function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δx::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
     
-    uₓₓ = zeros(Float64,nx,ny)
+    uₓₓ = zeros(Float64,ny,nx)
     if dim == 1 #y derivatives
         for i = 1:nx
-            uₓₓ[i,:] = Dₓₓt!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δx,order=order)
+            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],ny,Δx,order=order)
         end
     elseif dim == 2 #x derivatives
         for i = 1:ny
-            uₓₓ[:,i] = Dₓₓt!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δx,order=order)
+            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],nx,Δx,order=order)
         end
     end
 
@@ -45,7 +45,7 @@ end
     Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
 Call this when using distributed arrays
 """
-function Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     
     adj = Int64(order/2)
 
@@ -67,7 +67,7 @@ function Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64
 end
 
 
-function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓₓt!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     # Iterator for second derivative SBP operators
     
     if order == 2

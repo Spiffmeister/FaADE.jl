@@ -9,6 +9,7 @@ module SBP_operators
     include("Op_Dxx.jl")
     include("BoundaryOp_Dxx.jl")
     include("TimeSolver.jl")
+    include("integrators.jl")
 
 
     # Export the functions for direct user interaction
