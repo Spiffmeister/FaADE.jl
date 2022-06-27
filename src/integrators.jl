@@ -74,7 +74,7 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
 end
 function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64};tol=1e-5,maxIT=10,warnings=false)
     # MATRIX FORM
-    xₖ = zeros(size(b)) #Initial guess
+    xₖ = uⱼ #Initial guess
     rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
     dₖ = -rₖ
     i = 0
@@ -149,7 +149,7 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     tmp = 0.0
     for i = 1:nx
         for j = 1:ny
-            tmp += u[i,j]*Hx[j]*Hy[i]*v[i,j]
+            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
         end
     end
     return tmp
