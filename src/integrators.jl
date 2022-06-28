@@ -46,10 +46,9 @@ end
 
 
 
-
 function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
     # VECTOR FORM
-    xₖ = zeros(length(b)) #Initial guess
+    xₖ = uⱼ #Initial guess
     rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,boundary) - b
     dₖ = -rₖ
     i = 0
@@ -72,7 +71,8 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     end
     return xₖ
 end
-function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64};tol=1e-5,maxIT=10,warnings=false)
+function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
+    ;tol=1e-5,maxIT=10,warnings=false,adaptive=false)
     # MATRIX FORM
     xₖ = uⱼ #Initial guess
     rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
@@ -94,7 +94,11 @@ function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vecto
         warnstr = string("CG did not converge at t=",t)
         @warn warnstr
     end
-    return xₖ
+    if !adaptive
+        return xₖ
+    else
+        return xₖ, i, rnorm
+    end
 end
 
 
@@ -125,15 +129,15 @@ function build_H(n::Int64,order::Int64)
 end
 
 
-function A(uⱼ,PDE::Function,n,Δx,x,Δt,t,k,g)
+function A(uⱼ::Vector{Float64},PDE::Function,n::Int64,Δx::Float64,x::Vector{Float64},Δt::Float64,t::Float64,k::Vector{Float64},g)
     # tmp can be any vector of length(uⱼ)
-    tmp = zeros(length(uⱼ))
+    tmp = zeros(Float64,length(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
-function A(uⱼ,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+function A(uⱼ::Matrix{Float64},PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
-    tmp = zeros(size(uⱼ))
+    tmp = zeros(Float64,size(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return tmp
 end

@@ -145,7 +145,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1)
+    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=false)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -278,7 +278,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
                 end
             end
-            uₙ = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=1e-5,maxIT=20)
+            uₙ = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
             soln,k = storage!(soln,uₙ,i,k)
             uₒ = uₙ
         end

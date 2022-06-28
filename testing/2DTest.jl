@@ -12,7 +12,6 @@ using SBP_operators
 
 ###
 function rate(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky;order_x=2,order_y=2)
-    uₓₓ = zeros(Float64,nx,ny)
     uₓₓ = Dₓₓ(u,nx,ny,Δx,kx,dim=1,order=order_x) + Dₓₓ(u,nx,ny,Δy,ky,dim=2,order=order_y)
     return uₓₓ
 end
@@ -30,8 +29,8 @@ x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
-kx = zeros(Float64,nx,ny) .+ 1.0
-ky = zeros(Float64,nx,ny) .+ 1.0e-14
+kx = zeros(Float64,nx,ny) .+ 1.0e-10
+ky = zeros(Float64,nx,ny) .+ 1.0e-10
 
 Δt = 10.00 * min(Δx^2,Δy^2)
 t_f = 300Δt
@@ -49,7 +48,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1)
+@time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14)
 
 ###
 

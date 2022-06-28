@@ -1,15 +1,10 @@
-
-
-
-
-
-
 #======================================#
 #======== SECOND ORDER METHODS ========#
 #======================================#
+# Author: Dean Muir, Kenneth Duru
 
 
-function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};order::Int64=2)
+function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
 
     uₓₓ = zeros(Float64,n)
@@ -19,6 +14,18 @@ function Dₓₓ(u::Vector{Float64},n::Int64,Δx::Float64,c::Vector{Float64};ord
     return uₓₓ
 end
 
+
+"""
+    Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
+Wrapper for 2D matrix finite difference operator, calls vector form of Dₓₓ! under the hood.
+
+Inputs:
+- dim ∈ [1,2]
+
+Iterator form:
+    Dₓₓ!(uₓₓ::Matrix{Float64},u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
+The input uₓₓ is the second derivative matrix to be returned.
+"""
 
 function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
@@ -32,6 +39,8 @@ function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Fl
         for i = 1:nx #row derivative
             uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
         end
+    else
+        error("dim must be 1 or 2.")
     end
 
     return uₓₓ
@@ -49,6 +58,8 @@ function Dₓₓ!(uₓₓ::Matrix{Float64},u::Matrix{Float64},nx::Int64,ny::Int6
         for i = 1:nx #row derivative
             uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
         end
+    else
+        error("dim must be 1 or 2.")
     end
 
     return uₓₓ

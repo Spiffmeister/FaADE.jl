@@ -10,10 +10,7 @@ using SBP_operators
 
 ###
 function rate(uₓₓ,u,n,x,Δx,t,Δt,k;order=2)
-    # uₓₓ = SBP_operators.Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
-    # println("yes",uₓₓ[1:10])
-    uₓₓ = SBP_operators.Dₓₓt!(uₓₓ,u,k,n,Δx,order=order)
-    # println("yos",uₓₓ[1:10])
+    uₓₓ = SBP_operators.Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
     return uₓₓ
 end
 
@@ -35,13 +32,13 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 g(t) = [0.0, 0.0]
 
 order = 2
-method = :euler
+method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Dirichlet,method=method,order=order)
+@time soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Dirichlet,method=method,order=order)
 
 
 ###
