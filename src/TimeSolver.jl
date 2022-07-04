@@ -145,7 +145,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=false)
+    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=false,penalty_fn=nothing)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -160,6 +160,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     end
 
     soln[:,:,1] .= uₒ
+
+    parallel_penalty = false
+    if typeof(penalty_fn) <: Function
+        parallel_penalty = true
+    end
+
 
     function storage!(soln,tmp,sample,k)
         if mod(sample,samplefactor) == 0
@@ -210,6 +216,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         for i = 1:N-1
             t = i*Δt
             uₙ = forward_euler(uₙ,uₒ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+
+            if parallel_penalty
+                uₙ = uₙ + penalty_fn(uₙ)
+            end
+
             soln,k = storage!(soln,uₙ,i,k)
             uₒ = uₙ
         end
@@ -279,6 +290,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             end
             uₙ = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
+
+            if parallel_penalty
+                uₙ = uₙ + penalty_fn(uₙ,uₒ)
+            end
+
             soln,k = storage!(soln,uₙ,i,k)
             uₒ = uₙ
         end

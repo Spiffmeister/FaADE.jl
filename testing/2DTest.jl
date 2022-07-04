@@ -29,10 +29,10 @@ x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
-kx = zeros(Float64,nx,ny) .+ 1.0e-10
+kx = zeros(Float64,nx,ny) .+ 1.0
 ky = zeros(Float64,nx,ny) .+ 1.0e-10
 
-Δt = 10.00 * min(Δx^2,Δy^2)
+Δt = 1.00 * min(Δx^2,Δy^2)
 t_f = 300Δt
 N = ceil(Int64,t_f/Δt)
 
@@ -49,6 +49,13 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 ###
 @time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14)
+
+
+# ky = zeros(Float64,nx,ny)
+# @time uₙ = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14)
+
+
+
 
 ###
 
