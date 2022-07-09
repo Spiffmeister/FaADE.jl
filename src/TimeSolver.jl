@@ -298,10 +298,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             # if parallel_penalty
             #     uⱼ += Δt * penalty_fn_outer(uⱼ)
             # end
-            uₙ = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
+            uₙ,Δt = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
+            # println("cg",norm(uₙ))
             if parallel_penalty
                 uₙ += Δt*penalty_fn(uₙ,uₒ)
             end
+            # println("parallel",norm(uₙ))
 
 
             soln,k = storage!(soln,uₙ,i,k)

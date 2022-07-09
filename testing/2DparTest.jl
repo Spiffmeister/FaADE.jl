@@ -35,11 +35,11 @@ if y[end] != 2π
     y = vcat(y,2π)
 end
 
-kx = zeros(Float64,nx,ny) .+ 1.0e-2
-ky = zeros(Float64,nx,ny) .+ 1.0e-2
+kx = zeros(Float64,nx,ny) .+ 1.0e-10
+ky = zeros(Float64,nx,ny) .+ 1.0e-10
 
-Δt = 1.0 * min(Δx^2,Δy^2)
-t_f = 400Δt
+Δt = 10.0 * min(Δx^2,Δy^2)
+t_f = 1000Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
@@ -124,16 +124,17 @@ skip = 5
 fps = 25
 
 energy = zeros(N)
+maxerr = zeros(N)
 for i = 1:N
     energy[i] = norm(u[:,:,i],2)
+    maxerr[i] = maximum(abs.(u[1,:,i]-u[end,:,i]))
 end
 
 anim = @animate for i = 1:skip:size(u)[3]
     l = @layout [a{0.7w} [b; c]]
-    p = surface(u[:,:,i],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),xlabel="y",ylabel="x")
-    plot!(p[2],u[floor(Int64,nx/2),:,i])
-    # plot!(p[3],u[:,floor(Int64,ny/2),i])
-    plot!(p[3],energy[1:i])
+    p = surface(u[:,:,i],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x")
+    plot!(p[2],maxerr[1:i],ylabel="y_0 - y_N")
+    plot!(p[3],energy[1:i],ylabel="||u||_2")
 end
 
 gif(anim,"yes.gif",fps=fps)

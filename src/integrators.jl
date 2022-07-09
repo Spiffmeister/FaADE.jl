@@ -72,8 +72,9 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     return xₖ
 end
 function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
-    ;tol=1e-5,maxIT=10,warnings=false,adaptive=false)
+    ;tol=1e-5,maxIT=10,warnings=true,adaptive=true)
     # MATRIX FORM
+    converged = true
     xₖ = uⱼ #Initial guess
     rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
     dₖ = -rₖ
@@ -91,14 +92,15 @@ function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vecto
         i += 1
     end
     if (norm(rₖ)>tol) & warnings
-        warnstr = string("CG did not converge at t=",t)
+        converged = false
+        warnstr = string("CG did not converge at t=",t,"    Δt=",Δt)
         @warn warnstr
     end
-    if !adaptive
-        return xₖ
-    else
-        return xₖ, i, rnorm
+    if adaptive
+        Δt = adapt_time(converged,Δt,min(Δx^2,Δy^2))
     end
+    # println("Δt=",Δt)
+    return xₖ, Δt
 end
 
 
@@ -157,4 +159,13 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
         end
     end
     return tmp
+end
+
+function adapt_time(cg_conv,Δt,Δ)
+    if !cg_conv & (Δt > Δ)
+        Δt /= 2.0
+    elseif (Δt < 100*Δ)
+        Δt *= 1.1
+    end
+    return Δt
 end
