@@ -72,7 +72,7 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     return xₖ
 end
 function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
-    ;tol=1e-5,maxIT=10,warnings=true,adaptive=true)
+    ;tol=1e-5,rtol=1e-14,maxIT=10,warnings=true)
     # MATRIX FORM
     converged = true
     xₖ = uⱼ #Initial guess
@@ -80,7 +80,8 @@ function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vecto
     dₖ = -rₖ
     i = 0
     rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
-    while (rnorm > tol) & (i < maxIT)
+    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ))
+    while (rnorm > rtol*unorm) & (i < maxIT)
         Adₖ = A(dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
         dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ)
         αₖ = -innerH(rₖ,Hx,Hy,dₖ)/dₖAdₖ
@@ -91,16 +92,19 @@ function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vecto
         rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
         i += 1
     end
-    if (norm(rₖ)>tol) & warnings
+    # println(i," ",rnorm/unorm,"   ",rtol,"  ",t,"   ",Δt)
+    if (rnorm>rtol*unorm) & warnings
         converged = false
-        warnstr = string("CG did not converge at t=",t,"    Δt=",Δt)
+        warnstr = string("CG did not converge at t=",t,"    Δt=",Δt,"   # iters=",i)
         @warn warnstr
+        # xₖ = uⱼ #return to previous time
+        # t = t-Δt
     end
-    if adaptive
-        Δt = adapt_time(converged,Δt,min(Δx^2,Δy^2))
-    end
+    # if adaptive
+    #     Δt = adapt_time(converged,Δt,5.0*min(Δx^2,Δy^2))
+    # end
     # println("Δt=",Δt)
-    return xₖ, Δt
+    return xₖ, converged
 end
 
 
@@ -161,11 +165,12 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     return tmp
 end
 
-function adapt_time(cg_conv,Δt,Δ)
-    if !cg_conv & (Δt > Δ)
-        Δt /= 2.0
-    elseif (Δt < 100*Δ)
-        Δt *= 1.1
-    end
-    return Δt
-end
+# function adapt_time(cg_conv,Δt,Δ) #TODO FIX ME!!!!
+#     if !cg_conv
+#         # Δt /= 2.0
+#         Δt = Δ
+#     elseif (Δt < 100*Δ)
+#         Δt *= 1.1
+#     end
+#     return Δt
+# end

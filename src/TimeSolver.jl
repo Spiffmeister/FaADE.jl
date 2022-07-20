@@ -29,6 +29,17 @@ mutable struct solution
     end
 end
 
+mutable struct solution_2d
+    u   :: Union{Matrix{Float64},Array{Float64,3}}
+    x   :: Vector{Float64}
+    y   :: Vector{Float64}
+    Δt  :: Vector{Float64}
+    t   :: Vector{Float64}
+    function solution_2d(u₀,x,y,t,Δt)
+        new(u₀,x,y,[t],[Δt])
+    end
+end
+
 struct grid
     x   :: Array{Float64}
     Δx  :: Float64
@@ -145,12 +156,12 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,α::Float64=1.5,maxIT::Int64=-1,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=false,penalty_fn=nothing,penalty_fn_outer=nothing)
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing,)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
-    soln = zeros(Float64,nx,ny,ceil(Int64,N))#/samplefactor))
+    # soln = zeros(Float64,nx,ny,ceil(Int64,N))#/samplefactor))
     uₙ = zeros(Float64,nx,ny)
     uₒ = zeros(Float64,nx,ny)
     for i = 1:nx
@@ -159,7 +170,11 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         end
     end
 
-    soln[:,:,1] .= uₒ
+    # soln = uₒ
+
+    soln = solution_2d(uₒ,x,y,0.0,Δt)
+
+    outsoln = uₒ
 
     parallel_penalty = false
     if typeof(penalty_fn) <: Function
@@ -167,15 +182,16 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     end
 
 
-    function storage!(soln,tmp,sample,k)
+    function storage!(soln,tmp,sample)
         if mod(sample,samplefactor) == 0
-            soln[:,:,k] = tmp
-            k += 1
+            soln = cat(soln,tmp,dims=3)
         end
-        return soln, k
+        return soln
     end
 
-    k = 2
+    t = 0.0
+    Δt₀ = Δt
+
 
     if method != :cgie #Not using CG
         function RHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
@@ -214,7 +230,6 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             return uₓₓ
         end
     end
-
     if method == :euler
         for i = 1:N-1
             t = i*Δt
@@ -231,11 +246,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             uₒ = uₙ
         end
     elseif method == :cgie
-        maxIT == -1 ? maxIT = 15 : nothing
+        maxIT < 1 ? maxIT = 15 : nothing
 
-        # if parallel_penalty && penalty_fn_outer == nothing
-        #     error("CG method needs the forcing term seperately")
-        # end
 
         function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
@@ -275,9 +287,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
 
         Hx = build_H(nx,order_x)*Δx
         Hy = build_H(ny,order_y)*Δy
+        i = 1
+        converged = true
 
-        for i = 1:N-1
-            t = i*Δt
+        # for i = 1:N-1
+        while t ≤ t_f
+            # t += Δt
             uⱼ = uₒ
             if boundary_x != :Periodic
                 for i = 1:ny
@@ -295,20 +310,34 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
                 end
             end
-            # if parallel_penalty
-            #     uⱼ += Δt * penalty_fn_outer(uⱼ)
-            # end
-            uₙ,Δt = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
-            # println("cg",norm(uₙ))
+            uₙ, converged = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
             if parallel_penalty
-                uₙ += Δt*penalty_fn(uₙ,uₒ)
+                # uₙ += Δt*penalty_fn(uₙ,uₒ,Δt)
+                uₙ = penalty_fn(uₙ,uₒ,Δt)
             end
-            # println("parallel",norm(uₙ))
 
+            if converged
+                # If CG converged store and update the solution, increase the time step if adaptive time stepping on
+                outsoln = storage!(outsoln,uₙ,i)
+                uₒ = uₙ
+                i += 1
+                t += Δt
+                append!(soln.t,t)
+                append!(soln.Δt,Δt)
+                if Δt < 100*Δt₀
+                    Δt *= 1.05
+                end
+            else
+                # If CG fails, restart the step. If the step has been tried before abort the time solve, returning the current solution.
+                if Δt == Δt₀
+                    warnstr = string("Could not progress with minimum time step Δt₀=",Δt₀,", exiting.")
+                    @warn(warnstr)
+                    break
+                end
+                Δt = Δt₀
+            end
 
-            soln,k = storage!(soln,uₙ,i,k)
-            uₒ = uₙ
         end
     end
-    return soln
+    return outsoln, soln
 end
