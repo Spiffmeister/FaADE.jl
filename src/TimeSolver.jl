@@ -155,8 +155,12 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     return soln
 end
 
+"""
+    function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
+        method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
+"""
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing,)
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -189,7 +193,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         return soln
     end
 
-    t = 0.0
+    t = Δt
     Δt₀ = Δt
 
 
@@ -235,19 +239,18 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             t = i*Δt
             uₙ = forward_euler(uₙ,uₒ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
 
-            soln,k = storage!(soln,uₙ,i,k)
+            soln = storage!(soln,uₙ,i)
             uₒ = uₙ
         end
     elseif method == :impliciteuler
         for i = 1:N-1
             t = i*Δt
             u[:,:,i+1] = implicit_euler(u[:,:,i+1],u[:,:,i],RHS,nx,ny,Δx,Δy,Δt,kx,ky,t,x,y,gx,gy)
-            soln,k=storage!(soln,uₙ,i,k)
+            soln = storage!(soln,uₙ,i)
             uₒ = uₙ
         end
     elseif method == :cgie
-        maxIT < 1 ? maxIT = 15 : nothing
-
+        maxIT < 1 ? maxIT = 10 : nothing
 
         function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
@@ -290,9 +293,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         i = 1
         converged = true
 
-        # for i = 1:N-1
         while t ≤ t_f
-            # t += Δt
             uⱼ = uₒ
             if boundary_x != :Periodic
                 for i = 1:ny
@@ -310,22 +311,26 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     uⱼ[i,end-order_y+1:end] += Δt*Fᵣ
                 end
             end
+            # Advance the solution in time
             uₙ, converged = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,maxIT=maxIT)
+            # If a global penalty function has been applied, update the solution
             if parallel_penalty
-                # uₙ += Δt*penalty_fn(uₙ,uₒ,Δt)
                 uₙ = penalty_fn(uₙ,uₒ,Δt)
             end
 
             if converged
                 # If CG converged store and update the solution, increase the time step if adaptive time stepping on
-                outsoln = storage!(outsoln,uₙ,i)
+                # outsoln = storage!(outsoln,uₙ,i)
+                soln.u = cat(soln.u,uₙ,dims=3)
                 uₒ = uₙ
                 i += 1
                 t += Δt
                 append!(soln.t,t)
                 append!(soln.Δt,Δt)
-                if Δt < 100*Δt₀
-                    Δt *= 1.05
+                if adaptive #if adaptive time stepping is turned on
+                    if Δt < 100*Δt₀
+                        Δt *= 1.05
+                    end
                 end
             else
                 # If CG fails, restart the step. If the step has been tried before abort the time solve, returning the current solution.

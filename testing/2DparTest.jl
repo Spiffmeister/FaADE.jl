@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+pyplot()
 
 # using BenchmarkTools
 
@@ -70,7 +70,7 @@ H_y = diagm(H_y)
 Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
 
 κ_para = 1.0
-τ_para = -10.0
+τ_para = -1.0
 
 
 
@@ -100,7 +100,7 @@ end
 ###
 @time outsoln,soln = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
     # method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14,penalty_fn=penalty_cg_fn_outer,penalty_fn_outer=penalty_cg_fn_outer)
-    method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14,penalty_fn=penalty_fn)
+    method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14,penalty_fn=penalty_fn,adaptive=false)
 
 ###
 
@@ -108,12 +108,12 @@ end
 # savefig("yes2.png")
 
 # u = soln.u
-u = outsoln
+u = soln.u
 
 println("plotting")
 
 N = size(u)[3]
-skip = 1
+skip = 50
 fps = 25
 
 energy = zeros(N)
@@ -153,6 +153,16 @@ anim = @animate for i = 1:skip:N
     # plot!(p[2],maxerr[1:i],ylims=(0.0,maximum(maxerr)),ylabel="y_0 - y_N")
 end
 gif(anim,"yes3.gif",fps=fps)
+
+
+anim = @animate for i = 1:skip:N
+    l = @layout [a b ; c d]
+    p = plot(u[1,:,i],layout=l,ylims=(0.0,1.0),label="x_0")
+    plot!(p[2],u[end,:,i],ylims=(0.0,1.0),label="x_N")
+    plot!(p[3],u[:,1,i],ylims=(0.0,1.0),label="y_0")
+    plot!(p[4],u[:,end,i],ylims=(0.0,1.0),label="y_N")
+end
+gif(anim,"yes4.gif",fps=fps)
 
 
 plot(soln.Δt)
