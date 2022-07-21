@@ -30,13 +30,14 @@ mutable struct solution
 end
 
 mutable struct solution_2d
-    u   :: Union{Matrix{Float64},Array{Float64,3}}
+    # u   :: Union{Matrix{Float64},Array{Float64,3}}
+    u   :: Vector{Matrix{Float64}}
     x   :: Vector{Float64}
     y   :: Vector{Float64}
     Δt  :: Vector{Float64}
     t   :: Vector{Float64}
     function solution_2d(u₀,x,y,t,Δt)
-        new(u₀,x,y,[t],[Δt])
+        new([u₀],x,y,[t],[Δt])
     end
 end
 
@@ -173,12 +174,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             uₒ[i,j] = u₀(x[i],y[j])
         end
     end
+    soln = solution_2d(copy(uₒ),x,y,0.0,Δt)
 
-    # soln = uₒ
-
-    soln = solution_2d(uₒ,x,y,0.0,Δt)
-
-    outsoln = uₒ
 
     parallel_penalty = false
     if typeof(penalty_fn) <: Function
@@ -320,8 +317,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
 
             if converged
                 # If CG converged store and update the solution, increase the time step if adaptive time stepping on
-                # outsoln = storage!(outsoln,uₙ,i)
-                soln.u = cat(soln.u,uₙ,dims=3)
+                # soln.u = cat(soln.u,uₙ,dims=3)
+                push!(soln.u,copy(uₙ))
                 uₒ = uₙ
                 i += 1
                 t += Δt
@@ -344,5 +341,5 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
 
         end
     end
-    return outsoln, soln
+    return soln
 end
