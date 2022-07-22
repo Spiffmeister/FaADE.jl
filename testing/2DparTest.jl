@@ -25,7 +25,7 @@ end
 
 ###
 # 𝒟x = [0.0,1.0]
-𝒟x = [0.5,0.67]
+𝒟x = [0.5,0.68]
 𝒟y = [0.0,2π]
 nx = 31
 ny = 31
@@ -46,11 +46,11 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 t_f = 10.0
 N = ceil(Int64,t_f/Δt)
 
-u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
+# u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
 # u₀(x,y) = 0.5sin(4*2π*x) + 0.5sin(4*y)
-# u₀(x,y) = x
+u₀(x,y) = (x-0.5)/(0.68-0.5)
 
-gx(t) = [0.0, 0.0] #Dirichlet
+gx(t) = [0.0, 1.0] #Dirichlet
 gy(t) = [0.0, 0.0] #Periodic
 
 order = order_x = order_y = 2
@@ -101,6 +101,9 @@ function penalty_fn(u,uₒ,Δt)
             
             interp = LinearInterpolation((x,y),u)
 
+            # uₚ[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
+            #     (u[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j]) + interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])))
+
             if 0.5 ≥ gdata.z_planes[1].x[i,j]
                 w_f  = 0.0
             elseif 0.67 ≤ gdata.z_planes[1].x[i,j]
@@ -118,7 +121,7 @@ function penalty_fn(u,uₒ,Δt)
             end
 
             uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
-                (u[i,j] - Δt*τ_para/2.0 *(H_y[i] + H_x[j])*(w_f + interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])))
+                (u[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
 
 
         end
