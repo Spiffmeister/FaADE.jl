@@ -1,7 +1,9 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
+# using GLMakie
+using Interpolations
 
 # using BenchmarkTools
 
@@ -22,13 +24,14 @@ end
 
 
 ###
-𝒟x = [0.0,1.0]
+# 𝒟x = [0.0,1.0]
+𝒟x = [0.5,0.67]
 𝒟y = [0.0,2π]
 nx = 31
 ny = 31
 
-Δx = 𝒟x[2]/(nx-1)
-Δy = 𝒟y[2]/(ny-1)
+Δx = (𝒟x[2]-𝒟x[1])/(nx-1)
+Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
 x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 if y[end] != 2π
@@ -39,17 +42,18 @@ kx = zeros(Float64,nx,ny) .+ 1.0e-8
 ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 Δt = 1.0 * min(Δx^2,Δy^2)
-t_f = 200Δt
-# t_f = 10.0
+# t_f = 200Δt
+t_f = 10.0
 N = ceil(Int64,t_f/Δt)
 
-# u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
-u₀(x,y) = x
+u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
+# u₀(x,y) = 0.5sin(4*2π*x) + 0.5sin(4*y)
+# u₀(x,y) = x
 
-gx(t) = [0.0, 1.0] #Dirichlet
+gx(t) = [0.0, 0.0] #Dirichlet
 gy(t) = [0.0, 0.0] #Periodic
 
-order = 2
+order = order_x = order_y = 2
 method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
@@ -57,18 +61,20 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 
-params = plas_diff.SampleFields.H_params([0.],[0.],[0.])
+# params = plas_diff.SampleFields.H_params([0.],[0.],[0.])
+χₘₙ = 2.1e-3
+params = plas_diff.SampleFields.H_params([χₘₙ/2., χₘₙ/3.],[2.0, 3.0],[1.0, 2.0])
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,plas_diff.SampleFields.χ_h!,params)
 
-H_x = SBP_operators.build_H(nx,2)
+H_x = SBP_operators.build_H(ny,order_x)
 H_x = 1.0 ./H_x.^2
-H_x = diagm(H_x)
+# H_x = diagm(H_x)
 
-H_y = SBP_operators.build_H(nx,2)
+H_y = SBP_operators.build_H(nx,order_y)
 H_y = 1.0 ./H_y.^2
-H_y = diagm(H_y)
+# H_y = diagm(H_y)
 
-Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
+# Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
 
 κ_para = 1.0
 τ_para = -1.0
@@ -79,6 +85,7 @@ Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
 ### Parallel Penalty ###
 function penalty_fn(u,uₒ,Δt)
     uₚ = zeros(Float64,nx,ny)
+    umw = zeros(Float64,nx,ny)
     for i = 1:nx
         for j = 1:ny
             # uₚ[i,j] = κ_para * τ_para/2.0 * (Hinv[(i-1)*j+1]) * (u[i,j] - uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]])
@@ -87,20 +94,44 @@ function penalty_fn(u,uₒ,Δt)
             # uₚ[i,j] = u[i,j] + Δt * κ_para * τ_para/2.0 * (Hinv[(i-1)*j+1]) * 
                 # (2.0*u[i,j] - (uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]]))
 
-            uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * Hinv[(i-1)*j+1]) *
-                (u[i,j] - Δt*τ_para/2.0 *Hinv[(i-1)*j+1]*(u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]]))
+            umw[i,j] = 2u[i,j] - (u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
+
+            # uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
+                # (u[i,j] - Δt*τ_para/2.0 *(H_y[i] + H_x[j])*(u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]]))
+            
+            interp = LinearInterpolation((x,y),u)
+
+            if 0.5 ≥ gdata.z_planes[1].x[i,j]
+                w_f  = 0.0
+            elseif 0.67 ≤ gdata.z_planes[1].x[i,j]
+                w_f = 1.0
+            else
+                w_f = interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j])
+            end
+
+            if 0.5 ≥ gdata.z_planes[2].x[i,j]
+                w_b  = 0.0
+            elseif 0.67 ≤ gdata.z_planes[2].x[i,j]
+                w_b = 1.0
+            else
+                w_b = interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])
+            end
+
+            uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
+                (u[i,j] - Δt*τ_para/2.0 *(H_y[i] + H_x[j])*(w_f + interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])))
+
 
         end
     end
-    return uₚ
+    return uₚ, norm(umw)
 end
 
 
 
 
 ###
-@time soln = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14,penalty_fn=penalty_fn,adaptive=false)
+@time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 ###
 
@@ -113,8 +144,8 @@ u = soln.u
 println("plotting")
 
 N = length(u)
-skip = 1
-fps = 10
+skip = 5
+fps = 25
 
 energy = zeros(N)
 maxerry = zeros(N)
