@@ -72,7 +72,7 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     return xₖ
 end
 function conj_grad(b::Matrix,uⱼ::Matrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
-    ;tol=1e-5,rtol=1e-14,maxIT=10,warnings=true)
+    ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
     # MATRIX FORM
     converged = true
     xₖ = uⱼ #Initial guess

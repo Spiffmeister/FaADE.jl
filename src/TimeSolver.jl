@@ -161,7 +161,7 @@ end
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
 """
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing)
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -320,7 +320,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             if converged
                 # If CG converged store and update the solution, increase the time step if adaptive time stepping on
                 # soln.u = cat(soln.u,uₙ,dims=3)
-                push!(soln.u,copy(uₙ))
+                if (samplefactor - t) ≤ 0.0
+                    push!(soln.u,copy(uₙ))
+                    samplefactor += samplefactor
+                end
                 uₒ = uₙ
                 i += 1
                 t += Δt
@@ -328,7 +331,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 append!(soln.Δt,Δt)
                 append!(umw,tmp)
                 if adaptive #if adaptive time stepping is turned on
-                    if Δt < 100*Δt₀
+                    if Δt < 200*Δt₀
                         Δt *= 1.05
                     end
                 end

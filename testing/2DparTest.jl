@@ -1,9 +1,10 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+pyplot()
 # using GLMakie
 using Interpolations
+using JLD2
 
 # using BenchmarkTools
 
@@ -26,7 +27,8 @@ end
 ###
 # 𝒟x = [0.0,1.0]
 𝒟x = [0.5,0.68]
-𝒟y = [0.0,2π]
+# 𝒟y = [0.0,2π]
+𝒟y = [-π,π]
 nx = 31
 ny = 31
 
@@ -34,21 +36,19 @@ ny = 31
 Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
 x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
 y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
-if y[end] != 2π
-    y = vcat(y,2π)
-end
 
 kx = zeros(Float64,nx,ny) .+ 1.0e-8
 ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 Δt = 1.0 * min(Δx^2,Δy^2)
 # t_f = 200Δt
-t_f = 10.0
+t_f = 1000.0
 N = ceil(Int64,t_f/Δt)
 
 # u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
 # u₀(x,y) = 0.5sin(4*2π*x) + 0.5sin(4*y)
 u₀(x,y) = (x-0.5)/(0.68-0.5)
+# u₀(x,y) = x
 
 gx(t) = [0.0, 1.0] #Dirichlet
 gy(t) = [0.0, 0.0] #Periodic
@@ -104,23 +104,24 @@ function penalty_fn(u,uₒ,Δt)
             # uₚ[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
             #     (u[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j]) + interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])))
 
-            if 0.5 ≥ gdata.z_planes[1].x[i,j]
+
+            if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]
                 w_f  = 0.0
-            elseif 0.67 ≤ gdata.z_planes[1].x[i,j]
+            elseif 𝒟x[2] ≤ gdata.z_planes[1].x[i,j]
                 w_f = 1.0
             else
                 w_f = interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j])
             end
 
-            if 0.5 ≥ gdata.z_planes[2].x[i,j]
+            if 𝒟x[1] ≥ gdata.z_planes[2].x[i,j]
                 w_b  = 0.0
-            elseif 0.67 ≤ gdata.z_planes[2].x[i,j]
+            elseif 𝒟x[2] ≤ gdata.z_planes[2].x[i,j]
                 w_b = 1.0
             else
                 w_b = interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])
             end
 
-            uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
+            uₚ[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
                 (u[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
 
 
@@ -134,7 +135,7 @@ end
 
 ###
 @time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
+    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 ###
 
@@ -144,10 +145,17 @@ end
 # u = soln.u
 u = soln.u
 
+
+
+
 println("plotting")
 
+pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
+
+
+
 N = length(u)
-skip = 5
+skip = 100
 fps = 25
 
 energy = zeros(N)
@@ -163,10 +171,10 @@ end
 anim = @animate for i = 1:skip:N
     l = @layout [a{0.7w} [b; c]]
     p = surface(u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
-    plot!(p[2],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
-    plot!(p[2],maxerrx[1:i],label="x_0 - x_N")
+    plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
+    plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
     # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
-    plot!(p[3],energy[1:i],ylabel="||u||_2")
+    plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
 end
 gif(anim,"yes.gif",fps=fps)
 
@@ -216,4 +224,7 @@ gif(anim,"yes.gif",fps=fps)
 # gif(anim,"yes5.gif",fps=fps)
 
 
+
+println("saving")
+save_object("testrun.jld2",(soln,umw,pdata))
 
