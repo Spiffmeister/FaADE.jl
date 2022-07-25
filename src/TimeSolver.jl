@@ -53,6 +53,41 @@ struct grid
     end
 end
 
+
+
+"""
+    Struct for storing checkpoints for 2D simulations
+"""
+mutable struct checkpoint_2d
+    # Solution info
+    soln        :: solution_2d
+    Δx          :: Float64
+    Δy          :: Float64
+    t_f         :: Float64
+    # Diffusion coefficient matricies
+    kx          :: Matrix{Float64}
+    ky          :: Matrix{Float64}
+    # Boundary functions
+    gx          :: Function
+    gy          :: Function
+    # Parallel penalty function if provided
+    parallel    :: Bool
+    penalty_fn  :: Union{Function,Nothing}
+    # Simulation parameters
+    order_x     :: Int64
+    order_y     :: Int64
+    method      :: Symbol
+    maxIT       :: Int64
+    samplefactor:: Float64
+    tol         :: Float64
+    rtol        :: Float64
+    adaptive    :: Bool
+end
+
+
+
+
+
 """
     time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
 """
@@ -161,7 +196,7 @@ end
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
 """
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing)
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing)#,checkpoint=false)
     #===== 2D TIME SOLVER =====#
 
     # Preallocate and set initial
@@ -331,7 +366,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 append!(soln.Δt,Δt)
                 append!(umw,tmp)
                 if adaptive #if adaptive time stepping is turned on
-                    if Δt < 200*Δt₀
+                    if Δt < 300*Δt₀
                         Δt *= 1.05
                     end
                 end
@@ -342,11 +377,17 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     @warn(warnstr)
                     break
                 end
-                Δt = Δt₀
-                # Δt = Δt/2.0
+                # Δt = Δt₀
+                Δt = Δt/2.0
             end
 
         end
     end
+
+    # if checkpoint
+    #     checkpt = checkpoint_2d(soln,Δx,Δy,t_f,kx,ky,gx,gy,parallel_penalty,penalty_fn,order_x,order_y,method,maxIT,samplefactor,tol,rtol,adaptive)
+    #     return checkpt
+    # end
+
     return soln, umw
 end

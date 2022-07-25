@@ -29,8 +29,8 @@ end
 𝒟x = [0.5,0.68]
 # 𝒟y = [0.0,2π]
 𝒟y = [-π,π]
-nx = 21
-ny = 21
+nx = 41
+ny = 41
 
 Δx = (𝒟x[2]-𝒟x[1])/(nx-1)
 Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
@@ -42,7 +42,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 Δt = 1.0 * min(Δx^2,Δy^2)
 # t_f = 200Δt
-t_f = 1000.0
+t_f = 2000.0
 N = ceil(Int64,t_f/Δt)
 
 # u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
@@ -64,7 +64,15 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 # params = plas_diff.SampleFields.H_params([0.],[0.],[0.])
 χₘₙ = 2.1e-3
 params = plas_diff.SampleFields.H_params([χₘₙ/2., χₘₙ/3.],[2.0, 3.0],[1.0, 2.0])
-gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,plas_diff.SampleFields.χ_h!,params)
+
+function χ_h!(χ,x::Array{Float64},p,t)
+    # Hamiltons equations for the field-line Hamiltonian
+    # H = ψ²/2 - ∑ₘₙ ϵₘₙ(cos(mθ - nζ))
+    χ[1] = x[2] #p_1            qdot        θ
+    χ[2] = -sum(p.ϵₘₙ .*(sin.(p.m*x[1] - p.n*t) .* p.m)) #q_1        pdot        ψ
+end
+
+gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
 
 H_x = SBP_operators.build_H(ny,order_x)
 H_x = 1.0 ./H_x.^2
@@ -134,10 +142,6 @@ end
 
 
 ###
-@time SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,1.0,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
-
-
 @time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
@@ -229,5 +233,5 @@ println("saving")
 if !(typeof(pdata.poincare) <: Nothing)
     pdata.poincare = nothing
 end
-save_object("testrun.jld2",(soln,umw,pdata))
+save_object("testrun.jld2",(soln,gdata,umw,pdata))
 
