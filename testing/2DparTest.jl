@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
 # using GLMakie
 using Interpolations
 using JLD2
@@ -29,8 +29,8 @@ end
 𝒟x = [0.5,0.68]
 # 𝒟y = [0.0,2π]
 𝒟y = [-π,π]
-nx = 31
-ny = 31
+nx = 21
+ny = 21
 
 Δx = (𝒟x[2]-𝒟x[1])/(nx-1)
 Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
@@ -134,16 +134,14 @@ end
 
 
 ###
+@time SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,1.0,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
+
+
 @time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Dirichlet,:Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 ###
-
-# plas_diff.plot_grid(gdata)
-# savefig("yes2.png")
-
-# u = soln.u
-u = soln.u
 
 
 
@@ -153,8 +151,9 @@ println("plotting")
 pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
 
 
+# plas_diff.plot_grid(gdata)
 
-N = length(u)
+N = length(soln.u)
 skip = 100
 fps = 25
 
@@ -162,21 +161,21 @@ energy = zeros(N)
 maxerry = zeros(N)
 maxerrx = zeros(N)
 for i = 1:N
-    energy[i] = norm(u[i][:,:],2)
-    maxerry[i] = norm(u[i][:,1]-u[i][:,end],Inf)
-    maxerrx[i] = norm(u[i][1,:]-u[i][end,:],Inf)
+    energy[i] = norm(soln.u[i][:,:],2)
+    maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
+    maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
 end
 
 
-anim = @animate for i = 1:skip:N
-    l = @layout [a{0.7w} [b; c]]
-    p = surface(u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
-    plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
-    plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
-    # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
-    plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
-end
-gif(anim,"yes.gif",fps=fps)
+# anim = @animate for i = 1:skip:N
+#     l = @layout [a{0.7w} [b; c]]
+#     p = surface(u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
+#     plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
+#     plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
+#     # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
+#     plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
+# end
+# gif(anim,"yes.gif",fps=fps)
 
 
 # Slice info
@@ -226,5 +225,9 @@ gif(anim,"yes.gif",fps=fps)
 
 
 println("saving")
+
+if !(typeof(pdata.poincare) <: Nothing)
+    pdata.poincare = nothing
+end
 save_object("testrun.jld2",(soln,umw,pdata))
 
