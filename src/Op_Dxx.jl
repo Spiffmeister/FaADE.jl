@@ -16,12 +16,24 @@ const NodeRight = NodeType{:Right}()
 
 
 
-"""
-"""
-function Dₓₓ end
+
 """
     Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+If `typeof(u) <: Vector{Float64}` then uses a 1D second derviative SBP operator:
+Returns a `Vector{Float64}` of length `n`.
+
+
+    Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
+If `typeof(u) <: Matrix{Float64}` then uses a 2D second derivative SBP operator
+    - dim ∈ [1,2]
+        - If `dim==1` then takes derivative along rows (`u[:,i]`)
+        - If `dim==2` then takes derivative along columns (`u[i,:]`)
+    - Δ should be the grid spacing along the dimension requested
+    Returns a `Matrix{Float64}` of size `nx × ny`.
+
 """
+function Dₓₓ end
+### 1D second derivative operator
 function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
 
@@ -31,20 +43,7 @@ function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;ord
 
     return uₓₓ
 end
-
-
-"""
-    Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
-Wrapper for 2D matrix finite difference operator, calls vector form of Dₓₓ! under the hood.
-
-Inputs:
-- dim ∈ [1,2]
-
-Iterator form:
-    Dₓₓ!(uₓₓ::Matrix{Float64},u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
-The input uₓₓ is the second derivative matrix to be returned.
-"""
-
+### 2D second derivative operator
 function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
     
@@ -64,6 +63,13 @@ function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Fl
     return uₓₓ
 end
 
+
+
+"""
+    Dₓₓ!
+
+Iterator for multidimensional second derviative SBP operator
+"""
 
 function Dₓₓ!(uₓₓ::Matrix{Float64},u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
@@ -114,27 +120,22 @@ end
 
 
 """
-    SecondDerivative
+    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,type::NodeType;order::Int64=2)
 
-Inbuild method for the second derviative SBP operator
+Inbuild method for the second derviative SBP operator ∂ₓ(k∂ₓu) ∼ Dₓₓ⁽ᵏ⁾u
 
-u, c, Δx, NodeType; order=2
-
-NodeType is either NodeInternal, NodeLeft, or NodeRight
+- If `type==NodeInternal` then computes the second derviative for a node away from the boundaries (see next point for info), always returns `Float64` (the derivative at that point).
+    - `order==2`: 3 nodes
+    - `order==4`: 5 nodes
+    - `order==6`: 7 nodes
+- If `type==NodeLeft` or `type==NodeRight` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
+    - `order==2`: 1 node, returns `Float64`
+    - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
+    - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
+    
 """
 function SecondDerivative end
-"""
-    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
-
-Returns the 2nd, 4th or 6th order FD approximation for internal nodes.
-
-Inputs:
-- u:    Solution array centred on node
-- c:    coefficient c in ∂ₓ(c∂ₓu)
-- Δx:   Step size
-Optional inputs:
-- order:    Order of method :: 2 (default), 4, 6
-"""
+### Internal node
 function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
     if order == 2
@@ -162,20 +163,7 @@ function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::N
     end
 
 end
-
-
-"""
-    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
-
-Returns the 2nd, 4th or 6th order FD approximation for left boundary nodes
-
-Inputs:
-- u:    Solution array centred on node
-- c:    coefficient c in ∂ₓ(c∂ₓu)
-- Δx:   Step size
-Optional inputs:
-- order:    Order of method :: 2 (default), 4, 6
-"""
+### Left boundary
 function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
 
     if order == 2
@@ -357,20 +345,7 @@ function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::N
         return uₓₓ
     end
 end
-
-
-"""
-    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
-
-Returns the 2nd, 4th or 6th order FD approximation for right boundary nodes
-
-Inputs:
-- u:    Solution array centred on node
-- c:    coefficient c in ∂ₓ(c∂ₓu)
-- Δx:   Step size
-Optional inputs:
-- order:    Order of method :: 2 (default), 4, 6
-"""
+### Right boundary
 function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         uₓₓ = zeros(Float64,1)
