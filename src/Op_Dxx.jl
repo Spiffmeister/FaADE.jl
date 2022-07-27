@@ -4,6 +4,24 @@
 # Author: Dean Muir, Kenneth Duru
 
 
+"""
+    NodeType
+
+Tells if it is to use a 
+"""
+struct NodeType{T} end
+const NodeLeft = NodeType{:Left}()
+const NodeInternal = NodeType{:Internal}()
+const NodeRight = NodeType{:Right}()
+
+
+
+"""
+"""
+function Dₓₓ end
+"""
+    Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+"""
 function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
 
@@ -78,7 +96,7 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
     adj = Int64(order/2)
 
     for i = order:n-order+1
-        uₓₓ[i] = internal_Dₓₓ(u[i-adj:i+adj],c[i-adj:i+adj],Δx,order=order)
+        uₓₓ[i] = SecondDerivative(u[i-adj:i+adj],c[i-adj:i+adj],Δx,NodeInternal,order=order)
     end
 
     adj += order
@@ -87,8 +105,8 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
         uₓₓ[1] = 0.0
         uₓₓ[n] = 0.0
     else
-        uₓₓ[1:adj] = left_boundary_Dₓₓ(u[1:2order],c[1:2order],Δx,order=order)
-        uₓₓ[n-adj+1:n] = right_boundary_Dₓₓ(u[n-2order+1:n],c[n-2order+1:n],Δx,order=order)
+        uₓₓ[1:adj] = SecondDerivative(u[1:2order],c[1:2order],Δx,NodeLeft,order=order)
+        uₓₓ[n-adj+1:n] = SecondDerivative(u[n-2order+1:n],c[n-2order+1:n],Δx,NodeRight,order=order)
     end
 
     return uₓₓ
@@ -96,7 +114,17 @@ end
 
 
 """
-    internal_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+    SecondDerivative
+
+Inbuild method for the second derviative SBP operator
+
+u, c, Δx, NodeType; order=2
+
+NodeType is either NodeInternal, NodeLeft, or NodeRight
+"""
+function SecondDerivative end
+"""
+    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
 Returns the 2nd, 4th or 6th order FD approximation for internal nodes.
 
@@ -107,7 +135,7 @@ Inputs:
 Optional inputs:
 - order:    Order of method :: 2 (default), 4, 6
 """
-function internal_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
     if order == 2
         j = 2
@@ -137,7 +165,7 @@ end
 
 
 """
-    left_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
 
 Returns the 2nd, 4th or 6th order FD approximation for left boundary nodes
 
@@ -148,7 +176,7 @@ Inputs:
 Optional inputs:
 - order:    Order of method :: 2 (default), 4, 6
 """
-function left_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
 
     if order == 2
         uₓₓ = zeros(Float64,1)
@@ -332,7 +360,7 @@ end
 
 
 """
-    right_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
 
 Returns the 2nd, 4th or 6th order FD approximation for right boundary nodes
 
@@ -343,7 +371,7 @@ Inputs:
 Optional inputs:
 - order:    Order of method :: 2 (default), 4, 6
 """
-function right_boundary_Dₓₓ(u::Vector{Float64},c::Vector{Float64},Δx::Float64;order::Int64=2)
+function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         uₓₓ = zeros(Float64,1)
         return 0.0

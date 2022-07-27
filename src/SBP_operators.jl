@@ -1,6 +1,7 @@
 module SBP_operators
 
     # Inbuild julia packages
+    using Distributed
     using LinearAlgebra
 
 
