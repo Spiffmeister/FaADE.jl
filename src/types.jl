@@ -7,9 +7,9 @@ Used in `SecondDerivative` to indicate which node type should be used.
 - NodeRight
 """
 struct NodeType{T} end
-const NodeLeft = NodeType{:Left}()
-const NodeInternal = NodeType{:Internal}()
-const NodeRight = NodeType{:Right}()
+const Left = NodeType{:Left}()
+const Internal = NodeType{:Internal}()
+const Right = NodeType{:Right}()
 
 
 struct BoundaryCondition{T} end

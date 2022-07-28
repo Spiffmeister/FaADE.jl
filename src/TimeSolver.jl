@@ -178,7 +178,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
                 SATₗ,Fₗ = SAT_left(boundary_left,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
                 SATᵣ,Fᵣ = SAT_right(boundary_right,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
             else
-                SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ,Δx,k,order=order,separate_forcing=true)
+                SATₗ,SATᵣ,Fₗ,Fᵣ = SAT_Periodic(uⱼ,Δx,k,order=order)
             end
             uⱼ[1:order] += Δt*Fₗ
             uⱼ[end-order+1:end] += Δt*Fᵣ
