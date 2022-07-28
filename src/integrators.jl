@@ -135,13 +135,13 @@ function build_H(n::Int64,order::Int64)
 end
 
 
-function A(uⱼ::Vector{Float64},PDE::Function,n::Int64,Δx::Float64,x::Vector{Float64},Δt::Float64,t::Float64,k::Vector{Float64},g)
+function A(uⱼ::AbstractVector{Float64},PDE::Function,n::Int64,Δx::Float64,x::Vector{Float64},Δt::Float64,t::Float64,k::Vector{Float64},g)
     # tmp can be any vector of length(uⱼ)
     tmp = zeros(Float64,length(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
-function A(uⱼ::Matrix{Float64},PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+function A(uⱼ::AbstractMatrix{Float64},PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
     tmp = zeros(Float64,size(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
@@ -149,11 +149,11 @@ function A(uⱼ::Matrix{Float64},PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,
 end
 
 
-function innerH(u::Vector,H::Array,v::Vector)
+function innerH(u::AbstractVector,H::AbstractArray,v::AbstractVector)
     # H inner product for 1D problems
     return dot(u,H*v)
 end
-function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
+function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
     # H inner product for 2D problems
     nx,ny = size(u)
     tmp = 0.0
@@ -164,13 +164,3 @@ function innerH(u::Matrix,Hx::Vector,Hy::Vector,v::Matrix)
     end
     return tmp
 end
-
-# function adapt_time(cg_conv,Δt,Δ) #TODO FIX ME!!!!
-#     if !cg_conv
-#         # Δt /= 2.0
-#         Δt = Δ
-#     elseif (Δt < 100*Δ)
-#         Δt *= 1.1
-#     end
-#     return Δt
-# end

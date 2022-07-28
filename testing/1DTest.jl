@@ -38,7 +38,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,:Dirichlet,method=method,order=order)
+@time soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
 
 
 ###

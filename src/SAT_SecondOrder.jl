@@ -24,16 +24,16 @@ Optional inputs:
 
 For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
-function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;
+
+
+
+function SAT_left(type::BoundaryCondition,u::Vector{Float64},Δx::Float64,g;
     order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
-    if type == :Dirichlet # Dirichlet boundaries
+    if type == Dirichlet # Dirichlet boundaries
         # Ensure coefficient is correct type
-        if typeof(c) <: Float64
-            c = zeros(Float64,order) .+ c
-        end
         SAT, F = Dirichlet_left(u,Δx,g,c=c,order=order)
 
-    elseif type == :Neumann # Neumann boundary conditions
+    elseif type == Neumann # Neumann boundary conditions
         # Ensure coefficient is correct type
         if typeof(c) <: Vector
             k = c[1]
@@ -42,7 +42,7 @@ function SAT_left(type::Symbol,u::Vector{Float64},Δx::Float64,g;
         end
         SAT,F = Neumann_left(u,Δx,g,c=k,order=order)
         
-    elseif type == :Robin # Robin boundaries
+    elseif type == Robin # Robin boundaries
         # Ensure coefficient is correct type
         SAT,F = Robin_left(u,Δx,g,order=order,a=αβ[1],b=αβ[2])
         
@@ -125,11 +125,35 @@ end
 #=
 ====================== Dirichlet boundary conditions ======================
 =#
+# function SAT_left end
+# function SAT_left(::BoundaryCondition{:Dirichlet},u::AbstractVector,Δx::Float64,g;
+#         c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0],separate_forcing::Bool=false)
+#     α,τ = Dirichlet_penalties(Δx,order)
+
+#     # Construct the SATs
+#     SAT = zeros(Float64,order)
+#     Dᵀu = boundary_Dₓᵀ(u,Δx,order)
+#     SAT[1] += τ * u[1] 
+#     SAT .+= α * c[1] * Dᵀu[1:order]
+
+    
+#     # Forcing terms
+#     F = zeros(Float64,order)
+#     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+#     F[1] += -τ*g[1]
+#     F .+= -α * c[1] * Dᵀf[1:order]
+    
+#     return SAT, F
+# end
 
 """
     Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
 """
-function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
+
+
+function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;
+    c=1.0,order::Int64=2,seperate_forcing::Bool=false)
+
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -139,17 +163,22 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,p
     SAT[1] += τ * u[1] 
     SAT .+= α * c[1] * Dᵀu[1:order]
 
-    
     # Forcing terms
     F = zeros(Float64,order)
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
     F[1] += -τ*g[1]
     F .+= -α * c[1] * Dᵀf[1:order]
     
-    return SAT, F
+    if seperate_forcing
+        return SAT, F
+    else
+        return SAT + F
+    end
 end
 
-function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
+function Dirichlet_right(u::Vector{Float64},Δx,g;
+    c=1.0,order::Int64=2,seperate_forcing::Bool=false)
+
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -165,23 +194,22 @@ function Dirichlet_right(u::Vector{Float64},Δx,g;c=1.0,order::Int64=2,penalty::
     F[end] += -τ*g[end]
     F .+= -α * c[end] * Dᵀf[end-order+1:end]
 
-    return SAT, F
+    if seperate_forcing
+        return SAT, F
+    else
+        return SAT + F
+    end
 end
 
 
-function Dirichlet_penalties(Δx::Float64,order::Int64;penalty::Vector{Float64}=[-1.0,-1.0])
+function Dirichlet_penalties(Δx::Float64,order::Int64)
     # For reading in penalty parameters for Dirichlet SATs
     h = hval(order)
-    α,τ = penalty
 
-    if α == -1.0
-        α = 1.0 * (h * Δx)^-1
-    end
+    α = 1.0 * (h * Δx)^-1
 
-    if τ == -1.0
-        τ = 1.0
-        τ = -(1.0 + τ) * (h * Δx)^-2
-    end
+    τ = 1.0
+    τ = -(1.0 + τ) * (h * Δx)^-2
 
     return α, τ
 end
@@ -193,7 +221,9 @@ end
 =#
 
 
-function Neumann_left(u::Vector{Float64},Δx::Float64,g;c::Float64=1.0,order=2,penalty=1.0)
+function Neumann_left(u::Vector{Float64},Δx::Float64,g;
+    c::Float64=1.0,order::Int64=2,seperate_forcing::Bool=false)
+
     # Penalties
     τ = Neumann_penalties(Δx,order)
     # SAT construction
@@ -204,7 +234,11 @@ function Neumann_left(u::Vector{Float64},Δx::Float64,g;c::Float64=1.0,order=2,p
     F = zeros(Float64,order)
     F[1] += -τ*g[1]
 
-    return SAT, F
+    if seperate_forcing
+        return SAT, F
+    else
+        return SAT + F
+    end
 end
 
 function Neumann_right(u::Vector{Float64},Δx::Float64,g;c=1.0,order=2,penalty=1.0)

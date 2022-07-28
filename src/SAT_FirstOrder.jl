@@ -5,14 +5,6 @@
 #=====================================#
 
 
-struct BoundaryCond
-    # Structure for boundary conditions
-    coefficients :: Tuple{Vector{Float64}}
-    index :: Tuple{Vector{Int64}}
-end
-
-
-
 function Boundary(condtype::Symbol,order::Int64;cond::Union{Function,Vector{Float64}})
 
     if condtype ∉ (:Dirichlet,:Periodic,:Neumann,:Robin)
@@ -20,7 +12,6 @@ function Boundary(condtype::Symbol,order::Int64;cond::Union{Function,Vector{Floa
     end
 
 end
-
 
 
 function Boundary_dirichlet(;order::Int64=2,derivative::Int64=1)

@@ -4,16 +4,6 @@
 # Author: Dean Muir, Kenneth Duru
 
 
-"""
-    NodeType
-
-Tells if it is to use a 
-"""
-struct NodeType{T} end
-const NodeLeft = NodeType{:Left}()
-const NodeInternal = NodeType{:Internal}()
-const NodeRight = NodeType{:Right}()
-
 
 
 
@@ -66,38 +56,17 @@ end
 
 
 """
-    Dₓₓ!
+    Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+or
+    Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
+or
+    Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},m::Int64,Δ::Float64;order::Int64=2)
 
-Iterator for multidimensional second derviative SBP operator
+Iterator for 1D and 2D second derviative SBP operator
 """
-
-function Dₓₓ!(uₓₓ::Matrix{Float64},u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
-    # Multidimensional call for 2nd derivative SBP operator
-    
-    if dim == 1
-        for i = 1:ny #column derivatives
-            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
-        end
-    elseif dim == 2
-        for i = 1:nx #row derivative
-            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
-        end
-    else
-        error("dim must be 1 or 2.")
-    end
-
-    return uₓₓ
-end
-
-
-
-#=== SECOND ORDER ITERATOR ===#
-
-"""
-    Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
-Call this when using distributed arrays
-"""
-function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓₓ! end
+### Vector based second derviative iterator
+function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     
     adj = Int64(order/2)
 
@@ -117,6 +86,31 @@ function Dₓₓ!(uₓₓ::Vector{Float64},u::Vector{Float64},c::Vector{Float64}
 
     return uₓₓ
 end
+### Multidimensional second derivative SBP operator
+function Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
+    
+    if dim == 1
+        for i = 1:ny #column derivatives
+            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
+        end
+    elseif dim == 2
+        for i = 1:nx #row derivative
+            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
+        end
+    else
+        error("dim must be 1 or 2.")
+    end
+
+    return uₓₓ
+end
+### Chunked Arrays
+# function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},m::Int64,Δ::Float64;order::Int64=2)
+#     adj = Int64(order/2)
+#     for i = 1+adj:m-adj # Avoid the "ghost nodes" by doing adj:m-adj
+#         uₓₓ[i] = SecondDerivative(u[i-adj:i+adj],c[i-adj:i+adj],Δ,NodeInternal,order=order)
+#     end
+#     return uₓₓ
+# end
 
 
 """
@@ -136,7 +130,7 @@ Inbuild method for the second derviative SBP operator ∂ₓ(k∂ₓu) ∼ Dₓ�
 """
 function SecondDerivative end
 ### Internal node
-function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
+function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
     if order == 2
         j = 2
@@ -164,7 +158,7 @@ function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::N
 
 end
 ### Left boundary
-function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
+function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
 
     if order == 2
         uₓₓ = zeros(Float64,1)
@@ -346,7 +340,7 @@ function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::N
     end
 end
 ### Right boundary
-function SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
+function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         uₓₓ = zeros(Float64,1)
         return 0.0
