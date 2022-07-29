@@ -9,18 +9,21 @@
 
 """
     Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
-If `typeof(u) <: Vector{Float64}` then uses a 1D second derviative SBP operator:
-Returns a `Vector{Float64}` of length `n`.
-
-
+or
     Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
-If `typeof(u) <: Matrix{Float64}` then uses a 2D second derivative SBP operator
+
+- If `typeof(u) <: Vector{Float64}` then uses a 1D second derviative SBP operator
+    - Returns a `Vector{Float64}` of length `n`.
+- If `typeof(u) <: Matrix{Float64}` then uses a 2D second derivative SBP operator
     - dim ∈ [1,2]
         - If `dim==1` then takes derivative along rows (`u[:,i]`)
         - If `dim==2` then takes derivative along columns (`u[i,:]`)
     - Δ should be the grid spacing along the dimension requested
     Returns a `Matrix{Float64}` of size `nx × ny`.
 
+This is also available is an iterator [`Dₓₓ!`](@ref)
+
+Internally uses [`SecondDerivative`](@ref)
 """
 function Dₓₓ end
 ### 1D second derivative operator
@@ -71,7 +74,7 @@ function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c:
     adj = Int64(order/2)
 
     for i = order:n-order+1
-        uₓₓ[i] = SecondDerivative(u[i-adj:i+adj],c[i-adj:i+adj],Δx,NodeInternal,order=order)
+        uₓₓ[i] = SecondDerivative(u[i-adj:i+adj],c[i-adj:i+adj],Δx,Internal,order=order)
     end
 
     adj += order
@@ -80,8 +83,8 @@ function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c:
         uₓₓ[1] = 0.0
         uₓₓ[n] = 0.0
     else
-        uₓₓ[1:adj] = SecondDerivative(u[1:2order],c[1:2order],Δx,NodeLeft,order=order)
-        uₓₓ[n-adj+1:n] = SecondDerivative(u[n-2order+1:n],c[n-2order+1:n],Δx,NodeRight,order=order)
+        uₓₓ[1:adj] = SecondDerivative(u[1:2order],c[1:2order],Δx,Left,order=order)
+        uₓₓ[n-adj+1:n] = SecondDerivative(u[n-2order+1:n],c[n-2order+1:n],Δx,Right,order=order)
     end
 
     return uₓₓ
@@ -116,17 +119,20 @@ end
 """
     SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,type::NodeType;order::Int64=2)
 
-Inbuild method for the second derviative SBP operator ∂ₓ(k∂ₓu) ∼ Dₓₓ⁽ᵏ⁾u
+Inbuilt method for the second derviative SBP operator
+    ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right) \\sim D_{xx}^{(c)}u``
 
-- If `type==NodeInternal` then computes the second derviative for a node away from the boundaries (see next point for info), always returns `Float64` (the derivative at that point).
+- If `NodeType==Internal` then computes the second derviative for a node away from the boundaries (see next point for info).
     - `order==2`: 3 nodes
     - `order==4`: 5 nodes
     - `order==6`: 7 nodes
-- If `type==NodeLeft` or `type==NodeRight` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
+    - Returns `Float64`
+- If `NodeType==Left` or `NodeType==Right` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
     - `order==2`: 1 node, returns `Float64`
     - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
     - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
-    
+    - Returns `Vector{Float64}`
+
 """
 function SecondDerivative end
 ### Internal node

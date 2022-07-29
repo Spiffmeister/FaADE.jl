@@ -1,4 +1,19 @@
 #= EXPLICIT METHODS =#
+
+"""
+    forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
+or
+    function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy)
+
+Inbuilt forward euler method,
+``u^{n+1} = u^n + \\Delta t F(u^{n+1},u^n,x,\\Delta x, t,\\Delta t,k,g)``
+- `n` (`nx`, `ny`): is the number of grid points
+- `Δx` (`Δy`): is the grid spacing
+- `k` (`kx`, `gy`): is a matrix or function containing the diffusion coefficients at the grid points
+- `g` (`gx`, `gy`): is a vector or function containing the boundary conditions
+
+"""
+function forward_euler end
 function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)

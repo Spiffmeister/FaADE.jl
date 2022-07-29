@@ -45,5 +45,4 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 # anim = @animate for i=1:N
 #     plot(soln.x,soln.u[:,i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.,1.))
 # end
-
 # gif(anim,"yes.gif",fps=50)

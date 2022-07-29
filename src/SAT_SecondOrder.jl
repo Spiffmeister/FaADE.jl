@@ -3,20 +3,21 @@
 =#
 
 """
-    SAT(type::BoundaryCondition,u::Vector{Float64},Δx::Float64,g;
-        order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
+    SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
+        order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
 
-Returns the left SAT+Forcing term as a vector or SAT and Forcing term as separate vectors
+Returns the left SAT (or SAT+Forcing) term as a vector or SAT and Forcing term as separate vectors
 
 Inputs: 
-- type: Dirichlet, Neumann, Robin
+- type: Dirichlet, Neumann, Robin (see ? BoundaryCondition)
+- ::NodeType: Left or Right (see ? NodeType)
 - u: Solution vector
 - Δx: step size
 - g: boundary value
 Optional inputs:
 - order: 2 (default), 4, 6
-- coefficient: c in ∂ₓ(c∂ₓu)
-- αβ: [α,β] Robin boundary coefficient αdₓu + βu = f
+- coefficient: c in ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right)``
+- `αβ`: `[α,β]` Robin boundary coefficient ``\\alpha \\partial_x u + \\beta u = f``
 - separate_forcing: true, false (default) -- controls the return type.
     false; returns a single vector of the SAT
     true; returns SAT and F(orcing) vectors individually
@@ -25,13 +26,13 @@ For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Sp
 """
 function SAT end
 function SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
-    order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
+        order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     if type == Dirichlet # Dirichlet boundaries
-        SAT,F = Dirichlet_left(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
+        SAT,F = SAT_Dirichlet(Left,u,Δx,g,c=c,order=order,separate_forcing=true)
     elseif type == Neumann # Neumann boundary conditions
-        SAT,F = Neumann_left(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
+        SAT,F = SAT_Neumann(Left,u,Δx,g,c=c,order=order,separate_forcing=true)
     elseif type == Robin # Robin boundaries
-        SAT,F = Robin_left(u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=separate_forcing)
+        SAT,F = SAT_Robin(Left,u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=true)
     else
         error("Must specify either Dirichlet, Neumann or Robin. For periodic boundaries use the SAT_Periodic() function")
     end
@@ -43,15 +44,14 @@ function SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64
         return SAT, F
     end
 end
-
 function SAT(type::BoundaryCondition,::NodeType{:Right},u::AbstractVector{Float64},Δx::Float64,g;
-    order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
+        order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     if type == Dirichlet
-        SAT, F = Dirichlet_right(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
+        SAT, F = SAT_Dirichlet(Right,u,Δx,g,c=c,order=order,separate_forcing=true)
     elseif type == Neumann # Neumann boundary conditions
-        SAT, F = Neumann_right(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
+        SAT, F = SAT_Neumann(Right,u,Δx,g,c=c,order=order,separate_forcing=true)
     elseif type == Robin
-        SAT, F = Robin_right(u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=separate_forcing)
+        SAT, F = SAT_Robin(Right,u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=true)
     else
         error("Must specify either Dirichlet, Neumann or Robin. For Periodic use the SAT_Periodic() function")
     end
@@ -65,62 +65,20 @@ function SAT(type::BoundaryCondition,::NodeType{:Right},u::AbstractVector{Float6
 end
 
 
-"""
-    SAT_left(type::BoundaryCondition,u::Vector{Float64},Δx::Float64,g;
-        order=2::Int,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
-
-Returns the left SAT+Forcing term as a vector or SAT and Forcing term as separate vectors
-
-Inputs: 
-- type: Dirichlet, Neumann, Robin
-- u: Solution vector
-- Δx: step size
-- g: boundary value
-Optional inputs:
-- order: 2 (default), 4, 6
-- coefficient: c in ∂ₓ(c∂ₓu)
-- αβ: [α,β] Robin boundary coefficient αdₓu + βu = f
-- separate_forcing: true, false (default) -- controls the return type.
-    false; returns a single vector of the SAT
-    true; returns SAT and F(orcing) vectors individually
-
-For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
-"""
-function SAT_left end
-### Vector form
-function SAT_left(type::BoundaryCondition,u::AbstractVector{Float64},Δx::Float64,g;
-    order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
-    if type == Dirichlet # Dirichlet boundaries
-        SAT,F = Dirichlet_left(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
-    elseif type == Neumann # Neumann boundary conditions
-        SAT,F = Neumann_left(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
-    elseif type == Robin # Robin boundaries
-        SAT,F = Robin_left(u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=separate_forcing)
-    else
-        error("Must specify either Dirichlet, Neumann or Robin. For periodic boundaries use the SAT_Periodic() function")
-    end
-    # If the forcing term is part of the SAT (i.e. not using GC method)
-    if !separate_forcing
-        SAT += F
-        return SAT
-    else
-        return SAT, F
-    end
-end
-### MATRIX FORM
+### MATRIX FORM #TODO: REMOVE THIS/CHANGE TO MATRIX SAT()
 function SAT_left(type::BoundaryCondition,u::AbstractMatrix{Float64},Δx::Float64,Δy::Float64,nx::Int64,ny::Int64,g,dim;
     order::Int64=2,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     if dim == 1
         SAT = zeros(Float64,ny,order)
         F = zeros(Float64,ny,order)
         for i = 1:ny
-            SAT[i,:],F[i,:] = SAT_left(type,u[i,:],Δx,g,order=order,c=c,αβ=αβ,separate_forcing=separate_forcing)
+            SAT[i,:],F[i,:] = SAT(type,u[i,:],Δx,g,order=order,c=c,αβ=αβ,separate_forcing=false)
         end
     elseif dim == 2
         SAT = zeros(Float64,nx,order)
         F = zeros(Float64,nx,order)
         for i = 1:nx
-            SAT[i,:],F[i,:] = SAT_left(type,u[i,:],Δy,g,order=order,c=c,αβ=αβ,separate_forcing=separate_forcing)
+            SAT[i,:],F[i,:] = SAT(type,u[i,:],Δy,g,order=order,c=c,αβ=αβ,separate_forcing=false)
         end
     end
     if separate_forcing
@@ -132,39 +90,23 @@ end
 
 
 
-function SAT_right(type::BoundaryCondition,u::Vector{Float64},Δx::Float64,g;order::Int=2,c::Union{Float64,Vector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing=false)
-
-    # Right side SAT
-    if type == Dirichlet
-        SAT, F = Dirichlet_right(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
-    elseif type == Neumann # Neumann boundary conditions
-        SAT, F = Neumann_right(u,Δx,g,c=c,order=order,separate_forcing=separate_forcing)
-    elseif type == Robin
-        SAT, F = Robin_right(u,Δx,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=separate_forcing)
-    else
-        error("Must specify either Dirichlet, Neumann or Robin. For Periodic use the SAT_Periodic() function")
-    end
-    # If the forcing term is part of the SAT (i.e. not using GC method)
-    if !separate_forcing
-        SAT += F
-        return SAT
-    else
-        return SAT, F
-    end
-end
-
-
-
 
 #=
 ====================== Dirichlet boundary conditions ======================
 =#
 """
-    Dirichlet_left(u::Vector{Float64},Δx::Float64,g;c=1.0,order::Int64=2,penalty::Vector{Float64}=[-1.0,-1.0])
-"""
-function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;
-    c=1.0,order::Int64=2,separate_forcing::Bool=false)
+    SAT_Dirichlet(::NodeType{:Left,:Right},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
 
+Simulatenous approximation term for Dirichlet boundary conditions 
+    ``u(xᵢ)=g``
+where ``i\\in \\{0,N\\}``.
+
+`NodeType` is either `Left` or `Right`
+"""
+function SAT_Dirichlet end
+function SAT_Dirichlet(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -179,16 +121,15 @@ function Dirichlet_left(u::Vector{Float64},Δx::Float64,g;
     Dᵀf = boundary_Dₓᵀ(g,Δx,order)
     F[1] += -τ*g[1]
     F .+= -α * c[1] * Dᵀf[1:order]
+
     if separate_forcing
         return SAT, F
     else
         return SAT + F
     end
 end
-
-function Dirichlet_right(u::Vector{Float64},Δx,g;
-    c=1.0,order::Int64=2,separate_forcing::Bool=false)
-
+function SAT_Dirichlet(::NodeType{:Right},u::Vector{Float64},Δx,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalty parameters
     α,τ = Dirichlet_penalties(Δx,order)
     
@@ -212,28 +153,22 @@ function Dirichlet_right(u::Vector{Float64},Δx,g;
 end
 
 
-function Dirichlet_penalties(Δx::Float64,order::Int64)
-    # For reading in penalty parameters for Dirichlet SATs
-    h = hval(order)
-
-    α = 1.0 * (h * Δx)^-1
-
-    τ = 1.0
-    τ = -(1.0 + τ) * (h * Δx)^-2
-
-    return α, τ
-end
-
-
-
 #=
 ====================== Neumann boundary conditions ======================
 =#
+"""
+    SAT_Neumann(::NodeType{:Left,:Right},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
 
+Simulatenous approximation term for Neumann boundary conditions 
+    ``\\left.\\frac{\\partial u}{\\partial x}\\right|_{x_i} = g(t)``
+where ``i\\in\\{0,N\\}``
 
-function Neumann_left(u::Vector{Float64},Δx::Float64,g;
-    c=1.0,order::Int64=2,separate_forcing::Bool=false)
-
+`NodeType` is either `Left` or `Right`
+"""
+function SAT_Neumann end
+function SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalties
     τ = Neumann_penalties(Δx,order)
     # SAT construction
@@ -250,9 +185,8 @@ function Neumann_left(u::Vector{Float64},Δx::Float64,g;
         return SAT + F
     end
 end
-
-function Neumann_right(u::Vector{Float64},Δx::Float64,g;
-    c=1.0,order::Int64=2,separate_forcing::Bool=false)
+function SAT_Neumann(::NodeType{:Right},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalties
     τ = Neumann_penalties(Δx,order)
     # SAT construction
@@ -270,27 +204,21 @@ function Neumann_right(u::Vector{Float64},Δx::Float64,g;
     end
 end
 
-
-function Neumann_penalties(Δx::Float64,order::Int64)
-    # For reading in penalty parameters for Neumann SATs
-    h = hval(order)
-    τ = 1.0/(h * Δx)
-
-    return τ
-end
-
-#=
-====================== Robin boundary conditions ======================
-=#
-
 """
-    function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0)
+    SAT_Robin(::NodeType{:Left,:Right},u::Vector{Float64},Δx::Float64,g;
+        order=2,a=1.0,b=1.0,separate_forcing=false)
+
+Simulatenous approximation term for Robin boundary conditions
+
+`NodeType` is either `Left` or `Right`
 """
-function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0,separate_forcing=false)
+function SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
+        order=2,a=1.0,b=1.0,separate_forcing=false)
     # Get penalties
-    h = hval(order)
-    τ = 1.0/(a * h * Δx)
-    
+    # h = hval(order)
+    # τ = 1.0/(a * h * Δx)
+    τ = Robin_penalties(a,Δx,order)
+
     # Compute the SAT
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
@@ -307,11 +235,12 @@ function Robin_left(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0,separa
         return SAT, F
     end
 end
-
-function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0,separate_forcing=false)
+function SAT_Robin(::NodeType{:Right},u::Vector{Float64},Δx::Float64,g;
+        order=2,a=1.0,b=1.0,separate_forcing=false)
     # Get penalties
-    h = hval(order)
-    τ = 1.0/(a * h * Δx)
+    # h = hval(order)
+    # τ = 1.0/(a * h * Δx)
+    τ = Robin_penalties(a,Δx,order)
 
     # Compute the SAT
     SAT = zeros(Float64,order)
@@ -331,9 +260,11 @@ function Robin_right(u::Vector{Float64},Δx::Float64,g;order=2,a=1.0,b=1.0,separ
 end
 
 
-#=
-====================== Periodic boundary conditions ======================
-=#
+"""
+    SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2)
+
+Simulatenous approximation term for Periodic boundary conditions
+"""
 function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2)
 
     # Get h value
@@ -371,10 +302,14 @@ function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::
 end
 
 
+"""
+    Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
+        order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
 
-#=
-====================== Interface boundary ======================
-=#
+Simulatenous approximation term for a split domain
+
+    TODO: Fix for when `order⁺ != order⁻`
+"""
 function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
 
     h⁻ = hval(order⁻)
@@ -435,6 +370,34 @@ end
 
 
 
+
+
+#=
+====================== Generating Penalties ======================
+=#
+function Dirichlet_penalties(Δx::Float64,order::Int64)
+    # For reading in penalty parameters for Dirichlet SATs
+    h = hval(order)
+
+    α = 1.0 * (h * Δx)^-1 # α*H^{-1}
+
+    τ = 1.0
+    τ = -(1.0 + τ) * (h * Δx)^-2 # τ*H^{-1}H^{-1}
+    return α, τ
+end
+function Neumann_penalties(Δx::Float64,order::Int64)
+    # For reading in penalty parameters for Neumann SATs
+    h = hval(order)
+
+    τ = 1.0/(h * Δx) # τ*H^{-1}
+    return τ
+end
+function Robin_penalties(a,Δx::Float64,order::Int64)
+    h = hval(order)
+
+    τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
+    return τ
+end
 
 #=
 ====================== Supporting fns ======================
@@ -512,6 +475,8 @@ function boundary_Dₓ(u::Vector{Float64},Δx::Float64,order::Int64=2)
 
     return uₓ
 end
+
+
 
 
 

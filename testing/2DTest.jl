@@ -42,13 +42,13 @@ gx(t) = [0.0, 0.0]
 gy(t) = [0.0, 0.0]
 
 order = 2
-method = :cgie
+method = :euler
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time u = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,:Periodic,:Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1,tol=1e-14)
+@time soln, = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Periodic,Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-14)
 
 
 # ky = zeros(Float64,nx,ny)
@@ -62,11 +62,11 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 skip = 5
 fps = 10
 
-anim = @animate for i = 1:skip:size(u)[3]
+anim = @animate for i = 1:skip:length(soln.u)
     l = @layout [a{0.7w} [b; c]]
-    p = surface(u[:,:,i],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),xlabel="y",ylabel="x")
-    plot!(p[2],u[25,:,i])
-    plot!(p[3],u[:,25,i])
+    p = surface(soln.u[i],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),xlabel="y",ylabel="x")
+    plot!(p[2],soln.u[i][25,:])
+    plot!(p[3],soln.u[i][:,25])
 end
 
 gif(anim,"yes.gif",fps=fps)

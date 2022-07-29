@@ -1,3 +1,17 @@
+"""
+Module for `SBP_operators.jl` package - for computing finite differences by Summation by Parts 
+    with Simulatenous Approximation Terms.
+
+# Public functions
+
+- [`Dₓ`](@ref)
+- [`Dₓₓ`](@ref)
+- [`SAT`](@ref)
+- [`SAT_Periodic`](@ref)
+- [`Split_domain`](@ref)
+- [`time_solver`](@ref)
+
+"""
 module SBP_operators
 
     # Inbuild julia packages
@@ -15,8 +29,8 @@ module SBP_operators
 
 
     # Export the functions for direct user interaction
-    export NodeLeft, NodeInternal, NodeRight, 
+    export Left, Internal, Right, 
         Dirichlet, Neumann, Robin, Periodic, Interface
-    export Dₓ, Dₓₓ, Dₓ!, Dₓₓ!, SAT_left, SAT_right, SAT_Periodic, Split_domain, time_solver, build_H
+    export Dₓ, Dₓₓ, Dₓₓ!, SAT, SAT_Periodic, Split_domain, time_solver, build_H
 
 end # module
