@@ -27,7 +27,7 @@ Internally uses [`SecondDerivative`](@ref)
 """
 function Dₓₓ end
 ### 1D second derivative operator
-function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓₓ(u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
 
     uₓₓ = zeros(Float64,n)
@@ -37,7 +37,7 @@ function Dₓₓ(u::Vector{Float64},c::Vector{Float64},n::Int64,Δx::Float64;ord
     return uₓₓ
 end
 ### 2D second derivative operator
-function Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::Matrix{Float64};dim::Int64=1,order::Int64=2)
+function Dₓₓ(u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
     
     uₓₓ = zeros(Float64,nx,ny)

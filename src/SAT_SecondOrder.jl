@@ -108,7 +108,7 @@ function SAT_Dirichlet end
 function SAT_Dirichlet(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
         c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalty parameters
-    α,τ = Dirichlet_penalties(Δx,order)
+    α,τ = SATpenalties(Dirichlet,Δx,order)
     
     # Construct the SATs
     SAT = zeros(Float64,order)
@@ -131,7 +131,7 @@ end
 function SAT_Dirichlet(::NodeType{:Right},u::Vector{Float64},Δx,g;
         c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalty parameters
-    α,τ = Dirichlet_penalties(Δx,order)
+    α,τ = SATpenalties(Dirichlet,Δx,order)
     
     # Construct the SATs
     SAT = zeros(Float64,order)
@@ -170,7 +170,7 @@ function SAT_Neumann end
 function SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
         c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalties
-    τ = Neumann_penalties(Δx,order)
+    τ = SATpenalties(Neumann,Δx,order)
     # SAT construction
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
@@ -188,7 +188,7 @@ end
 function SAT_Neumann(::NodeType{:Right},u::Vector{Float64},Δx::Float64,g;
         c=1.0,order::Int64=2,separate_forcing::Bool=false)
     # Penalties
-    τ = Neumann_penalties(Δx,order)
+    τ = SATpenalties(Neumann,Δx,order)
     # SAT construction
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
@@ -217,7 +217,7 @@ function SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
     # Get penalties
     # h = hval(order)
     # τ = 1.0/(a * h * Δx)
-    τ = Robin_penalties(a,Δx,order)
+    τ = SATpenalties(Robin,a,Δx,order)
 
     # Compute the SAT
     SAT = zeros(Float64,order)
@@ -240,7 +240,7 @@ function SAT_Robin(::NodeType{:Right},u::Vector{Float64},Δx::Float64,g;
     # Get penalties
     # h = hval(order)
     # τ = 1.0/(a * h * Δx)
-    τ = Robin_penalties(a,Δx,order)
+    τ = SATpenalties(Robin,a,Δx,order)
 
     # Compute the SAT
     SAT = zeros(Float64,order)
@@ -369,13 +369,15 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
 end
 
 
+"""
+    SATpenalties(::BoundaryCondition{:Dirichlet,:Neumann},Δx::Float64,order::Int64)
+or
+    SATpenalties(::BoundaryCondition{:Robin},a,Δx::Float64,order::Int64)
 
-
-
-#=
-====================== Generating Penalties ======================
-=#
-function Dirichlet_penalties(Δx::Float64,order::Int64)
+Determines the penatly parameters for the given boundary conditions.
+"""
+function SATpenalties end
+function SATpenalties(::BoundaryCondition{:Dirichlet},Δx::Float64,order::Int64)
     # For reading in penalty parameters for Dirichlet SATs
     h = hval(order)
 
@@ -385,23 +387,26 @@ function Dirichlet_penalties(Δx::Float64,order::Int64)
     τ = -(1.0 + τ) * (h * Δx)^-2 # τ*H^{-1}H^{-1}
     return α, τ
 end
-function Neumann_penalties(Δx::Float64,order::Int64)
+function SATpenalties(::BoundaryCondition{:Neumann},Δx::Float64,order::Int64)
     # For reading in penalty parameters for Neumann SATs
     h = hval(order)
 
     τ = 1.0/(h * Δx) # τ*H^{-1}
     return τ
 end
-function Robin_penalties(a,Δx::Float64,order::Int64)
+function SATpenalties(::BoundaryCondition{:Robin},a,Δx::Float64,order::Int64)
     h = hval(order)
 
     τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
     return τ
 end
 
-#=
-====================== Supporting fns ======================
-=#
+
+"""
+    boundary_Dₓᵀ(u::AbstractVector{Float64},Δx::Float64,order::Int64=2)
+
+Transpose of first order derivative operator at the boundary needed to compute certain SATs
+"""
 function boundary_Dₓᵀ(u::Vector{Float64},Δx::Float64,order::Int64=2)
     # Implementation of the 
 
@@ -438,7 +443,11 @@ function boundary_Dₓᵀ(u::Vector{Float64},Δx::Float64,order::Int64=2)
 end
 
 
+"""
+    boundary_Dₓ(u::AbstractVector{Float64},Δx::Float64,order::Int64=2)
 
+Transpose of first order derivative operator at the boundary needed to compute certain SATs
+"""
 function boundary_Dₓ(u::Vector{Float64},Δx::Float64,order::Int64=2)
     # Implementation of the 
 
@@ -477,17 +486,17 @@ function boundary_Dₓ(u::Vector{Float64},Δx::Float64,order::Int64=2)
 end
 
 
+"""
+    hval(order::Int64)
 
-
-
+Returns the value of ``h^{-1}`` for the penalties
+"""
 function hval(order::Int64)
     if order == 2
-        h = 0.5
+        return 0.5
     elseif order == 4
-        h = 17.0/48.0
+        return 17.0/48.0
     elseif order == 6
-        #TODO
-        h = 13649.0/43200.0
+        return 13649.0/43200.0
     end
-    return h
 end

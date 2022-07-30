@@ -1,8 +1,10 @@
 """
     NodeType{T}
 
-Used in `FirstDerivative()` and `SecondDerivative()` to indicate which node type should be used. 
-`Left` and `Right` are used by the `SAT()` function to determine which side of the SAT to call.
+- Used by `FirstDerivative()` and `SecondDerivative()` to indicate which node type should be used.
+- `Left` and `Right` are used by the `SAT()` function to determine which side of the SAT to call.
+
+Node types are:
 - Left
 - Internal
 - Right
@@ -19,6 +21,8 @@ Used in `SAT()` function to determine which boundary conditions to call.
 - Dirichlet
 - Neumann
 - Robin
+
+
 - Periodic
 - Interface
 """

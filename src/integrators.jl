@@ -14,20 +14,23 @@ Inbuilt forward euler method,
 
 """
 function forward_euler end
-function forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
+function forward_euler(uₙ::AbstractVector,uₒ::AbstractVector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::AbstractVector,t::Float64,x::AbstractVector,g)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
     return uₙ
 end
-function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy)
+# Matrix version
+function forward_euler(uₙ::AbstractMatrix,uₒ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::AbstractMatrix,ky::AbstractMatrix,gx,gy)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return uₙ
 end
 
 
-
-
+"""
+    RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
+"""
+function RK4 end
 function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
     k1 = RHS(uₙ,uₒ        ,n,x,Δx,t,Δt,k,       boundary)
     k2 = RHS(uₙ,uₒ+Δt/2*k1,n,x,Δx,t+0.5Δt,Δt,k, boundary)
