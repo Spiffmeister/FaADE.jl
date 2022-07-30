@@ -3,5 +3,5 @@
 *.jpg 
 *.gif
 *.pdf
-/docs/*/
+/docs/build/
 /build
