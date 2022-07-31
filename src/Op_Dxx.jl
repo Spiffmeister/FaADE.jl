@@ -90,14 +90,14 @@ function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c:
     return uₓₓ
 end
 ### Multidimensional second derivative SBP operator
-function Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
+function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
     
     if dim == 1
-        for i = 1:ny #column derivatives
+        @sync @distributed for i = 1:ny #column derivatives
             uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
         end
     elseif dim == 2
-        for i = 1:nx #row derivative
+        @sync @distributed for i = 1:nx #row derivative
             uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
         end
     else
@@ -106,6 +106,140 @@ function Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx
 
     return uₓₓ
 end
+### 2D at nodes
+
+function Stencil2D(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx,ny,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+
+    adjx = Int64(order/2)
+    adjy = Int64(order/2)
+
+    # Internal nodes
+    @sync @distributed for i = order_x:nx-order_x+1
+        @distributed for j = order_y:ny-order_y+1
+            uₓₓ[i] = SecondDerivative(u[i-adjx:i+adjx,j],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x) + 
+                SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Internal,order=order_y)
+        end
+    end
+
+end
+
+"""
+    Stencil2D
+
+Computes the 2D finite difference stencil at a given node
+"""
+function Stencil2D end
+
+### Iternal node stencil
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy,nx,ny;order_x=2,order_y=order_x)
+    i = Int64(order/2)+1 #half way
+    j = Int64(order/2)+1 #half way
+
+    uₓₓ = SecondDerivative(u[:,j],cx[:,j],Δx,Internal,order=order_x) + 
+        SecondDerivative(u[i,:],cy[i,:],Δy,Internal,order=order_y)
+    return uₓₓ
+
+end
+### X boundaries
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # Left x internal y
+    i = Int64(order/2)+1
+    j = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[:,j],cx[:,j],Δx,Left,order=order_x)
+    for i = 1:order_x
+        uₓₓ += SecondDerivative(u[i,:],cy[i,:],Δy,Internal,order=order_y)
+    end
+    return uₓₓ
+
+end
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # Right x internal y
+    i = Int64(order/2)+1
+    j = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[:,j],cx[:,j],Δx,Right,order=order_x) + 
+    for i = 1:order_x
+        uₓₓ += SecondDerivative(u[i,:],cy[i,:],Δy,Internal,order=order_y)
+    end
+    return uₓₓ
+
+end
+### Y boundaries
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # internal x left y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Left,order=order_y)
+    for j = j:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # internal x right y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Right,order=order_y)
+    for j = 1:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+### Corners
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # left x left y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Right,order=order_y)
+    for j = 1:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # left x right y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Right,order=order_y)
+    for j = 1:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # right x left y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Right,order=order_y)
+    for j = 1:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+function Stencil2D(u::AbstractMatrix,Δx,Δy,cx,cy;order_x=2,order_y=order_x)
+    # right x right y
+    adjx = Int64(order/2)+1
+    adjy = Int64(order/2)+1
+
+    uₓₓ = SecondDerivative(u[i,j-adjy:j+adjy],cy[i,j-adjy:j+adjy],Δy,Right,order=order_y)
+    for j = 1:order_y
+        uₓₓ += SecondDerivative(u[:,adjx],cx[i-adjx:i+adjx,j],Δx,Internal,order=order_x)
+    end
+    return uₓₓ
+
+end
+
 ### Chunked Arrays
 # function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},m::Int64,Δ::Float64;order::Int64=2)
 #     adj = Int64(order/2)
