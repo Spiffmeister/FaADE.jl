@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
+# pyplot()
 
 # using BenchmarkTools
 

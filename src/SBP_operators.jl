@@ -21,6 +21,8 @@ module SBP_operators
 
     # Include the files (add as completed)
     include("types.jl")
+    include("DerivativeFirst.jl")
+    include("DerivativeSecond.jl")
     include("Op_Dx.jl")
     include("Op_Dxx.jl")
     include("SAT_SecondOrder.jl")
