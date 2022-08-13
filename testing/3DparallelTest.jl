@@ -94,23 +94,13 @@ H_y = 1.0 ./H_y.^2
 function penalty_fn(u,uₒ,Δt)
     uₚ = zeros(Float64,nx,ny)
     umw = zeros(Float64,nx,ny)
+
+    interp = LinearInterpolation((x,y),u)
+    
     for i = 1:nx
         for j = 1:ny
-            # uₚ[i,j] = κ_para * τ_para/2.0 * (Hinv[(i-1)*j+1]) * (u[i,j] - uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]])
-            # uₚ[i,j] += κ_para * τ_para/2.0 * (Hinv[(i-1)*j+1]) * (u[i,j] - uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
-
-            # uₚ[i,j] = u[i,j] + Δt * κ_para * τ_para/2.0 * (Hinv[(i-1)*j+1]) * 
-                # (2.0*u[i,j] - (uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]]))
-
             umw[i,j] = 2u[i,j] - (u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
 
-            # uₚ[i,j] = 1.0/(1.0 - 2.0 * κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
-                # (u[i,j] - Δt*τ_para/2.0 *(H_y[i] + H_x[j])*(u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]]))
-            
-            interp = LinearInterpolation((x,y),u)
-
-            # uₚ[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
-            #     (u[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j]) + interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])))
 
 
             if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]

@@ -1,8 +1,8 @@
 
 """
-function Dₓ(u::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+    Dₓ(u::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
 or
-Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,dims::Union{Int64,Vector{Int64}}=1)
+    Dₓ(u::Matrix{Float64},n::Vector{Int64},Δx::Float64;order::Int64=2,dims::Union{Int64,Vector{Int64}}=1)
 
 - If `typeof(u) <: AbstractVector{Float64}` then uses a 1D first derivative SBP operator.
 - Returns a `Vector{Float64}` of length `n`.

@@ -16,6 +16,7 @@ module SBP_operators
 
     # Inbuild julia packages
     using Distributed
+    using SharedArrays
     using LinearAlgebra
 
 
@@ -32,7 +33,8 @@ module SBP_operators
 
     # Export the functions for direct user interaction
     export Left, Internal, Right, 
-        Dirichlet, Neumann, Robin, Periodic, Interface
-    export Dₓ, Dₓₓ, Dₓₓ!, SAT, SAT_Periodic, Split_domain, time_solver, build_H
+        Dirichlet, Neumann, Robin, Periodic, Interface,
+        Dₓ, Dₓₓ, Dₓₓ!, Stencil2D,
+        SAT, SAT_Periodic, Split_domain, time_solver, build_H
 
 end # module

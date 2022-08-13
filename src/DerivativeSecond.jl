@@ -17,7 +17,7 @@ Inbuilt method for the second derviative SBP operator
     - `order==6`: 7 nodes
     - Returns `Float64`
 - If `NodeType==Left` or `NodeType==Right` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
-    - `order==2`: 1 node, returns `Float64`
+    - `order==2`: 1 node, returns `Vector{Float64}` with length 1
     - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
     - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
     - Returns `Vector{Float64}`
@@ -57,7 +57,7 @@ function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},
 
     if order == 2
         uₓₓ = zeros(Float64,1)
-        return 0.0
+        return [0.0]
     elseif order == 4
         uₓₓ = zeros(Float64,6)
         
@@ -238,7 +238,7 @@ end
 function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         uₓₓ = zeros(Float64,1)
-        return 0.0
+        return [0.0]
     elseif order == 4
         n = 8
         m = 6
