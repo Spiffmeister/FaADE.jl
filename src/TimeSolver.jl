@@ -216,10 +216,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     # soln = zeros(Float64,nx,ny,ceil(Int64,N))#/samplefactor))
     uₙ = zeros(Float64,nx,ny)
     uₒ = zeros(Float64,nx,ny)
-    if nprocs() > 1
-        uₙ = SharedArray(uₙ)
-        uₒ = SharedArray(uₒ)
-    end
+    # if nprocs() > 1
+    #     uₙ = SharedArray(uₙ)
+    #     uₒ = SharedArray(uₒ)
+    # end
 
     for i = 1:nx
         for j = 1:ny
@@ -381,7 +381,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 t += Δt
                 append!(soln.t,t)
                 append!(soln.Δt,Δt)
-                append!(umw,tmp)
+                # append!(umw,tmp)
                 if adaptive #if adaptive time stepping is turned on
                     if Δt < 300*Δt₀
                         Δt *= 1.05

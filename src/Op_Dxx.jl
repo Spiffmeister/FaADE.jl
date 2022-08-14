@@ -185,6 +185,7 @@ function Stencil2D(u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal}
     halfy = Int64(order_y/2) #half way
 
     uₓₓ = SharedArray(zeros(Float64,nx,ny))
+    
     @sync @distributed for i = 1:nx
         for j = 1:ny
             uₓₓ[i,j] = SecondDerivative(u[i:i+order_x,j+halfx],
@@ -193,6 +194,7 @@ function Stencil2D(u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal}
                     cy[i+halfy,j:j+order_y],Δy,Internal,order=order_y)
         end
     end
+    
 
     return uₓₓ
 

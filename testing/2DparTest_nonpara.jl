@@ -10,14 +10,13 @@ using JLD2
 using ProfileView
 
 cd("..")
-using Distributed
-addprocs(2)
-@everywhere push!(LOAD_PATH,"./plas_diff")
-@everywhere push!(LOAD_PATH,"./SBP_operators")
-# @everywhere push!(LOAD_PATH,".")
-@everywhere using SBP_operators
-@everywhere using plas_diff
+push!(LOAD_PATH,"./plas_diff")
+push!(LOAD_PATH,"./SBP_operators")
+# push!(LOAD_PATH,".")
+using SBP_operators
+using plas_diff
 using SharedArrays
+
 
 ###
 function rate(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky;order_x=2,order_y=2)
@@ -32,8 +31,8 @@ end
 ###
 𝒟x = [0.5,0.68]
 𝒟y = [-π,π]
-nx = 41
-ny = 41
+nx = 61
+ny = 61
 
 Δx = (𝒟x[2]-𝒟x[1])/(nx-1)
 Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
@@ -46,12 +45,13 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 Δt = 1.0 * min(Δx^2,Δy^2)
 # t_f = 200Δt
-t_f = 100.0
+t_f = 1000.0
 N = ceil(Int64,t_f/Δt)
 
 # u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
 # u₀(x,y) = 0.5sin(4*2π*x) + 0.5sin(4*y)
 u₀(x,y) = (x-0.5)/(0.68-0.5)
+
 
 gx(t) = [0.0, 1.0] #Dirichlet
 gy(t) = [0.0, 0.0] #Periodic
@@ -68,7 +68,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 χₘₙ = 2.1e-3
 params = plas_diff.SampleFields.H_params([χₘₙ/2., χₘₙ/3.],[2.0, 3.0],[1.0, 2.0])
 
-@everywhere function χ_h!(χ,x::Array{Float64},p,t)
+function χ_h!(χ,x::Array{Float64},p,t)
     # Hamiltons equations for the field-line Hamiltonian
     # H = ψ²/2 - ∑ₘₙ ϵₘₙ(cos(mθ - nζ))
     χ[1] = x[2] #p_1            qdot        θ
@@ -105,7 +105,6 @@ function penalty_fn(u,uₒ,Δt)
 
             umw[i,j] = 2u[i,j] - (u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
 
-
             if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]
                 w_f  = 0.0
             elseif 𝒟x[2] ≤ gdata.z_planes[1].x[i,j]
@@ -131,23 +130,12 @@ function penalty_fn(u,uₒ,Δt)
     return uₚ, norm(umw)
 end
 
-"""
-@time SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+
+
+
+###
+@profview soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
-
-###
-@time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
-
-###
-"""
-
-@time SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
-
-###
-@time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
 
 ###
 
@@ -161,18 +149,18 @@ pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_or
 
 # plas_diff.plot_grid(gdata)
 
-N = length(soln.u)
-skip = 1
-fps = 5
+# N = length(soln.u)
+# skip = 1
+# fps = 5
 
-energy = zeros(N)
-maxerry = zeros(N)
-maxerrx = zeros(N)
-for i = 1:N
-    energy[i] = norm(soln.u[i][:,:],2)
-    maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
-    maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
-end
+# energy = zeros(N)
+# maxerry = zeros(N)
+# maxerrx = zeros(N)
+# for i = 1:N
+#     energy[i] = norm(soln.u[i][:,:],2)
+#     maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
+#     maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
+# end
 
 
 # anim = @animate for i = 1:skip:N
@@ -232,10 +220,10 @@ end
 
 
 
-# println("saving")
+println("saving")
 
-# if !(typeof(pdata.poincare) <: Nothing)
-#     pdata.poincare = nothing
-# end
-# save_object("testrun.jld2",(soln,gdata,umw,pdata))
+if !(typeof(pdata.poincare) <: Nothing)
+    pdata.poincare = nothing
+end
+save_object("testrun.jld2",(soln,gdata,umw,pdata))
 

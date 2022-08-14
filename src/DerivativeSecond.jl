@@ -25,7 +25,7 @@ Inbuilt method for the second derviative SBP operator
 """
 function SecondDerivative end
 ### Internal node
-function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Internal};order::Int64=2)
+function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
     if order == 2
         j = 2
