@@ -9,20 +9,20 @@
 Returns the left SAT (or SAT+Forcing) term as a vector or SAT and Forcing term as separate vectors
 
 Inputs: 
-- type: Dirichlet, Neumann, Robin (see ? BoundaryCondition)
-- ::NodeType: Left or Right (see ? NodeType)
+- type: Dirichlet, Neumann, Robin (see [`BoundaryCondition`](@ref))
+- ::NodeType: Left or Right (see [`NodeType`](@ref))
 - u: Solution vector
 - Δx: step size
 - g: boundary value
 Optional inputs:
 - order: 2 (default), 4, 6
 - coefficient: c in ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right)``
-- `αβ`: `[α,β]` Robin boundary coefficient ``\\alpha \\partial_x u + \\beta u = f``
+- `αβ`: `[α,β]` Robin boundary coefficient ``\\alpha \\partial_x u + \\beta u = f`` (NOTE: Robin only)
 - separate_forcing: true, false (default) -- controls the return type.
     false; returns a single vector of the SAT
-    true; returns SAT and F(orcing) vectors individually
+    true; returns SAT and F(orcing) vectors individually, useful when using implicit solvers
 
-For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
+For periodic conditions call [`Periodic`](@ref)(u,Δx,c;order), for a split domain call [`Split_domain`](@ref)(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
 function SAT end
 function SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
@@ -66,7 +66,7 @@ end
 
 
 ### MATRIX FORM #TODO: REMOVE THIS/CHANGE TO MATRIX SAT()
-function SAT_left(type::BoundaryCondition,u::AbstractMatrix{Float64},Δx::Float64,Δy::Float64,nx::Int64,ny::Int64,g,dim;
+function SAT_left(type::BoundaryCondition,::NodeType{:Left},u::AbstractMatrix,Δx::Float64,Δy::Float64,nx::Int64,ny::Int64,g,dim;
     order::Int64=2,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
     if dim == 1
         SAT = zeros(Float64,ny,order)
@@ -102,7 +102,7 @@ Simulatenous approximation term for Dirichlet boundary conditions
     ``u(xᵢ)=g``
 where ``i\\in \\{0,N\\}``.
 
-`NodeType` is either `Left` or `Right`
+`NodeType` is either `Left` or `Right`. See [`NodeType`](@ref).
 """
 function SAT_Dirichlet end
 function SAT_Dirichlet(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
@@ -164,7 +164,7 @@ Simulatenous approximation term for Neumann boundary conditions
     ``\\left.\\frac{\\partial u}{\\partial x}\\right|_{x_i} = g(t)``
 where ``i\\in\\{0,N\\}``
 
-`NodeType` is either `Left` or `Right`
+`NodeType` is either `Left` or `Right`. See [`NodeType`](@ref).
 """
 function SAT_Neumann end
 function SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
@@ -210,7 +210,7 @@ end
 
 Simulatenous approximation term for Robin boundary conditions
 
-`NodeType` is either `Left` or `Right`
+`NodeType` is either `Left` or `Right`. See [`NodeType`](@ref).
 """
 function SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
         order=2,a=1.0,b=1.0,separate_forcing=false)
@@ -263,7 +263,7 @@ end
 """
     SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2)
 
-Simulatenous approximation term for Periodic boundary conditions
+Simulatenous approximation term for Periodic boundary conditions.
 """
 function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2)
 

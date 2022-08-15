@@ -22,7 +22,6 @@ Used in `SAT()` function to determine which boundary conditions to call.
 - Neumann
 - Robin
 
-
 - Periodic
 - Interface
 """

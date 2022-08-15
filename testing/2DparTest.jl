@@ -6,12 +6,12 @@ using Plots
 using Interpolations
 using JLD2
 
-# using BenchmarkTools
-using ProfileView
+using BenchmarkTools
+# using ProfileView
 
 cd("..")
 using Distributed
-addprocs(2)
+# addprocs(2)
 @everywhere push!(LOAD_PATH,"./plas_diff")
 @everywhere push!(LOAD_PATH,"./SBP_operators")
 # @everywhere push!(LOAD_PATH,".")
@@ -142,11 +142,11 @@ end
 ###
 """
 
-@time SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+@btime SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
 
 ###
-@time soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+@btime soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
 
 ###
