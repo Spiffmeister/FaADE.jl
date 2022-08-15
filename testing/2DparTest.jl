@@ -11,7 +11,7 @@ using BenchmarkTools
 
 cd("..")
 using Distributed
-# addprocs(2)
+addprocs(1)
 @everywhere push!(LOAD_PATH,"./plas_diff")
 @everywhere push!(LOAD_PATH,"./SBP_operators")
 # @everywhere push!(LOAD_PATH,".")
@@ -37,8 +37,8 @@ ny = 41
 
 Δx = (𝒟x[2]-𝒟x[1])/(nx-1)
 Δy = (𝒟y[2]-𝒟y[1])/(ny-1)
-x = collect(range(𝒟x[1],𝒟x[2],step=Δx))
-y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
+x = collect(range(𝒟x[1],𝒟x[2],length=nx))
+y = collect(range(𝒟y[1],𝒟y[2],length=ny))
 
 kx = zeros(Float64,nx,ny) .+ 1.0e-8
 ky = zeros(Float64,nx,ny) .+ 1.0e-8
@@ -100,8 +100,8 @@ function penalty_fn(u,uₒ,Δt)
 
     interp = LinearInterpolation((x,y),u)
 
-    for i = 1:nx
-        for j = 1:ny
+    for j = 1:ny
+        for i = 1:nx
 
             umw[i,j] = 2u[i,j] - (u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
 
@@ -142,7 +142,7 @@ end
 ###
 """
 
-@btime SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
 
 ###
@@ -156,7 +156,7 @@ end
 
 println("plotting")
 
-pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
+# pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
 
 
 # plas_diff.plot_grid(gdata)
@@ -175,15 +175,15 @@ for i = 1:N
 end
 
 
-# anim = @animate for i = 1:skip:N
-#     l = @layout [a{0.7w} [b; c]]
-#     p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
-#     plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
-#     plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
-#     # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
-#     plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
-# end
-# gif(anim,"yes.gif",fps=fps)
+anim = @animate for i = 1:skip:N
+    l = @layout [a{0.7w} [b; c]]
+    p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
+    plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
+    plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
+    # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
+    plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
+end
+gif(anim,"yes.gif",fps=fps)
 
 
 # Slice info

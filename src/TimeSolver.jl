@@ -92,6 +92,8 @@ or
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
 
 Inbuilt function for integrating in time.
+
+See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_grad`](@ref)
 """
 function time_solver end
 function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryCondition;
@@ -183,8 +185,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         while t ≤ t_f
             uⱼ = copy(uₒ)
             if boundary_left != :Periodic
-                SATₗ,Fₗ = SAT(boundary_left,Left,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
-                SATᵣ,Fᵣ = SAT(boundary_right,Right,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
+                _,Fₗ = SAT(boundary_left,Left,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
+                _,Fᵣ = SAT(boundary_right,Right,uⱼ,Δx,boundary(t),order=order,separate_forcing=true)
                 uⱼ[1:order] += Δt*Fₗ
                 uⱼ[end-order+1:end] += Δt*Fᵣ
             end
@@ -216,10 +218,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     # soln = zeros(Float64,nx,ny,ceil(Int64,N))#/samplefactor))
     uₙ = zeros(Float64,nx,ny)
     uₒ = zeros(Float64,nx,ny)
-    # if nprocs() > 1
-    #     uₙ = SharedArray(uₙ)
-    #     uₒ = SharedArray(uₒ)
-    # end
+    if nprocs() > 1
+        uₙ = SharedArray(uₙ)
+        uₒ = SharedArray(uₒ)
+    end
 
     for i = 1:nx
         for j = 1:ny

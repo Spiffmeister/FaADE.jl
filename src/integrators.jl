@@ -43,6 +43,13 @@ end
 
 
 #= IMPLICIT METHODS =#
+"""
+    implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
+or
+    function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,Δy::Float64,Δt::Float64,kx::Matrix,ky::Matrix,t::Float64,x::Vector,y::Vector,boundary_x,boundary_y;maxIT::Int=100,α::Float64=1.5)
+"""
+function implicit_euler end
+# Vector form
 function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
     uⱼ = uₒ
     for j = 1:maxIT
@@ -51,6 +58,7 @@ function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Floa
     uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary)
     return uⱼ
 end
+# Matrix form
 function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,Δy::Float64,Δt::Float64,kx::Matrix,ky::Matrix,t::Float64,x::Vector,y::Vector,boundary_x,boundary_y;maxIT::Int=100,α::Float64=1.5)
     uⱼ = uₒ
     for j = 1:maxIT
@@ -62,10 +70,17 @@ end
     
 
 
+"""
+    conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+or
+    conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
+    ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
 
-
+See also [`build_H`](@ref), [`A`](@ref)
+"""
+function conj_grad end
+# VECTOR FORM
 function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
-    # VECTOR FORM
     xₖ = uⱼ #Initial guess
     rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,boundary) - b
     dₖ = -rₖ
@@ -130,6 +145,9 @@ end
 
 
 #= SUPPORT =#
+"""
+    build_H(n::Int64,order::Int64)
+"""
 function build_H(n::Int64,order::Int64)
     H = ones(n)
     if order == 2
@@ -152,27 +170,39 @@ function build_H(n::Int64,order::Int64)
     return H
 end
 
+"""
+    A
 
-function A(uⱼ::AbstractVector{Float64},PDE::Function,n::Int64,Δx::Float64,x::Vector{Float64},Δt::Float64,t::Float64,k::Vector{Float64},g)
+    1. A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector{Float64},g)
+    2. A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+"""
+function A end
+function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector{Float64},g)
     # tmp can be any vector of length(uⱼ)
     tmp = zeros(Float64,length(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
-function A(uⱼ::AbstractMatrix{Float64},PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+function A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
     tmp = zeros(Float64,size(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return tmp
 end
 
+"""
+    innerH
 
+    1. innerH(u::AbstractVector,H::AbstractArray,v::AbstractVector)
+    2. innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
+"""
+function innerH end
+# H inner product for 1D problems
 function innerH(u::AbstractVector,H::AbstractArray,v::AbstractVector)
-    # H inner product for 1D problems
     return dot(u,H*v)
 end
+# H inner product for 2D problems
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
-    # H inner product for 2D problems
     nx,ny = size(u)
     tmp = 0.0
     for i = 1:nx

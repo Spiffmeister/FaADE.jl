@@ -6,7 +6,7 @@
 
 
 """
-    SecondDerivative(u::Vector{Float64},c::Vector{Float64},Δx::Float64,type::NodeType;order::Int64=2)
+    SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,type::NodeType;order::Int64=2)
 
 Inbuilt method for the second derviative SBP operator
     ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right) \\sim D_{xx}^{(c)}u``
@@ -21,6 +21,8 @@ Inbuilt method for the second derviative SBP operator
     - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
     - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
     - Returns `Vector{Float64}`
+
+See also [`NodeType`](@ref)
 
 """
 function SecondDerivative end

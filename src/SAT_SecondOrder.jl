@@ -22,7 +22,7 @@ Optional inputs:
     false; returns a single vector of the SAT
     true; returns SAT and F(orcing) vectors individually, useful when using implicit solvers
 
-For periodic conditions call [`Periodic`](@ref)(u,Δx,c;order), for a split domain call [`Split_domain`](@ref)(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
+For periodic conditions call [`SAT_Periodic`](@ref)(u,Δx,c;order), for a split domain call [`Split_domain`](@ref)(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
 function SAT end
 function SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;

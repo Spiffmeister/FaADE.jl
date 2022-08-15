@@ -1,5 +1,5 @@
 """
-    NodeType{T}
+    NodeType
 
 - Used by `FirstDerivative()` and `SecondDerivative()` to indicate which node type should be used.
 - `Left` and `Right` are used by the `SAT()` function to determine which side of the SAT to call.
