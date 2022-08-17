@@ -6,12 +6,12 @@ using Plots
 using Interpolations
 using JLD2
 
-using BenchmarkTools
+# using BenchmarkTools
 # using ProfileView
 
 cd("..")
 using Distributed
-addprocs(1)
+# addprocs(1)
 @everywhere push!(LOAD_PATH,"./plas_diff")
 @everywhere push!(LOAD_PATH,"./SBP_operators")
 # @everywhere push!(LOAD_PATH,".")
@@ -95,12 +95,12 @@ H_y = 1.0 ./H_y.^2
 
 ### Parallel Penalty ###
 function penalty_fn(u,uₒ,Δt)
-    uₚ = zeros(Float64,nx,ny)
+    uₚ = SharedArray(zeros(Float64,nx,ny))
     umw = zeros(Float64,nx,ny)
 
     interp = LinearInterpolation((x,y),u)
 
-    for j = 1:ny
+    @sync @distributed for j = 1:ny
         for i = 1:nx
 
             umw[i,j] = 2u[i,j] - (u[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + u[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
@@ -142,12 +142,12 @@ end
 ###
 """
 
-SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,0.1,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
+SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 ###
-@btime soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,adaptive=true)
+soln,umw = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 ###
 
