@@ -112,13 +112,16 @@ function SAT_Dirichlet(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
     
     # Construct the SATs
     SAT = zeros(Float64,order)
-    Dᵀu = boundary_Dₓᵀ(u,Δx,order)
+    Dᵀu = zeros(Float64,order)
+    Dᵀu = boundary_Dₓᵀ!(Dᵀu,u,Left,Δx,order)
+    # Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     SAT[1] += τ * u[1] 
     SAT .+= α * c[1] * Dᵀu[1:order]
 
     # Forcing terms
     F = zeros(Float64,order)
-    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+    Dᵀf = zeros(Float64,order)
+    Dᵀf = boundary_Dₓᵀ!(Dᵀf,g,Left,Δx,order)
     F[1] += -τ*g[1]
     F .+= -α * c[1] * Dᵀf[1:order]
 
@@ -135,13 +138,16 @@ function SAT_Dirichlet(::NodeType{:Right},u::Vector{Float64},Δx,g;
     
     # Construct the SATs
     SAT = zeros(Float64,order)
-    Dᵀu = boundary_Dₓᵀ(u,Δx,order)
+    Dᵀu = zeros(Float64,order)
+    Dᵀu = boundary_Dₓᵀ!(Dᵀu,u,Right,Δx,order)
+    # Dᵀu = boundary_Dₓᵀ(u,Δx,order)
     SAT[end] += τ*u[end]
     SAT .+= α * c[end] * Dᵀu[end-order+1:end]
     
     # Forcing terms
     F = zeros(Float64,order)
-    Dᵀf = boundary_Dₓᵀ(g,Δx,order)
+    Dᵀf = zeros(Float64,order)
+    Dᵀf = boundary_Dₓᵀ!(Dᵀf,g,Right,Δx,order)
     F[end] += -τ*g[end]
     F .+= -α * c[end] * Dᵀf[end-order+1:end]
 
@@ -150,6 +156,37 @@ function SAT_Dirichlet(::NodeType{:Right},u::Vector{Float64},Δx,g;
     else
         return SAT + F
     end
+end
+
+function SAT_Dirichlet_forcing(forcing,::Bool,::NodeType{:Left},u::AbstractVector,Δx::Float64;
+        c=1.0,order::Int64=2)
+    # Penalty parameters
+    α,τ = SATpenalties(Dirichlet,Δx,order)
+
+    SAT = zeros(Float64,order)
+    SAT = α * c[1] * boundary_Dₓᵀ!(SAT,u,Left,Δx,order)
+    SAT[1]  += τ*u[1]
+
+    if forcing
+        return SAT
+    else
+        return -SAT
+    end
+end
+
+function SAT_Dirichlet_optimal(::NodeType{:Left},u::Vector{Float64},Δx::Float64,g;
+        c=1.0,order::Int64=2)
+    # Penalty parameters
+    α,τ = SATpenalties(Dirichlet,Δx,order)
+
+    SAT = zeros(Float64,order)
+    SAT = boundary_Dₓᵀ!(SAT,u,Left,Δx,order)
+    SAT -= boundary_Dₓᵀ!(SAT,u,Left,Δx,order)
+    SAT .*= α * c[1] 
+    
+    SAT[1]  += τ*(u[1] - g[1])
+
+    return SAT
 end
 
 
@@ -287,7 +324,9 @@ function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::
     L₁u[1] = (u[1] - u[end])
     L₁u[end] = (u[1] - u[end])
     
-    Dᵀu = boundary_Dₓᵀ(L₁u,Δx,order)
+    Dᵀu = zeros(Float64,2order)
+    Dᵀu = boundary_Dₓᵀ!(Dᵀu,L₁u,Internal,Δx,order)
+    # Dᵀu = boundary_Dₓᵀ(L₁u,Δx,order)
 
     SAT[1:order] += τ₁ * c[1] * Dᵀu[1:order]
     SAT[order+1:end] += -τ₁ * c[end] * Dᵀu[end-order+1:end] # negative for directional derivative
@@ -403,45 +442,73 @@ end
 
 
 """
-    boundary_Dₓᵀ(u::AbstractVector{Float64},Δx::Float64,order::Int64=2)
+    boundary_Dₓᵀ(u::AbstractVector,node::NodeType,Δx::Float64,order::Int64=2)
 
-Transpose of first order derivative operator at the boundary needed to compute certain SATs
+Transpose of first order derivative operator at the boundary needed to compute certain SATs.
+
+Calls [`boundary_Dₓᵀ!`](@ref) under the hood.
 """
-function boundary_Dₓᵀ(u::Vector{Float64},Δx::Float64,order::Int64=2)
-    # Implementation of the 
-
-    uₓ = zeros(Float64,2*order)
-
-    if order == 2
-        #Boundary for the second order case
-
-        BOp = [-1.0, 1.0]
-
-        uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
-        uₓ[end-1:end] = BOp*u[end]/Δx   # Right boundary
-        
-    elseif order == 4
-        #Boundary for the fourth order case
-
-        BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
-        
-        uₓ[1:4] = BOp*u[1]/Δx   # Left boundary
-        uₓ[end-3:end] = -BOp*u[end]/Δx  # Right boundary
-        
-        
-    elseif order == 6
-        #Boundary for the sixth order case
-
-        BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
-        
-        uₓ[1:6] = BOp*u[1]/Δx   # Left boundary
-        uₓ[end-5:end] = -BOp*u[end]/Δx  # Right boundary
-
-    end
-
+function boundary_Dₓᵀ(u::AbstractVector,node::NodeType,Δx::Float64,order::Int64=2)
+    uₓ = zeros(Float64,order)
+    uₓ = boundary_Dₓᵀ!(uₓ,u,node,Δx,order)
     return uₓ
 end
+"""
+    boundary_Dₓᵀ!
 
+Iterator for boundary_Dₓᵀ
+
+``D_{x}^T u``
+"""
+function boundary_Dₓᵀ! end
+function boundary_Dₓᵀ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
+    if order == 2
+        BOp = [-1.0, 1.0]
+        uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
+    elseif order == 4
+        BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        uₓ[1:4] = BOp*u[1]/Δx   # Left boundary
+    elseif order == 6
+        BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        uₓ[1:6] = BOp*u[1]/Δx   # Left boundary
+    else
+        error("Order must be 2, 4, or 6")
+    end
+    return uₓ
+end
+function boundary_Dₓᵀ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
+    if order == 2
+        BOp = [-1.0, 1.0]
+        uₓ[end-1:end] = BOp*u[end]/Δx   # Right boundary
+    elseif order == 4
+        BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        uₓ[end-3:end] = -BOp*u[end]/Δx  # Right boundary
+    elseif order == 6
+        BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        uₓ[end-5:end] = -BOp*u[end]/Δx  # Right boundary
+    else
+        error("Order must be 2, 4, or 6")
+    end
+    return uₓ
+end
+function boundary_Dₓᵀ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Internal},Δx::Float64,order::Int64=2)
+    if order == 2
+        BOp = [-1.0, 1.0]
+        uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
+        uₓ[end-1:end] = BOp*u[end]/Δx   # Right boundary
+    elseif order == 4
+        BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        uₓ[1:4] = BOp*u[1]/Δx   # Left boundary
+        uₓ[end-3:end] = -BOp*u[end]/Δx  # Right boundary
+    elseif order == 6
+        BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        uₓ[1:6] = BOp*u[1]/Δx   # Left boundary
+        uₓ[end-5:end] = -BOp*u[end]/Δx  # Right boundary
+    else
+        error("Order must be 2, 4, or 6")
+    end
+    return uₓ
+end
 
 """
     boundary_Dₓ(u::AbstractVector{Float64},Δx::Float64,order::Int64=2)
@@ -482,6 +549,59 @@ function boundary_Dₓ(u::Vector{Float64},Δx::Float64,order::Int64=2)
 
     end
 
+    return uₓ
+end
+"""
+    boundary_Dₓ!
+
+``Dₓu``
+"""
+function boundary_Dₓ! end
+function boundary_Dₓ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
+    if order == 2
+        #Boundary for the second order case
+        uₓ[1] = (u[2] - u[1])/Δx
+    elseif order == 4
+        #Boundary for the fourth order case
+        B0p = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        uₓ[1] = sum(B0p.*u[1:4])/Δx
+    elseif order == 6
+        #Boundary for the sixth order case
+        B0p = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        uₓ[1] = sum(B0p.*u[1:6])/Δx
+    end
+    return uₓ
+end
+function boundary_Dₓ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
+    if order == 2
+        #Boundary for the second order case
+        uₓ[end] = (u[end] - u[end-1])/Δx
+    elseif order == 4
+        #Boundary for the fourth order case
+        Bnp = [3.0/34.0, 4.0/17.0, -59.0/34.0, 24.0/17.0]
+        uₓ[end] = sum(Bnp.*u[end-3:end])/Δx
+    elseif order == 6
+        #Boundary for the sixth order case
+        Bnp = [-0.036577936277544, -0.104488069284042, 0.450398306578272, 0.141512858744873, -2.033378678700676, 1.582533518939116]
+        uₓ[end] = sum(Bnp.*u[end-5:end])/Δx
+    end
+    return uₓ
+end
+function boundary_Dₓ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Internal},Δx::Float64,order::Int64)
+    if order == 2
+        uₓ[1] = (u[2] - u[1])/Δx
+        uₓ[end] = (u[end] - u[end-1])/Δx
+    elseif order == 4
+        B0p = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        uₓ[1] = sum(B0p.*u[1:4])/Δx
+        Bnp = [3.0/34.0, 4.0/17.0, -59.0/34.0, 24.0/17.0]
+        uₓ[end] = sum(Bnp.*u[end-3:end])/Δx
+    elseif order == 6
+        B0p = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        uₓ[1] = sum(B0p.*u[1:6])/Δx
+        Bnp = [-0.036577936277544, -0.104488069284042, 0.450398306578272, 0.141512858744873, -2.033378678700676, 1.582533518939116]
+        uₓ[end] = sum(Bnp.*u[end-5:end])/Δx
+    end
     return uₓ
 end
 
