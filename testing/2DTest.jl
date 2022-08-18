@@ -3,7 +3,7 @@ using Printf
 using Plots
 # pyplot()
 
-# using BenchmarkTools
+using BenchmarkTools
 
 using Pkg
 Pkg.activate(".")
@@ -20,8 +20,8 @@ end
 ###
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
-nx = 31
-ny = 31
+nx = 51
+ny = 51
 
 Δx = 𝒟x[2]/(nx-1)
 Δy = 𝒟y[2]/(ny-1)
@@ -30,25 +30,25 @@ y = collect(range(𝒟y[1],𝒟y[2],step=Δy))
 
 
 kx = zeros(Float64,nx,ny) .+ 1.0
-ky = zeros(Float64,nx,ny) .+ 1.0e-10
+ky = zeros(Float64,nx,ny) .+ 1.0
 
-Δt = 1.00 * min(Δx^2,Δy^2)
-t_f = 300Δt
+Δt = 0.05*1.00 * min(Δx^2,Δy^2)
+t_f = 1000Δt
 N = ceil(Int64,t_f/Δt)
 
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
-gx(t) = [0.0, 0.0]
+gx(t) = [0.0, 1.0]
 gy(t) = [0.0, 0.0]
 
 order = 2
-method = :euler
+method = :cgie
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time soln, = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Periodic,Dirichlet,method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-14)
+soln, = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,method=method,order_x=order,order_y=order,tol=1e-14,adaptive=false)
 
 
 # ky = zeros(Float64,nx,ny)
@@ -60,7 +60,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 ###
 
 skip = 5
-fps = 10
+fps = 50
 
 anim = @animate for i = 1:skip:length(soln.u)
     l = @layout [a{0.7w} [b; c]]
@@ -70,3 +70,7 @@ anim = @animate for i = 1:skip:length(soln.u)
 end
 
 gif(anim,"yes.gif",fps=fps)
+
+
+@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,tol=1e-5,rtol=1e-10)

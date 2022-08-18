@@ -1,8 +1,8 @@
 using LinearAlgebra
 using Printf
 using Plots
-pyplot()
-
+# pyplot()
+using BenchmarkTools
 using Pkg
 Pkg.activate(".")
 using SBP_operators
@@ -24,25 +24,31 @@ x = collect(range(𝒟[1],𝒟[2],step=Δx))
 k = zeros(Float64,n) .+ 1.0
 
 Δt = 0.05 * Δx^2
-t_f = 100Δt
-N = ceil(Int64,t_f/Δt)
+t_f = 1000Δt
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g(t) = [0.0, 0.0]
+g(t) = [0.0, 1.0]
 
 order = 2
-method = :cgie
-
+method = :euler
+println(method)
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-@time soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Neumann,method=method,order=order)
 
+println("Plotting")
+
+N = length(soln.t)
 
 ###
-# anim = @animate for i=1:N
-#     plot(soln.x,soln.u[:,i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.,1.))
-# end
-# gif(anim,"yes.gif",fps=50)
+anim = @animate for i=1:N
+    plot(soln.x,soln.u[i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.,1.1))
+end
+gif(anim,"yes.gif",fps=50)
+
+
+
+# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60

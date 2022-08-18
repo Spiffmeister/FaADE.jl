@@ -8,6 +8,8 @@ using JLD2
 
 # using BenchmarkTools
 # using ProfileView
+using Profile
+using PProf
 
 cd("..")
 using Distributed
@@ -46,7 +48,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 Δt = 1.0 * min(Δx^2,Δy^2)
 # t_f = 200Δt
-t_f = 100.0
+t_f = 10.0
 N = ceil(Int64,t_f/Δt)
 
 # u₀(x,y) = exp(-(x-0.5)^2/0.02 - (y-π)^2/0.5)
@@ -163,7 +165,7 @@ println("plotting")
 
 N = length(soln.u)
 skip = 1
-fps = 5
+fps = 1
 
 energy = zeros(N)
 maxerry = zeros(N)
