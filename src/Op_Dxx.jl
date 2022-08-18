@@ -151,25 +151,25 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     # x left (top)
     uₓₓ[1:order_x+retx,inty+halfy:ny-(inty+halfy-1)] = 
         Stencil2D!(uₓₓ[1:order_x+retx,inty+halfy:ny-(inty+halfy-1)],
-            u[1:order_x+retx,inty:ny-inty+1],Left,Internal,Δx,Δy,
-            cx[1:order_x+retx,inty:ny-inty+1],
-            cy[1:order_x+retx,inty:ny-inty+1],
+            u[1:order_x+adjx,inty:ny-inty+1],Left,Internal,Δx,Δy,
+            cx[1:order_x+adjx,inty:ny-inty+1],
+            cy[1:order_x+adjx,inty:ny-inty+1],
             order_x+retx,ny-2(order_y+rety),order_x=order_x,order_y=order_y)
     # x right (bottom)
     uₓₓ[nx-(order_x+retx-1):nx,order_y+rety+1:ny-order_y-rety] =
         Stencil2D!(uₓₓ[nx-(order_x+retx-1):nx,inty+halfy:ny-(inty+halfy-1)],
             u[nx-order_x-adjx:nx,inty:ny-inty+1],Right,Internal,Δx,Δy,
-            cx[1:order_x+retx,inty:ny-inty+1],
-            cy[1:order_x+retx,inty:ny-inty+1],
+            cx[nx-order_x-adjx:nx,inty:ny-inty+1],
+            cy[nx-order_x-adjx:nx,inty:ny-inty+1],
             order_x+retx,ny-2(order_y+rety),order_x=order_x,order_y=order_y)
 
     # left and right y boundaries, for a matrix zeros(nx,ny) this is the 'left' and 'right' boundaries
     # y left (left)
     uₓₓ[intx+halfx:nx-(intx+halfx-1),1:order_y+retx] = 
         Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),1:order_y+retx],
-        u[intx:nx-intx+1,1:order_y+rety],Internal,Left,Δx,Δy,
-        cx[intx:nx-intx+1,1:order_y+rety],
-        cy[intx:nx-intx+1,1:order_y+rety],
+        u[intx:nx-intx+1,1:order_y+adjy],Internal,Left,Δx,Δy,
+        cx[intx:nx-intx+1,1:order_y+adjy],
+        cy[intx:nx-intx+1,1:order_y+adjy],
         nx-2(order_x+retx),order_y+rety,order_x=order_x,order_y=order_y)
     # y right (right)
     uₓₓ[order_x+retx+1:nx-order_y-retx,ny-(order_y+rety-1):ny] = 
@@ -184,22 +184,26 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     uₓₓ[1:order_x+retx,1:order_y+rety]          = 
         Stencil2D!(uₓₓ[1:order_x+retx,1:order_y+rety],u[1:order_x+adjx,1:order_y+adjy],Left,Left,Δx,Δy,
             cx[1:order_x+adjx,1:order_y+adjy],
-            cy[1:order_x+adjx,1:order_y+adjy],order_x=order_x,order_y=order_y)
+            cy[1:order_x+adjx,1:order_y+adjy],
+            order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
     # x left y right
-    uₓₓ[1:order_x+retx,ny-order_y-rety+1:ny]      = 
+    uₓₓ[1:order_x+retx,ny-order_y-rety+1:ny]    =
         Stencil2D!(uₓₓ[1:order_x+retx,1:order_y+rety],u[1:order_x+adjx,ny-order_y-adjy:ny],Left,Right,Δx,Δy,
             cx[1:order_x+adjx,ny-order_y-adjy:ny],
-            cy[1:order_x+adjx,ny-order_y-adjy:ny],order_x=order_x,order_y=order_y)
+            cy[1:order_x+adjx,ny-order_y-adjy:ny],
+            order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
     # x right y left
     uₓₓ[nx-order_x-retx+1:nx,1:order_y+rety]      = 
         Stencil2D!(uₓₓ[1:order_x+retx,1:order_y+rety],u[nx-order_x-adjx:nx,1:order_y+adjy],Right,Left,Δx,Δy,
             cx[nx-order_x-adjx:nx,1:order_y+adjy],
-            cy[nx-order_x-adjx:nx,1:order_y+adjy],order_x=order_x,order_y=order_y)
+            cy[nx-order_x-adjx:nx,1:order_y+adjy],
+            order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
     # x right y right
     uₓₓ[nx-order_x-retx+1:nx,ny-order_y-rety+1:ny]  = 
         Stencil2D!(uₓₓ[1:order_x+retx,1:order_y+rety],u[nx-order_x-adjx:nx,ny-order_y-adjy:ny],Right,Right,Δx,Δy,
             cx[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
-            cy[nx-order_x-adjx:nx,ny-order_y-adjy:ny],order_x=order_x,order_y=order_y)
+            cy[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
+            order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
 
     return uₓₓ
 end
@@ -244,7 +248,7 @@ function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,::
     # side x internal y
     order_x == 2 ? adjx = 1 : adjx = order_x + Int64(order_x/2)
     halfy = Int64(order_y/2) # half way
-    
+
     for j = 1:ny
         uₓₓ[1:nx,j] = SecondDerivative(u[:,j+halfy],cx[:,j+halfy],Δx,xnode,order=order_x)
         for i = 1:adjx
@@ -269,14 +273,14 @@ function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Intern
     return uₓₓ
 end
 ### Corners
-function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,ynode::NodeType,Δx,Δy,cx,cy;
+function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,ynode::NodeType,Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)
     # corner x-y
     order_x == 2 ? adjx = -1 : adjx = Int64(order_x/2)
     order_y == 2 ? adjy = -1 : adjy = Int64(order_y/2)
 
     for j = 1:order_y+adjy # x direction - top/bottom
-        uₓₓ[:,j] += SecondDerivative(u[:,j],cx[:,j],Δx,xnode,order=order_x)
+        uₓₓ[:,j] = SecondDerivative(u[:,j],cx[:,j],Δx,xnode,order=order_x)
     end
     for i = 1:order_x+adjx # y direction - left/right
         uₓₓ[i,:] += SecondDerivative(u[i,:],cy[i,:],Δy,ynode,order=order_y)
