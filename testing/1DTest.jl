@@ -31,13 +31,13 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 g(t) = [0.0, 1.0]
 
 order = 2
-method = :euler
+method = :cgie
 println(method)
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Neumann,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
 
 println("Plotting")
 
@@ -51,4 +51,4 @@ gif(anim,"yes.gif",fps=50)
 
 
 
-# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60
+@benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60

@@ -35,6 +35,7 @@ function SAT(condition::BoundaryCondition,node::NodeType,u::AbstractVector,Δ::F
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     SAT = zeros(Float64,order)
     SAT = SAT!(SAT,condition,node,u,Δ,RHS,order=order,c=c,αβ=αβ)
+    # println(SAT)
     return SAT
 end
 
@@ -49,7 +50,7 @@ function SAT!(SAT::AbstractVector,condition::BoundaryCondition,node::NodeType,u:
     if condition == Dirichlet
         SAT = SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif condition == Neumann
-        SAT = SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=true)
+        SAT = SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif condition == Robin
         SAT = SAT_Robin(node,u,Δ,g,order=order,a=αβ[1],b=αβ[2],separate_forcing=true)
     else
@@ -60,9 +61,9 @@ end
 function SAT!(SAT::AbstractVector,condition::BoundaryCondition,node::NodeType,u::AbstractVector,Δ::Float64,RHS;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     if condition == Dirichlet
-        SAT = SAT_Dirichlet!(SAT,node,u,Δ,RHS,c=c,order=order,forcing=forcing)
+        SAT = SAT_Dirichlet!(SAT,node,u,Δ,RHS,c=c,order=order)
     elseif condition == Neumann
-        SAT = SAT_Neumann!(SAT,node,u,Δ,RHS,c=c,order=order,forcing=true)
+        SAT = SAT_Neumann!(SAT,node,u,Δ,RHS,c=c,order=order)
     elseif condition == Robin
         SAT = SAT_Robin(node,u,Δ,RHS,order=order,a=αβ[1],b=αβ[2],separate_forcing=true)
     else
@@ -216,30 +217,38 @@ Iterator form of [`SAT_Neumann`](@ref)
 function SAT_Neumann! end
 function SAT_Neumann!(SAT::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64;
         c=1.0,order::Int64=2,forcing::Bool=false)
-    forcing ? s = -1.0 : s = 1.0
-    SAT = τ * c[1] * boundary_Dₓ!(SAT,u,Left,Δ,order)
-    return s * SAT
+    τ = SATpenalties(Neumann,Δ,order)
+    if !forcing
+        SAT = boundary_Dₓ!(SAT,u,Left,Δ,order)
+        SAT[1] = τ*c[1]*SAT[1]
+    else
+        SAT[1] = -τ*u[1]
+    end
+    return SAT
 end
 function SAT_Neumann!(SAT::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64;
         c=1.0,order::Int64=2,forcing::Bool=false)
-    forcing ? s = -1.0 : s = 1.0
-    SAT = τ * c[end] * boundary_Dₓ!(SAT,u,Right,Δ,order)
-    return s * SAT
+    τ = SATpenalties(Neumann,Δ,order)
+    if !forcing
+        SAT = boundary_Dₓ!(SAT,u,Right,Δ,order)
+        SAT[end] = -τ * c[end] * SAT[end]
+    else
+        SAT[end] = τ*u[end]
+    end
+    return SAT
 end
 function SAT_Neumann!(SAT::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
     τ = SATpenalties(Neumann,Δ,order)
-    SAT = τ * c[1] * boundary_Dₓ!(SAT,u,Left,Δ,order)
-    SAT[1] += τ * -RHS[1]
+    SAT = boundary_Dₓ!(SAT,u,Left,Δ,order)
+    SAT[1] = τ*(c[1]*SAT[1] - RHS[1])
     return SAT
 end
 function SAT_Neumann!(SAT::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
     τ = SATpenalties(Neumann,Δ,order)
-    println(SAT)
-    SAT = τ * c[end] * boundary_Dₓ!(SAT,u,Right,Δ,order)
-    println(SAT)
-    SAT[end] -= τ* -RHS[end]
+    SAT = boundary_Dₓ!(SAT,u,Right,Δ,order)
+    SAT[end] = -τ*(c[end]*SAT[end] - RHS[end])
     return SAT
 end
 
@@ -475,8 +484,12 @@ Iterator for boundary_Dₓᵀ
 function boundary_Dₓᵀ! end
 function boundary_Dₓᵀ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
     if order == 2
-        BOp = [-1.0, 1.0]
-        uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
+        # BOp = [-1.0, 1.0]
+        # uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
+
+        uₓ[1] = -u[1]/Δx   # Left boundary
+        uₓ[2] = u[1]/Δx   # Left boundary
+
     elseif order == 4
         BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
         uₓ[1:4] = BOp*u[1]/Δx   # Left boundary
@@ -506,8 +519,12 @@ end
 function boundary_Dₓᵀ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Internal},Δx::Float64,order::Int64=2)
     if order == 2
         BOp = [-1.0, 1.0]
-        uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
-        uₓ[end-1:end] = BOp*u[end]/Δx   # Right boundary
+        # uₓ[1:2] = BOp*u[1]/Δx   # Left boundary
+        # uₓ[end-1:end] = BOp*u[end]/Δx   # Right boundary
+
+        uₓ[1:2] .= -u[1]/Δx
+        uₓ[end-1:end] .= u[end]/Δx
+
     elseif order == 4
         BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
         uₓ[1:4] = BOp*u[1]/Δx   # Left boundary
@@ -595,7 +612,7 @@ function boundary_Dₓ!(uₓ::AbstractVector,u::AbstractVector,::NodeType{:Right
     elseif order == 6
         #Boundary for the sixth order case
         Bnp = [-0.036577936277544, -0.104488069284042, 0.450398306578272, 0.141512858744873, -2.033378678700676, 1.582533518939116]
-        uₓ[end] = sum(Bnp.*u[end-5:end])/Δx
+        uₓ[end] = -sum(Bnp.*u[end-5:end])/Δx
     end
     return uₓ
 end
@@ -674,6 +691,7 @@ function SAT1(type::BoundaryCondition,::NodeType{:Right},u::AbstractVector{Float
     # If the forcing term is part of the SAT (i.e. not using GC method)
     if !separate_forcing
         SAT += F
+        # println(SAT)
         return SAT
     else
         return SAT, F
@@ -748,7 +766,10 @@ function SAT_Neumann1(::NodeType{:Right},u::Vector{Float64},Δx::Float64,g;
     # SAT construction
     SAT = zeros(Float64,order)
     Du = boundary_Dₓ(u,Δx,order)
+    # println(Du)
+
     SAT[end] -= τ * c[end] * Du[end]
+    # println(SAT)
     # Forcing term
     F = zeros(Float64,order)
     F[end] -= -τ*g[end]

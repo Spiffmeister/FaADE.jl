@@ -168,8 +168,8 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
                 # SATᵣ, = SAT1(boundary_left,Right,u,Δx,g(t),order=order,separate_forcing=true)
                 # uₓₓ[1:order] += SATₗ
                 # uₓₓ[end-order+1:end] += SATᵣ
-                uₓₓ[1:order]        += SAT(boundary_left,Left,u,Δx,order=order,forcing=false)
-                uₓₓ[end-order+1:end]+= SAT(boundary_right,Right,u,Δx,order=order,forcing=false)
+                uₓₓ[1:order]        += SAT!(uₓₓ[1:order],boundary_left,Left,u,Δx,order=order,forcing=false)
+                uₓₓ[end-order+1:end]+= SAT!(uₓₓ[end-order+1:end],boundary_right,Right,u,Δx,order=order,forcing=false)
             else
                 SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order)
                 uₓₓ[1:order] += SATₗ
@@ -337,8 +337,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     # println(SATₗ)
                     # println(SAT(boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false))
                     
-                    uₓₓ[1:order_x,i] += SAT(boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
-                    uₓₓ[end-order_x+1:end,i] += SAT(boundary_x,Right,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    uₓₓ[1:order_x,i] += SAT!(uₓₓ[1:order_x,i],boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    uₓₓ[end-order_x+1:end,i] += SAT!(uₓₓ[end-order_x+1:end,i],boundary_x,Right,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
                 end
             else
                 for i = 1:ny
@@ -372,8 +372,14 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         i = 1
         converged = true
 
+        uⱼ = zeros(nx,ny)
+        if nprocs() > 1
+            uⱼ = SharedArray(uⱼ)
+        end
+
         while t ≤ t_f
-            uⱼ = copy(uₒ)
+            # uⱼ = copy(uₒ)
+            uⱼ .= uₒ
             ### FORCING TERMS
             if boundary_x != Periodic
                 for i = 1:ny
@@ -405,7 +411,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 # If CG converged store and update the solution, increase the time step if adaptive time stepping on
                 # soln.u = cat(soln.u,uₙ,dims=3)
                 if (samplefactor - t) ≤ 0.0
-                    push!(soln.u,copy(uₙ))
+                    push!(soln.u,uₙ)
                     samplefactor += samplefactor
                 end
                 uₒ = uₙ

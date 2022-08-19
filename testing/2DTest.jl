@@ -42,13 +42,13 @@ gx(t) = [0.0, 1.0]
 gy(t) = [0.0, 0.0]
 
 order = 2
-method = :cgie
+method = :euler
 
 println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln, = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,method=method,order_x=order,order_y=order,tol=1e-14,adaptive=false)
+soln, = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Neumann,SBP_operators.Periodic,method=method,order_x=order,order_y=order,tol=1e-14,adaptive=false)
 
 
 # ky = zeros(Float64,nx,ny)
@@ -72,5 +72,5 @@ end
 gif(anim,"yes.gif",fps=fps)
 
 
-@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Neumann,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,tol=1e-5,rtol=1e-10)
