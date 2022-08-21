@@ -337,6 +337,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         Hy = build_H(ny,order_y)*Δy
         i = 1
         converged = true
+        chkpoint = t_f/4.0
 
         uⱼ = zeros(nx,ny)
         if nprocs() > 1
@@ -397,6 +398,16 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
                 # Δt = Δt₀
                 Δt = Δt/2.0
+            end
+
+            if chkpnt < t
+                push!(soln.u,uₙ)
+                append!(soln.t,t)
+                append!(soln.Δt,Δt)
+
+                chkpnt += t_f/4.0
+                save_object("chkpnt.jld2",soln)
+                println("checkpointing at t=",t)
             end
 
         end
