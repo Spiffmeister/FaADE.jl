@@ -226,14 +226,14 @@ Computes the 2D finite difference stencil at a given node
 """
 function Stencil2D end
 ### Iternal node stencil
-function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
+@views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)
 
     halfx = Int64(order_x/2) #half way
     halfy = Int64(order_y/2) #half way
 
     @sync @distributed for j = 1:ny
-        @inbounds for i = 1:nx
+        for i = 1:nx
             uₓₓ[i,j] = SecondDerivative(u[i:i+order_x,j+halfy],
                     cx[i:i+order_x,j+halfy],Δx,Internal,order=order_x) + 
                 SecondDerivative(u[i+halfx,j:j+order_y],
