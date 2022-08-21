@@ -3,7 +3,6 @@ using Printf
 using Plots
 # pyplot()
 # using GLMakie
-using Interpolations
 using JLD2
 
 using BenchmarkTools
@@ -13,7 +12,8 @@ using PProf
 
 cd("..")
 using Distributed
-# addprocs(1)
+addprocs(1)
+@everywhere using Interpolations
 @everywhere push!(LOAD_PATH,"./plas_diff")
 @everywhere push!(LOAD_PATH,"./SBP_operators")
 # @everywhere push!(LOAD_PATH,".")
@@ -47,7 +47,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 
 Δt = 1.0 * min(Δx^2,Δy^2)
-# t_f = 200Δt
+# t_f = 1000Δt
 t_f = 100.0
 N = ceil(Int64,t_f/Δt)
 
@@ -145,48 +145,49 @@ end
 """
 
 SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=false)
+
+###
+# @benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+#     method=method,order_x=order,order_y=order,samplefactor=1000.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=false)
+
+###
+
+soln,_ = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
-###
-@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1000.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
+println("t_f=",soln.t[end],"    ",length(soln.t))
 
-###
-
-# soln,_ = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-#     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
-
-
-# println("plotting")
+println("plotting")
 
 # pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
 
 
 # plas_diff.plot_grid(gdata)
 
-# N = length(soln.u)
-# skip = 1
-# fps = 1
+N = length(soln.u)
+skip = 5
+fps = 10
 
-# energy = zeros(N)
-# maxerry = zeros(N)
-# maxerrx = zeros(N)
-# for i = 1:N
-#     energy[i] = norm(soln.u[i][:,:],2)
-#     maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
-#     maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
-# end
+energy = zeros(N)
+maxerry = zeros(N)
+maxerrx = zeros(N)
+for i = 1:N
+    energy[i] = norm(soln.u[i][:,:],2)
+    maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
+    maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
+end
 
 
-# anim = @animate for i = 1:skip:N
-#     l = @layout [a{0.7w} [b; c]]
-#     p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
-#     plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
-#     plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
-#     # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
-#     plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
-# end
-# gif(anim,"yes.gif",fps=fps)
+anim = @animate for i = 1:skip:N
+    l = @layout [a{0.7w} [b; c]]
+    p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
+    plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
+    plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
+    # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
+    plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
+end
+gif(anim,"yes.gif",fps=fps)
 
 
 # Slice info
@@ -242,3 +243,12 @@ SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Diric
 # end
 # save_object("testrun.jld2",(soln,gdata,umw,pdata))
 
+
+# SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+#     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false)
+
+# @profile SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+#     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=true)
+
+@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=true) seconds = 300

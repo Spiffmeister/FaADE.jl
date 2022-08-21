@@ -19,7 +19,7 @@ end
 𝒟 = [0.0,1.0]
 n = 51
 Δx = 𝒟[2]/(n-1)
-x = collect(range(𝒟[1],𝒟[2],step=Δx))
+x = collect(range(𝒟[1],𝒟[2],length=n))
 
 k = zeros(Float64,n) .+ 1.0
 
@@ -37,7 +37,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Robin,method=method,order=order)
 
 println("Plotting")
 
@@ -45,10 +45,10 @@ N = length(soln.t)
 
 ###
 anim = @animate for i=1:N
-    plot(soln.x,soln.u[i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(0.,1.1))
+    plot(soln.x,soln.u[i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(-0.05,1.1))
 end
 gif(anim,"yes.gif",fps=50)
 
 
 
-@benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60
+# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60

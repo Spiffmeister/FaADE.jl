@@ -243,7 +243,7 @@ function Stencil2D end
     return uₓₓ
 end
 ### X boundaries
-function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
+@views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)
     # side x internal y
     order_x == 2 ? adjx = 1 : adjx = order_x + Int64(order_x/2)
@@ -258,7 +258,7 @@ function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,::
     return uₓₓ
 end
 ### Y boundaries
-function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},ynode::NodeType,Δx,Δy,cx,cy,nx,ny;
+@views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},ynode::NodeType,Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)
     # internal x side y
     halfx = Int64(order_x/2) # half way
