@@ -337,7 +337,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         Hy = build_H(ny,order_y)*Δy
         i = 1
         converged = true
-        chkpoint = t_f/4.0
+        chkpnt = t_f/4.0
 
         uⱼ = zeros(nx,ny)
         if nprocs() > 1
