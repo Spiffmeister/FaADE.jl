@@ -212,7 +212,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 #===== 2D TIME SOLVER =====#
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},gx,gy,boundary_x::BoundaryCondition,boundary_y::BoundaryCondition;
-    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing)#,checkpoint=false)
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
@@ -400,14 +400,16 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 Δt = Δt/2.0
             end
 
-            if chkpnt < t
-                push!(soln.u,uₙ)
-                append!(soln.t,t)
-                append!(soln.Δt,Δt)
+            if checkpointing
+                if chkpnt < t
+                    push!(soln.u,uₙ)
+                    append!(soln.t,t)
+                    append!(soln.Δt,Δt)
 
-                chkpnt += t_f/4.0
-                save_object("chkpnt.jld2",soln)
-                println("checkpointing at t=",t)
+                    chkpnt += t_f/4.0
+                    save_object("chkpnt.jld2",soln)
+                    println("checkpointing at t=",t)
+                end
             end
 
         end
