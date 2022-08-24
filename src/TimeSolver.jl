@@ -301,12 +301,13 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     elseif method == :cgie
         maxIT < 1 ? maxIT = 10 : nothing
 
-        function cgRHS(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+        function cgRHS(uₓₓ,u)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
             if boundary_x != Periodic
                 for i = 1:ny
-                    uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    # uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    uₓₓ[1:order_x,i]        += SAT_Dirichlet!(uₓₓ[1:order_x,i],Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x,forcing=false)
                     uₓₓ[end-order_x+1:end,i]+= SAT(boundary_x,Right,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
                 end
             else

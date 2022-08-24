@@ -58,7 +58,7 @@ end
 function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Left};order::Int64=2)
 
     if order == 2
-        uₓₓ = zeros(Float64,1)
+        # uₓₓ = zeros(Float64,1)
         return [0.0]
     elseif order == 4
         uₓₓ = zeros(Float64,6)
@@ -239,7 +239,7 @@ end
 ### Right boundary
 function SecondDerivative(u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
-        uₓₓ = zeros(Float64,1)
+        # uₓₓ = zeros(Float64,1)
         return [0.0]
     elseif order == 4
         n = 8

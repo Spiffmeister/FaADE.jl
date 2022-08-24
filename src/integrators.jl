@@ -112,17 +112,20 @@ function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,
     rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
     dₖ = -rₖ
     i = 0
-    rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
-    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ))
+
+    Adₖ = zeros(Float64,(nx,ny))
+
+    rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
+    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ,nx,ny))
     while (rnorm > rtol*unorm) & (i < maxIT)
-        Adₖ = A(dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
-        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ)
-        αₖ = -innerH(rₖ,Hx,Hy,dₖ)/dₖAdₖ
+        Adₖ = A!(Adₖ,dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ,nx,ny)
+        αₖ = -innerH(rₖ,Hx,Hy,dₖ,nx,ny)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
-        rₖ = A(xₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
-        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy))/dₖAdₖ
+        rₖ = A!(rₖ,xₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) .- b
+        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy),nx,ny)/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
-        rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
+        rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
         i += 1
     end
     # println(i," ",rnorm/unorm,"   ",rtol,"  ",t,"   ",Δt)
@@ -177,7 +180,7 @@ end
     2. A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
 """
 function A end
-function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector{Float64},g)
+function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector,g)
     # tmp can be any vector of length(uⱼ)
     tmp = zeros(Float64,length(uⱼ))
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
@@ -186,9 +189,15 @@ end
 function A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     # A for 2D arrays
     tmp = zeros(Float64,size(uⱼ))
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ)
     return tmp
 end
+function A!(tmp,uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    # A for 2D arrays
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ)
+    return tmp
+end
+
 
 """
     innerH
@@ -205,8 +214,17 @@ end
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
     nx,ny = size(u)
     tmp = 0.0
-    for i = 1:nx
-        for j = 1:ny
+    for j = 1:ny
+        for i = 1:nx
+            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
+        end
+    end
+    return tmp
+end
+function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix,nx,ny)
+    tmp = 0.0
+    for j = 1:ny
+        for i = 1:nx
             tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
         end
     end

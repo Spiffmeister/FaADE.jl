@@ -190,6 +190,26 @@ function SAT_Dirichlet(::NodeType{:Right},u::AbstractVector,Δ::Float64,RHS;
 end
 
 
+
+function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64;
+        c=1.0,order::Int64=2,forcing=false)
+
+    α,τ = SATpenalties(Dirichlet,Δ,order)
+    # SAT = zeros(Float64,order)
+
+    if !forcing
+        SAT = α*c[1]*BDₓᵀ(u,Left,Δ,order)
+        SAT[1] += τ*u[1]
+        return SAT
+    else
+        uₓₓ[1:order] -= α*c[1]*BDₓᵀ(u,Left,Δ,order)
+        uₓₓ[1] -= τ*u[1]
+        return -SAT
+    end
+end
+
+
+
 #=
 ====================== Neumann boundary conditions ======================
 =#
@@ -318,7 +338,69 @@ end
 
 Simulatenous approximation term for Periodic boundary conditions
 """
-function SAT_Periodic(u::Vector{Float64},Δx::Float64,c::Vector{Float64};order::Int64=2)
+function SAT_Periodic(u::AbstractVector,Δx::Float64,c::AbstractVector;order::Int64=2)
+
+    # Get h value
+    h = hval(order)
+
+    # Penalties
+    α₀ = 0.5/(h * Δx) # Derivative penatly
+    τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
+    τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h*Δx) # Dirichlet penalty
+
+    SAT = zeros(Float64,2order)
+
+    # Dirichlet terms
+    SAT[1]  += τ₀ * (u[1] - u[end])
+    SAT[end]+= τ₀ * (u[end] - u[1])
+
+    # Symmeteriser
+    L₁u = [(u[1] - u[end])]
+    SAT[1:order]        = τ₁ * c[1] * BDₓᵀ(L₁u,Left,Δx,order)
+    SAT[order+1:2order] = -τ₁ * c[end] * BDₓᵀ(L₁u,Right,Δx,order)
+
+    # Neumann term
+    BDₓu₁ = BDₓ(u,Left,Δx,order)
+    BDₓuₙ = BDₓ(u,Right,Δx,order)
+
+    SAT[1]  += α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
+    SAT[end]+= α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
+
+    return SAT[1:order], SAT[order+1:end]
+
+end
+function SAT_Periodic(uₗ::AbstractMatrix,uᵣ::AbstractMatrix,Δx::Float64,c::AbstractVector;order::Int64=2)
+
+    # Get h value
+    h = hval(order)
+
+    # Penalties
+    α₀ = 0.5/(h * Δx) # Derivative penatly
+    τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
+    τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h*Δx) # Dirichlet penalty
+
+    SAT = zeros(Float64,2order)
+
+    # Dirichlet terms
+    SAT[1]  += τ₀ * (u[1] - u[end])
+    SAT[end]+= τ₀ * (u[end] - u[1])
+
+    # Symmeteriser
+    L₁u = [(u[1] - u[end])]
+    SAT[1:order]        = τ₁ * c[1] * BDₓᵀ(L₁u,Left,Δx,order)
+    SAT[order+1:2order] = -τ₁ * c[end] * BDₓᵀ(L₁u,Right,Δx,order)
+
+    # Neumann term
+    BDₓu₁ = BDₓ(u,Left,Δx,order)
+    BDₓuₙ = BDₓ(u,Right,Δx,order)
+
+    SAT[1]  += α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
+    SAT[end]+= α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
+
+    return SAT[1:order], SAT[order+1:end]
+
+end
+function SAT_Periodic!(u::AbstractMatrix,Δx::Float64,c::AbstractVector;order::Int64=2)
 
     # Get h value
     h = hval(order)
@@ -427,31 +509,39 @@ end
 Transpose of first order derivative operator at the boundary needed to compute certain SATs
 """
 function BDₓᵀ end
-function BDₓᵀ(u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
+@inline function BDₓᵀ(u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
     if order == 2
         BOp = [-1.0, 1.0]
+        BOp .*= u[1]/Δx
+        return BOp
     elseif order == 4
         BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        BOp .*= u[1]/Δx
+        return BOp
     elseif order == 6
         BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        BOp .*= u[1]/Δx
+        return BOp
     else
         error("Order must be 2, 4, or 6")
     end
-    BOp *= u[1]/Δx
-    return BOp
 end
-function BDₓᵀ(u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
+@inline function BDₓᵀ(u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
     if order == 2
         BOp = [-1.0, 1.0]
+        BOp .*= u[end]/Δx
+        return BOp
     elseif order == 4
         BOp = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]
+        BOp .*= u[end]/Δx
+        return BOp
     elseif order == 6
         BOp = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]
+        BOp .*= u[end]/Δx
+        return BOp
     else
         error("Order must be 2, 4, or 6")
     end
-    BOp *= u[end]/Δx
-    return BOp
 end
 
 

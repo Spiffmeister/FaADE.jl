@@ -204,7 +204,6 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
             cx[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
             cy[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
             order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
-
     return uₓₓ
 end
 
@@ -234,7 +233,7 @@ function Stencil2D end
 
     @sync @distributed for j = 1:ny
         for i = 1:nx
-            uₓₓ[i,j] = SecondDerivative(u[i:i+order_x,j+halfy],
+        uₓₓ[i,j] = SecondDerivative(u[i:i+order_x,j+halfy],
                     cx[i:i+order_x,j+halfy],Δx,Internal,order=order_x) + 
                 SecondDerivative(u[i+halfx,j:j+order_y],
                     cy[i+halfx,j:j+order_y],Δy,Internal,order=order_y)
