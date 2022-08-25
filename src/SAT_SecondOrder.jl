@@ -37,18 +37,26 @@ end
 function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     SAT = zeros(Float64,order)
+    SAT = SAT!(SAT,type,node,u,Δ,order=order,c=c,αβ=αβ,forcing=forcing)
+    return SAT
+end
+
+"""
+    SAT!
+
+Iterator for [`SAT`](@ref)
+"""
+function SAT!(SAT::AbstractVector,type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
+        order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     if type == Dirichlet
         SAT .= SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Neumann
-        SAT = SAT_Neumann(node,u,Δ,c=c,order=order,forcing=forcing)
+        SAT = SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Robin
         SAT = SAT_Robin(node,u,Δ,a=αβ[1],b=αβ[2],order=order,forcing=forcing)
     end
     return SAT
 end
-
-
-
 
 
 
@@ -78,6 +86,23 @@ end
 
 
 
+# struct boundary_second_order_implicit
+#     SAT         :: Function
+#     forcing     :: Function
+#     condition   :: BoundaryCondition
+#     RHS         :: Union{Function,AbstractFloat}
+#     penalties   :: Union{AbstractFloat,AbstractVector}
+#     function boundary_second_order()
+#         SAT(uₓₓ,u) = SAT!(uₓₓ)
+#     end
+# end
+
+# SATₓ₀(uₓₓ,u) -> SAT_Dirichlet!(uₓₓ,Right,u,Δx,c=kx)
+# SATₓₙ(uₓₓ,u) -> SAT_Dirichlet!(uₓₓ,Right,u,Δx,c=kx)
+
+
+
+
 """
     SAT_Dirichlet
 
@@ -97,34 +122,11 @@ See [`NodeType`](@ref)
 """
 function SAT_Dirichlet end
 # Dirichlet for implicit integrators
-function SAT_Dirichlet(::NodeType{:Left},u::AbstractVector,Δ::Float64;
-        c=1.0,order::Int64=2,forcing=false)
-
-    α,τ = SATpenalties(Dirichlet,Δ,order)
+function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
     SAT = zeros(Float64,order)
-
-    SAT = α*c[1]*BDₓᵀ(u,Left,Δ,order)
-    SAT[1] += τ*u[1]
-    if !forcing
-        return SAT
-    else
-        return -SAT
-    end
+    SAT = SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
 end
-function SAT_Dirichlet(::NodeType{:Right},u::AbstractVector,Δ::Float64;
-        c=1.0,order::Int64=2,forcing=false)
 
-    α,τ = SATpenalties(Dirichlet,Δ,order)
-    SAT = zeros(Float64,order)
-
-    SAT = α*c[end]*BDₓᵀ(u,Right,Δ,order)
-    SAT[end] += τ*u[end]
-    if !forcing
-        return SAT
-    else
-        return -SAT
-    end
-end
 # Dirichlet for explicit integrators
 function SAT_Dirichlet(::NodeType{:Left},u::AbstractVector,Δ::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
@@ -176,7 +178,6 @@ function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Right},u::AbstractVe
         c=1.0,order::Int64=2,forcing=false)
 
     α,τ = SATpenalties(Dirichlet,Δ,order)
-    # forcing ? s=1.0 : s=-1.0
 
     if !forcing
         uₓₓ[end-order+1:end] .+= α*c[end]*BDₓᵀ(u,Right,Δ,order)
@@ -207,34 +208,34 @@ where ``i\\in\\{0,N\\}``
 `NodeType` is either `Left` or `Right`
 """
 function SAT_Neumann end
-function SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
-        c=1.0,order::Int64=2,forcing::Bool=false)
-    # Penalties
-    τ = SATpenalties(Neumann,Δx,order)
-    SAT = zeros(Float64,order)
+# function SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
+#         c=1.0,order::Int64=2,forcing::Bool=false)
+#     # Penalties
+#     τ = SATpenalties(Neumann,Δx,order)
+#     SAT = zeros(Float64,order)
 
-    if !forcing
-        SAT[1] = τ*c[1]*BDₓ(u,Left,Δx,order)
-        return SAT
-    else
-        SAT[1] += -τ*u[1]
-        return SAT
-    end
-end
-function SAT_Neumann(::NodeType{:Right},u::Vector{Float64},Δx::Float64;
-        c=1.0,order::Int64=2,forcing::Bool=false)
-    # Penalties
-    τ = SATpenalties(Neumann,Δx,order)
-    SAT = zeros(Float64,order)
+#     if !forcing
+#         SAT[1] = τ*c[1]*BDₓ(u,Left,Δx,order)
+#         return SAT
+#     else
+#         SAT[1] += -τ*u[1]
+#         return SAT
+#     end
+# end
+# function SAT_Neumann(::NodeType{:Right},u::Vector{Float64},Δx::Float64;
+#         c=1.0,order::Int=2,forcing::Bool=false)
+#     # Penalties
+#     τ = SATpenalties(Neumann,Δx,order)
+#     SAT = zeros(Float64,order)
 
-    if !forcing
-        SAT[end] = -τ*c[end]*BDₓ(u,Right,Δx,order)
-        return SAT
-    else
-        SAT[end] -= -τ*u[end] 
-        return SAT
-    end
-end
+#     if !forcing
+#         SAT[end] = -τ*c[end]*BDₓ(u,Right,Δx,order)
+#         return SAT
+#     else
+#         SAT[end] -= -τ*u[end] 
+#         return SAT
+#     end
+# end
 function SAT_Neumann(::NodeType{:Left},u::AbstractVector,Δx::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
     τ = SATpenalties(Neumann,Δx,order)
@@ -251,6 +252,44 @@ function SAT_Neumann(::NodeType{:Right},u::AbstractVector,Δx::Float64,RHS;
     SAT[end] = -τ*(c[end]*BDₓ(u,Right,Δx,order) - RHS[end])
     return SAT
 end
+
+function SAT_Neumann(node,u::AbstractVector,Δ::Float64; c=1.0,order::Int=2,forcing::Bool=false)
+    SAT = zeros(Float64,order)
+    SAT = SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
+    return SAT
+end
+
+"""
+    SAT_Neumann!
+
+Iterator for [`SAT_Neumann`](@ref)
+"""
+function SAT_Neumann! end
+function SAT_Neumann!(uₓₓ::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64;c=1.0,order::Int=2,forcing=false)
+
+    τ = SATpenalties(Neumann,Δ,order)
+
+    if !forcing
+        uₓₓ[1] += τ*c[1]*BDₓ(u,Left,Δ,order)
+        return uₓₓ
+    else
+        uₓₓ[1] -= τ*u[1]
+        return uₓₓ
+    end
+end
+function SAT_Neumann!(uₓₓ::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64;c=1.0,order::Int=2,forcing=false)
+
+    τ = SATpenalties(Neumann,Δ,order)
+
+    if !forcing
+        uₓₓ[end] -= τ*c[end]*BDₓ(u,Right,Δ,order)
+        return uₓₓ
+    else
+        uₓₓ[end] += τ*u[end]
+        return uₓₓ
+    end
+end
+
 
 """
     SAT_Robin
@@ -349,7 +388,7 @@ function SAT_Periodic(u::AbstractVector,Δx::Float64,c::AbstractVector;order::In
     return SAT[1:order], SAT[order+1:end]
 
 end
-function SAT_Periodic(uₗ::AbstractMatrix,uᵣ::AbstractMatrix,Δx::Float64,c::AbstractVector;order::Int64=2)
+function SAT_Periodic!(uₓₓ::AbstractVector,u::AbstractVector,Δx::Float64,c::AbstractVector;order::Int64=2)
 
     # Get h value
     h = hval(order)
@@ -359,38 +398,7 @@ function SAT_Periodic(uₗ::AbstractMatrix,uᵣ::AbstractMatrix,Δx::Float64,c::
     τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
     τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h*Δx) # Dirichlet penalty
 
-    SAT = zeros(Float64,2order)
-
-    # Dirichlet terms
-    SAT[1]  += τ₀ * (u[1] - u[end])
-    SAT[end]+= τ₀ * (u[end] - u[1])
-
-    # Symmeteriser
-    L₁u = [(u[1] - u[end])]
-    SAT[1:order]        = τ₁ * c[1] * BDₓᵀ(L₁u,Left,Δx,order)
-    SAT[order+1:2order] = -τ₁ * c[end] * BDₓᵀ(L₁u,Right,Δx,order)
-
-    # Neumann term
-    BDₓu₁ = BDₓ(u,Left,Δx,order)
-    BDₓuₙ = BDₓ(u,Right,Δx,order)
-
-    SAT[1]  += α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
-    SAT[end]+= α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
-
-    return SAT[1:order], SAT[order+1:end]
-
-end
-function SAT_Periodic!(u::AbstractMatrix,Δx::Float64,c::AbstractVector;order::Int64=2)
-
-    # Get h value
-    h = hval(order)
-
-    # Penalties
-    α₀ = 0.5/(h * Δx) # Derivative penatly
-    τ₁ = -0.5/(h * Δx) # Symmeteriser penalty
-    τ₀ = -max(c[1]/2(h*Δx),c[end]/2(h*Δx))/(h*Δx) # Dirichlet penalty
-
-    SAT = zeros(Float64,2order)
+    # SAT = zeros(Float64,2order)
 
     # Dirichlet terms
     SAT[1] += τ₀ * (u[1] - u[end])
@@ -581,7 +589,7 @@ end
 Transpose of first order derivative operator at the boundary needed to compute certain SATs
 """
 function BDₓ end
-function BDₓ(u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
+@inline function BDₓ(u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
     if order == 2
         #Boundary for the second order case
         return (u[2] - u[1])/Δx
@@ -596,7 +604,7 @@ function BDₓ(u::AbstractVector,::NodeType{:Left},Δx::Float64,order::Int64=2)
     end
     return uₓ
 end
-function BDₓ(u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
+@inline function BDₓ(u::AbstractVector,::NodeType{:Right},Δx::Float64,order::Int64=2)
     if order == 2
         #Boundary for the second order case
         return (u[end] - u[end-1])/Δx

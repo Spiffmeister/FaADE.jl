@@ -24,8 +24,9 @@ x = collect(range(𝒟[1],𝒟[2],length=n))
 
 k = zeros(Float64,n) .+ 1.0
 
-Δt = 0.05 * Δx^2
+Δt = 1.0 * Δx^2
 t_f = 1000Δt
+# t_f = 100.0
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
@@ -38,7 +39,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Neumann,method=method,order=order)
 
 println("Plotting")
 
