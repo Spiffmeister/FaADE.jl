@@ -161,8 +161,13 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         function cgRHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
             if boundary_left != :Periodic
-                uₓₓ[1:order]        += SAT(boundary_left,Left,u,Δx,order=order,forcing=false)
-                uₓₓ[end-order+1:end]+= SAT(boundary_right,Right,u,Δx,order=order,forcing=false)
+                # uₓₓ[1:order]        += SAT(boundary_left,Left,u,Δx,order=order,forcing=false)
+                uₓₓ[1:order]        .= SAT_Dirichlet!(uₓₓ[1:order],Left,u,Δx,order=order,forcing=false)
+                # uₓₓ[end-order+1:end]+= SAT(boundary_right,Right,u,Δx,order=order,forcing=false)
+                println(uₓₓ[end-order+1:end])
+                uₓₓ[end-order+1:end].= SAT_Dirichlet!(uₓₓ[end-order+1:end],Right,u,Δx,order=order,forcing=false)
+                println(uₓₓ[end-order+1:end])
+                println()
             else
                 SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order)
                 uₓₓ[1:order]        += SATₗ
@@ -187,11 +192,20 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         while t ≤ t_f
             uⱼ = copy(uₒ)
             if boundary_left != :Periodic
-                Fₗ = SAT(boundary_left,Left,boundary(t),Δx,order=order,forcing=true)
-                Fᵣ = SAT(boundary_right,Right,boundary(t),Δx,order=order,forcing=true)
+                # Fₗ = SAT(boundary_left,Left,boundary(t),Δx,order=order,forcing=true)
 
-                uⱼ[1:order] += Δt*Fₗ
+                Fᵣ = SAT(boundary_right,Right,boundary(t),Δx,order=order,forcing=true)
+                println("yes",Fᵣ)
+
+                uⱼ[1:order] .= Δt*SAT_Dirichlet!(uⱼ[1:order],Left,boundary(t),Δx,order=order,forcing=true)
+                println("yes",uⱼ[n-order+1:n])
+                # uⱼ[n-order+1:n] .= Δt*SAT_Dirichlet!(uⱼ[n-order+1:n],Right,boundary(t),Δx,order=order,forcing=true)
+                # println("yes",uⱼ[n-order+1:n])
+                # uⱼ[1:order] += Δt*Fₗ
                 uⱼ[end-order+1:end] += Δt*Fᵣ
+                println("yes",uⱼ[end-order+1:end])
+                println()
+
             end
             uₙ = conj_grad(uⱼ,uⱼ,cgRHS,n,Δx,Δt,k,t,x,H,boundary;tol=1e-5,maxIT=20)
 
@@ -307,8 +321,9 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             if boundary_x != Periodic
                 for i = 1:ny
                     # uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
-                    uₓₓ[1:order_x,i]        += SAT_Dirichlet!(uₓₓ[1:order_x,i],Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x,forcing=false)
-                    uₓₓ[end-order_x+1:end,i]+= SAT(boundary_x,Right,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    uₓₓ[1:order_x,i]        .= SAT_Dirichlet!(uₓₓ[1:order_x,i],Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x,forcing=false)
+                    # uₓₓ[end-order_x+1:end,i]+= SAT(boundary_x,Right,u[:,i],Δx,c=kx[:,i],order=order_x,forcing=false)
+                    uₓₓ[nx-order_x+1:nx,i]  .= SAT_Dirichlet!(uₓₓ[nx-order_x+1:nx,i],Right,u[:,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=false)
                 end
             else
                 for i = 1:ny
@@ -351,10 +366,12 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             ### FORCING TERMS
             if boundary_x != Periodic
                 for i = 1:ny
-                    Fₗ = SAT(boundary_x,Left,gx(t),Δx,c=kx[:,i],order=order_x,forcing=true)
-                    Fᵣ = SAT(boundary_x,Right,gx(t),Δx,c=kx[:,i],order=order_x,forcing=true)
-                    uⱼ[1:order_x,i] += Δt*Fₗ
-                    uⱼ[nx-order_x+1:nx,i] += Δt*Fᵣ
+                    # Fₗ = SAT(boundary_x,Left,gx(t),Δx,c=kx[:,i],order=order_x,forcing=true)
+                    uⱼ[1:order_x,i] .= Δt*SAT_Dirichlet!(uⱼ[1:order_x,i],Left,gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
+                    # Fᵣ = SAT(boundary_x,Right,gx(t),Δx,c=kx[:,i],order=order_x,forcing=true)
+                    uⱼ[nx-order_x+1:nx,i] .= Δt*SAT_Dirichlet!(uⱼ[nx-order_x+1:nx,i],Right,gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
+                    # uⱼ[1:order_x,i] += Δt*Fₗ
+                    # uⱼ[nx-order_x+1:nx,i] += Δt*Fᵣ
                 end
             end
             if boundary_y != Periodic

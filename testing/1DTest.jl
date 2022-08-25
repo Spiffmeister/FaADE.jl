@@ -3,8 +3,9 @@ using Printf
 using Plots
 # pyplot()
 using BenchmarkTools
-using Pkg
-Pkg.activate(".")
+# using Pkg
+# Pkg.activate(".")
+push!(LOAD_PATH,".")
 using SBP_operators
 
 
@@ -37,7 +38,7 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Robin,method=method,order=order)
+soln = SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
 
 println("Plotting")
 

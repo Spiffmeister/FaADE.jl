@@ -7,8 +7,8 @@ using JLD2
 
 using BenchmarkTools
 # using ProfileView
-using Profile
-using PProf
+# using Profile
+# using PProf
 
 cd("..")
 using Distributed
@@ -46,7 +46,7 @@ kx = zeros(Float64,nx,ny) .+ 1.0e-8
 ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 
-Δt = 10.0 * min(Δx^2,Δy^2)
+Δt = 1.0 * min(Δx^2,Δy^2)
 t_f = 100Δt
 # t_f = 100.0
 N = ceil(Int64,t_f/Δt)
@@ -139,7 +139,7 @@ SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Diric
 # Profile.clear_malloc_data()
 
 # @benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-#     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false) seconds=10
+    # method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false) seconds=10
 
 t_f = 100.0
 soln,_ = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
