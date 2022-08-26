@@ -5,3 +5,6 @@
 *.pdf
 /docs/build/
 /build
+*.mem
+*.txt
+*.bak

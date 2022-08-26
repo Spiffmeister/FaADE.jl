@@ -1,96 +1,10 @@
 
-
-
-
-
-
-struct grid
-    x   :: Array{Float64}
-    Δx  :: Float64
-    n   :: Int64
-
-    function grid(𝒟,n)
-        Δx = (𝒟[2] - 𝒟[1])/(n-1)
-        x = collect(range(𝒟[1],𝒟[2],step=Δx))
-        new(x,Δx,n)
-    end
-end
-
-
-
-mutable struct solution
-    u       :: Vector{Vector{Float64}}
-    x       :: Vector{Float64}
-    Δt      :: Union{Float64,Vector{Float64}}
-    t       :: Vector{Float64}
-
-    function solution(u₀,x,Δx,t,Δt;preallocate=false)
-        if preallocate
-            N = ceil(Int64,t/Δt)
-            n = length(x)
-            u = [zeros(Float64,n) for _ in 1:N]
-
-            u[1] = u₀
-
-            new(u,x,Δt,collect(range(0.0,t,length=N)))
-        else
-            u = u₀
-            new([u],x,[Δt],[t])
-        end
-
-    end
-end
-
-mutable struct solution_2d
-    u   :: Vector{Matrix{Float64}}
-    x   :: Vector{Float64}
-    y   :: Vector{Float64}
-    Δt  :: Vector{Float64}
-    t   :: Vector{Float64}
-    function solution_2d(u₀,x,y,t,Δt)
-        new([u₀],x,y,[Δt],[t])
-    end
-end
-
-
 """
-    Struct for storing checkpoints for 2D simulations
-"""
-mutable struct checkpoint_2d
-    # Solution info
-    soln        :: solution_2d
-    Δx          :: Float64
-    Δy          :: Float64
-    t_f         :: Float64
-    # Diffusion coefficient matricies
-    kx          :: Matrix{Float64}
-    ky          :: Matrix{Float64}
-    # Boundary functions
-    gx          :: Function
-    gy          :: Function
-    # Parallel penalty function if provided
-    parallel    :: Bool
-    penalty_fn  :: Union{Function,Nothing}
-    # Simulation parameters
-    order_x     :: Int64
-    order_y     :: Int64
-    method      :: Symbol
-    maxIT       :: Int64
-    samplefactor:: Float64
-    tol         :: Float64
-    rtol        :: Float64
-    adaptive    :: Bool
-end
-
-
-
-
-"""
-    time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;
-        boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
+time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;
+    boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
 or
-    function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
-        method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::Vector{Float64},y::Vector{Float64},t_f::Float64,Δt::Float64,kx::Matrix{Float64},ky::Matrix{Float64},gx,gy,boundary_x::Symbol,boundary_y::Symbol;
+    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Int64=1,tol=1e-5,adaptive=true,penalty_fn=nothing)
 
 Inbuilt function for integrating in time.
 
@@ -99,7 +13,7 @@ See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_gra
 function time_solver end
 #===== 1D TIME SOLVER =====#
 function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryCondition;
-    boundary_right::BoundaryCondition=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
+        boundary_right::BoundaryCondition=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
 
     uₙ = zeros(Float64,n)
 
@@ -126,6 +40,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
                 SATₗ,SATᵣ = SAT_Periodic(u,Δx,k,order=order)
                 uₓₓ[1:order]        += SATₗ
                 uₓₓ[end-order+1:end]+= SATᵣ
+                # uₓₓ = SAT_Periodic!(uₓₓ,u,Δx,k,order=order)
             end
             return uₓₓ
         end
@@ -160,13 +75,12 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         end
         function cgRHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
-            if boundary_left != :Periodic
+            if boundary_left != Periodic
                 uₓₓ[1:order]        .= SAT!(uₓₓ[1:order],boundary_left,Left,u[1:order],Δx,order=order,forcing=false)
                 uₓₓ[n-order+1:n].= SAT!(uₓₓ[n-order+1:n],boundary_right,Right,u[n-order+1:n],Δx,order=order,forcing=false)
             else
-                SATₗ,SATᵣ, = SAT_Periodic(u,Δx,k,order=order)
-                uₓₓ[1:order]        += SATₗ
-                uₓₓ[end-order+1:end]+= SATᵣ
+                uₓₓ = SAT_Periodic!(uₓₓ,u,Δx,c=k,order=order)
+
             end
             return uₓₓ
         end
@@ -186,7 +100,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 
         while t ≤ t_f
             uⱼ = copy(uₒ)
-            if boundary_left != :Periodic
+            if boundary_left != Periodic
                 uⱼ[1:order]     .= SAT!(uⱼ[1:order],boundary_left,Left,Δt*boundary(t),Δx,order=order,c=k[1:order],forcing=true)
                 uⱼ[n-order+1:n] .= SAT!(uⱼ[n-order+1:n],boundary_right,Right,Δt*boundary(t),Δx,order=order,c=k[n-order+1:n],forcing=true)
             end
@@ -209,7 +123,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
 end
 #===== 2D TIME SOLVER =====#
 function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},gx,gy,boundary_x::BoundaryCondition,boundary_y::BoundaryCondition;
-    method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
+        method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
 
     # Preallocate and set initial
     N = ceil(Int64,t_f/Δt)
@@ -260,9 +174,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             else
                 for i = 1:ny
-                    SATₗ,SATᵣ = SAT_Periodic(u[:,i],Δx,kx[:,i],order=order_x)
-                    uₓₓ[1:order_x,i]        += SATₗ
-                    uₓₓ[end-order_x+1:end,i]+= SATᵣ
+                    uₓₓ[:,i] = SAT_Periodic!(uₓₓ[:,i],u[:,i],Δx,kx[:,i],order=order_x)
                 end
             end
             if boundary_y != Periodic
@@ -272,9 +184,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             else
                 for i = 1:nx
-                    SATₗ,SATᵣ = SAT_Periodic(u[i,:],Δy,ky[i,:],order=order_y)
-                    uₓₓ[i,1:order_y]        += SATₗ
-                    uₓₓ[i,end-order_y+1:end]+= SATᵣ
+                    uₓₓ[i,:] = SAT_Periodic!(uₓₓ,u[i,:],Δy,ky[i,:],order=order_y)
                 end
             end
             return uₓₓ
@@ -298,31 +208,32 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     elseif method == :cgie
         maxIT < 1 ? maxIT = 10 : nothing
 
+
+
+        
+
+
         function cgRHS(uₓₓ,u)
             uₓₓ = PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
             if boundary_x != Periodic
                 for i = 1:ny
-                    uₓₓ[1:order_x,i]        = SAT!(uₓₓ[1:order_x,i],boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
-                    uₓₓ[nx-order_x+1:nx,i]  = SAT!(uₓₓ[nx-order_x+1:nx,i],boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
+                    uₓₓ[1:order_x,i]        .= SAT!(uₓₓ[1:order_x,i],boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
+                    uₓₓ[nx-order_x+1:nx,i]  .= SAT!(uₓₓ[nx-order_x+1:nx,i],boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
                 end
             else
                 for i = 1:ny
-                    SATₗ,SATᵣ = SAT_Periodic(u[:,i],Δx,kx[:,i],order=order_x)
-                    uₓₓ[1:order_x,i]        += SATₗ
-                    uₓₓ[nx-order_x+1:nx,i]  += SATᵣ
+                    uₓₓ[:,i] = SAT_Periodic!(uₓₓ[:,i],u[:,i],Δx,c=kx[:,i],order=order_x)
                 end
             end
             if boundary_y != Periodic
                 for i = 1:nx
-                    uₓₓ[i,1:order_y]        = SAT!(uₓₓ[i,1:order_y],boundary_y,Left,u[i,1:order_y],Δy,c=ky[i,1:order_y],order=order_y)
-                    uₓₓ[i,ny-order_y+1:ny]  = SAT!(uₓₓ[i,ny-order_y+1:ny],boundary_y,Right,u[i,ny-order_y+1:ny],Δy,c=ky[i,ny-order_y+1:ny],order=order_y)
+                    uₓₓ[i,1:order_y]        .= SAT!(uₓₓ[i,1:order_y],boundary_y,Left,u[i,1:order_y],Δy,c=ky[i,1:order_y],order=order_y)
+                    uₓₓ[i,ny-order_y+1:ny]  .= SAT!(uₓₓ[i,ny-order_y+1:ny],boundary_y,Right,u[i,ny-order_y+1:ny],Δy,c=ky[i,ny-order_y+1:ny],order=order_y)
                 end
             else
                 for i = 1:nx
-                    SATₗ,SATᵣ = SAT_Periodic(u[i,:],Δy,ky[i,:],order=order_y)
-                    uₓₓ[i,1:order_y]        += SATₗ
-                    uₓₓ[i,ny-order_y+1:ny]  += SATᵣ
+                    uₓₓ[i,:] .= SAT_Periodic!(uₓₓ[i,:],u[i,:],Δy,c=ky[i,:],order=order_y)
                 end
             end
             return uₓₓ
@@ -405,10 +316,6 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         end
     end
 
-    # if checkpoint
-    #     checkpt = checkpoint_2d(soln,Δx,Δy,t_f,kx,ky,gx,gy,parallel_penalty,penalty_fn,order_x,order_y,method,maxIT,samplefactor,tol,rtol,adaptive)
-    #     return checkpt
-    # end
 
     if length(soln.u) == 1
         push!(soln.u,uₙ)
