@@ -67,3 +67,13 @@ function SAT_Periodic!(uₓₓ::AbstractVector,u::AbstractVector,Δx::Float64;
     return uₓₓ
 
 end
+
+
+
+# function SAT_Periodic!(uₓₓ::AbstractMatrix,u::AbstractVector,Δx::Float64,n;
+#         c=[1.0,1.0],order::Int64=2)
+    
+#     for i = 1:n
+#     end
+    
+# end

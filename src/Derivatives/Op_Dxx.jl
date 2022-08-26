@@ -79,25 +79,20 @@ Iterator for 1D and 2D second derviative SBP operator
 """
 function Dₓₓ! end
 ### Vector based second derviative iterator
-function Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
+function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order::Int64=2)
 
-    adj = Int64(order/2)
+    half = Int64(order/2)
+    order == 2 ? adj = 1 : adj = order + half
+
 
     for i = order:n-order+1
-        uₓₓ[i] = SecondDerivative(u[i-adj:i+adj],c[i-adj:i+adj],Δx,Internal,order=order)
+        uₓₓ[i] = SecondDerivative(u[i-half:i+half],c[i-half:i+half],Δx,Internal,order=order)
     end
 
-    adj += order
+    SecondDerivative!(uₓₓ,u[1:2order],c[1:2order],Δx,Left,order=order)
+    SecondDerivative!(uₓₓ,u[n-2order+1:n],c[n-2order+1:n],Δx,Right,order=order)
 
-    if order == 2
-        uₓₓ[1] = 0.0
-        uₓₓ[n] = 0.0
-    else
-        uₓₓ[1:adj] = SecondDerivative(u[1:2order],c[1:2order],Δx,Left,order=order)
-        uₓₓ[n-adj+1:n] = SecondDerivative(u[n-2order+1:n],c[n-2order+1:n],Δx,Right,order=order)
-    end
-
-    return uₓₓ
+    # return uₓₓ
 end
 ### Multidimensional second derivative SBP operator
 function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
@@ -204,7 +199,7 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
             cx[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
             cy[nx-order_x-adjx:nx,ny-order_y-adjy:ny],
             order_x+adjx,order_y+adjy,order_x=order_x,order_y=order_y)
-    return uₓₓ
+    # return uₓₓ
 end
 
 
@@ -248,8 +243,12 @@ end
     order_x == 2 ? adjx = 1 : adjx = order_x + Int64(order_x/2)
     halfy = Int64(order_y/2) # half way
 
+    # println(xnode)
     for j = 1:ny
-        uₓₓ[1:nx,j] = SecondDerivative(u[:,j+halfy],cx[:,j+halfy],Δx,xnode,order=order_x)
+        # println("before",uₓₓ[1:nx,j])
+        # uₓₓ[1:nx,j] = SecondDerivative(u[:,j+halfy],cx[:,j+halfy],Δx,xnode,order=order_x)
+        SecondDerivative!(uₓₓ[1:nx,j],u[:,j+halfy],cx[:,j+halfy],Δx,xnode,order=order_x)
+        # println("after",uₓₓ[1:nx,j])
         for i = 1:adjx
             uₓₓ[i,j] += SecondDerivative(u[i,j:j+order_y],cy[i,j:j+order_y],Δy,Internal,order=order_y)
         end
@@ -264,7 +263,8 @@ end
     order_y == 2 ? adjy = 1 : adjy = order_y + Int64(order_y/2)
 
     for i = 1:nx
-        uₓₓ[i,1:ny] = SecondDerivative(u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
+        # uₓₓ[i,1:ny] = SecondDerivative(u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
+        SecondDerivative!(uₓₓ[i,1:ny],u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
         for j = 1:adjy
             uₓₓ[i,j] += SecondDerivative(u[i:i+order_y,j],cx[i:i+order_y,j],Δx,Internal,order=order_x)
         end
@@ -280,9 +280,10 @@ function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,yn
 
     for j = 1:order_y+adjy # x direction - top/bottom
         uₓₓ[:,j] = SecondDerivative(u[:,j],cx[:,j],Δx,xnode,order=order_x)
+        # SecondDerivative!(uₓₓ[:,j],u[:,j],cx[:,j],Δx,xnode,order=order_x)
     end
     for i = 1:order_x+adjx # y direction - left/right
-        uₓₓ[i,:] += SecondDerivative(u[i,:],cy[i,:],Δy,ynode,order=order_y)
+        uₓₓ[i,:] .+= SecondDerivative(u[i,:],cy[i,:],Δy,ynode,order=order_y)
     end
     return uₓₓ
 end

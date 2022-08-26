@@ -11,7 +11,7 @@ using SBP_operators
 
 ###
 function rate(uₓₓ,u,n,x,Δx,t,Δt,k;order=2)
-    uₓₓ = SBP_operators.Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
+    Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
     return uₓₓ
 end
 
@@ -30,7 +30,7 @@ t_f = 1000Δt
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g(t) = [0.0, 1.0]
+g(t) = [1.0, 0.0]
 
 order = 2
 method = :cgie
@@ -53,4 +53,4 @@ gif(anim,"yes.gif",fps=50)
 
 
 
-# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order) seconds=60
+@benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)

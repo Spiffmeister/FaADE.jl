@@ -7,7 +7,7 @@ module solvers
 
 
     using SBP_operators.types
-    using SBP_operators.SATs: SAT!, SAT_Periodic!
+    using SBP_operators.SATs: SAT, SAT!, SAT_Periodic, SAT_Periodic!
 
 
     include("solution.jl")

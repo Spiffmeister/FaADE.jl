@@ -34,7 +34,7 @@ end
 function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     SAT = zeros(Float64,order)
-    SAT = SAT!(SAT,type,node,u,Δ,order=order,c=c,αβ=αβ,forcing=forcing)
+    SAT!(SAT,type,node,u,Δ,order=order,c=c,αβ=αβ,forcing=forcing)
     return SAT
 end
 
@@ -46,12 +46,12 @@ Iterator for [`SAT`](@ref)
 function SAT!(SAT::AbstractVector,type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     if type == Dirichlet
-        SAT .= SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
+        SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Neumann
-        SAT = SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
+        SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Robin
-        SAT = SAT_Robin(node,u,Δ,a=αβ[1],b=αβ[2],order=order,forcing=forcing)
+        # SAT_Robin!(SAT,node,u,Δ,a=αβ[1],b=αβ[2],order=order,forcing=forcing)
     end
-    return SAT
+    # return SAT
 end
 

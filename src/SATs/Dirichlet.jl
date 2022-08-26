@@ -67,11 +67,9 @@ function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Left},u::AbstractVec
     if !forcing
         uₓₓ[1:order] .+= α*c[1]*BDₓᵀ(u,Left,Δ,order)
         uₓₓ[1] += τ*u[1]
-        return uₓₓ[1:order]
     else
         uₓₓ[1:order] .-= α*c[1]*BDₓᵀ(u,Left,Δ,order)
         uₓₓ[1] -= τ*u[1]
-        return uₓₓ[1:order]
     end
 end
 function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64;
@@ -82,10 +80,8 @@ function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Right},u::AbstractVe
     if !forcing
         uₓₓ[end-order+1:end] .+= α*c[end]*BDₓᵀ(u,Right,Δ,order)
         uₓₓ[end] += τ*u[end]
-        return uₓₓ
     else
         uₓₓ[end-order+1:end] .-= α*c[end]*BDₓᵀ(u,Right,Δ,order)
         uₓₓ[end] -= τ*u[end]
-        return uₓₓ
     end
 end
