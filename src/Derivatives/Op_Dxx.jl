@@ -264,7 +264,7 @@ end
 
     for i = 1:nx
         # uₓₓ[i,1:ny] = SecondDerivative(u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
-        SecondDerivative!(uₓₓ[i,1:ny],u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
+        SecondDerivative!(uₓₓ[i,:],u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
         for j = 1:adjy
             uₓₓ[i,j] += SecondDerivative(u[i:i+order_y,j],cx[i:i+order_y,j],Δx,Internal,order=order_x)
         end
@@ -272,18 +272,19 @@ end
     return uₓₓ
 end
 ### Corners
-function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,ynode::NodeType,Δx,Δy,cx,cy,nx,ny;
+@views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,ynode::NodeType,Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)
     # corner x-y
     order_x == 2 ? adjx = -1 : adjx = Int64(order_x/2)
     order_y == 2 ? adjy = -1 : adjy = Int64(order_y/2)
 
     for j = 1:order_y+adjy # x direction - top/bottom
-        uₓₓ[:,j] = SecondDerivative(u[:,j],cx[:,j],Δx,xnode,order=order_x)
-        # SecondDerivative!(uₓₓ[:,j],u[:,j],cx[:,j],Δx,xnode,order=order_x)
+        # uₓₓ[:,j] = SecondDerivative(u[:,j],cx[:,j],Δx,xnode,order=order_x)
+        SecondDerivative!(uₓₓ[:,j],u[:,j],cx[:,j],Δx,xnode,order=order_x)
     end
     for i = 1:order_x+adjx # y direction - left/right
-        uₓₓ[i,:] .+= SecondDerivative(u[i,:],cy[i,:],Δy,ynode,order=order_y)
+        # uₓₓ[i,:] .+= SecondDerivative(u[i,:],cy[i,:],Δy,ynode,order=order_y)
+        SecondDerivative!(uₓₓ[i,:],u[i,:],cy[i,:],Δy,ynode,order=order_y)
     end
     return uₓₓ
 end

@@ -2,7 +2,6 @@ using LinearAlgebra
 using Printf
 using Plots
 # pyplot()
-# using GLMakie
 using JLD2
 
 using BenchmarkTools
@@ -10,20 +9,18 @@ using BenchmarkTools
 using Profile
 # using PProf
 
-cd("..")
-using Distributed
-# addprocs(1)
+# cd("..")
+# using Distributed
+# addprocs(2)
 @everywhere using Interpolations
 @everywhere push!(LOAD_PATH,"./plas_diff")
 @everywhere push!(LOAD_PATH,"./SBP_operators")
-# @everywhere push!(LOAD_PATH,".")
 @everywhere using SBP_operators
 @everywhere using plas_diff
 using SharedArrays
 
 ###
 function rate(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky;order_x=2,order_y=2)
-    # uₓₓ = Dₓₓ(u,nx,ny,Δx,kx,dim=1,order=order_x) + Dₓₓ(u,nx,ny,Δy,ky,dim=2,order=order_y)
     Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,kx,ky,order_x=order_x,order_y=order_y)
     return uₓₓ
 end
@@ -136,47 +133,49 @@ end
 SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=false)
 
+    
+@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+    method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false) seconds=30
+    
 # Profile.clear_malloc_data()
+# soln,uwa = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+#     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
+    # # println("t_f=",soln.t[end],"    ",length(soln.t))
+    
+    # println("plotting")
+    
+    # pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
+    
+    
+    # plas_diff.plot_grid(gdata)
 
-# @benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    # method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false) seconds=30
+# t_f = 100.0
+# soln,uwa = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+#     method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
-t_f = 100.0
-soln,uwa = SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
-    method=method,order_x=order,order_y=order,samplefactor=1.0,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
+# N = length(soln.u)
+# skip = 5
+# fps = 10
 
-# # println("t_f=",soln.t[end],"    ",length(soln.t))
-
-# println("plotting")
-
-# pdata = plas_diff.poincare(plas_diff.SampleFields.χ_h!,params,N_trajs=1000,N_orbs=100,x=𝒟x,y=𝒟y)
-
-
-plas_diff.plot_grid(gdata)
-
-N = length(soln.u)
-skip = 5
-fps = 10
-
-energy = zeros(N)
-maxerry = zeros(N)
-maxerrx = zeros(N)
-for i = 1:N
-    energy[i] = norm(soln.u[i][:,:],2)
-    maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
-    maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
-end
+# energy = zeros(N)
+# maxerry = zeros(N)
+# maxerrx = zeros(N)
+# for i = 1:N
+#     energy[i] = norm(soln.u[i][:,:],2)
+#     maxerry[i] = norm(soln.u[i][:,1]-soln.u[i][:,end],Inf)
+#     maxerrx[i] = norm(soln.u[i][1,:]-soln.u[i][end,:],Inf)
+# end
 
 
-anim = @animate for i = 1:skip:N
-    l = @layout [a{0.7w} [b; c]]
-    p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
-    plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
-    plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
-    # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
-    plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
-end
-gif(anim,"yes.gif",fps=fps)
+# anim = @animate for i = 1:skip:N
+#     l = @layout [a{0.7w} [b; c]]
+#     p = surface(soln.u[i][:,:],layout=l,label="t=$(@sprintf("%.5f",i*Δt))",zlims=(0.0,1.0),clims=(0.0,1.0),xlabel="y",ylabel="x",camera=(30,30))
+#     plot!(p[2],soln.t[1:i],maxerry[1:i],ylims=(0.0,max(maximum(maxerrx),maximum(maxerry))),label="y_0 - y_N")
+#     plot!(p[2],soln.t[1:i],maxerrx[1:i],label="x_0 - x_N")
+#     # plot!(p[2],u[15,:,i],ylabel="u(x=0.5)")
+#     plot!(p[3],soln.t[1:i],energy[1:i],ylabel="||u||_2")
+# end
+# gif(anim,"yes.gif",fps=fps)
 
 
 # println("saving")

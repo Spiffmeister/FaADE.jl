@@ -257,7 +257,6 @@ end
 
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
-        # uₓₓ[end] = 0.0
         return [0.0]
     elseif order == 4
         n = 8
@@ -456,7 +455,7 @@ end
     SecondDerivative!
 """
 ### Left boundary
-function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Left};order::Int64=2)
+@views function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Left};order::Int64=2)
     if order == 2
         uₓₓ[1] = 0.0
         # return uₓₓ
@@ -633,7 +632,7 @@ function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector,c::Abstract
 end
 
 
-function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
+@views function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         uₓₓ[end] = 0.0
     elseif order == 4

@@ -64,7 +64,7 @@ function SAT_Periodic!(uₓₓ::AbstractVector,u::AbstractVector,Δx::Float64;
 
     uₓₓ[1]  += α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
     uₓₓ[end]+= α₀ * (c[1]*BDₓu₁ - c[end]*BDₓuₙ)
-    return uₓₓ
+    # return uₓₓ
 
 end
 
