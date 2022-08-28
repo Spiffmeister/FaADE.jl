@@ -17,45 +17,42 @@ See [`NodeType`](@ref)
 """
 function SAT_Dirichlet end
 # Dirichlet for implicit integrators
-function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
+function SAT_Dirichlet(node,u::AbstractArray,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
     SAT = zeros(Float64,order)
     SAT = SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
 end
-# function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
-# end
+function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64,RHS; c=1.0,order::Int64=2,forcing=false)
+    SAT = zeros(Float64,order)
+end
 # Dirichlet for explicit integrators
-function SAT_Dirichlet(::NodeType{:Left},u::AbstractVector,Δ::Float64,RHS;
+
+
+
+
+
+"""
+    SAT_Dirichlet!
+
+
+"""
+function SAT_Dirichlet!(SAT::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
     α,τ = SATpenalties(Dirichlet,Δ,order)
-    SAT = zeros(Float64,order)
 
-    SAT += BDₓᵀ(u,Left,Δ,order) - BDₓᵀ(RHS,Left,Δ,order)
-    
-    SAT .*= α * c[1]
+    SAT[1:order] += BDₓᵀ(u,Left,Δ,order) - BDₓᵀ(RHS,Left,Δ,order)
+
+    SAT[1:order] .*= α * c[1]
     SAT[1]  += τ*(u[1] - RHS[1])
-    
-    return SAT
 end
-function SAT_Dirichlet(::NodeType{:Right},u::AbstractVector,Δ::Float64,RHS;
+function SAT_Dirichlet(SAT::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64,RHS;
         c=1.0,order::Int64=2,forcing::Bool=false)
     α,τ = SATpenalties(Dirichlet,Δ,order)
-    SAT = zeros(Float64,order)
 
-    SAT += BDₓᵀ(u,Right,Δ,order) + BDₓᵀ(-RHS,Right,Δ,order)
+    SAT[end-order+1:end] .+= BDₓᵀ(u,Right,Δ,order) + BDₓᵀ(-RHS,Right,Δ,order)
 
-    SAT .*= α * c[end]
+    SAT[end-order+1:end] .*= α * c[end]
     SAT[end]  += τ*(u[end] - RHS[end])
-   
-    return SAT
 end
-
-
-# function SAT_Dirichlet(node::NodeType,u::AbstractVector,Δ::Float64;
-    # c=1.0,order=2,forcing=false)
-    # SAT = zeros(Float64,order)
-    # SAT_Dirichlet!
-# end
-
 
 
 #=== Implicit methods ===#

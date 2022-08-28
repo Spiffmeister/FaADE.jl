@@ -38,13 +38,17 @@ function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},�
     return SAT
 end
 
+
+
+
+
 """
     SAT!
 
 Iterator for [`SAT`](@ref)
 """
-function SAT!(SAT::AbstractVector,type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
-        order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+function SAT!(SAT::AbstractArray,type::BoundaryCondition,node::NodeType,u::AbstractArray,Δ::Float64;
+        order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     if type == Dirichlet
         SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Neumann
@@ -54,4 +58,51 @@ function SAT!(SAT::AbstractVector,type::BoundaryCondition,node::NodeType,u::Abst
     end
     # return SAT
 end
+
+function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Dirichlet},node::NodeType,u::AbstractArray,Δ::Float64;
+        order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+    if !forcing
+        map((A,U) -> SAT_Dirichlet!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
+    else
+        map((A,U,K) -> SAT_Dirichlet!(A,node,U,Δ,c=K,order=order,forcing=forcing), eachcol(SAT),eachcol(u),eachcol(c))
+    end
+    SAT
+end
+function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Neumann},node::NodeType,u::AbstractArray,Δ::Float64;
+        order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+    if !forcing
+        map((A,U) -> SAT_Neumann!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
+    else
+        map((A,U,K) -> SAT_Neumann!(A,node,U,Δ,c=K,order=order,forcing=forcing), eachcol(SAT),eachcol(u),eachcol(c))
+    end
+    SAT
+end
+# function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Periodic},node::NodeType,u::AbstractArray,Δ::Float64;
+#         order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+    
+#         map((A,U) -> SAT_Periodic!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
+#     SAT
+# end
+
+
+# function SAT(u::AbstractArray,type::Dirichlet,node::NodeType,Δ::Float64,n::Int;
+#         order::Int=2,c::Union{Float64,AbstractMatrix})
+#     SAT = zeros((order,n))
+#     for i = 1:n
+#         SAT[1:order] = SAT_Dirichlet!(SAT[1:order],node,u,Δ,c=c,order=order,forcing=forcing)
+#     end
+# end
+
+
+
+# function dimiter(u,:first)
+#     return eachcol
+# end
+# function dimiter(u,:second)
+#     return eachcol
+# end
+
+
+
+
 

@@ -9,8 +9,8 @@ using BenchmarkTools
 using Profile
 # using PProf
 
-# cd("..")
-# using Distributed
+cd("..")
+using Distributed
 # addprocs(2)
 @everywhere using Interpolations
 @everywhere push!(LOAD_PATH,"./plas_diff")

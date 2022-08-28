@@ -38,6 +38,13 @@ function SAT_Periodic(u::AbstractVector,Δx::Float64;
 end
 
 
+function SAT_Periodic!(SAT::AbstractArray,u::AbstractArray,Δ::Float64;
+        c=[1.0,1.0], order::Int=2)
+    map((A,U,K) -> SAT_Periodic!(A,U,Δ,c=K,order=order), eachrow(SAT),eachrow(u),eachrow(c))
+    SAT
+end
+
+
 function SAT_Periodic!(uₓₓ::AbstractVector,u::AbstractVector,Δx::Float64;
         c=[1.0,1.0],order::Int64=2)
 

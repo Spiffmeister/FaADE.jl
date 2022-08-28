@@ -135,11 +135,18 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     order_y == 2 ? inty = 1 : inty = order_y+1
 
     # Internal nodes
+    # uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
+    #     Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
+    #         u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
+    #         cx[intx:nx-intx+1,inty:ny-inty+1],
+    #         cy[intx:nx-intx+1,inty:ny-inty+1],nx-2(order_x+retx),ny-2(order_y+rety),order_x=order_x,order_y=order_y)
+
     uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
         Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
             u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
             cx[intx:nx-intx+1,inty:ny-inty+1],
-            cy[intx:nx-intx+1,inty:ny-inty+1],nx-2(order_x+retx),ny-2(order_y+rety),order_x=order_x,order_y=order_y)
+            cy[intx:nx-intx+1,inty:ny-inty+1],order_x=order_x,order_y=order_y)
+    
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries
@@ -236,6 +243,15 @@ function Stencil2D end
     end
     return uₓₓ
 end
+
+function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy;
+    order_x=2,order_y=order_x)
+
+    SecondDerivativeInd!(uₓₓ,u,cx,Δx,Internal)
+    SecondDerivativeIndAdd!(uₓₓ,u,cy,Δy,Internal)
+    uₓₓ
+end
+
 ### X boundaries
 @views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,xnode::NodeType,::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
         order_x=2,order_y=order_x)

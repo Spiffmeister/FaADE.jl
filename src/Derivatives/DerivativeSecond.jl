@@ -56,6 +56,30 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
 end
 
 
+function SecondDerivativeInd!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2)
+
+    off = CartesianIndex(1,0)
+
+    for I in CartesianIndices(uₓₓ)
+        uₓₓ[I] = (c[I+off] + c[I])*u[I] - (c[I+2off] + 2c[I+off] + c[I])*u[I+off] + (c[I+off] + c[I+2off])*u[I+2off]
+        uₓₓ[I] /= 2Δx^2
+    end
+
+end
+function SecondDerivativeIndAdd!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2)
+
+    off = CartesianIndex(0,1)
+
+    for I in CartesianIndices(uₓₓ)
+        q = (c[I+off] + c[I])*u[I] - (c[I+2off] + 2c[I+off] + c[I])*u[I+off] + (c[I+off] + c[I+2off])*u[I+2off]
+        uₓₓ[I] += q/(2Δx^2)
+    end
+
+end
+
+
+
+
 
 # function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,node::NodeType;order::Int64=2)
     
