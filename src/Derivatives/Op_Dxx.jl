@@ -137,23 +137,9 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     order_x == 2 ? intx = 1 : intx = order_x+1
     order_y == 2 ? inty = 1 : inty = order_y+1
 
-    # Internal nodes
-    # uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
-    #     Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
-    #         u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
-    #         cx[intx:nx-intx+1,inty:ny-inty+1],
-    #         cy[intx:nx-intx+1,inty:ny-inty+1],nx-2(order_x+retx),ny-2(order_y+rety),order_x=order_x,order_y=order_y)
 
-    n = size(uₓₓ)
-
-    SecondDerivative!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
-
-    # uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
-    #     Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
-    #         u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
-    #         cx[intx:nx-intx+1,inty:ny-inty+1],
-    #         cy[intx:nx-intx+1,inty:ny-inty+1],order_x=order_x,order_y=order_y)
-    
+    # SecondDerivative!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
+    # ArbitrarySecondDerivativeStencil!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,Internal)
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries
