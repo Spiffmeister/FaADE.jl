@@ -3,7 +3,10 @@
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
-
+struct order{T} end
+const order2 = order{:SecondOrder}()
+const order4 = order{:FourthOrder}()
+const order6 = order{:SixthOrder}()
 
 """
     SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,type::NodeType;order::Int64=2)
@@ -56,39 +59,22 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
 end
 
 
-function SecondDerivativeInd!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2)
 
-    off = CartesianIndex(1,0)
 
-    for I in CartesianIndices(uₓₓ)
-        uₓₓ[I] = (c[I+off] + c[I])*u[I] - (c[I+2off] + 2c[I+off] + c[I])*u[I+off] + (c[I+off] + c[I+2off])*u[I+2off]
-        uₓₓ[I] /= 2Δx^2
+function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,Δx,Δy,nx,ny,::NodeType{:Internal})
+
+    for j in 2:ny-1
+        for i in 2:nx-1
+            uₓₓ[i-1,j-1] = 
+                ((cx[i-1,j] + cx[i,j])*u[i-1,j] + (cx[i-1,j] + 2cx[i,j] + cx[i+1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
+                ((cy[i,j-1] + cy[i,j])*u[i,j-1] + (cy[i,j-1] + 2cy[i,j] + cy[i,j+1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
+        end
     end
-
-end
-function SecondDerivativeIndAdd!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2)
-
-    off = CartesianIndex(0,1)
-
-    for I in CartesianIndices(uₓₓ)
-        q = (c[I+off] + c[I])*u[I] - (c[I+2off] + 2c[I+off] + c[I])*u[I+off] + (c[I+off] + c[I+2off])*u[I+2off]
-        uₓₓ[I] += q/(2Δx^2)
-    end
-
+    uₓₓ
 end
 
 
 
-
-
-# function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,node::NodeType;order::Int64=2)
-    
-#     order == 2 ? ret = 1 : ret = 2order
-
-#     uₓₓ = zeros(Float64,ret)
-#     uₓₓ = SecondDerivative!(uₓₓ,u,c,Δx,node,order=order)
-#     return uₓₓ
-# end
 
 
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Left};order::Int64=2)
@@ -273,11 +259,6 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
         return uₓₓ
     end
 end
-
-
-
-
-
 
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
@@ -836,4 +817,47 @@ end
     end
 end
 
+
+
+
+
+
+
+
+
+"""
+    SecondDerivativeStencil!
+"""
+function ArbitrarySecondDerivativeStencil!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2,dims=ndims(uₓₓ))
+
+    SecondDerivativeSet!(uₓₓ,u,c,Δx,Internal,order=order,dims=dims)
+    for dim in 2:dims
+        SecondDerivativeAdd!(uₓₓ,u,c,Δx,Internal,order=order,dim=dim,dims=dims)
+    end
+    uₓₓ
+end
+function ArbitrarySecondDerivativeSet!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2,dim=1,dims=ndims(uₓₓ))
+
+    off = offset(dim,dims)
+
+    for I in CartesianIndices(uₓₓ)
+        q = (c[I+off[dim]] + c[I])*u[I] - (c[I+2off[dim]] + 2c[I+off[dim]] + c[I])*u[I+off[dim]] + (c[I+off[dim]] + c[I+2off[dim]])*u[I+2off[dim]]
+        uₓₓ[I] = q/(2Δx^2)
+    end
+    uₓₓ
+end
+function ArbitrarySecondDerivativeAdd!(uₓₓ::AbstractArray,u::AbstractArray,c::AbstractArray,Δx::Float64,::NodeType{:Internal};order=2,dim=2,dims=ndims(uₓₓ))
+
+    off = offset(dim,dims)
+
+    for I in CartesianIndices(uₓₓ)
+        q = (c[I+off] + c[I])*u[I] - (c[I+2off] + 2c[I+off] + c[I])*u[I+off] + (c[I+off] + c[I+2off])*u[I+2off]
+        uₓₓ[I] += q/(2Δx^2)
+    end
+
+end
+
+@inline function offset(dim,sz)
+    return CartesianIndex(ntuple(i->i ∈ dim ? 1 : 0, Val(sz)))
+end
 

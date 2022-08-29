@@ -29,21 +29,20 @@ This is also available is an iterator [`Dₓₓ!`](@ref)
 Internally uses [`SecondDerivative`](@ref)
 """
 function Dₓₓ end
-### 1D second derivative operator
 function Dₓₓ(u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
-
-    uₓₓ = zeros(Float64,n)
-
+    uₓₓ = zeros(eltype(u),size(u))
     Dₓₓ!(uₓₓ,u,c,n,Δx,order=order)
-
     return uₓₓ
 end
 ### 2D second derivative operator
 function Dₓₓ(u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
 # Multidimensional call for 2nd derivative SBP operator
 
-    uₓₓ = zeros(Float64,nx,ny)
+    uₓₓ = zeros(eltype(u),size(u))
+
+    Dₓₓ!(uₓₓ,u,c,n,Δx,order=order)
+
     if dim == 1
         for i = 1:ny #column derivatives
             uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
@@ -84,6 +83,10 @@ function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n:
     half = Int64(order/2)
     order == 2 ? adj = 1 : adj = order + half
 
+    n = size(uₓₓ)
+    dims = length(n)
+
+    SecondDerivativeStencil!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,c,Δx,Internal,dims=dims)
 
     for i = order:n-order+1
         uₓₓ[i] = SecondDerivative(u[i-half:i+half],c[i-half:i+half],Δx,Internal,order=order)
@@ -141,11 +144,15 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     #         cx[intx:nx-intx+1,inty:ny-inty+1],
     #         cy[intx:nx-intx+1,inty:ny-inty+1],nx-2(order_x+retx),ny-2(order_y+rety),order_x=order_x,order_y=order_y)
 
-    uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
-        Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
-            u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
-            cx[intx:nx-intx+1,inty:ny-inty+1],
-            cy[intx:nx-intx+1,inty:ny-inty+1],order_x=order_x,order_y=order_y)
+    n = size(uₓₓ)
+
+    SecondDerivative!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
+
+    # uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)] = 
+    #     Stencil2D!(uₓₓ[intx+halfx:nx-(intx+halfx-1),inty+halfy:ny-(inty+halfy-1)],
+    #         u[intx:nx-intx+1,inty:ny-inty+1],Internal,Internal,Δx,Δy,
+    #         cx[intx:nx-intx+1,inty:ny-inty+1],
+    #         cy[intx:nx-intx+1,inty:ny-inty+1],order_x=order_x,order_y=order_y)
     
 
     ### Boundary nodes - avoiding corners
