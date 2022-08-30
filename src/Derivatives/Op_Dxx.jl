@@ -138,8 +138,7 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     order_y == 2 ? inty = 1 : inty = order_y+1
 
 
-    # SecondDerivative!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
-    # ArbitrarySecondDerivativeStencil!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,Internal)
+    SecondDerivative!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries
@@ -219,23 +218,6 @@ Use 1. for internal nodes, 2. and 3. for non-corner boundaries, 4. for corners.
 Computes the 2D finite difference stencil at a given node
 """
 function Stencil2D end
-### Iternal node stencil
-@views function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy,nx,ny;
-        order_x=2,order_y=order_x)
-
-    halfx = Int64(order_x/2) #half way
-    halfy = Int64(order_y/2) #half way
-
-    @sync @distributed for j = 1:ny
-        for i = 1:nx
-        uₓₓ[i,j] = SecondDerivative(u[i:i+order_x,j+halfy],
-                    cx[i:i+order_x,j+halfy],Δx,Internal,order=order_x) + 
-                SecondDerivative(u[i+halfx,j:j+order_y],
-                    cy[i+halfx,j:j+order_y],Δy,Internal,order=order_y)
-        end
-    end
-    return uₓₓ
-end
 
 function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy;
     order_x=2,order_y=order_x)
