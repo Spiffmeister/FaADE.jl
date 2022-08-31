@@ -56,29 +56,67 @@ end
 
 
 #=== Implicit methods ===#
-function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64;
+function SAT_Dirichlet!(uₓₓ::AbstractArray,::NodeType{:Left},u::AbstractArray,Δ::Float64,α,τ,BD;
         c=1.0,order::Int64=2,forcing=false)
 
     α,τ = SATpenalties(Dirichlet,Δ,order)
+    BD = BDₓᵀ(order,Δ)
 
     if !forcing
-        uₓₓ[1:order] .+= α*c[1]*BDₓᵀ(u,Left,Δ,order)
+        # for i = 1:41
+        #     uₓₓ[i,1:order] += α*c[1,1] * BD*u[i,1]
+        #     uₓₓ[i,1] += τ*u[1]
+        # end
+        # uₓₓ[1] += α*c[1] * -u[1]/Δ
+        # uₓₓ[2] += α*c[1] * u[1]/Δ
+        uₓₓ[1:order] += α*c[1] * BD*u[1]
         uₓₓ[1] += τ*u[1]
     else
-        uₓₓ[1:order] .-= α*c[1]*BDₓᵀ(u,Left,Δ,order)
+        uₓₓ[1:order] .-= α*c[1]*BD*u[1]
         uₓₓ[1] -= τ*u[1]
     end
 end
-function SAT_Dirichlet!(uₓₓ::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64;
+
+function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
+    SAT[1:order] += α*c[1]*BD*u[1]
+    SAT[1] += τ*u[1]
+end
+function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
+    SAT[end-order+1:end] += α*c[end]*BD*u[end]
+    SAT[end] += τ*u[end]
+end
+
+# function SAT_Dirichlet_forcing!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
+#     SAT[1:order] -= α*c[1]*BD*u[1]
+#     SAT[1] -= τ*u[1]
+# end
+
+
+
+function SAT_Dirichlet!(uₓₓ::AbstractArray,::NodeType{:Right},u::AbstractArray,Δ::Float64,α,τ,BD;
         c=1.0,order::Int64=2,forcing=false)
 
-    α,τ = SATpenalties(Dirichlet,Δ,order)
+    # α,τ = SATpenalties(Dirichlet,Δ,order)
 
     if !forcing
-        uₓₓ[end-order+1:end] .+= α*c[end]*BDₓᵀ(u,Right,Δ,order)
+        uₓₓ[end-order+1:end] .+= α*c[end]*[-u[1], u[1]]/Δ
         uₓₓ[end] += τ*u[end]
     else
-        uₓₓ[end-order+1:end] .-= α*c[end]*BDₓᵀ(u,Right,Δ,order)
+        uₓₓ[end-order+1:end] .-= α*c[end]*[-u[1], u[1]]/Δ
         uₓₓ[end] -= τ*u[end]
     end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+

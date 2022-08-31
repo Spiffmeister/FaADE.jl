@@ -49,8 +49,10 @@ Iterator for [`SAT`](@ref)
 """
 function SAT!(SAT::AbstractArray,type::BoundaryCondition,node::NodeType,u::AbstractArray,Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+    α,τ = SATpenalties(Dirichlet,Δ,order)
+
     if type == Dirichlet
-        SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
+        SAT_Dirichlet!(SAT,node,u,Δ,α,τ,c=c,order=order,forcing=forcing)
     elseif type == Neumann
         SAT_Neumann!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
     elseif type == Robin
@@ -59,16 +61,25 @@ function SAT!(SAT::AbstractArray,type::BoundaryCondition,node::NodeType,u::Abstr
     # return SAT
 end
 
-function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Dirichlet},node::NodeType,u::AbstractArray,Δ::Float64;
+function SATAdd!(SAT::AbstractArray,::BoundaryCondition{:Dirichlet},node::NodeType,u::AbstractArray,Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
+
+    α,τ = SATpenalties(Dirichlet,Δ,order)
+    BD = BDₓᵀ(2,Δ)
+
+    # FD(A,U,K) = SAT_Dirichlet_internal!(A,node,U,K,Δ,α,τ,BD,order)
+
     if !forcing
-        map((A,U) -> SAT_Dirichlet!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
+        map((A,U,K) -> SAT_Dirichlet!(A,node,U,Δ,α,τ,BD,c=K,order=order,forcing=forcing), eachcol(SAT),eachcol(u),eachcol(c))
+        # map((A,U,K) -> SAT_Dirichlet_internal!(A,node,U,K,Δ,α,τ,BD,order), eachcol(SAT),eachcol(u),eachcol(c))
+        # map((A,U,K) -> FD(A,U,K), eachcol(SAT),eachcol(u),eachcol(c))
+        # SAT_Dirichlet!(SAT,node,u,Δ,α,τ,BD,c=c,order=order,forcing=forcing)
     else
-        map((A,U,K) -> SAT_Dirichlet!(A,node,U,Δ,c=K,order=order,forcing=forcing), eachcol(SAT),eachcol(u),eachcol(c))
+        map((A,K) -> SAT_Dirichlet!(A,node,u,Δ,α,τ,BD,c=K,order=order,forcing=forcing), eachcol(SAT),eachcol(c))
     end
     SAT
 end
-function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Neumann},node::NodeType,u::AbstractArray,Δ::Float64;
+function SATAdd!(SAT::AbstractArray,::BoundaryCondition{:Neumann},node::NodeType,u::AbstractArray,Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     if !forcing
         map((A,U) -> SAT_Neumann!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
@@ -77,7 +88,7 @@ function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Neumann},node::NodeType
     end
     SAT
 end
-# function AddSAT!(SAT::AbstractArray,::BoundaryCondition{:Periodic},node::NodeType,u::AbstractArray,Δ::Float64;
+# function SATAdd!(SAT::AbstractArray,::BoundaryCondition{:Periodic},node::NodeType,u::AbstractArray,Δ::Float64;
 #         order=2::Int,c::Union{Float64,AbstractArray}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     
 #         map((A,U) -> SAT_Periodic!(A,node,U,Δ,c=c,order=order,forcing=forcing), eachcol(SAT),eachcol(u))
@@ -103,6 +114,39 @@ end
 # end
 
 
+
+
+
+
+
+# struct Boundary 
+#     nodes :: CartesianIndices
+#     SAT :: Function
+#     Forcing :: Function
+
+#     function Boundary()
+
+#         if condition == Dirichlet
+#             BC(uₓₓ,u,c) = SAT_Dirichlet!()
+
+#         elseif condition == Neumann
+#         end
+
+#     end
+
+# end
+
+
+
+function BDx(order,u)
+    if order == 2
+        return [-1.0,1.0]*u[1]
+    elseif order == 4
+        return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]*u[1]
+    elseif order == 6
+        return [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]*u[1]
+    end
+end
 
 
 

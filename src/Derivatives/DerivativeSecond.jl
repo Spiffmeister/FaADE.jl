@@ -58,12 +58,16 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
 
 end
 
+# function SecondDerivative(u,cx,cy,Δx,Δy,nx,ny,::NodeType{:Internal};order=2)
+#     uₓₓ = zeros(size(u).-2)
+#     SecondDerivative!(uₓₓ,u,cx,cy,Δx,Δy,nx,ny,Internal;order=2)
+# end
 
 
 
 
 
-@views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,Δx,Δy,nx,ny,::NodeType{:Internal})
+@views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,Δx,Δy,nx,ny,::NodeType{:Internal};order=2)
 
     # for j in 2:ny-1
     #     for i in 2:nx-1
@@ -837,10 +841,35 @@ end
 
 
 
-function SecondDerivative_Order2()
-    0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
-end
+# function SecondDerivative_InternalStencil_Order2()
+#     (0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1])/Δx^2
+# end
+# function SecondDerivative_InternalStencil_Order4()
+#     -((-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
+#         (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
+#         (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
+#         (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
+#         (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2])/Δx^2
+# end
+# function SecondDerivative_InternalStencil_Order6()
+#     -((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
+#         (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
+#         (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
+#         (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
+#         (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
+#         (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
+#         (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
+# end
 
 
 
 
+# function SecondDerivative_Boundary_Order2()
+#     return [0.0]
+# end
+# function SecondDerivative_Boundary_Order4()
+    
+
+# end
+# function SecondDerivative_Boundary_Order6()
+# end

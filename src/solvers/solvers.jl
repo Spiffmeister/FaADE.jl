@@ -7,7 +7,7 @@ module solvers
 
 
     using SBP_operators.types
-    using SBP_operators.SATs: SAT, SAT!, SAT_Periodic, SAT_Periodic!, AddSAT!
+    using SBP_operators.SATs: SAT, SAT!, SAT_Periodic, SAT_Periodic!, SATAdd!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ
 
 
     include("solution.jl")

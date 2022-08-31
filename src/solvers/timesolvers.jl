@@ -208,19 +208,38 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     elseif method == :cgie
         maxIT < 1 ? maxIT = 10 : nothing
 
+        α,τ = SATpenalties(Dirichlet,Δx,2)
+        BD = BDₓᵀ(2,Δx)
+        function FDL(SAT,u,c)
+            SAT_Dirichlet_internal!(SAT,Left,u,c,Δx,α,τ,BD,2)
+        end
+        function FDR(SAT,u,c)
+            SAT_Dirichlet_internal!(SAT,Right,u,c,Δx,α,τ,BD,2)
+        end
+        
+        function FFDL(SAT,c,g)
+            SAT_Dirichlet_internal!(SAT,Left,g,c,Δx,α,τ,BD,2)
+        end
+        function FFDR(SAT,c,g)
+            SAT_Dirichlet_internal!(SAT,Right,g,c,Δx,α,τ,BD,2)
+        end
+
+
 
         function cgRHS(uₓₓ,u)
             PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
             if boundary_x != Periodic
                 # for i = 1:ny
-                    # uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
-                    # uₓₓ[nx-order_x+1:nx,i]  += SAT(boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
-                    # SAT!(@views(uₓₓ[1:order_x,i]),boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
-                    # SAT!(@views(uₓₓ[nx-order_x+1:nx,i]),boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
+                #     # uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
+                #     # uₓₓ[nx-order_x+1:nx,i]  += SAT(boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
+                #     SAT!(@views(uₓₓ[1:order_x,i]),boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
+                #     SAT!(@views(uₓₓ[nx-order_x+1:nx,i]),boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
                 # end
-                AddSAT!(uₓₓ,boundary_x,Left,u,Δx,c=kx,order=order_x)
-                AddSAT!(uₓₓ,boundary_x,Right,u,Δx,c=kx,order=order_x)
+                # SATAdd!(uₓₓ,boundary_x,Left,u,Δx,c=kx,order=order_x)
+                map((A,B,C) -> FDL(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
+                map((A,B,C) -> FDR(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
+                # SATAdd!(uₓₓ,boundary_x,Right,u,Δx,c=kx,order=order_x)
                 # map((A,U,K) -> SAT!(A,boundary_x,Left,U,Δx,c=K,order=order_x), eachcol(uₓₓ), eachcol(u), eachcol(kx))
                 # map((A,U,K) -> SAT!(A,boundary_x,Right,U,Δx,c=K,order=order_x), eachcol(uₓₓ), eachcol(u), eachcol(kx))
             else
@@ -236,8 +255,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                     # SAT!(@views(uₓₓ[i,1:order_y]),boundary_y,Left,u[i,1:order_y],Δy,c=ky[i,1:order_y],order=order_y)
                     # SAT!(@views(uₓₓ[i,ny-order_y+1:ny]),boundary_y,Right,u[i,ny-order_y+1:ny],Δy,c=ky[i,ny-order_y+1:ny],order=order_y)
                 # end
-                AddSAT!(uₓₓ,boundary_y,Left,u,Δx,c=ky,order=order_y)
-                AddSAT!(uₓₓ,boundary_y,Right,u,Δx,c=ky,order=order_y)
+                SATAdd!(uₓₓ,boundary_y,Left,u,Δx,c=ky,order=order_y)
+                SATAdd!(uₓₓ,boundary_y,Right,u,Δx,c=ky,order=order_y)
             else
                 for i = 1:nx
                     # SATₗ,SATᵣ = SAT_Periodic(u[i,:],Δy,c=ky[i,:],order=order_y)
@@ -270,9 +289,14 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 for i = 1:ny
                     # uⱼ[1:order_x,i]         += SAT(boundary_x,Left,Δt*gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
                     # uⱼ[nx-order_x+1:nx,i] += SAT(boundary_x,Right,Δt*gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
-                    SAT!(@view(uⱼ[1:order_x,i]),boundary_x,Left,Δt*gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
-                    SAT!(@views(uⱼ[nx-order_x+1:nx,i]),boundary_x,Right,Δt*gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
+
+                    # SAT!(@view(uⱼ[1:order_x,i]),boundary_x,Left,Δt*gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
+                    # SAT!(@views(uⱼ[nx-order_x+1:nx,i]),boundary_x,Right,Δt*gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
                 end
+                SATAdd!(uⱼ,boundary_x,Left,Δt*gx(t),Δx,c=kx,order=order_x,forcing=true)
+                SATAdd!(uⱼ,boundary_x,Right,Δt*gx(t),Δx,c=kx,order=order_x,forcing=true)
+                # map((A,B) -> FFDL(A,B,Δt*gx(t)), eachcol(uⱼ), eachcol(kx))
+                # map((A,B) -> FFDR(A,B,Δt*gx(t)), eachcol(uⱼ), eachcol(kx))
             end
             if boundary_y != Periodic
                 for i = 1:nx

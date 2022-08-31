@@ -43,6 +43,22 @@ end
 end
 
 
+function BDₓᵀ(order::Int,Δx::Float64)
+    if order == 2
+        return [-1.0,1.0]/Δx
+    elseif order == 4
+        return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+    elseif order == 6
+        return [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]/Δx
+    end
+end
+
+
+@inline function BDₓᵀ_order2(u,Δu)
+    return [-1.0,1.0]/Δx
+end
+
+
 
 
 
