@@ -78,12 +78,20 @@ function SAT_Dirichlet!(uₓₓ::AbstractArray,::NodeType{:Left},u::AbstractArra
 end
 
 function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
-    SAT[1:order] += α*c[1]*BD*u[1]
-    SAT[1] += τ*u[1]
+        SAT[1:order] .+= α*c[1]*BD*u[1]
+        SAT[1] += τ*u[1]
 end
 function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
-    SAT[end-order+1:end] += α*c[end]*BD*u[end]
+    SAT[end-order+1:end] .+= α*c[end]*BD*u[end]
     SAT[end] += τ*u[end]
+end
+
+
+function SAT_Dirichlet_internal_yes!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
+    for (S,C,U) in zip(eachcol(SAT),eachcol(c),eachcol(u))
+        S[1:order] .+= α*C[1]*BD*U[1]
+        S[1] += τ*U[1]
+    end
 end
 
 # function SAT_Dirichlet_forcing!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int)
@@ -91,6 +99,12 @@ end
 #     SAT[1] -= τ*u[1]
 # end
 
+
+
+# function SAT_Construct_Dirichlet!()
+#     SAT_FN(cache,u) = SAT_Dirichlet_internal!(cache,node,u,)
+#     return SAT_FN
+# end
 
 
 function SAT_Dirichlet!(uₓₓ::AbstractArray,::NodeType{:Right},u::AbstractArray,Δ::Float64,α,τ,BD;

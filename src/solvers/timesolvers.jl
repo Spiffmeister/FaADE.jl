@@ -211,7 +211,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         α,τ = SATpenalties(Dirichlet,Δx,2)
         BD = BDₓᵀ(2,Δx)
         function FDL(SAT,u,c)
-            SAT_Dirichlet_internal!(SAT,Left,u,c,Δx,α,τ,BD,2)
+            SAT_Dirichlet_internal_yes!(SAT,Left,u,c,Δx,α,τ,BD,2)
         end
         function FDR(SAT,u,c)
             SAT_Dirichlet_internal!(SAT,Right,u,c,Δx,α,τ,BD,2)
@@ -237,7 +237,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 #     SAT!(@views(uₓₓ[nx-order_x+1:nx,i]),boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
                 # end
                 # SATAdd!(uₓₓ,boundary_x,Left,u,Δx,c=kx,order=order_x)
-                map((A,B,C) -> FDL(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
+                
+                # map((A,B,C) -> FDL(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
+                FDL(uₓₓ,u,kx)
+
                 map((A,B,C) -> FDR(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
                 # SATAdd!(uₓₓ,boundary_x,Right,u,Δx,c=kx,order=order_x)
                 # map((A,U,K) -> SAT!(A,boundary_x,Left,U,Δx,c=K,order=order_x), eachcol(uₓₓ), eachcol(u), eachcol(kx))
