@@ -1,4 +1,33 @@
 
+
+
+# struct SimultanousApproximationTermContainer
+#     SATs        :: Vector{SimultanousApproximationTerm}
+#     axis        :: Vector{Int}
+#     edge        :: Vector{NodeType}
+
+#     function SimultanousApproximationTermContainer(boundaries...)
+        
+#         ApproxTerm = []
+#         axis = []
+#         edge = []
+
+#         for term in boundaries
+#             push!(ApproxTerm,term)
+#             push!(axis,term.axis)
+#             push!(edge,term.side)
+#         end
+
+#     end
+
+# end
+
+
+# function get_SAT()
+# end
+
+
+
 """
 SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
     order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
@@ -150,3 +179,7 @@ end
 
 
 
+
+
+
+abstract type SimultanousApproximationTerm end

@@ -1,8 +1,12 @@
 module SATs
 
+
+    # import Base: +
+
     using SBP_operators.types
     using StaticArrays
 
+    include("SAT_Interface.jl")
 
     include("Boundary_Operators.jl")
 
@@ -12,10 +16,9 @@ module SATs
     include("Periodic.jl")
     include("Split.jl")
 
-    include("SAT_Interface.jl")
 
     export SAT, SAT!, SATAdd!
-    export SAT_Dirichlet, SAT_Dirichlet!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ, SAT_Dirichlet_internal_yes!
+    export SAT_Dirichlet, SAT_Dirichlet!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ, SAT_Dirichlet_internal_forcing!
     export SAT_Neumann, SAT_Neumann!
     export SAT_Periodic, SAT_Periodic!
     export SAT_Robin

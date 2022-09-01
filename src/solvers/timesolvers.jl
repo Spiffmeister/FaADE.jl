@@ -211,17 +211,17 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         α,τ = SATpenalties(Dirichlet,Δx,2)
         BD = BDₓᵀ(2,Δx)
         function FDL(SAT,u,c)
-            SAT_Dirichlet_internal_yes!(SAT,Left,u,c,Δx,α,τ,BD,2)
+            SAT_Dirichlet_internal!(SAT,Left,u,c,Δx,α,τ,BD,2,eachcol)
         end
         function FDR(SAT,u,c)
-            SAT_Dirichlet_internal!(SAT,Right,u,c,Δx,α,τ,BD,2)
+            SAT_Dirichlet_internal!(SAT,Right,u,c,Δx,α,τ,BD,2,eachcol)
         end
         
-        function FFDL(SAT,c,g)
-            SAT_Dirichlet_internal!(SAT,Left,g,c,Δx,α,τ,BD,2)
+        function FFDL(SAT,g,c)
+            SAT_Dirichlet_internal_forcing!(SAT,Left,g,c,Δx,-α,-τ,BD,2,eachcol)
         end
-        function FFDR(SAT,c,g)
-            SAT_Dirichlet_internal!(SAT,Right,g,c,Δx,α,τ,BD,2)
+        function FFDR(SAT,g,c)
+            SAT_Dirichlet_internal_forcing!(SAT,Right,g,c,Δx,-α,-τ,BD,2,eachcol)
         end
 
 
@@ -230,21 +230,10 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
             if boundary_x != Periodic
-                # for i = 1:ny
-                #     # uₓₓ[1:order_x,i]        += SAT(boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
-                #     # uₓₓ[nx-order_x+1:nx,i]  += SAT(boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
-                #     SAT!(@views(uₓₓ[1:order_x,i]),boundary_x,Left,u[1:order_x,i],Δx,c=kx[1:order_x,i],order=order_x)
-                #     SAT!(@views(uₓₓ[nx-order_x+1:nx,i]),boundary_x,Right,u[nx-order_x+1:nx,i],Δx,c=kx[nx-order_x+1:nx,i],order=order_x)
-                # end
-                # SATAdd!(uₓₓ,boundary_x,Left,u,Δx,c=kx,order=order_x)
-                
-                # map((A,B,C) -> FDL(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
-                FDL(uₓₓ,u,kx)
 
-                map((A,B,C) -> FDR(A,B,C), eachcol(uₓₓ), eachcol(u), eachcol(kx))
-                # SATAdd!(uₓₓ,boundary_x,Right,u,Δx,c=kx,order=order_x)
-                # map((A,U,K) -> SAT!(A,boundary_x,Left,U,Δx,c=K,order=order_x), eachcol(uₓₓ), eachcol(u), eachcol(kx))
-                # map((A,U,K) -> SAT!(A,boundary_x,Right,U,Δx,c=K,order=order_x), eachcol(uₓₓ), eachcol(u), eachcol(kx))
+                FDL(uₓₓ,u,kx)
+                FDR(uₓₓ,u,kx)
+
             else
                 for i = 1:ny
                     # uₓₓ[:,i] = SAT_Periodic!(uₓₓ[:,i],u[:,i],Δx,c=kx[:,i],order=order_x)
@@ -286,20 +275,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             uⱼ .= uₒ
             ### FORCING TERMS
             if boundary_x != Periodic
-                # map((A,K) -> SAT!(A,boundary_x,Left,Δt*gx(t),Δx,c=K,order=order_x,forcing=true), eachcol(uⱼ), eachcol(kx[1:order_x,1:ny]))
-                # map((A,K) -> SAT!(A,boundary_x,Right,Δt*gx(t),Δx,c=K,order=order_x,forcing=true), eachcol(uⱼ), eachcol(kx[nx-order_x+1:nx,1:ny]))
-
-                for i = 1:ny
-                    # uⱼ[1:order_x,i]         += SAT(boundary_x,Left,Δt*gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
-                    # uⱼ[nx-order_x+1:nx,i] += SAT(boundary_x,Right,Δt*gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
-
-                    # SAT!(@view(uⱼ[1:order_x,i]),boundary_x,Left,Δt*gx(t),Δx,c=kx[1:order_x,i],order=order_x,forcing=true)
-                    # SAT!(@views(uⱼ[nx-order_x+1:nx,i]),boundary_x,Right,Δt*gx(t),Δx,c=kx[nx-order_x+1:nx,i],order=order_x,forcing=true)
-                end
-                SATAdd!(uⱼ,boundary_x,Left,Δt*gx(t),Δx,c=kx,order=order_x,forcing=true)
-                SATAdd!(uⱼ,boundary_x,Right,Δt*gx(t),Δx,c=kx,order=order_x,forcing=true)
-                # map((A,B) -> FFDL(A,B,Δt*gx(t)), eachcol(uⱼ), eachcol(kx))
-                # map((A,B) -> FFDR(A,B,Δt*gx(t)), eachcol(uⱼ), eachcol(kx))
+                FFDL(uⱼ,Δt*gx(t),kx)
+                FFDL(uⱼ,Δt*gx(t),kx)
             end
             if boundary_y != Periodic
                 for i = 1:nx

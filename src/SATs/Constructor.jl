@@ -24,6 +24,8 @@ end
 
 
 
+
+
 function (::SAT_DirichletStruct)(::NodeType{:Left})
     cache[1:Op.order] .+= Op.α * c[1] * Op.BDₓᵀ * u[1]
     cache[1]        += Op.τ * u[1]
@@ -38,7 +40,7 @@ function (::SAT_DirichletStruct)()
 end
 function (::SAT_DirichletStruct)()
     cache[end-Op.order+1:end] .-= Op.α * c[end] * Op.BDₓᵀ * u[end]
-    cache[end]        -= Op.τ * u[end]
+    cache[end]        .-= Op.τ * u[end]
 end
 
 
@@ -59,6 +61,16 @@ end
 
 
 
+
+function select_SAT_direction(axis::Int)
+    if axis == 1
+        return eachcol
+    elseif axis == 2
+        return eachrow
+    else
+        error("axis must be 1 or 2")
+    end
+end
 
 
 
