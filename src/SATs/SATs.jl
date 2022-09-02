@@ -17,8 +17,7 @@ module SATs
     include("Split.jl")
 
 
-    export SAT, SAT!, SATAdd!
-    export SAT_Dirichlet, SAT_Dirichlet!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ, SAT_Dirichlet_internal_forcing!
+    export SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_forcing!
     export SAT_Neumann, SAT_Neumann!
     export SAT_Periodic, SAT_Periodic!
     export SAT_Robin

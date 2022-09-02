@@ -214,29 +214,14 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
     elseif method == :cgie
         maxIT < 1 ? maxIT = 10 : nothing
 
-        α,τ = SATpenalties(Dirichlet,Δx,2)
-        BD = BDₓᵀ(2,Δx)
-        function FDL(SAT,u,c)
-            SAT_Dirichlet_internal!(SAT,Left,u,c,Δx,α,τ,BD,2,eachcol)
-        end
-        function FDR(SAT,u,c)
-            SAT_Dirichlet_internal!(SAT,Right,u,c,Δx,α,τ,BD,2,eachcol)
-        end
-        
-        function FFDL(SAT,g,c)
-            SAT_Dirichlet_internal_forcing!(SAT,Left,g,c,Δx,-α,-τ,BD,2,eachcol)
-        end
-        function FFDR(SAT,g,c)
-            SAT_Dirichlet_internal_forcing!(SAT,Right,g,c,Δx,-α,-τ,BD,2,eachcol)
-        end
 
 
 
         function cgRHS(uₓₓ,u)
             PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
-            for SAT in BoundaryTerms
-                
+            for Term in BoundaryTerms.SATs
+                uₓₓ + SAT(u,kx)
             end
             if boundary_x != Periodic
 

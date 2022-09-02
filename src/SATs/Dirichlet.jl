@@ -39,6 +39,8 @@ end
 """
     SAT_Dirichlet
 
+WARNING: DEPRECATED
+
 1. SAT_Dirichlet(::NodeType{:Left},u::AbstractVector,Δ::Float64;
         c=1.0,order::Int64=2,forcing=false)
 2. SAT_Dirichlet(::NodeType{:Left,:Right},u::Vector{Float64},Δx::Float64,RHS;
@@ -57,7 +59,7 @@ function SAT_Dirichlet end
 # Dirichlet for implicit integrators
 function SAT_Dirichlet(node,u::AbstractArray,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
     SAT = zeros(Float64,order)
-    SAT = SAT_Dirichlet!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
+    # SAT_Dirichlet_implicit!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
 end
 function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64,RHS; c=1.0,order::Int64=2,forcing=false)
     SAT = zeros(Float64,order)
@@ -67,49 +69,33 @@ end
 
 
 
-# function (SAT::Boundary_Dirichlet)()
-
-
 
 
 """
-    SAT_Dirichlet!
+    generate_Dirichlet
 
+Generates mutating functions required for Dirichlet boundary conditions.
 
+If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
+If `solver ∈ [:euler]` then only one method is generated
 """
-function SAT_Dirichlet!(SAT::AbstractVector,::NodeType{:Left},u::AbstractVector,Δ::Float64,RHS;
-        c=1.0,order::Int64=2,forcing::Bool=false)
-    α,τ = SATpenalties(Dirichlet,Δ,order)
+function generate_Dirichlet(SATD::Boundary_Dirichlet,solver)
+    # Choose the axis to loop over
+    loopdirection = select_SAT_direction(SATD.dim)
 
-    SAT[1:order] += BDₓᵀ(u,Left,Δ,order) - BDₓᵀ(RHS,Left,Δ,order)
-
-    SAT[1:order] .*= α * c[1]
-    SAT[1]  += τ*(u[1] - RHS[1])
-end
-function SAT_Dirichlet(SAT::AbstractVector,::NodeType{:Right},u::AbstractVector,Δ::Float64,RHS;
-        c=1.0,order::Int64=2,forcing::Bool=false)
-    α,τ = SATpenalties(Dirichlet,Δ,order)
-
-    SAT[end-order+1:end] .+= BDₓᵀ(u,Right,Δ,order) + BDₓᵀ(-RHS,Right,Δ,order)
-
-    SAT[end-order+1:end] .*= α * c[end]
-    SAT[end]  += τ*(u[end] - RHS[end])
-end
-
-
-
-function generate_Dirichlet(::BoundaryCondition{:Dirichlet},side,RHS,order,Δx,axis,solver)
-
-    loopdirection = select_SAT_direction(dim)
-    α,τ = SATpenalties(Dirichlet,Δx,order)
+    α,τ = SATD.penalties
+    BD = SATD.BDₓᵀ
+    side = SATD.side
+    Δx = SATD.Δx
 
     if solver == :cgie
-        CGTerm(cache,u,c) = SAT_Dirichlet_internal!(cache,side,u,c,Δx,α,τ,BD,order,loopdirection)
-        F(cache,c) = SAT_Dirichlet_internal_forcing!(cache,side,RHS,c,Δx,α,τ,BD,order,loopdirection)
+        # Defines 2 methods
+        CGTerm(cache,u,c) = SAT_Dirichlet_implicit!(cache,side,u,c,Δx,α,τ,BD,order,loopdirection)
+        CGTerm(cache,c) = SAT_Dirichlet_implicit_forcing!(cache,side,SATD.RHS,c,Δx,α,τ,BD,order,loopdirection)
 
-        return (CGTerm, F)
-    else
-        Term(cache,u,c) = SAT_Dirichlet_internal!(cache,side,u,c,Δx,RHS,α,τ,BD,order,loopdirection)
+        return CGTerm
+    elseif solver ∈ [:euler]
+        Term(cache,u,c) = SAT_Dirichlet_explicit!(cache,side,u,c,Δx,SATD.RHS,α,τ,BD,order,loopdirection)
 
         return Term
     end
@@ -117,13 +103,13 @@ end
 
 
 #=== Explicit methods ===#
-function SAT_Dirichlet_internal!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS::T,Δ::T,α::T,τ::T,BD::AbstractVector{T},order::Int,loopaxis::Function) where T
+function SAT_Dirichlet_explicit!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS::T,Δ::T,α::T,τ::T,BD::AbstractVector{T},order::Int,loopaxis::Function) where T
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS)
         S[1] += τ*(U[1] - RHS)
     end
 end
-function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,RHS::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,RHS::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS)
         S[end] += τ*(U[end] - RHS)
@@ -131,25 +117,25 @@ function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
 end
 
 #=== Implicit methods ===#
-function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*BD*U[1]
         S[1] += τ*U[1]
     end
 end
-function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[end-order+1:end] .+= α*C[end]*BD*U[end]
         S[end] += τ*U[end]
     end
 end
-function SAT_Dirichlet_internal_forcing!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit_forcing!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         S[1:order] .+= α*C[1]*BD*u[1]
         S[1] += τ*u[1]
     end
 end
-function SAT_Dirichlet_internal_forcing!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit_forcing!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         S[end-order+1:end] .+= α*C[end]*BD*u[end]
         S[end] += τ*u[end]
@@ -157,22 +143,6 @@ function SAT_Dirichlet_internal_forcing!(SAT::AbstractArray,::NodeType{:Right},u
 end
 
 
-
-
-
-function SAT_Dirichlet!(uₓₓ::AbstractArray,::NodeType{:Right},u::AbstractArray,Δ::Float64,α,τ,BD;
-        c=1.0,order::Int64=2,forcing=false)
-
-    # α,τ = SATpenalties(Dirichlet,Δ,order)
-
-    if !forcing
-        uₓₓ[end-order+1:end] .+= α*c[end]*[-u[1], u[1]]/Δ
-        uₓₓ[end] += τ*u[end]
-    else
-        uₓₓ[end-order+1:end] .-= α*c[end]*[-u[1], u[1]]/Δ
-        uₓₓ[end] -= τ*u[end]
-    end
-end
 
 
 
