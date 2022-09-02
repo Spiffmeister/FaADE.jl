@@ -12,7 +12,7 @@ See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_gra
 """
 function time_solver end
 #===== 1D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryCondition;
+function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryCondition,BoundaryTerms::SimultanousApproximationTermContainer;
         boundary_right::BoundaryCondition=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
 
     uₙ = zeros(Float64,n)
@@ -32,6 +32,12 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             # Combines the PDE and SATs (forcing term included)
             uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
+
+            # for SAT in BoundaryTerms.SATs
+            #     if type != Periodic
+            #         SAT(uₓₓ)
+            #     end
+            # end
 
             if boundary_left != Periodic
                 uₓₓ[1:order]    += SAT(boundary_left,Left,u,Δx,g(t),c=k,order=order)
@@ -122,7 +128,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     return soln
 end
 #===== 2D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},gx,gy,boundary_x::BoundaryCondition,boundary_y::BoundaryCondition;
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},BoundaryTerms::SimultanousApproximationTermContainer,gy,boundary_y::BoundaryCondition;
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
 
     # Preallocate and set initial
@@ -229,6 +235,9 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         function cgRHS(uₓₓ,u)
             PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
+            for SAT in BoundaryTerms
+                
+            end
             if boundary_x != Periodic
 
                 FDL(uₓₓ,u,kx)

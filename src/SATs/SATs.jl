@@ -23,6 +23,9 @@ module SATs
     export SAT_Periodic, SAT_Periodic!
     export SAT_Robin
     export Split_domain
+
+
+    export SimultanousApproximationTerm, Boundary_Dirichlet, SimultanousApproximationTermContainer
     
 end
 

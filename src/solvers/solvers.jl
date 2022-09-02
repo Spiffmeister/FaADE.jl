@@ -7,8 +7,8 @@ module solvers
 
 
     using SBP_operators.types
-    using SBP_operators.SATs: SAT, SAT!, SAT_Periodic, SAT_Periodic!, SATAdd!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ, SAT_Dirichlet_internal_forcing!
-
+    using SBP_operators.SATs: SAT, SAT!, SAT_Periodic, SAT_Periodic!, SATAdd!, SAT_Dirichlet_internal!, SATpenalties, BDₓᵀ, SAT_Dirichlet_internal_forcing!, 
+    SimultanousApproximationTermContainer
 
     include("solution.jl")
     include("timesolvers.jl")

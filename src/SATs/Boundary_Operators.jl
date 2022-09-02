@@ -43,7 +43,14 @@ end
 end
 
 
-function BDₓᵀ(order::Int,Δx::Float64)
+# abstract type BoundaryDerivative end
+
+
+
+
+
+
+function BoundaryDerivativeTranspose(order::Int,Δx::Float64)
     if order == 2
         return [-1.0,1.0]/Δx
     elseif order == 4
@@ -54,19 +61,24 @@ function BDₓᵀ(order::Int,Δx::Float64)
 end
 
 
-
-abstract type BoundaryDerivative end
-
-@inline function BDₓᵀ_order2(Δx)
-    return [-1.0,1.0]/Δx
+function BoundaryDerivative(::NodeType{:Left},Δx::T,order::Int) where T
+    if order == 2
+        return [-1.0,1.0]/Δx
+    elseif order == 4
+        return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+    elseif order == 6
+        return [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]/Δx
+    end
 end
-@inline function BDₓᵀ_order4(Δx)
-    return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+function BoundaryDerivative(::NodeType{:Right},Δx::T,order::Int) where T
+    if order == 2
+        return [-1.0,1.0]/Δx
+    elseif order == 4
+        return [3.0/34.0, 4.0/17.0, -59.0/34.0, 24.0/17.0]/Δx
+    elseif order == 6
+        return [-0.036577936277544, -0.104488069284042, 0.450398306578272, 0.141512858744873, -2.033378678700676, 1.582533518939116]/Δx
+    end
 end
-@inline function BDₓᵀ_order6(Δx)
-    return [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]/Δx
-end
-
 
 
 

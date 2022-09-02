@@ -32,7 +32,7 @@ module SBP_operators
     using SBP_operators.Derivatives: Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
     
     include("SATs/SATs.jl")
-    using SBP_operators.SATs: SAT, SAT_Periodic
+    using SBP_operators.SATs: SAT, SAT_Periodic, Boundary_Dirichlet, SimultanousApproximationTerm, SimultanousApproximationTermContainer
 
     include("solvers/solvers.jl")
     using SBP_operators.solvers: time_solver, build_H
@@ -46,11 +46,11 @@ module SBP_operators
 
     export time_solver, build_H
     
-    export SAT, SAT!, 
-        SAT_Dirichlet, SAT_Dirichlet!, 
-        SAT_Neumann, SAT_Neumann!, 
+    export SAT, SAT!, SimultanousApproximationTerm, SimultanousApproximationTermContainer,
+        SAT_Dirichlet, SAT_Dirichlet!, Boundary_Dirichlet,
         SAT_Periodic, SAT_Periodic!, 
-        SAT_Robin, 
         Split_domain
+        #SAT_Neumann, SAT_Neumann!, 
+        #SAT_Robin, 
 
 end # module

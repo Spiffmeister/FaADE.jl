@@ -1,32 +1,39 @@
 
 
-
-struct Boundary_Dirichlet{T} <: SimultanousApproximationTerm
-    BDₓᵀ    :: Vector{T}
+"""
+    Boundary_Dirichlet
+"""
+struct Boundary_Dirichlet <: SimultanousApproximationTerm
+    BDₓᵀ    :: Vector{Real}
     RHS     :: Function
     type    :: BoundaryCondition
     side    :: NodeType
     axis    :: Int
     order   :: Int
-    Δx      :: T
-    α       :: T
-    τ       :: T
+    Δx      :: Real
+    penalties :: NamedTuple
     expression  :: String
 
-    function Boundary_Dirichlet(RHS,order,Δx,side,axis)
+    ### CONSTRUCTOR ###
+    function Boundary_Dirichlet(RHS::Function,Δx::Real,side::NodeType,axis::Int,order::Int)
+
+        order ∈ [2,4,6] ? nothing : error("Order must be 2,4 or 6 in position 5")
+        side ∈ [Left,Right] ? nothing : error("Must be Left or Right in position 3")
+        
 
         BD = BoundaryDerivativeTranspose(order,Δx)
 
-
+        α,τ = SATpenalties(Dirichlet,Δx,order)
+        penalties = (α=α,τ=τ)
 
         fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
 
-
-        new(BD,Dirichlet,side,axis,order,Δx,α,τ,fullsat)
-
+        new(BD,RHS,Dirichlet,side,axis,order,Δx,penalties,fullsat)
     end
-
 end
+
+# Boundary_Dirichlet(RHS,Δx,side,axis,order)
+
 
 
 """
@@ -60,7 +67,7 @@ end
 
 
 
-function (SAT::Boundary_Dirichlet)()
+# function (SAT::Boundary_Dirichlet)()
 
 
 
@@ -91,9 +98,26 @@ end
 
 
 
+function generate_Dirichlet(::BoundaryCondition{:Dirichlet},side,RHS,order,Δx,axis,solver)
+
+    loopdirection = select_SAT_direction(dim)
+    α,τ = SATpenalties(Dirichlet,Δx,order)
+
+    if solver == :cgie
+        CGTerm(cache,u,c) = SAT_Dirichlet_internal!(cache,side,u,c,Δx,α,τ,BD,order,loopdirection)
+        F(cache,c) = SAT_Dirichlet_internal_forcing!(cache,side,RHS,c,Δx,α,τ,BD,order,loopdirection)
+
+        return (CGTerm, F)
+    else
+        Term(cache,u,c) = SAT_Dirichlet_internal!(cache,side,u,c,Δx,RHS,α,τ,BD,order,loopdirection)
+
+        return Term
+    end
+end
+
 
 #=== Explicit methods ===#
-function SAT_Dirichlet_internal!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,RHS::Float64,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_internal!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS::T,Δ::T,α::T,τ::T,BD::AbstractVector{T},order::Int,loopaxis::Function) where T
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS)
         S[1] += τ*(U[1] - RHS)
