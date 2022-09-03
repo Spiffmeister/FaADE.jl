@@ -17,14 +17,15 @@ module SATs
     include("Split.jl")
 
 
-    export SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_forcing!
+    export SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_data!
     export SAT_Neumann, SAT_Neumann!
     export SAT_Periodic, SAT_Periodic!
     export SAT_Robin
     export Split_domain
 
 
-    export SimultanousApproximationTerm, Boundary_Dirichlet, SimultanousApproximationTermContainer
+    export SimultanousApproximationTerm, Boundary_Dirichlet, SimultanousApproximationTermContainer,
+    construct_SATs
     
 end
 

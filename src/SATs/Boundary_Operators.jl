@@ -128,13 +128,13 @@ end
 """
     SATpenalties
 
-1. `SATpenalties(::BoundaryCondition{:Dirichlet,:Neumann},Δx::Float64,order::Int64)`
-2. `SATpenalties(::BoundaryCondition{:Robin},a,Δx::Float64,order::Int64)`
+1. `SATpenalties(::BoundaryConditionType{:Dirichlet,:Neumann},Δx::Float64,order::Int64)`
+2. `SATpenalties(::BoundaryConditionType{:Robin},a,Δx::Float64,order::Int64)`
 
 Determines the penatly parameters for the given boundary conditions.
 """
 function SATpenalties end
-@inline function SATpenalties(::BoundaryCondition{:Dirichlet},Δx::Float64,order::Int64)
+@inline function SATpenalties(::BoundaryConditionType{:Dirichlet},Δx::Float64,order::Int64)
     # For reading in penalty parameters for Dirichlet SATs
     h = hval(order)
 
@@ -144,18 +144,38 @@ function SATpenalties end
     τ = -(1.0 + τ) * (h * Δx)^-2 # τ*H^{-1}H^{-1}
     return α, τ
 end
-@inline function SATpenalties(::BoundaryCondition{:Neumann},Δx::Float64,order::Int64)
+@inline function SATpenalties(::BoundaryConditionType{:Neumann},Δx::Float64,order::Int64)
     # For reading in penalty parameters for Neumann SATs
     h = hval(order)
 
     τ = 1.0/(h * Δx) # τ*H^{-1}
     return τ
 end
-@inline function SATpenalties(::BoundaryCondition{:Robin},a,Δx::Float64,order::Int64)
+@inline function SATpenalties(::BoundaryConditionType{:Robin},a,Δx::Float64,order::Int64)
     h = hval(order)
 
     τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
     return τ
+end
+@inline function SATpenalties(::BoundaryConditionType{:Periodic},Δx::Float64,order::Int64)
+    h = hval(order)
+
+    α₀ = 0.5/(h*Δx)
+    τ₁ = -0.5/(h*Δx)
+    τ₀(c) = -max(c[1],c[end])/2(h*Δx)^2
+
+    return α₀,τ₁,τ₀
+end
+@inline function SATpenalties(::BoundaryConditionType{:Interface},Δx⁺,Δx⁻,order⁺,order⁻)
+
+    h⁻ = hval(order⁻)
+    h⁺ = hval(order⁺)
+
+    α₀ = -0.5
+    τ₁ = 0.5
+    τ₀(c) = max(c[end]/2(h⁻*Δx⁻),c[1]/2(h⁺*Δx⁺))
+
+    return α₀,τ₁,τ₀
 end
 
 

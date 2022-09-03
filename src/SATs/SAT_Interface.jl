@@ -15,7 +15,7 @@ struct SimultanousApproximationTermContainer
     SATs        :: Vector{SimultanousApproximationTerm}
     axis        :: Vector{Int}
     edge        :: Vector{NodeType}
-    type        :: BoundaryCondition
+    type        :: BoundaryConditionType
 
     function SimultanousApproximationTermContainer(boundaries...)
         
@@ -39,25 +39,40 @@ function construct_SATs(SATC::SimultanousApproximationTermContainer)
     SATFns = []
     for Term in SATC.SATs
         if Term.type == Dirichlet
-            cacheFn = generate_Dirichlet
+            cacheFn = generate_Dirichlet(Term,:cgie)
         elseif Term.type == Neumann
         elseif Term.type == Robin
         elseif Term.type == Periodic
         else
             error("Available boundary types are Dirichlet, Neumann, Robin or Periodic")
         end
-        push!(SATFns,cacheFN)
+        push!(SATFns,cacheFn)
+    end
+    return SATFns
+end
+
+
+
+function select_SAT_direction(axis::Int)
+    if axis == 1
+        return eachcol
+    elseif axis == 2
+        return eachrow
+    else
+        error("axis must be 1 or 2")
     end
 end
 
 
 
+
+
 """
-    SAT(type::BoundaryCondition,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
+    SAT(type::BoundaryConditionType,::NodeType{:Left},u::AbstractVector{Float64},Δx::Float64,g;
     order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],separate_forcing::Bool=false)
 Returns the left SAT (or SAT+Forcing) term as a vector or SAT and Forcing term as separate vectors
 Inputs: 
-- type: Dirichlet, Neumann, Robin (see ? BoundaryCondition)
+- type: Dirichlet, Neumann, Robin (see ? BoundaryConditionType)
 - ::NodeType: Left or Right (see ? NodeType)
 - u: Solution vector
 - Δx: step size
@@ -72,7 +87,7 @@ true; returns SAT and F(orcing) vectors individually
 For periodic conditions call Periodic(u,Δx,c;order), for a split domain call Split_domain(u⁻,u⁺,Δx⁻,Δx⁺,c⁻,c⁺;order=2,order⁻=2,order⁺=2)
 """
 function SAT end
-function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64,RHS;
+function SAT(type::BoundaryConditionType,node::NodeType,u::AbstractVector{Float64},Δ::Float64,RHS;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     SAT = zeros(Float64,order)
     if type == Dirichlet
@@ -84,7 +99,7 @@ function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},�
     end
     return SAT
 end
-function SAT(type::BoundaryCondition,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
+function SAT(type::BoundaryConditionType,node::NodeType,u::AbstractVector{Float64},Δ::Float64;
         order=2::Int,c::Union{Float64,AbstractVector{Float64}}=1.0,αβ::Vector{Float64}=[1.0,1.0],forcing=false)
     SAT = zeros(Float64,order)
     SAT!(SAT,type,node,u,Δ,order=order,c=c,αβ=αβ,forcing=forcing)

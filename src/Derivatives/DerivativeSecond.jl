@@ -3,10 +3,6 @@
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
-struct order{T} end
-const order2 = order{:SecondOrder}()
-const order4 = order{:FourthOrder}()
-const order6 = order{:SixthOrder}()
 
 """
     SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,type::NodeType;order::Int64=2)

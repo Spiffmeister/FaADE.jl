@@ -6,7 +6,7 @@
 struct Boundary_Dirichlet <: SimultanousApproximationTerm
     BDₓᵀ    :: Vector{Real}
     RHS     :: Function
-    type    :: BoundaryCondition
+    type    :: BoundaryConditionType
     side    :: NodeType
     axis    :: Int
     order   :: Int
@@ -17,12 +17,9 @@ struct Boundary_Dirichlet <: SimultanousApproximationTerm
     ### CONSTRUCTOR ###
     function Boundary_Dirichlet(RHS::Function,Δx::Real,side::NodeType,axis::Int,order::Int)
 
-        order ∈ [2,4,6] ? nothing : error("Order must be 2,4 or 6 in position 5")
         side ∈ [Left,Right] ? nothing : error("Must be Left or Right in position 3")
-        
 
         BD = BoundaryDerivativeTranspose(order,Δx)
-
         α,τ = SATpenalties(Dirichlet,Δx,order)
         penalties = (α=α,τ=τ)
 
@@ -81,17 +78,20 @@ If `solver ∈ [:euler]` then only one method is generated
 """
 function generate_Dirichlet(SATD::Boundary_Dirichlet,solver)
     # Choose the axis to loop over
-    loopdirection = select_SAT_direction(SATD.dim)
+    loopdirection = select_SAT_direction(SATD.axis)
 
     α,τ = SATD.penalties
     BD = SATD.BDₓᵀ
     side = SATD.side
     Δx = SATD.Δx
+    order = SATD.order
 
     if solver == :cgie
         # Defines 2 methods
-        CGTerm(cache,u,c) = SAT_Dirichlet_implicit!(cache,side,u,c,Δx,α,τ,BD,order,loopdirection)
-        CGTerm(cache,c) = SAT_Dirichlet_implicit_forcing!(cache,side,SATD.RHS,c,Δx,α,τ,BD,order,loopdirection)
+        CGTerm(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = 
+            SAT_Dirichlet_implicit!(cache,side,u,c,Δx,α,τ,BD,order,loopdirection)
+        CGTerm(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 
+            SAT_Dirichlet_implicit_data!(cache,side,RHS,c,Δx,α,τ,BD,order,loopdirection)
 
         return CGTerm
     elseif solver ∈ [:euler]
@@ -103,13 +103,13 @@ end
 
 
 #=== Explicit methods ===#
-function SAT_Dirichlet_explicit!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS::T,Δ::T,α::T,τ::T,BD::AbstractVector{T},order::Int,loopaxis::Function) where T
+function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,RHS,Δ::Float64,α::T,τ::T,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS)
         S[1] += τ*(U[1] - RHS)
     end
 end
-function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,RHS::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,RHS,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS)
         S[end] += τ*(U[end] - RHS)
@@ -129,13 +129,13 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
         S[end] += τ*U[end]
     end
 end
-function SAT_Dirichlet_implicit_forcing!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit_data!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         S[1:order] .+= α*C[1]*BD*u[1]
         S[1] += τ*u[1]
     end
 end
-function SAT_Dirichlet_implicit_forcing!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
+function SAT_Dirichlet_implicit_data!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,Δ::Float64,α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function)
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         S[end-order+1:end] .+= α*C[end]*BD*u[end]
         S[end] += τ*u[end]

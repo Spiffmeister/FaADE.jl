@@ -12,8 +12,8 @@ See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_gra
 """
 function time_solver end
 #===== 1D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryCondition,BoundaryTerms::SimultanousApproximationTermContainer;
-        boundary_right::BoundaryCondition=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
+function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryConditionType,BoundaryTerms::SimultanousApproximationTermContainer;
+        boundary_right::BoundaryConditionType=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
 
     uₙ = zeros(Float64,n)
 
@@ -128,7 +128,7 @@ function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δ
     return soln
 end
 #===== 2D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},BoundaryTerms::SimultanousApproximationTermContainer,gy,boundary_y::BoundaryCondition;
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},BoundaryTerms::SimultanousApproximationTermContainer,gy,boundary_y::BoundaryConditionType;
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
 
     # Preallocate and set initial
@@ -215,25 +215,32 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         maxIT < 1 ? maxIT = 10 : nothing
 
 
+        SATFns = construct_SATs(BoundaryTerms)
 
+        #=
+        DPenalties = BoundaryTerms.SATs[1].penalties
+        BOp = BoundaryTerms.SATs[1].BDₓᵀ
+        gx = BoundaryTerms.SATs[1].RHS
 
-        function cgRHS(uₓₓ,u)
+        FDL(A,B,C) = SAT_Dirichlet_implicit!(A,Left,B,C,Δx,DPenalties.α,DPenalties.τ,BOp,order_x,eachcol)
+        FFDL(A,B,C) = SAT_Dirichlet_implicit_data!(A,Left,B,C,Δx,DPenalties.α,DPenalties.τ,BOp,order_x,eachcol)
+
+        FDR(A,B,C) = SAT_Dirichlet_implicit!(A,Right,B,C,Δx,DPenalties.α,DPenalties.τ,BOp,order_x,eachcol)
+        FFDR(A,B,C) = SAT_Dirichlet_implicit_data!(A,Right,B,C,Δx,DPenalties.α,DPenalties.τ,BOp,order_x,eachcol)
+        =#
+
+        function cgRHS(uₓₓ,u,kx,ky)
             PDE(uₓₓ,u,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,order_x=order_x,order_y=order_y)
             ### SATs
-            for Term in BoundaryTerms.SATs
-                uₓₓ + SAT(u,kx)
+            for ApproxTerm in SATFns
+                ApproxTerm(uₓₓ,u,kx,SolutionMode)
             end
-            if boundary_x != Periodic
 
-                FDL(uₓₓ,u,kx)
-                FDR(uₓₓ,u,kx)
-
-            else
-                for i = 1:ny
-                    # uₓₓ[:,i] = SAT_Periodic!(uₓₓ[:,i],u[:,i],Δx,c=kx[:,i],order=order_x)
-                    SAT_Periodic!(@views(uₓₓ[:,i]),u[:,i],Δx,c=kx[:,i],order=order_x)
-                end
-            end
+            
+            # if boundary_x != Periodic
+                # FDL(uₓₓ,u,kx)
+                # FDR(uₓₓ,u,kx)
+            # else
             if boundary_y != Periodic
                 # for i = 1:nx
                     # uₓₓ[i,1:order_y]        += SAT(boundary_y,Left,u[i,1:order_y],Δy,c=ky[i,1:order_y],order=order_y)
@@ -268,10 +275,13 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         while t ≤ t_f
             uⱼ .= uₒ
             ### FORCING TERMS
-            if boundary_x != Periodic
-                FFDL(uⱼ,Δt*gx(t),kx)
-                FFDL(uⱼ,Δt*gx(t),kx)
+            for ApproxTerm in SATFns
+                ApproxTerm(uⱼ,Δt*BoundaryTerms.SATs[1].RHS(t),kx,DataMode)
             end
+            # if boundary_x != Periodic
+                # FFDL(uⱼ,Δt*gx(t),kx)
+                # FFDR(uⱼ,Δt*gx(t),kx)
+            # end
             if boundary_y != Periodic
                 for i = 1:nx
                     # uⱼ[1:order_y,i]         += SAT(boundary_y,Left,Δt*gy(t),Δy,c=ky[i,1:order_y],order=order_y,forcing=true)
@@ -281,7 +291,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
                 end
             end
             # Advance the solution in time
-            uₙ, converged = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy,Hx,Hy,tol=tol,rtol=rtol,maxIT=maxIT)
+            uₙ, converged = conj_grad(uⱼ,uⱼ,cgRHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,Hx,Hy,tol=tol,rtol=rtol,maxIT=maxIT)
             # If a global penalty function has been applied, update the solution
             if parallel_penalty
                 uₙ,tmp = penalty_fn(uₙ,uₒ,Δt)

@@ -104,12 +104,12 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
     end
     return xₖ
 end
-function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
+function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,Hx::Vector{Float64},Hy::Vector{Float64}
     ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
     # MATRIX FORM
     converged = true
     xₖ = uⱼ #Initial guess
-    rₖ = A(uⱼ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) - b
+    rₖ = A(uⱼ,RHS,x,y,Δx,Δy,Δt,kx,ky) - b
     dₖ = -rₖ
     i = 0
 
@@ -118,12 +118,12 @@ function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,
     rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
     unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ,nx,ny))
     while (rnorm > rtol*unorm) & (i < maxIT)
-        Adₖ = A!(Adₖ,dₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+        Adₖ = A!(Adₖ,dₖ,RHS,x,y,Δx,Δy,Δt,kx,ky)
         dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ,nx,ny)
         αₖ = -innerH(rₖ,Hx,Hy,dₖ,nx,ny)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
-        rₖ = A!(rₖ,xₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy) .- b
-        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy),nx,ny)/dₖAdₖ
+        rₖ = A!(rₖ,xₖ,RHS,x,y,Δx,Δy,Δt,kx,ky) .- b
+        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,x,y,Δx,Δy,Δt,kx,ky),nx,ny)/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
         rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
         i += 1
@@ -177,7 +177,7 @@ end
     A
 
     1. A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector{Float64},g)
-    2. A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+    2. A(uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,t,Δt,kx,ky)
 """
 function A end
 function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector,g)
@@ -186,15 +186,15 @@ function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δ
     tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
     return tmp
 end
-function A(uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+function A(uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,Δt,kx,ky)
     # A for 2D arrays
     tmp = zeros(Float64,size(uⱼ))
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ)
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ,kx,ky)
     return tmp
 end
-function A!(tmp,uⱼ::AbstractMatrix,PDE::Function,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
+function A!(tmp,uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,Δt,kx,ky)
     # A for 2D arrays
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ)
+    tmp = uⱼ - Δt*PDE(tmp,uⱼ,kx,ky)
     return tmp
 end
 
