@@ -1,4 +1,30 @@
 
+struct Boundary_Periodic <: SimultanousApproximationTerm
+    BDₓᵀ        :: Vector{Real}
+    B₀Dₓ        :: Vector{Real}
+    BₙDₓ        :: Vector{Real}
+    type        :: BoundaryConditionType
+    axis        :: Int
+    Δx          :: Real
+    penalties   :: NamedTuple
+
+    function Boundary_Periodic(Δx::Real,axis::Int,order::Int,solver::Symbol)
+
+        BDₓᵀ = BoundaryDerivativeTranspose(order,Δx)
+        B₀Dₓ = BoundaryDerivative(Left,order,Δx)
+        BₙDₓ = BoundaryDerivative(Right,order,Δx)
+
+        α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
+
+    end
+end
+
+
+
+
+
+
+
 """
     SAT_Periodic(u::Vector{Float64},Δx::Float64;c=[1.0,1.0],order::Int64=2)
 

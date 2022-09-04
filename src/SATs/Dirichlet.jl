@@ -9,13 +9,11 @@ struct Boundary_Dirichlet <: SimultanousApproximationTerm
     type    :: BoundaryConditionType
     side    :: NodeType
     axis    :: Int
-    order   :: Int
     Δx      :: Real
     penalties :: NamedTuple
-    expression  :: String
 
     ### CONSTRUCTOR ###
-    function Boundary_Dirichlet(RHS::Function,Δx::Real,side::NodeType,axis::Int,order::Int)
+    function Boundary_Dirichlet(RHS::Function,Δx::Real,side::NodeType,axis::Int,order::Int,solver::Symbol)
 
         side ∈ [Left,Right] ? nothing : error("Must be Left or Right in position 3")
 
@@ -23,9 +21,9 @@ struct Boundary_Dirichlet <: SimultanousApproximationTerm
         α,τ = SATpenalties(Dirichlet,Δx,order)
         penalties = (α=α,τ=τ)
 
-        fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
+        # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
 
-        new(BD,RHS,Dirichlet,side,axis,order,Δx,penalties,fullsat)
+        new(BD,RHS,Dirichlet,side,axis,order,Δx,penalties)
     end
 end
 

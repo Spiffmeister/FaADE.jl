@@ -44,7 +44,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8
 
 
 Δt = 1.0 * min(Δx^2,Δy^2)
-t_f = 1000Δt
+t_f = 100Δt
 # t_f = 1000.0
 N = ceil(Int64,t_f/Δt)
 
@@ -57,6 +57,12 @@ gy(t) = [0.0, 0.0] #Periodic
 
 order = order_x = order_y = 2
 method = :cgie
+
+
+BxL = Boundary_Dirichlet(gx,Δx,Left,1,2)
+BxR = Boundary_Dirichlet(gx,Δx,Right,1,2)
+SATC = SimultanousApproximationTermContainer(BxL,BxR)
+
 
 println("(Δx,Δy)=(",Δx,",",Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
 
@@ -130,12 +136,12 @@ end
 
 
 
-SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,2Δt,Δt,kx,ky,SATC,gy,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=false)
 
 
 println("Benchmarking")
-@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SBP_operators.Periodic,
+@benchmark SBP_operators.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,SATC,gy,SBP_operators.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,adaptive=false) seconds=30
     
 # Profile.clear_malloc_data()

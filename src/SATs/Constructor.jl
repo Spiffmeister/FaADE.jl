@@ -13,7 +13,7 @@
 struct SAT_DirichletStruct{T} <: SimultanousApproximationTerm
     BDₓᵀ    :: Vector{T}
     RHS     :: Function
-    type    :: BoundaryCondition
+    type    :: BoundaryConditionType
     side    :: NodeType
     order   :: Int
     solver  :: Symbol

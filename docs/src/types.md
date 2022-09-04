@@ -2,5 +2,5 @@
 
 ```@docs
 SBP_operators.NodeType
-SBP_operators.BoundaryCondition
+SBP_operators.BoundaryConditionType
 ```
