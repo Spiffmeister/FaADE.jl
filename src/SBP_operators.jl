@@ -21,26 +21,30 @@ module SBP_operators
     using JLD2
 
 
+    # Includes
+    include("Helpers/Helpers.jl")
+    include("Derivatives/Derivatives.jl")
+    include("SATs/SATs.jl")
+    include("solvers/solvers.jl")
 
 
     # Include the files (add as completed)
-    include("types/types.jl")
-    using SBP_operators.types: Dirichlet, Neumann, Robin, Periodic, Interface
-    using SBP_operators.types: Left, Internal, Right
+    # Helpers export
+    using SBP_operators.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
+    using SBP_operators.Helpers: Left, Internal, Right
+    using SBP_operators.Helpers: Grid1D
 
-    include("Derivatives/Derivatives.jl")
     using SBP_operators.Derivatives: Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
     
-    include("SATs/SATs.jl")
     using SBP_operators.SATs: SAT_Periodic, Boundary_Dirichlet, SimultanousApproximationTerm, SimultanousApproximationTermContainer
 
-    include("solvers/solvers.jl")
     using SBP_operators.solvers: time_solver, build_H
 
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right
+    export Grid1D
 
     export Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
 

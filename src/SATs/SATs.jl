@@ -3,7 +3,7 @@ module SATs
 
     # import Base: +
 
-    using SBP_operators.types
+    using SBP_operators.Helpers
     using StaticArrays
 
     include("SAT_Interface.jl")

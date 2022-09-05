@@ -6,7 +6,7 @@ module solvers
 
 
 
-    using SBP_operators.types
+    using SBP_operators.Helpers
     using SBP_operators.SATs: SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_data!, 
     SimultanousApproximationTermContainer, construct_SATs
 

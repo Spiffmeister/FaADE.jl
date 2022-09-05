@@ -1,15 +1,6 @@
 
 
 
-struct BoundaryConditionType{T} end
-const Dirichlet = BoundaryConditionType{:Dirichlet}()
-const Neumann = BoundaryConditionType{:Neumann}()
-const Robin = BoundaryConditionType{:Robin}()
-const Periodic = BoundaryConditionType{:Periodic}()
-const Interface = BoundaryConditionType{:Interface}()
-
-
-
 
 struct Boundary
     type    :: BoundaryConditionType

@@ -49,7 +49,11 @@ end
 
 
 
+"""
+    BoundaryDerivativeTranspose
 
+Used to construct `EDₓᵀ` where `E=E₀` or `Eₙ`.
+"""
 function BoundaryDerivativeTranspose(order::Int,Δx::Float64)
     if order == 2
         return [-1.0,1.0]/Δx
@@ -61,6 +65,12 @@ function BoundaryDerivativeTranspose(order::Int,Δx::Float64)
 end
 
 
+"""
+    BoundaryDerivative
+
+Used to construct `E₀Dₓ` or `EₙDₓ`.
+"""
+function BoundaryDerivative end
 function BoundaryDerivative(::NodeType{:Left},Δx::Real,order::Int)
     if order == 2
         return [-1.0,1.0]/Δx
@@ -188,7 +198,7 @@ end
     τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
     return τ
 end
-@inline function SATpenalties(::BoundaryConditionType{:Periodic},Δx::Float64,order::Int64)
+@inline function SATpenalties(::BoundaryConditionType{:Periodic},Δx::Real,order::Int64)
     h = hval(order)
 
     α₀ = 0.5/(h*Δx)

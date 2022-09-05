@@ -2,7 +2,7 @@ module Derivatives
 
     using Distributed
 
-    using SBP_operators.types
+    using SBP_operators.Helpers
 
     include("DerivativeFirst.jl")
     include("DerivativeSecond.jl")

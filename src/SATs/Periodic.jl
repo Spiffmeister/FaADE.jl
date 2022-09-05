@@ -8,15 +8,35 @@ struct Boundary_Periodic <: SimultanousApproximationTerm
     Δx          :: Real
     penalties   :: NamedTuple
 
-    function Boundary_Periodic(Δx::Real,axis::Int,order::Int,solver::Symbol)
+    function Boundary_Periodic(Δx::Real,axis::Int,order::Int)
 
         BDₓᵀ = BoundaryDerivativeTranspose(order,Δx)
         B₀Dₓ = BoundaryDerivative(Left,order,Δx)
         BₙDₓ = BoundaryDerivative(Right,order,Δx)
 
         α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
+        penalties = (α₀=α₀, τ₁=τ₁, τ₀=τ₀)
 
+        new(BDₓᵀ,B₀Dₓ,BₙDₓ,Periodic,axis,Δx,penalties)
     end
+end
+
+
+
+
+"""
+    generate_Periodic
+"""
+function generate_Periodic(SATP::Boundary_Periodic,solver)
+
+    loopdirection = select_SAT_direction(SATP.axis)
+
+    p = SATP.penalties
+
+    Term(cache,u,c) = 
+        SAT_Periodic!(cache,u,c,p.α₀,p.τ₀,p.τ₁,SATP.B₀Dₓ,SATP.BₙDₓ,SATP.BDₓᵀ,SATP.order,loopdirection)
+    
+    return Term
 end
 
 
@@ -103,10 +123,27 @@ end
 
 
 
-# function SAT_Periodic!(uₓₓ::AbstractMatrix,u::AbstractVector,Δx::Float64,n;
-#         c=[1.0,1.0],order::Int64=2)
-    
-#     for i = 1:n
-#     end
-    
-# end
+"""
+    SAT_Periodic!
+
+
+"""
+function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
+        α₀::Real,τ₀::Function,τ₁::Real,
+        E₀Dₓ::Vector{Real},EₙDₓ::Vector{Real},BDₓᵀ::Vector{Real},
+        order::Int,loopaxis::Function)
+
+    for (S,U,K) in zip(loopaxis(cache),loopaxis(u),loopaxis(c))
+        # Dirichlet terms
+        S[1]  += τ₀(K) * (U[1] - U[end])
+        S[end]+= τ₀(K) * (U[end] - U[1])
+        # Symmeteriser
+        L₁u = (U[1] - U[end])
+        S[1:order]        .+= τ₁ * K[1] * BDₓᵀ*L₁u
+        S[end-order+1:end].+= τ₁ * K[end] * BDₓᵀ*L₁u
+        # Neumann terms
+        S[1]  += α₀ * K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end])
+        S[end]+= α₀ * K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end])
+    end
+    cache
+end
