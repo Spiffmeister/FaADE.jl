@@ -18,7 +18,7 @@ const Right = NodeType{:Right}()
 
 
 """
-BoundaryCondition
+    BoundaryCondition
 
 Defines the boundary conditions, options are:
 - Dirichlet
