@@ -29,7 +29,6 @@ end
 struct SquareGrid <: GridType
     grids   :: Tuple{Grid1D}
     axis    :: Vector{Int}
-    nodes
 end
 
 

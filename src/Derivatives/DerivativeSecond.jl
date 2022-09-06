@@ -61,9 +61,18 @@ end
 
 
 
+function generate_SecondDerivate(grid)
+
+    Index = CartesianIndices((2:(grid[1].n-1),2:(grid[2].n-1)))
+
+    InternalDerivative!(cache,u,cx,cy) = 
+        SecondDerivative!(cache,u,cx,cy,grid[1].Δ,grid[2].Δ,Internal,Index)
+end
 
 
-@views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,Δx,Δy,nx,ny,::NodeType{:Internal};order=2)
+
+@views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
+        Δx,Δy,::NodeType{:Internal},InternalNodes::CartesianIndices)
 
     # for j in 2:ny-1
     #     for i in 2:nx-1
@@ -76,13 +85,17 @@ end
     offx = CartesianIndex(1,0)
     offy = CartesianIndex(0,1)
 
-    for I in CartesianIndex(2,2):CartesianIndex(nx-1,ny-1)
+    for I in InternalNodes
     @inbounds uₓₓ[I-offx-offy] = 
             ((cx[I-offx] + cx[I])*u[I-offx] + (cx[I-offx] + 2cx[I] + cx[I+offx])*u[I] + (cx[I] + cx[I+offx])*u[I+offx])/(2.0Δx^2) +
             ((cy[I-offy] + cy[I])*u[I-offy] + (cy[I-offy] + 2cy[I] + cy[I+offy])*u[I] + (cy[I] + cy[I+offy])*u[I+offy])/(2.0Δy^2)
     end
     uₓₓ
 end
+
+
+
+
 
 
 

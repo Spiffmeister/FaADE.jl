@@ -1,26 +1,22 @@
 using LinearAlgebra
 using Printf
 using Plots
-# pyplot()
+
 using BenchmarkTools
-# using Pkg
-# Pkg.activate(".")
 push!(LOAD_PATH,".")
 using SBP_operators
 
 
-###
-function rate(uₓₓ,u,n,x,Δx,t,Δt,k;order=2)
-    Dₓₓ!(uₓₓ,u,k,n,Δx,order=order)
-    return uₓₓ
-end
 
 
 ###
 𝒟 = [0.0,1.0]
 n = 51
-Δx = 𝒟[2]/(n-1)
-x = collect(range(𝒟[1],𝒟[2],length=n))
+order = 2
+
+grid = Grid1D(𝒟,n,order)
+
+
 
 k = zeros(Float64,n) .+ 1.0
 

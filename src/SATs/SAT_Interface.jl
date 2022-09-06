@@ -12,7 +12,7 @@ abstract type SimultanousApproximationTerm end
 Holds the SATs for a given PDE
 """
 struct SimultanousApproximationTermContainer
-    SATs        :: Vector{SimultanousApproximationTerm}
+    SAT         :: Vector{SimultanousApproximationTerm}
     axis        :: Vector{Int}
     edge        :: Vector{NodeType}
     type        :: BoundaryConditionType

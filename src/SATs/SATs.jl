@@ -4,29 +4,29 @@ module SATs
     # import Base: +
 
     using SBP_operators.Helpers
-    using StaticArrays
+    # using StaticArrays
+
 
     include("SAT_Interface.jl")
 
     include("Boundary_Operators.jl")
 
     include("Dirichlet.jl")
-    include("Neumann.jl")
-    include("Robin.jl")
+    # include("Neumann.jl")
+    # include("Robin.jl")
     include("Periodic.jl")
-    include("Split.jl")
+    # include("Split.jl")
 
 
-    export SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_data!
-    export SAT_Neumann, SAT_Neumann!
+    export SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!
+    # export SAT_Neumann, SAT_Neumann!
     export SAT_Periodic, SAT_Periodic!
-    export SAT_Robin
-    export Split_domain
+    # export SAT_Robin
+    # export Split_domain
 
 
-    export SimultanousApproximationTerm, Boundary_Dirichlet, SimultanousApproximationTermContainer,
-    construct_SATs
+    export SimultanousApproximationTerm, SimultanousApproximationTermContainer
+    export Boundary_Dirichlet
+    export construct_SATs
     
 end
-
-# get_node_coordinates

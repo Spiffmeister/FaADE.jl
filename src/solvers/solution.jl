@@ -2,25 +2,11 @@
 
 
 
-struct grid
-    x   :: Array{Float64}
-    Δx  :: Float64
-    n   :: Int64
-
-    function grid(𝒟,n)
-        Δx = (𝒟[2] - 𝒟[1])/(n-1)
-        x = collect(range(𝒟[1],𝒟[2],step=Δx))
-        new(x,Δx,n)
-    end
-end
-
-
-
-mutable struct solution
-    u       :: Vector{Vector{Float64}}
-    x       :: Vector{Float64}
-    Δt      :: Union{Float64,Vector{Float64}}
-    t       :: Vector{Float64}
+mutable struct solution{T<:Real}
+    u       :: Vector{AbstractArray{T}}
+    grid    :: GridType
+    Δt      :: Union{T,Vector{T}}
+    t       :: Vector{T}
 
     function solution(u₀,x,Δx,t,Δt;preallocate=false)
         if preallocate
@@ -38,6 +24,10 @@ mutable struct solution
 
     end
 end
+
+
+
+
 
 mutable struct solution_2d
     u   :: Vector{Matrix{Float64}}

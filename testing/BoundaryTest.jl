@@ -16,7 +16,12 @@ g₀(t) = 0.0
 Gx = Grid1D([0.0,1.0], 41, 2)
 Gy = Grid1D([0.5,0.68], 41, 2)
 
-# SquareGrid
+grid = SquareGrid((Gx,1),(Gy,2))
+
+
+
+
+
 
 
 

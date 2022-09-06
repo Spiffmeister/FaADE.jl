@@ -12,12 +12,12 @@ See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_gra
 """
 function time_solver end
 #===== 1D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::BoundaryConditionType,BoundaryTerms::SimultanousApproximationTermContainer;
-        boundary_right::BoundaryConditionType=boundary_left,method::Symbol=:euler,order::Int64=2,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
+function time_solver(u₀::Function,t_f::Float64,Δt::Float64,grid::Grid1D,BoundaryTerms::SimultanousApproximationTermContainer;
+        method::Symbol=:euler,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
 
     uₙ = zeros(Float64,n)
 
-    uₒ = u₀.(x)
+    uₒ = u₀.(grid.domain)
 
     # Initialise solution
     soln = solution(uₒ,x,Δx,0.0,Δt)
