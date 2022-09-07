@@ -60,7 +60,7 @@ end
 # end
 
 
-
+#=
 function generate_SecondDerivate(grid)
 
     Index = CartesianIndices((2:(grid[1].n-1),2:(grid[2].n-1)))
@@ -68,11 +68,11 @@ function generate_SecondDerivate(grid)
     InternalDerivative!(cache,u,cx,cy) = 
         SecondDerivative!(cache,u,cx,cy,grid[1].Δ,grid[2].Δ,Internal,Index)
 end
-
+=#
 
 
 @views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
-        Δx,Δy,::NodeType{:Internal},InternalNodes::CartesianIndices)
+        Δx,Δy,nx,ny,::NodeType{:Internal})#,InternalNodes::CartesianIndices)
 
     # for j in 2:ny-1
     #     for i in 2:nx-1
@@ -84,8 +84,9 @@ end
 
     offx = CartesianIndex(1,0)
     offy = CartesianIndex(0,1)
+    Index = CartesianIndices((2:(nx-1),2:(ny-1)))
 
-    for I in InternalNodes
+    for I in Index
     @inbounds uₓₓ[I-offx-offy] = 
             ((cx[I-offx] + cx[I])*u[I-offx] + (cx[I-offx] + 2cx[I] + cx[I+offx])*u[I] + (cx[I] + cx[I+offx])*u[I+offx])/(2.0Δx^2) +
             ((cy[I-offy] + cy[I])*u[I-offy] + (cy[I-offy] + 2cy[I] + cy[I+offy])*u[I] + (cy[I] + cy[I+offy])*u[I+offy])/(2.0Δy^2)
@@ -850,27 +851,40 @@ end
 
 
 
-# function SecondDerivative_InternalStencil_Order2()
-#     (0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1])/Δx^2
-# end
-# function SecondDerivative_InternalStencil_Order4()
-#     -((-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
-#         (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
-#         (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
-#         (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
-#         (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2])/Δx^2
-# end
-# function SecondDerivative_InternalStencil_Order6()
-#     -((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
-#         (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
-#         (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
-#         (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
-#         (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
-#         (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
-#         (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
-# end
+function SecondDerivative_Order2()
+    (0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1])/Δx^2
+end
+function SecondDerivative_Order4()
+    -((-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
+        (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
+        (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
+        (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
+        (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2])/Δx^2
+end
+function SecondDerivative_InternalStencil_Order6()
+    -((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
+        (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
+        (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
+        (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
+        (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
+        (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
+        (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
+end
 
 
+
+function SecondDerivative!(uₓₓ::Array,u::Array,Δx::Real,Δy::Real,Index::CartesianIndices)
+
+    offx = CartesianIndex(1,0)
+    offy = CartesianIndex(0,1)
+
+    for I in Index
+    uₓₓ[I] = 
+            (u[I-offx] + 2*u[I] + u[I+offx])/(2.0Δx^2) +
+            (u[I-offy] + 2*u[I] + u[I+offy])/(2.0Δy^2)
+    end
+    uₓₓ
+end
 
 
 # function SecondDerivative_Boundary_Order2()

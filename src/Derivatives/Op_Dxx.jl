@@ -67,6 +67,21 @@ function Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64
     return uₓₓ
 end
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
 or
@@ -114,6 +129,9 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
 
     return uₓₓ
 end
+
+
+
 
 
 ### 2D at nodes

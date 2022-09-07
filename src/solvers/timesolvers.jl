@@ -31,7 +31,7 @@ function time_solver(u₀::Function,t_f::Float64,Δt::Float64,grid::Grid1D,Bound
 
         function RHS(uₓₓ,u,n,x,Δx,t,Δt,k,g)
             # Combines the PDE and SATs (forcing term included)
-            uₓₓ = PDE(uₓₓ,u,n,x,Δx,t,Δt,k,order=order)
+            uₓₓ = Dₓₓ(uₓₓ,u,n,x,Δx,t,Δt,k,order=grid.order)
 
             # for SAT in BoundaryTerms.SATs
             #     if type != Periodic
