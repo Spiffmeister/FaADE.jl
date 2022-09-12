@@ -42,14 +42,14 @@ struct VariableCoefficientPDE1D{T,D} <: PDEProblem
         new(grid,K,order,BC)
     end
 end
-struct VariableCoefficientPDE2D{T} <: PDEProblem
+struct VariableCoefficientPDE2D{T,D} <: PDEProblem
     grid                :: GridType{T}
     Kx                  :: AbstractArray{T}
     Ky                  :: AbstractArray{T}
     order               :: Vector{Int}
-    BoundaryConditions  :: Vector{BoundaryConditionData}
-    function VariableCoefficientPDE2D{T,D}(grid::GridType{T},Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::D...) where {T,D}
-        new(grid,K,order,[bc for bc in BCs])
+    BoundaryConditions  :: Vector{D}
+    function VariableCoefficientPDE2D{T,D}(grid::GridType{T},Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
+        new(grid,Kx,Ky,order,[bc for bc in BCs])
     end
 end
 

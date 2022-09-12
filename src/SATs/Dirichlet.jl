@@ -1,64 +1,33 @@
 
 
 """
-    Boundary_Dirichlet
+    SATDirichlet
 """
-struct Boundary_Dirichlet <: SimultanousApproximationTerm
-    EDₓᵀ    :: Vector{Real}
-    RHS     :: Function
+struct SATDirichlet{T} <: SimultanousApproximationTerm
     type    :: BoundaryConditionType
     side    :: NodeType
     axis    :: Int
-    Δx      :: Real
-    penalties :: NamedTuple
+    order   :: Int
+    EDₓᵀ    :: Vector{T}
+    RHS     :: Function
+    Δx      :: T
+    α       :: T
+    τ       :: T
 
     ### CONSTRUCTOR ###
-    function Boundary_Dirichlet(RHS::Function,Δx::Real,side::NodeType,axis::Int,order::Int)
+    function SATDirichlet(RHS::Function,Δx::T,side::NodeType,axis::Int,order::Int) where T
 
-        side ∈ [Left,Right] ? nothing : error("Must be Left or Right in position 3")
+        check_boundary(side)
 
         ED = BoundaryDerivativeTranspose(order,Δx)
         α,τ = SATpenalties(Dirichlet,Δx,order)
-        penalties = (α=α,τ=τ)
 
         # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
 
-        new(ED,RHS,Dirichlet,side,axis,order,Δx,penalties)
+        new{T}(Dirichlet,side,axis,order,ED,RHS,Δx,α,τ)
     end
 end
 
-
-
-
-"""
-    SAT_Dirichlet
-
-WARNING: DEPRECATED
-
-1. SAT_Dirichlet(::NodeType{:Left},u::AbstractVector,Δ::Float64;
-        c=1.0,order::Int64=2,forcing=false)
-2. SAT_Dirichlet(::NodeType{:Left,:Right},u::Vector{Float64},Δx::Float64,RHS;
-        c=1.0,order::Int64=2,separate_forcing::Bool=false)
- 
-
-Simulatenous approximation term for Dirichlet boundary conditions 
-    ``u(xᵢ)=g``
-where ``i\\in \\{0,N\\}``.
-
-`NodeType` is either `Left` or `Right`.
-
-See [`NodeType`](@ref)
-"""
-function SAT_Dirichlet end
-# Dirichlet for implicit integrators
-function SAT_Dirichlet(node,u::AbstractArray,Δ::Float64; c=1.0,order::Int64=2,forcing=false)
-    SAT = zeros(Float64,order)
-    # SAT_Dirichlet_implicit!(SAT,node,u,Δ,c=c,order=order,forcing=forcing)
-end
-function SAT_Dirichlet(node,u::AbstractVector,Δ::Float64,RHS; c=1.0,order::Int64=2,forcing=false)
-    SAT = zeros(Float64,order)
-end
-# Dirichlet for explicit integrators
 
 
 
@@ -73,12 +42,13 @@ Generates mutating functions required for Dirichlet boundary conditions.
 If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
 If `solver ∈ [:euler]` then only one method is generated
 """
-function generate_Dirichlet(SATD::Boundary_Dirichlet,solver)
+function generate_Dirichlet(SATD::SATDirichlet,solver)
     # Choose the axis to loop over
     loopdirection = select_SAT_direction(SATD.axis)
 
-    α,τ = SATD.penalties
-    BD = SATD.BDₓᵀ
+    α = SATD.α
+    τ = SATD.τ
+    BD = SATD.EDₓᵀ
     side = SATD.side
     order = SATD.order
 
@@ -128,11 +98,11 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::Abstrac
         S[1] += τ*U[1]
     end
 end
-function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,
+function SAT_Dirichlet_implicit!(uₓₓ::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)
 
-    for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
+    for (S,C,U) in zip(loopaxis(uₓₓ),loopaxis(c),loopaxis(u))
         S[end-order+1:end] .+= α*C[end]*BD*U[end]
         S[end] += τ*U[end]
     end
