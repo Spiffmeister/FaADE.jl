@@ -16,8 +16,8 @@ struct DataBlock{T} <: DataBlockType{T}
     uₓₓ         :: AbstractArray{T}
     boundary    :: BoundaryStorage
     Δt          :: T
-    function DataBlock{T}(grid,u,uₓₓ,boundary,Δt)
-        new(grid,u,uₓₓ,boundary,Δt)
+    function DataBlock(grid,u,uₓₓ,boundary,Δt) where T
+        new{T}(grid,u,uₓₓ,boundary,Δt)
     end
 end
 
@@ -25,7 +25,7 @@ end
     DataBlock
 External constructor for `DataBlock{T}` for 1D and 2D problems.
 """
-function DataBlock(grid::Grid,Δt::T,order::Int,boundaries...) where T
+function DataBlock(grid::GridType,Δt::T,order::Int,boundaries...) where T
     # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
     BTypes = []
     for bound in boundaries
