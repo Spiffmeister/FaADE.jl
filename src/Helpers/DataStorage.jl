@@ -25,7 +25,7 @@ end
     DataBlock
 External constructor for `DataBlock{T}` for 1D and 2D problems.
 """
-function DataBlock(grid::GridType,Δt::T,order::Int,boundaries...) where T
+function DataBlock(grid::GridType,Δt::T,order::Int,boundaries::BoundaryConditionData...) where T
     # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
     BTypes = []
     for bound in boundaries

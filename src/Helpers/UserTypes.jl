@@ -33,26 +33,29 @@ end
 """
     PDE Problem type for user input
 """
-struct VariableCoefficientPDE1D{T} <: PDEProblem
-    grid                :: GridType
+struct VariableCoefficientPDE1D{T,D} <: PDEProblem
+    grid                :: GridType{T}
     K                   :: AbstractArray{T}
-    order               :: Vector{Int}
-    BoundaryConditions  :: Vector{BoundaryConditionData}
-    function VariableCoefficientPDE1D(grid,K,order,BCs...) where T
-        new{T}(grid,K,order,BCs)
+    order               :: Int
+    BoundaryConditions  :: Vector{D}
+    function VariableCoefficientPDE1D{T,D}(grid,K,order,BC) where {T,D}
+        new(grid,K,order,BC)
     end
 end
 struct VariableCoefficientPDE2D{T} <: PDEProblem
-    grid                :: GridType
+    grid                :: GridType{T}
     Kx                  :: AbstractArray{T}
     Ky                  :: AbstractArray{T}
     order               :: Vector{Int}
     BoundaryConditions  :: Vector{BoundaryConditionData}
-    function VariableCoefficientPDE2D(grid,K,order,BCs...) where T
-        new{T}(grid,K,order,BCs)
+    function VariableCoefficientPDE2D{T,D}(grid::GridType{T},Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::D...) where {T,D}
+        new(grid,K,order,[bc for bc in BCs])
     end
 end
 
 
 
+function VariableCoefficientPDE1D(grid::GridType{T},K::AbstractVector{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
+    VariableCoefficientPDE1D{T,D}(grid,K,order,[bc for bc in BCs])
+end
 
