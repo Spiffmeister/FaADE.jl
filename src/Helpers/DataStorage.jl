@@ -8,7 +8,7 @@ abstract type BoundaryStorage{T<:AbstractFloat} end
 #========== WHOLE PROBLEM DATA ==========#
 """
     DataBlock{T}
-Passed around internally between functions. Only contains the current timestep
+Passed around internally between functions. Only contains data required for current timestep.
 """
 struct DataBlock{T} <: DataBlockType{T}
     grid        :: GridType
@@ -16,41 +16,32 @@ struct DataBlock{T} <: DataBlockType{T}
     uₓₓ         :: AbstractArray{T}
     boundary    :: BoundaryStorage
     Δt          :: T
-    function DataBlock(grid,u,uₓₓ,boundary,Δt) where T
-        new{T}(grid,u,uₓₓ,boundary,Δt)
-    end
-end
-
-"""
-    DataBlock
-External constructor for `DataBlock{T}` for 1D and 2D problems.
-"""
-function DataBlock(grid::GridType,Δt::T,order::Int,boundaries::BoundaryConditionData...) where T
-    # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
-    BTypes = []
-    for bound in boundaries
-        if bound.type != Periodic
-            push!(BTypes,bound.type)
-        else
-            push!(BTypes,Periodic)
-            push!(BTypes,Periodic)
+    function DataBlock{T}(grid::GridType,Δt::T,order::Int,boundaries::BoundaryConditionData...) where T
+        # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
+        BTypes = []
+        for bound in boundaries
+            if bound.type != Periodic
+                push!(BTypes,bound.type)
+            else
+                push!(BTypes,Periodic)
+                push!(BTypes,Periodic)
+            end
         end
-    end
-    BTypes = Tuple(BTypes)
-
-    # If grid is 1D or 2D construct the right DataBlock
-    if typeof(grid) <: Grid1D
-        u   = zeros(T,grid.n)
-        uₓₓ = zeros(T,grid.n)
-        BStor = BoundaryData1D{T}(BTypes,grid.n,order)
-    elseif typeof(grid) <: Grid2D
-        u   = zeros(T,(grid.nx,grid.ny))
-        uₓₓ = zeros(T,(grid.nx,grid.ny))
-        BStor = BoundaryData2D{T}(BTypes,grid.nx,grid.ny,order)
-    end
+        BTypes = Tuple(BTypes)
     
-    DBlock = DataBlock{T}(grid,u,uₓₓ,Bstor,Δt)
-    return DBlock
+        # If grid is 1D or 2D construct the right DataBlock
+        if typeof(grid) <: Grid1D
+            u   = zeros(T,grid.n)
+            uₓₓ = zeros(T,grid.n)
+            BStor = BoundaryData1D{T}(BTypes,grid.n,order)
+        elseif typeof(grid) <: Grid2D
+            u   = zeros(T,(grid.nx,grid.ny))
+            uₓₓ = zeros(T,(grid.nx,grid.ny))
+            BStor = BoundaryData2D{T}(BTypes,grid.nx,grid.ny,order)
+        end
+        
+        new{T}(grid,u,uₓₓ,BStor,Δt)
+    end
 end
 
 
