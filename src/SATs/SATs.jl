@@ -25,8 +25,8 @@ module SATs
     # export Split_domain
 
 
-    export SimultanousApproximationTerm, SimultanousApproximationTermContainer
-    export Boundary_Dirichlet
-    export construct_SATs
+    export SimultanousApproximationTerm
+    export SATDirichlet
+    export construct_SAT
     
 end

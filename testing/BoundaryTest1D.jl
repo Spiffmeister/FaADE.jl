@@ -40,11 +40,11 @@ P = VariableCoefficientPDE1D(Dom,K,order,BoundaryLeft,BoundaryRight)
 
 
 BStor = SBP_operators.Helpers.BoundaryData1D{Float64}((Dirichlet,Dirichlet),n,order)
-DStor = SBP_operators.Helpers.DataBlock{Float64}(P.grid,Δt,2,BoundaryLeft,BoundaryRight)
+DStor = SBP_operators.Helpers.DataBlock{Float64}(Dom,Δt,2,BoundaryLeft,BoundaryRight)
 
-SATD = SBP_operators.SATs.SATDirichlet(P.BoundaryConditions[1].RHS,P.grid.Δx,P.BoundaryConditions[1].side,P.BoundaryConditions[1].axis,order)
+SATD = SBP_operators.SATs.SATDirichlet(P.BoundaryConditions[1].RHS,Dom.Δx,P.BoundaryConditions[1].side,P.BoundaryConditions[1].axis,order)
 
-SATD2, SATFn2 = SBP_operators.SATs.SAT(P.BoundaryConditions[1],P.grid,order,:cgie)
+SATD2, SATFn2 = SBP_operators.SATs.SAT(P.BoundaryConditions[1],Dom,order,:cgie)
 
 
 # SBP_operators.Helpers.DataBlock(P.grid,Δt,2,BoundaryLeft,BoundaryRight)
