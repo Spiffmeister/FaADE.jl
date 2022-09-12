@@ -1,13 +1,61 @@
 
 
 # abstract type Solution{T<:AbstractFloat} end
-
-
-
-
+abstract type DataBlockType{T<:AbstractFloat} end
 abstract type BoundaryStorage{T<:AbstractFloat} end
 
 
+#========== WHOLE PROBLEM DATA ==========#
+"""
+    DataBlock{T}
+Passed around internally between functions. Only contains the current timestep
+"""
+struct DataBlock{T} <: DataBlockType{T}
+    grid        :: GridType
+    u           :: AbstractArray{T}
+    uₓₓ         :: AbstractArray{T}
+    boundary    :: BoundaryStorage
+    Δt          :: T
+    function DataBlock{T}(grid,u,uₓₓ,boundary,Δt)
+        new(grid,u,uₓₓ,boundary,Δt)
+    end
+end
+
+"""
+    DataBlock
+External constructor for `DataBlock{T}` for 1D and 2D problems.
+"""
+function DataBlock(grid::Grid,Δt::T,order::Int,boundaries...) where T
+    # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
+    BTypes = []
+    for bound in boundaries
+        if bound.type != Periodic
+            push!(BTypes,bound.type)
+        else
+            push!(BTypes,Periodic)
+            push!(BTypes,Periodic)
+        end
+    end
+    BTypes = Tuple(BTypes)
+
+    # If grid is 1D or 2D construct the right DataBlock
+    if typeof(grid) <: Grid1D
+        u   = zeros(T,grid.n)
+        uₓₓ = zeros(T,grid.n)
+        BStor = BoundaryData1D{T}(BTypes,grid.n,order)
+    elseif typeof(grid) <: Grid2D
+        u   = zeros(T,(grid.nx,grid.ny))
+        uₓₓ = zeros(T,(grid.nx,grid.ny))
+        BStor = BoundaryData2D{T}(BTypes,grid.nx,grid.ny,order)
+    end
+    
+    DBlock = DataBlock{T}(grid,u,uₓₓ,Bstor,Δt)
+    return DBlock
+end
+
+
+
+#========== BOUNDARY DATA ==========#
 """
     BoundaryData1D{T}
 Data structure for storage of SATs in 1 dimensional problems
