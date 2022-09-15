@@ -25,7 +25,7 @@ See also [`NodeType`](@ref)
 
 """
 function SecondDerivative end
-### Internal node
+### Internal single point 1D stencil
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Internal};order::Int64=2)
 
     if order == 2
@@ -54,42 +54,31 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
 
 end
 
-# function SecondDerivative(u,cx,cy,Δx,Δy,nx,ny,::NodeType{:Internal};order=2)
-#     uₓₓ = zeros(size(u).-2)
-#     SecondDerivative!(uₓₓ,u,cx,cy,Δx,Δy,nx,ny,Internal;order=2)
-# end
 
 
-#=
-function generate_SecondDerivate(grid)
 
-    Index = CartesianIndices((2:(grid[1].n-1),2:(grid[2].n-1)))
 
-    InternalDerivative!(cache,u,cx,cy) = 
-        SecondDerivative!(cache,u,cx,cy,grid[1].Δ,grid[2].Δ,Internal,Index)
+"""
+    SecondDerivative!
+"""
+@views @inline function SecondDerivativeInternal1D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,
+    Δx::AbstractFloat,nx::Int)
+
+    for i in 2:nx-1
+            @inbounds uₓₓ[i-1] = 
+                ((cx[i-1] + cx[i])*u[i-1] + (cx[i-1] + 2cx[i] + cx[i+1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2.0Δx^2)
+    end
+    uₓₓ
 end
-=#
+@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
+    Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int)
 
-
-@views @inline function SecondDerivative!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
-        Δx,Δy,nx,ny,::NodeType{:Internal})#,InternalNodes::CartesianIndices)
-
-    # for j in 2:ny-1
-    #     for i in 2:nx-1
-    #         @inbounds uₓₓ[i-1,j-1] = 
-    #             ((cx[i-1,j] + cx[i,j])*u[i-1,j] + (cx[i-1,j] + 2cx[i,j] + cx[i+1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
-    #             ((cy[i,j-1] + cy[i,j])*u[i,j-1] + (cy[i,j-1] + 2cy[i,j] + cy[i,j+1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
-    #     end
-    # end
-
-    offx = CartesianIndex(1,0)
-    offy = CartesianIndex(0,1)
-    Index = CartesianIndices((2:(nx-1),2:(ny-1)))
-
-    for I in Index
-    @inbounds uₓₓ[I-offx-offy] = 
-            ((cx[I-offx] + cx[I])*u[I-offx] + (cx[I-offx] + 2cx[I] + cx[I+offx])*u[I] + (cx[I] + cx[I+offx])*u[I+offx])/(2.0Δx^2) +
-            ((cy[I-offy] + cy[I])*u[I-offy] + (cy[I-offy] + 2cy[I] + cy[I+offy])*u[I] + (cy[I] + cy[I+offy])*u[I+offy])/(2.0Δy^2)
+    for j in 2:ny-1
+        for i in 2:nx-1
+            @inbounds uₓₓ[i-1,j-1] = 
+                ((cx[i-1,j] + cx[i,j])*u[i-1,j] + (cx[i-1,j] + 2cx[i,j] + cx[i+1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
+                ((cy[i,j-1] + cy[i,j])*u[i,j-1] + (cy[i,j-1] + 2cy[i,j] + cy[i,j+1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
+        end
     end
     uₓₓ
 end
@@ -873,23 +862,9 @@ end
 
 
 
-function SecondDerivative!(uₓₓ::Array,u::Array,Δx::Real,Δy::Real,Index::CartesianIndices)
-
-    offx = CartesianIndex(1,0)
-    offy = CartesianIndex(0,1)
-
-    for I in Index
-    uₓₓ[I] = 
-            (u[I-offx] + 2*u[I] + u[I+offx])/(2.0Δx^2) +
-            (u[I-offy] + 2*u[I] + u[I+offy])/(2.0Δy^2)
-    end
-    uₓₓ
+function SecondDerivative_Boundary_Order2(uₓₓ,)
+    return [0.0]
 end
-
-
-# function SecondDerivative_Boundary_Order2()
-#     return [0.0]
-# end
 # function SecondDerivative_Boundary_Order4()
     
 

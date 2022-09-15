@@ -89,23 +89,16 @@ or
 or
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},m::Int64,Δ::Float64;order::Int64=2)
 
-Iterator for 1D and 2D second derviative SBP operator
+Mutable function for 1D and 2D second derviative SBP operator
 """
 function Dₓₓ! end
-### Vector based second derviative iterator
-function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order::Int64=2)
+### 1D second derviative mutable function
+function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64,order::Int64)
 
-    half = Int64(order/2)
-    order == 2 ? adj = 1 : adj = order + half
+    half = halforder(order)
+    # adj = 
 
-    n = size(uₓₓ)
-    dims = length(n)
-
-    SecondDerivativeStencil!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,c,Δx,Internal,dims=dims)
-
-    for i = order:n-order+1
-        uₓₓ[i] = SecondDerivative(u[i-half:i+half],c[i-half:i+half],Δx,Internal,order=order)
-    end
+    SecondDerivativeInternal1D!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,c,Δx,n)
 
     SecondDerivative!(uₓₓ,u[1:2order],c[1:2order],Δx,Left,order=order)
     SecondDerivative!(uₓₓ,u[n-2order+1:n],c[n-2order+1:n],Δx,Right,order=order)
@@ -117,11 +110,11 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
 
     if dim == 1
         @sync @distributed for i = 1:ny #column derivatives
-            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
+            uₓₓ[:,i] = SecondDerivativeInternal1D!(uₓₓ[:,i],u[:,i],c[:,i],Δ,nx)
         end
     elseif dim == 2
         @sync @distributed for i = 1:nx #row derivative
-            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
+            uₓₓ[i,:] = SecondDerivativeInternal1D!(uₓₓ[i,:],u[i,:],c[i,:],Δ,ny)
         end
     else
         error("dim must be 1 or 2.")
@@ -135,10 +128,17 @@ end
 
 
 ### 2D at nodes
+function Dₓₓ(cache::AbstractVector,u::AbstractVector,c::AbstractVector,
+        n::Int,Δx::AbstractFloat,order::Int)
+
+    
+    
+end
 
 
-function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
-    order_x::Int64=2,order_y::Int64=order_x)
+function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,cx::AbstractMatrix,cy::AbstractMatrix,
+        nx::Int64,ny::Int64,Δx::Float64,Δy::Float64;
+        order_x::Int64=2,order_y::Int64=order_x)
 
     # Half order
     halfx = Int64(order_x/2) #half way
@@ -156,7 +156,7 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,
     order_y == 2 ? inty = 1 : inty = order_y+1
 
 
-    SecondDerivative!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny,Internal)
+    SecondDerivativeInternal2D!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny)
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries

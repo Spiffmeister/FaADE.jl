@@ -1,4 +1,66 @@
 
+
+function solve end
+
+"""
+    solve
+
+    1. Construction
+        a. DataBlock
+        b. SATs
+        c. Derivative function
+    2. Solving
+"""
+function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver)
+
+    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
+
+    
+    # Build functions
+
+    D(uₓₓ,u,c) = Dₓₓ(uₓₓ,u,c,
+        grid.n,grid.Δx)
+    
+    
+    _,SAT_Left    = SAT(boundaries.Left,grid,Prob.order,solver)
+    _,SAT_Right   = SAT(boundaries.Right,grid,Prob.order,solver)
+
+    
+    function CGRHS(DBlock)
+    # function CGRHS(uₓₓ,u,n,x,Δx,Δt,k,g)
+        uₓₓ = Dₓₓ(uₓₓ,u,k,grid.n,grid.Δx)
+        SAT_Left(uₓₓ,u,k,SATMode)
+        SAT_Right(uₓₓ,u,k,SATMode)
+    end
+
+    H = build_H(grid.n,Prob.order)
+
+    # CGBlock = 
+
+    DBlock.uₙ₊₁ = DBlock.u
+    while t < t_f
+
+        SAT_Left(DBlock.boundary.SAT_Left,DBlock.Δt * Prob.BoundaryConditions.Left.RHS(t),DBlock.K.Kx,DataMode)
+        SAT_Right(DBlock.boundary.SAT_Right,DBlock.Δt * Prob.BoundaryConditions.Right.RHS(t),DBlock.K.Kx,DataMode)
+
+        DBlock.uₙ₊₁,converged = conj_grad(DBlock.u,CGRHS)
+
+        if converged #If CG converges
+            DBlock.u .= DBlock.uₙ₊₁
+        else #If CG fails, reset and retry step
+            DBlock.uₙ₊₁ .= DBlock.u
+        end
+
+        t += Δt
+    end
+
+
+end
+function solve(Prob::VariableCoefficientPDE2D)
+end
+
+
+
 """
 time_solver(PDE::Function,u₀::Function,n::Int64,x::Vector{Float64},Δx::Float64,t_f::Float64,Δt::Float64,k::Vector{Float64},boundary::Function,boundary_left::Symbol;
     boundary_right::Symbol=boundary_left,method::Symbol=:euler,order::Int64=2)
@@ -12,7 +74,7 @@ See [`forward_euler`](@ref), [`RK4`](@ref), [`implicit_euler`](@ref), [`conj_gra
 """
 function time_solver end
 #===== 1D TIME SOLVER =====#
-function time_solver(u₀::Function,t_f::Float64,Δt::Float64,grid::Grid1D,BoundaryTerms::SimultanousApproximationTermContainer;
+function time_solver(u₀::Function,t_f::Float64,Δt::Float64,grid::Grid1D,BoundaryTerms;
         method::Symbol=:euler,α::Float64=1.5,tol::Float64=1e-5,maxIT::Int64=-1,warnings::Bool=false,samplefactor=1.0)
 
     uₙ = zeros(Float64,n)
@@ -128,7 +190,7 @@ function time_solver(u₀::Function,t_f::Float64,Δt::Float64,grid::Grid1D,Bound
     return soln
 end
 #===== 2D TIME SOLVER =====#
-function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},BoundaryTerms::SimultanousApproximationTermContainer,gy,boundary_y::BoundaryConditionType;
+function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,x::AbstractVector{Float64},y::AbstractVector{Float64},t_f::Float64,Δt::Float64,kx::AbstractMatrix{Float64},ky::AbstractMatrix{Float64},BoundaryTerms,gy,boundary_y::BoundaryConditionType;
         method=:euler,order_x=2,order_y=order_x,maxIT::Int64=15,warnings::Bool=false,samplefactor::Float64=0.0,tol=1e-5,rtol=1e-14,adaptive=true,penalty_fn=nothing,checkpointing=false)
 
     # Preallocate and set initial
@@ -215,7 +277,7 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
         maxIT < 1 ? maxIT = 10 : nothing
 
 
-        SATFns = construct_SATs(BoundaryTerms)
+        SATFns = construct_SAT(BoundaryTerms)
 
         #=
         DPenalties = BoundaryTerms.SATs[1].penalties
@@ -278,14 +340,8 @@ function time_solver(PDE::Function,u₀::Function,nx::Int64,ny::Int64,Δx::Float
             for ApproxTerm in SATFns
                 ApproxTerm(uⱼ,Δt*BoundaryTerms.SATs[1].RHS(t),kx,DataMode)
             end
-            # if boundary_x != Periodic
-                # FFDL(uⱼ,Δt*gx(t),kx)
-                # FFDR(uⱼ,Δt*gx(t),kx)
-            # end
             if boundary_y != Periodic
                 for i = 1:nx
-                    # uⱼ[1:order_y,i]         += SAT(boundary_y,Left,Δt*gy(t),Δy,c=ky[i,1:order_y],order=order_y,forcing=true)
-                    # uⱼ[ny-order_y+1:ny,i]   += SAT(boundary_y,Right,Δt*gy(t),Δy,c=ky[ny-order_y+1:ny,i],order=order_y,forcing=true)
                     SAT!(@views(uⱼ[1:order_y,i]),boundary_y,Left,Δt*gy(t),Δy,c=ky[i,1:order_y],order=order_y,forcing=true)
                     SAT!(@view(uⱼ[ny-order_y+1:ny,i]),boundary_y,Right,Δt*gy(t),Δy,c=ky[ny-order_y+1:ny,i],order=order_y,forcing=true)
                 end

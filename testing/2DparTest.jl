@@ -59,8 +59,8 @@ order = order_x = order_y = 2
 method = :cgie
 
 
-BxL = Boundary_Dirichlet(gx,Δx,Left,1,2)
-BxR = Boundary_Dirichlet(gx,Δx,Right,1,2)
+BxL = SATDirichlet(gx,Δx,Left,1,2)
+BxR = SATDirichlet(gx,Δx,Right,1,2)
 SATC = SimultanousApproximationTermContainer(BxL,BxR)
 
 

@@ -28,7 +28,7 @@ module Helpers
     
     # DataStorage import
     export DataBlockType, BoundaryStorage, 
-        DataBlock,
+        DataBlock, ConjGradBlock,
         BoundaryData1D, BoundaryData2D, 
         copyUtoSAT
     

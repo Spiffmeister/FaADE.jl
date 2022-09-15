@@ -9,9 +9,9 @@ module solvers
     using SBP_operators.Helpers
     
     using SBP_operators.SATs: SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, BDₓᵀ, SAT_Dirichlet_implicit_data!, 
-    SimultanousApproximationTermContainer, construct_SATs
+    construct_SAT
 
-    include("solution.jl")
+    # include("solution.jl")
     include("timesolvers.jl")
     include("integrators.jl")
 

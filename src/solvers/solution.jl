@@ -28,19 +28,6 @@ end
 
 
 
-
-mutable struct solution_2d
-    u   :: Vector{Matrix{Float64}}
-    x   :: Vector{Float64}
-    y   :: Vector{Float64}
-    Δt  :: Vector{Float64}
-    t   :: Vector{Float64}
-    function solution_2d(u₀,x,y,t,Δt)
-        new([u₀],x,y,[Δt],[t])
-    end
-end
-
-
 """
     Struct for storing checkpoints for 2D simulations
 """

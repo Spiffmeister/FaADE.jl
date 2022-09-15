@@ -32,11 +32,13 @@ module SBP_operators
     # Helpers export
     using SBP_operators.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
     using SBP_operators.Helpers: Left, Internal, Right
-    using SBP_operators.Helpers: Grid1D
+    using SBP_operators.Helpers: Grid1D, Grid2D
+    using SBP_operators.Helpers: Boundary, PeriodicBoundary
+    using SBP_operators.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using SBP_operators.Derivatives: Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
+    using SBP_operators.Derivatives: Dₓ, Dₓₓ, Dₓₓ!
     
-    using SBP_operators.SATs: SAT_Periodic, Boundary_Dirichlet, SimultanousApproximationTerm, SimultanousApproximationTermContainer
+    using SBP_operators.SATs: SAT_Periodic, SATDirichlet, SimultanousApproximationTerm
 
     using SBP_operators.solvers: time_solver, build_H
 
@@ -44,14 +46,15 @@ module SBP_operators
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right
-    export Grid1D
+    export Grid1D, Grid2D, Boundary, PeriodicBoundary
+    export VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    export Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
+    export Dₓ, Dₓₓ, Dₓₓ!
 
     export time_solver, build_H
     
-    export SimultanousApproximationTerm, SimultanousApproximationTermContainer,
-        SAT_Dirichlet, SAT_Dirichlet!, Boundary_Dirichlet,
+    export SimultanousApproximationTerm,
+        SAT_Dirichlet, SAT_Dirichlet!, SATDirichlet,
         SAT_Periodic, SAT_Periodic!, 
         Split_domain
         #SAT_Neumann, SAT_Neumann!, 

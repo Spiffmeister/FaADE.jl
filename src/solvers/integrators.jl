@@ -3,24 +3,15 @@
 """
     forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
 or
-    function forward_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy)
-
-Inbuilt forward euler method,
-``u^{n+1} = u^n + \\Delta t F(u^{n+1},u^n,x,\\Delta x, t,\\Delta t,k,g)``
-- `n` (`nx`, `ny`): is the number of grid points
-- `Δx` (`Δy`): is the grid spacing
-- `k` (`kx`, `gy`): is a matrix or function containing the diffusion coefficients at the grid points
-- `g` (`gx`, `gy`): is a vector or function containing the boundary conditions
-
+    function forward_euler(DBlock::DataBlock,RHS::Function)
 """
 function forward_euler end
-function forward_euler(uₙ::AbstractVector,uₒ::AbstractVector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::AbstractVector,t::Float64,x::AbstractVector,g)
+function forward_euler(DBlock::DataBlock,RHS::Function)
     # Simple forward euler method
-    uₙ = uₒ + Δt*RHS(uₙ,uₒ,n,x,Δx,t,Δt,k,g)
-    return uₙ
+    RHS(DBlock.uₙ₊₁,DBlock.u,DBlock.K)
+    DBlock.uₙ₊₁ .= DBlock.u .+ DBlock.Δt*DBlock.uₙ₊₁
 end
-# Matrix version
-function forward_euler(uₙ::AbstractMatrix,uₒ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x,y,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::AbstractMatrix,ky::AbstractMatrix,gx,gy)
+function forward_euler(uₒ::AbstractMatrix,RHS::Function,Δt::Float64)
     # Simple forward euler method
     uₙ = uₒ + Δt*RHS(uₙ,uₒ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
     return uₙ
@@ -80,21 +71,35 @@ See also [`build_H`](@ref), [`A`](@ref)
 """
 function conj_grad end
 # VECTOR FORM
-function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
-    xₖ = uⱼ #Initial guess
-    rₖ = A(uⱼ,RHS,n,Δx,x,Δt,t,k,boundary) - b
-    dₖ = -rₖ
+# function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+function conj_grad(DBlock::DataBlock,CGB::ConjGradBlock,order::Int;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+    
+    # x₀ = uₙ #Initial guess
+    DBlock.uₙ₊₁ = DBlock.u
+
+    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
+    A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,Δt,k) 
+    CGB.rₖ .= CGB.rₖ .- CGB.b
+
+    CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
     i = 0
-    rnorm = sqrt(innerH(rₖ,H,rₖ))
+    rnorm = sqrt(innerH(rₖ,rₖ,order,DBlock.grid.Δx))
     while (rnorm > tol) & (i < maxIT)
-        Adₖ = A(dₖ,RHS,n,Δx,x,Δt,t,k,boundary)
-        dₖAdₖ = innerH(dₖ,H,Adₖ)
-        αₖ = -innerH(rₖ,H,dₖ)/dₖAdₖ
-        xₖ = xₖ + αₖ*dₖ
-        rₖ = A(xₖ,RHS,n,Δx,x,Δt,t,k,boundary) - b
-        βₖ = innerH(rₖ,H,A(rₖ,RHS,n,Δx,x,Δt,t,k,boundary))/dₖAdₖ
-        dₖ = - rₖ + βₖ*dₖ
-        rnorm = sqrt(innerH(rₖ,H,rₖ))
+        A!(CGB.Adₖ,dₖ,RHS,Δt,k) # Adₖ = dₖ - Δt*D(dₖ)
+
+        dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,DBlock.grid.Δx)
+        αₖ = -innerH(CGB.rₖ,CGB.dₖ, order,DBlock.grid.Δx)/dₖAdₖ
+
+        DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+
+        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
+        A!(CGB.rₖ,xₖ,RHS,Δt,k)
+        CGB.rₖ .= CGB.rₖ .- b
+
+        A!(Drₖ,rₖ,RHS,Δt,k) # Drₖ = rₖ - Δt*D(rₖ)
+        βₖ = innerH(rₖ,Drₖ, order,DBlock.grid.Δx)/dₖAdₖ
+        CGB.dₖ .= -rₖ .+ βₖ*dₖ
+        rnorm = sqrt(innerH(rₖ,rₖ, order,DBlock.grid.Δx))
         # rnorm = norm(rₖ)
         i += 1
     end
@@ -102,8 +107,10 @@ function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt:
         warnstr = string("CG did not converge at t=",t)
         @warn warnstr
     end
-    return xₖ
+    # return xₖ
 end
+
+
 function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,Hx::Vector{Float64},Hy::Vector{Float64}
     ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
     # MATRIX FORM
@@ -115,17 +122,17 @@ function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,
 
     Adₖ = zeros(Float64,(nx,ny))
 
-    rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
-    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ,nx,ny))
+    rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
+    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ))
     while (rnorm > rtol*unorm) & (i < maxIT)
-        Adₖ = A!(Adₖ,dₖ,RHS,x,y,Δx,Δy,Δt,kx,ky)
-        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ,nx,ny)
-        αₖ = -innerH(rₖ,Hx,Hy,dₖ,nx,ny)/dₖAdₖ
+        Adₖ = A!(Adₖ,dₖ,RHS,Δt,kx,ky)
+        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ)
+        αₖ = -innerH(rₖ,Hx,Hy,dₖ)/dₖAdₖ
         xₖ = xₖ + αₖ*dₖ
-        rₖ = A!(rₖ,xₖ,RHS,x,y,Δx,Δy,Δt,kx,ky) .- b
-        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,x,y,Δx,Δy,Δt,kx,ky),nx,ny)/dₖAdₖ
+        rₖ = A!(rₖ,xₖ,RHS,Δt,kx,ky) .- b
+        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,Δt,kx,ky))/dₖAdₖ
         dₖ = - rₖ + βₖ*dₖ
-        rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ,nx,ny))
+        rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
         i += 1
     end
     # println(i," ",rnorm/unorm,"   ",rtol,"  ",t,"   ",Δt)
@@ -133,13 +140,7 @@ function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,
         converged = false
         warnstr = string("CG did not converge at t=",t,"    Δt=",Δt,"   # iters=",i)
         @warn warnstr
-        # xₖ = uⱼ #return to previous time
-        # t = t-Δt
     end
-    # if adaptive
-    #     Δt = adapt_time(converged,Δt,5.0*min(Δx^2,Δy^2))
-    # end
-    # println("Δt=",Δt)
     return xₖ, converged
 end
 
@@ -174,27 +175,22 @@ function build_H(n::Int64,order::Int64)
 end
 
 """
-    A
+    A!
 
-    1. A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector{Float64},g)
-    2. A(uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,t,Δt,kx,ky)
+    1. A(uⱼ::AbstractVector,PDE::Function,Δt::Float64,k::Vector{Float64})
+    2. A(uⱼ::AbstractMatrix,PDE::Function,Δt,kx,ky)
 """
-function A end
-function A(uⱼ::AbstractVector,PDE::Function,n::Int64,Δx::Float64,x::Vector,Δt::Float64,t::Float64,k::Vector,g)
-    # tmp can be any vector of length(uⱼ)
-    tmp = zeros(Float64,length(uⱼ))
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ,n,x,Δx,t,Δt,k,g)
+function A! end
+function A!(tmp,uⱼ,PDE!::Function,Δt::Float64,k::Vector)
+    # 1D A
+    PDE!(tmp,uⱼ,Δt,k)
+    tmp .= uⱼ .- Δt*tmp
     return tmp
 end
-function A(uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,Δt,kx,ky)
+function A!(tmp,uⱼ::AbstractMatrix,PDE!::Function,Δt::Float64,kx::AbstractArray,ky::AbstractArray)
     # A for 2D arrays
-    tmp = zeros(Float64,size(uⱼ))
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ,kx,ky)
-    return tmp
-end
-function A!(tmp,uⱼ::AbstractMatrix,PDE::Function,x,y,Δx,Δy,Δt,kx,ky)
-    # A for 2D arrays
-    tmp = uⱼ - Δt*PDE(tmp,uⱼ,kx,ky)
+    PDE!(tmp,uⱼ,kx,ky)
+    tmp .= uⱼ .- Δt*tmp
     return tmp
 end
 
@@ -207,21 +203,27 @@ end
 """
 function innerH end
 # H inner product for 1D problems
-function innerH(u::AbstractVector,H::AbstractArray,v::AbstractVector)
-    return dot(u,H*v)
+function innerH(u::AbstractVector,v::AbstractVector,order::Int,Δ::Float64)
+    tmp = 0.0
+    if order == 2
+        tmp += 0.5*Δ * u[1]*v[1]
+        tmp += 0.5*Δ * u[end]*v[end]
+        tmp += sum(Δ*u[2:end-1].*v[2:end-1])
+        return tmp
+    elseif order == 4
+        tmp += sum([17.0/48.0, 59.0/48.0, 43.0/48.0, 49.0/48.0]*Δ .* u[1:4] .* v[1:4])
+        tmp += sum([49.0/48.0, 43.0/48.0, 59.0/48.0, 17.0/48.0]*Δ .* u[end-3:end] .* v[end-3:end])
+        tmp += sum(Δ*u[5:end-4].*v[5:end-4])
+        return tmp
+    elseif order == 6
+        tmp += sum([13649.0/43200.0, 12013.0/8640.0, 2711.0/4320.0, 5359.0/4320.0, 7877.0/8640.0, 43801.0/43200.0])
+        tmp += sum([43801.0/43200.0, 7877.0/8640.0, 5359.0/4320.0, 2711.0/4320.0, 12013.0/8640.0, 13649.0/43200.0])
+        tmp += sum(Δ*u[7:end-6].*v[7:end-6])
+    end
 end
 # H inner product for 2D problems
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
     nx,ny = size(u)
-    tmp = 0.0
-    for j = 1:ny
-        for i = 1:nx
-            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
-        end
-    end
-    return tmp
-end
-function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix,nx,ny)
     tmp = 0.0
     for j = 1:ny
         for i = 1:nx

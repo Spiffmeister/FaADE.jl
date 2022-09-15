@@ -6,47 +6,31 @@ abstract type SimultanousApproximationTerm end
 
 
 
-"""
-    SimultanousApproximationTermContainer
 
-Holds the SATs for a given PDE
-"""
-struct SimultanousApproximationTermContainer
-    SAT         :: Vector{SimultanousApproximationTerm}
-    axis        :: Vector{Int}
-    edge        :: Vector{NodeType}
-    type        :: BoundaryConditionType
-
-    function SimultanousApproximationTermContainer(boundaries...)
-        
-        ApproxTerm = []
-        axis = []
-        edge = []
-
-        for term in boundaries
-            push!(ApproxTerm,term)
-            push!(axis,term.axis)
-            push!(edge,term.side)
-        end
-        new(ApproxTerm,axis,edge)
+function SAT(BoundCond::BoundaryConditionData,grid::GridType,order::Int,solver)
+    # Is the problem 1 or 2D
+    if typeof(grid) <: Grid1D
+        Δ = grid.Δx
+    elseif typeof(grid) <: Grid2D
+        BoundCond.axis == 1 ? Δ=grid.Δx : Δ=grid.Δy
     end
+    # Build Parametic things
+    if BoundCond.type == Dirichlet
+        BD = SATDirichlet(BoundCond.RHS,Δ,BoundCond.side,BoundCond.axis,order)
+    end
+    # Build the SAT function
+    SATFn = construct_SAT(BD,solver)
+    return BD,SATFn
 end
 
-
-
-
-function construct_SATs(SATC::SimultanousApproximationTermContainer)
-    SATFns = []
-    for Term in SATC.SATs
-        if Term.type == Dirichlet
-            cacheFn = generate_Dirichlet(Term,:cgie)
-        elseif Term.type == Neumann
-        elseif Term.type == Robin
-        elseif Term.type == Periodic
-        else
-            error("Available boundary types are Dirichlet, Neumann, Robin or Periodic")
-        end
-        push!(SATFns,cacheFn)
+function construct_SAT(Term::SimultanousApproximationTerm,solver)
+    if Term.type == Dirichlet
+        SATFns = generate_Dirichlet(Term,solver)
+    elseif Term.type == Neumann
+    elseif Term.type == Robin
+    elseif Term.type == Periodic
+    else
+        error("Available boundary types are Dirichlet, Neumann, Robin or Periodic")
     end
     return SATFns
 end

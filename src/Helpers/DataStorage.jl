@@ -10,37 +10,52 @@ abstract type BoundaryStorage{T<:AbstractFloat} end
     DataBlock{T}
 Passed around internally between functions. Only contains data required for current timestep.
 """
-struct DataBlock{T} <: DataBlockType{T}
+struct DataBlock{T,DIM} <: DataBlockType{T}
     grid        :: GridType
     u           :: AbstractArray{T}
-    uₓₓ         :: AbstractArray{T}
+    uₙ₊₁        :: AbstractArray{T}
+    K           :: Vector{AbstractArray{T}}
     boundary    :: BoundaryStorage
     Δt          :: T
-    function DataBlock{T}(grid::GridType,Δt::T,order::Int,boundaries::BoundaryConditionData...) where T
-        # Build tuple of boundary types, ensure that Periodic boundaries do not result in too few types
-        BTypes = []
-        for bound in boundaries
-            if bound.type != Periodic
-                push!(BTypes,bound.type)
-            else
-                push!(BTypes,Periodic)
-                push!(BTypes,Periodic)
-            end
-        end
-        BTypes = Tuple(BTypes)
+    function DataBlock{T,DIM}(
+            boundaries::NamedTuple,
+            grid::GridType,
+            Δt::T,
+            order::Int,
+            K::AbstractArray{T}) where {T,DIM}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
             u   = zeros(T,grid.n)
             uₓₓ = zeros(T,grid.n)
-            BStor = BoundaryData1D{T}(BTypes,grid.n,order)
+            BStor = BoundaryData1D{T}(boundaries,order)
         elseif typeof(grid) <: Grid2D
             u   = zeros(T,(grid.nx,grid.ny))
             uₓₓ = zeros(T,(grid.nx,grid.ny))
-            BStor = BoundaryData2D{T}(BTypes,grid.nx,grid.ny,order)
+            BStor = BoundaryData2D{T}(boundaries,grid.nx,grid.ny,order)
         end
-        
-        new{T}(grid,u,uₓₓ,BStor,Δt)
+        DiffCoeff = [K]
+        new{T,DIM}(grid,u,uₓₓ,DiffCoeff,BStor,Δt)
+    end
+end
+
+
+#========== WHOLE PROBLEM DATA ==========#
+struct ConjGradBlock{T} <: DataBlockType{T}
+    b   :: AbstractArray{T} # b = uⁿ⁺¹ + F
+    rₖ  :: AbstractArray{T} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
+    Adₖ :: AbstractArray{T}
+    Arₖ :: AbstractArray{T}
+    dₖ  :: AbstractArray{T}
+
+    function ConjGradBlock{T}(n::Int...) where T
+        rₖ  = zeros(T,n)
+        Adₖ = zeros(T,n)
+        Arₖ = zeros(T,n)
+        dₖ  = zeros(T,n)
+        b   = zeros(T,n)
+
+        new{T}(b, rₖ, Adₖ, Arₖ, dₖ)
     end
 end
 
@@ -61,7 +76,10 @@ struct BoundaryData1D{T} <: BoundaryStorage{T}
     u_Left      :: AbstractArray{T}
     u_Right     :: AbstractArray{T}
 
-    function BoundaryData1D{T}(type::Tuple{BoundaryConditionType,BoundaryConditionType},n::Int,order::Int) where T
+    RHS_Left    :: Float64
+    RHS_Right   :: Float64
+
+    function BoundaryData1D{T}(BC::NamedTuple,order::Int) where {T}
 
         nnodes = SATNodeOutput(order)
 
@@ -71,7 +89,7 @@ struct BoundaryData1D{T} <: BoundaryStorage{T}
         u_Left      = zeros(T,nnodes)
         u_Right     = zeros(T,nnodes)
 
-        new{T}(type[1],type[2],SAT_Left,SAT_Right,u_Left,u_Right)
+        new{T}(BC.Left.type,BC.Right.type,SAT_Left,SAT_Right,u_Left,u_Right,0.0,0.0)
 
     end
 end
@@ -97,7 +115,7 @@ struct BoundaryData2D{T} <: BoundaryStorage{T}
     u_Up        :: AbstractArray{T} #Solution along boundary with size determined by derivative order
     u_Down      :: AbstractArray{T} #Solution along boundary with size determined by derivative order
 
-    function BoundaryData2D{T}(type::Tuple{BoundaryConditionType,BoundaryConditionType,BoundaryConditionType,BoundaryConditionType},nx::Int,ny::Int,order::Int) where T
+    function BoundaryData2D{T}(type::Tuple{D},nx::Int,ny::Int,order::Int) where {T,D<:BoundaryConditionData}
 
         nnodes = SATNodeOutput(order)
 

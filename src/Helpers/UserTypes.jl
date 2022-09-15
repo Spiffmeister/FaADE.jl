@@ -33,12 +33,12 @@ end
 """
     PDE Problem type for user input
 """
-struct VariableCoefficientPDE1D{T,D} <: PDEProblem
+struct VariableCoefficientPDE1D{T} <: PDEProblem
     grid                :: GridType{T}
     K                   :: AbstractArray{T}
     order               :: Int
-    BoundaryConditions  :: Vector{D}
-    function VariableCoefficientPDE1D{T,D}(grid,K,order,BC) where {T,D}
+    BoundaryConditions  :: NamedTuple
+    function VariableCoefficientPDE1D{T}(grid,K,order,BC) where T
         new(grid,K,order,BC)
     end
 end
@@ -56,6 +56,12 @@ end
 
 
 function VariableCoefficientPDE1D(grid::GridType{T},K::AbstractVector{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
-    VariableCoefficientPDE1D{T,D}(grid,K,order,[bc for bc in BCs])
+    BCs = (Left=BCs[1],Right=BCs[2])
+    VariableCoefficientPDE1D{T}(grid,K,order,BCs)
 end
+
+
+
+
+
 
