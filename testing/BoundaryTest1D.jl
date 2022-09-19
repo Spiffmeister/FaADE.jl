@@ -55,5 +55,5 @@ SATD2, SATFn2 = SBP_operators.SATs.SAT(P.BoundaryConditions[1],Dom,order,:cgie)
 
 # Solution storage
 IC = u₀(Dom.grid)
-solution = SBP_operators.solvers.solution{Float64}(IC,Dom,0.0,Δt,P)
+solution = SBP_operators.solvers.solution{Float64}(Dom,0.0,Δt,P)
 

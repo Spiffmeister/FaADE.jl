@@ -40,7 +40,7 @@ module SBP_operators
     
     using SBP_operators.SATs: SAT_Periodic, SATDirichlet, SimultanousApproximationTerm
 
-    using SBP_operators.solvers: time_solver, build_H
+    using SBP_operators.solvers: solve, build_H
 
 
     # Export the functions for direct user interaction
@@ -51,7 +51,7 @@ module SBP_operators
 
     export Dₓ, Dₓₓ, Dₓₓ!
 
-    export time_solver, build_H
+    export solve, build_H
     
     export SimultanousApproximationTerm,
         SAT_Dirichlet, SAT_Dirichlet!, SATDirichlet,

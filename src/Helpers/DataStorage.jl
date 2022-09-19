@@ -49,7 +49,7 @@ struct ConjGradBlock{T,N} <: DataBlockType{T,N}
     b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
     rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
     Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
-    Arₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
+    Drₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
     dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
 
     converged :: Bool
@@ -154,7 +154,8 @@ end
     copyUtoSAT
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs.
 """
-function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,nnodes::Int)
+function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::Int)
+    nnodes = SATNodeOutput(order)
     if side == Left
         SAT .= u[1:nnodes,:]
     elseif side == Right
@@ -166,7 +167,8 @@ function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,nnodes::
     end
 end
 
-function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,nnodes::Int)
+function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
+    nnodes = SATNodeOutput(order)
     if side == Left
         u[1:nnodes,:] .= SAT
     elseif side == Right
