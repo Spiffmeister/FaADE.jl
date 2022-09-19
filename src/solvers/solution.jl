@@ -1,14 +1,14 @@
 
 
 
-
-mutable struct solution{T<:Real}
+mutable struct solution{T}
     u       :: Vector{AbstractArray{T}}
     grid    :: GridType
     Δt      :: Union{T,Vector{T}}
     t       :: Vector{T}
+    problem :: PDEProblem
 
-    function solution(u₀,x,Δx,t,Δt;preallocate=false)
+    function solution{T}(u₀::AbstractArray{T},grid,t,Δt,prob::PDEProblem;preallocate=false) where T
         if preallocate
             N = ceil(Int64,t/Δt)
             n = length(x)
@@ -19,7 +19,7 @@ mutable struct solution{T<:Real}
             new(u,x,Δt,collect(range(0.0,t,length=N)))
         else
             u = u₀
-            new([u],x,[Δt],[t])
+            new{T}([u],grid,[Δt],[t],prob)
         end
 
     end
@@ -27,33 +27,4 @@ end
 
 
 
-
-"""
-    Struct for storing checkpoints for 2D simulations
-"""
-mutable struct checkpoint_2d
-    # Solution info
-    soln        :: solution_2d
-    Δx          :: Float64
-    Δy          :: Float64
-    t_f         :: Float64
-    # Diffusion coefficient matricies
-    kx          :: Matrix{Float64}
-    ky          :: Matrix{Float64}
-    # Boundary functions
-    gx          :: Function
-    gy          :: Function
-    # Parallel penalty function if provided
-    parallel    :: Bool
-    penalty_fn  :: Union{Function,Nothing}
-    # Simulation parameters
-    order_x     :: Int64
-    order_y     :: Int64
-    method      :: Symbol
-    maxIT       :: Int64
-    samplefactor:: Float64
-    tol         :: Float64
-    rtol        :: Float64
-    adaptive    :: Bool
-end
 

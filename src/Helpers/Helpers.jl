@@ -24,7 +24,7 @@ module Helpers
 
     # Export UserTypes
     export BoundaryConditionData, Boundary, PeriodicBoundary,
-    VariableCoefficientPDE1D, VariableCoefficientPDE2D
+    PDEProblem, VariableCoefficientPDE1D, VariableCoefficientPDE2D
     
     # DataStorage import
     export DataBlockType, BoundaryStorage, 
