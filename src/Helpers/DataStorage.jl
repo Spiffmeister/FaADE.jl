@@ -1,7 +1,7 @@
 
 
 # abstract type Solution{T<:AbstractFloat} end
-abstract type DataBlockType{T<:AbstractFloat} end
+abstract type DataBlockType{T<:AbstractFloat,N} end
 abstract type BoundaryStorage{T<:AbstractFloat} end
 
 
@@ -10,52 +10,60 @@ abstract type BoundaryStorage{T<:AbstractFloat} end
     DataBlock{T}
 Passed around internally between functions. Only contains data required for current timestep.
 """
-struct DataBlock{T,DIM} <: DataBlockType{T}
+struct DataBlock{T,N} <: DataBlockType{T,N}
+    dim         :: Int
     grid        :: GridType
     u           :: AbstractArray{T}
     uₙ₊₁        :: AbstractArray{T}
-    K           :: Vector{AbstractArray{T}}
+    K           :: Union{Vector,Vector{AbstractArray{T}}}
     boundary    :: BoundaryStorage
     Δt          :: T
-    function DataBlock{T,DIM}(
+    function DataBlock{T}(
             boundaries::NamedTuple,
             grid::GridType,
             Δt::T,
             order::Int,
-            K::AbstractArray{T}) where {T,DIM}
+            K::AbstractArray{T}) where {T}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
             u   = zeros(T,grid.n)
             uₓₓ = zeros(T,grid.n)
             BStor = BoundaryData1D{T}(boundaries,order)
+            DiffCoeff = K
+            dim = 1
         elseif typeof(grid) <: Grid2D
             u   = zeros(T,(grid.nx,grid.ny))
             uₓₓ = zeros(T,(grid.nx,grid.ny))
             BStor = BoundaryData2D{T}(boundaries,grid.nx,grid.ny,order)
+            DiffCoeff = [K]
+            dim = 2
         end
-        DiffCoeff = [K]
-        new{T,DIM}(grid,u,uₓₓ,DiffCoeff,BStor,Δt)
+        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,Δt)
     end
 end
 
 
 #========== WHOLE PROBLEM DATA ==========#
-struct ConjGradBlock{T} <: DataBlockType{T}
-    b   :: AbstractArray{T} # b = uⁿ⁺¹ + F
-    rₖ  :: AbstractArray{T} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
-    Adₖ :: AbstractArray{T}
-    Arₖ :: AbstractArray{T}
-    dₖ  :: AbstractArray{T}
+struct ConjGradBlock{T,N} <: DataBlockType{T,N}
+    b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
+    rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
+    Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
+    Arₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
+    dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
+
+    converged :: Bool
 
     function ConjGradBlock{T}(n::Int...) where T
+        b   = zeros(T,n)
         rₖ  = zeros(T,n)
         Adₖ = zeros(T,n)
         Arₖ = zeros(T,n)
         dₖ  = zeros(T,n)
-        b   = zeros(T,n)
 
-        new{T}(b, rₖ, Adₖ, Arₖ, dₖ)
+        dims = length(n)
+
+        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true)
     end
 end
 
@@ -146,7 +154,7 @@ end
     copyUtoSAT
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs.
 """
-function copyUtoSAT(SAT::AbstractArray,u::AbstractArray,side::NodeType,nnodes::Int)
+function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,nnodes::Int)
     if side == Left
         SAT .= u[1:nnodes,:]
     elseif side == Right
@@ -158,5 +166,15 @@ function copyUtoSAT(SAT::AbstractArray,u::AbstractArray,side::NodeType,nnodes::I
     end
 end
 
-
+function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,nnodes::Int)
+    if side == Left
+        u[1:nnodes,:] .= SAT
+    elseif side == Right
+        u[1:nnodes,:] .= SAT
+    elseif side == Up
+        u[1:nnodes,:] .= SAT
+    elseif side == Down
+        u[1:nnodes,:] .= SAT
+    end
+end
 

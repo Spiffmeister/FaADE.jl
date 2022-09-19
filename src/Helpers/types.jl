@@ -14,6 +14,8 @@ struct NodeType{T} end
 const Left = NodeType{:Left}()
 const Internal = NodeType{:Internal}()
 const Right = NodeType{:Right}()
+const Up = NodeType{:Up}()
+const Down = NodeType{:Down}()
 
 
 

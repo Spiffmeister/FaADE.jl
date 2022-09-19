@@ -34,30 +34,28 @@ end
     PDE Problem type for user input
 """
 struct VariableCoefficientPDE1D{T} <: PDEProblem
-    grid                :: GridType{T}
     K                   :: AbstractArray{T}
     order               :: Int
     BoundaryConditions  :: NamedTuple
-    function VariableCoefficientPDE1D{T}(grid,K,order,BC) where T
-        new(grid,K,order,BC)
+    function VariableCoefficientPDE1D{T}(K,order,BC) where T
+        new(K,order,BC)
     end
 end
 struct VariableCoefficientPDE2D{T,D} <: PDEProblem
-    grid                :: GridType{T}
     Kx                  :: AbstractArray{T}
     Ky                  :: AbstractArray{T}
     order               :: Vector{Int}
     BoundaryConditions  :: Vector{D}
-    function VariableCoefficientPDE2D{T,D}(grid::GridType{T},Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
-        new(grid,Kx,Ky,order,[bc for bc in BCs])
+    function VariableCoefficientPDE2D{T,D}(Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
+        new(Kx,Ky,order,[bc for bc in BCs])
     end
 end
 
 
 
-function VariableCoefficientPDE1D(grid::GridType{T},K::AbstractVector{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
+function VariableCoefficientPDE1D(K::AbstractVector{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
     BCs = (Left=BCs[1],Right=BCs[2])
-    VariableCoefficientPDE1D{T}(grid,K,order,BCs)
+    VariableCoefficientPDE1D{T}(K,order,BCs)
 end
 
 

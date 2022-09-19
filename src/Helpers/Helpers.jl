@@ -11,7 +11,7 @@ module Helpers
 
 
     # types import
-    export NodeType, Left, Internal, Right
+    export NodeType, Left, Internal, Right, Up, Down
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     export SATMode, DataMode, SolutionMode
 
@@ -30,7 +30,7 @@ module Helpers
     export DataBlockType, BoundaryStorage, 
         DataBlock, ConjGradBlock,
         BoundaryData1D, BoundaryData2D, 
-        copyUtoSAT
+        copyUtoSAT!, copySATtoU!
     
 end
 

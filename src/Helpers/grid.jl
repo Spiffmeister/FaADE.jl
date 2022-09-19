@@ -25,7 +25,7 @@ end
     Grid2D{T}
 Grid data structure for 2 dimensional problems
 """
-struct Grid2D{T,N} <: GridType{T,2}
+struct Grid2D{T} <: GridType{T,2}
     gridx   :: AbstractArray{T}
     gridy   :: AbstractArray{T}
     Δx      :: T
