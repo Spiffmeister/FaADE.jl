@@ -53,44 +53,6 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
     end
 
 end
-
-
-
-
-
-"""
-    SecondDerivative!
-"""
-@views @inline function SecondDerivativeInternal1D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,
-    Δx::AbstractFloat,nx::Int)
-
-    for i in 2:nx-1
-            @inbounds uₓₓ[i-1] = 
-                ((cx[i-1] + cx[i])*u[i-1] + (cx[i-1] + 2cx[i] + cx[i+1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2.0Δx^2)
-    end
-    uₓₓ
-end
-@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
-    Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int)
-
-    for j in 2:ny-1
-        for i in 2:nx-1
-            @inbounds uₓₓ[i-1,j-1] = 
-                ((cx[i-1,j] + cx[i,j])*u[i-1,j] + (cx[i-1,j] + 2cx[i,j] + cx[i+1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
-                ((cy[i,j-1] + cy[i,j])*u[i,j-1] + (cy[i,j-1] + 2cy[i,j] + cy[i,j+1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
-        end
-    end
-    uₓₓ
-end
-
-
-
-
-
-
-
-
-
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Left};order::Int64=2)
 
     if order == 2
@@ -273,7 +235,6 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
         return uₓₓ
     end
 end
-
 function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Right};order::Int64=2)
     if order == 2
         return [0.0]
@@ -461,6 +422,46 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
 
     end
 end
+
+
+
+
+
+
+
+
+"""
+    SecondDerivative!
+"""
+@views @inline function SecondDerivativeInternal1D!(uₓₓ::AbstractVector,u::AbstractVector,cx::AbstractVector,
+    Δx::AbstractFloat,nx::Int)
+
+    for i = 2:nx-1
+            @inbounds uₓₓ[i-1] = 
+                ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2.0Δx^2)
+    end
+    uₓₓ
+end
+@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
+    Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int)
+
+    for j = 2:ny-1
+        for i = 2:nx-1
+            @inbounds uₓₓ[i-1,j-1] = 
+                ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
+                ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
+        end
+    end
+    uₓₓ
+end
+
+
+
+
+
+
+
+
 
 
 

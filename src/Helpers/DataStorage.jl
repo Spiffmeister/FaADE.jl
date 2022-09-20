@@ -172,11 +172,22 @@ function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::I
     if side == Left
         u[1:nnodes,:] .= SAT
     elseif side == Right
-        u[1:nnodes,:] .= SAT
+        u[end-nnodes+1:end,:] .= SAT
     elseif side == Up
-        u[1:nnodes,:] .= SAT
+        u[:,1:nnodes] .= SAT
     elseif side == Down
-        u[1:nnodes,:] .= SAT
+        u[:,end-nnodes+1:end] .= SAT
     end
 end
 
+
+# function copySATtoU!(DBlock::DataBlock{T,1},order::Int) where T
+#     copySATtoU!(u,SAT_Left)
+#     copySATtoU!(u,SAT_Left)
+# end
+# function copySATtoU!(DBlock::DataBlock{T,2},order::Int) where T
+#     copySATtoU!(u,SAT_Left)
+#     copySATtoU!(u,SAT_Left)
+#     copySATtoU!(u,SAT_Left)
+#     copySATtoU!(u,SAT_Left)
+# end

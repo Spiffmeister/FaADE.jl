@@ -32,12 +32,12 @@ function Dₓₓ end
 function Dₓₓ(u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order::Int64=2)
     # Function call for the 1D 2nd derivative SBP operator
     uₓₓ = zeros(eltype(u),size(u))
-    Dₓₓ!(uₓₓ,u,c,n,Δx,order=order)
+    Dₓₓ!(uₓₓ,u,c,n,Δx,order)
     return uₓₓ
 end
 ### 2D second derivative operator
 function Dₓₓ(u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
-# Multidimensional call for 2nd derivative SBP operator
+    # Multidimensional call for 2nd derivative SBP operator
 
     uₓₓ = zeros(eltype(u),size(u))
 
@@ -81,7 +81,12 @@ end
 
 
 
-
+function generate_Derivative(n::Int64,Δx::Float64,order::Int64)
+    let n = n, Δx=Δx, order=order
+        Diff(uₓₓ,u,c) = Dₓₓ!(uₓₓ,u,c,n,Δx,order)
+        return Diff
+    end
+end
 """
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
 or
@@ -93,17 +98,16 @@ Mutable function for 1D and 2D second derviative SBP operator
 """
 function Dₓₓ! end
 ### 1D second derviative mutable function
-function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64,order::Int64)
+@inline function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64,order::Int64)
+    #TODO HIGHER ORDER METHODS
+    # half = halforder(order)
+    # adj = BoundaryNodeOutput(order)
+    
+    SecondDerivativeInternal1D!(@views(uₓₓ[2:n-1]),u,c,Δx,n)
 
-    half = halforder(order)
-    # adj = 
-
-    SecondDerivativeInternal1D!(@views(uₓₓ[2:n[1]-1,2:n[2]-1]),u,c,Δx,n)
-
-    SecondDerivative!(uₓₓ,u[1:2order],c[1:2order],Δx,Left,order=order)
-    SecondDerivative!(uₓₓ,u[n-2order+1:n],c[n-2order+1:n],Δx,Right,order=order)
-
-    # return uₓₓ
+    SecondDerivative!(uₓₓ,u[1:order],c[1:order],Δx,Left,order=order)
+    SecondDerivative!(uₓₓ,u[n-order+1:n],c[n-order+1:n],Δx,Right,order=order)
+    uₓₓ
 end
 ### Multidimensional second derivative SBP operator
 function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)

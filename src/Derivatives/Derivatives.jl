@@ -11,6 +11,6 @@ module Derivatives
     include("Op_Dxx.jl")
 
     export SecondDerivative
-    export Dₓ, Dₓₓ, Dₓₓ!, Stencil2D
+    export Dₓ, Dₓₓ, Dₓₓ!, Stencil2D, generate_Derivative
 
 end
