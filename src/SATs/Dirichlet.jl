@@ -44,7 +44,7 @@ If `solver ∈ [:euler]` then only one method is generated
 """
 function generate_Dirichlet(SATD::SATDirichlet,solver)
     # Choose the axis to loop over
-    loopdirection = select_SAT_direction(SATD.axis)
+    loopdirection = SelectLoopDirection(SATD.axis)
 
     let α = SATD.α, 
         τ = SATD.τ,
@@ -52,19 +52,19 @@ function generate_Dirichlet(SATD::SATDirichlet,solver)
         side = SATD.side,
         order = SATD.order
 
-    if solver == :cgie
-        # Defines 2 methods
-        CGTerm(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = 
-            SAT_Dirichlet_implicit!(cache,side,u,c,α,τ,BD,order,loopdirection)
-        CGTerm(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 
-                SAT_Dirichlet_implicit_data!(cache,side,RHS,c,α,τ,BD,order,loopdirection)
+        if solver == :cgie
+            # Defines 2 methods
+            CGTerm(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = 
+                SAT_Dirichlet_implicit!(cache,side,u,c,α,τ,BD,order,loopdirection)
+            CGTerm(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 
+                    SAT_Dirichlet_implicit_data!(cache,side,RHS,c,α,τ,BD,order,loopdirection)
 
-            return CGTerm
-    elseif solver ∈ [:euler]
-        Term(cache,u,c) = SAT_Dirichlet_explicit!(cache,side,u,c,SATD.RHS,α,τ,BD,order,loopdirection)
+                return CGTerm
+        elseif solver ∈ [:euler]
+            Term(cache,u,c) = SAT_Dirichlet_explicit!(cache,side,u,c,SATD.RHS,α,τ,BD,order,loopdirection)
 
-        return Term
-    end
+            return Term
+        end
     end
 end
 

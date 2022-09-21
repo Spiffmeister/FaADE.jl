@@ -29,7 +29,7 @@ end
 """
 function generate_Periodic(SATP::Boundary_Periodic,solver)
 
-    loopdirection = select_SAT_direction(SATP.axis)
+    loopdirection = SelectLoopDirection(SATP.axis)
 
     p = SATP.penalties
 

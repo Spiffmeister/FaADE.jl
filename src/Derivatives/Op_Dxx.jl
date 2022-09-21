@@ -8,10 +8,10 @@ The second derivative SBP operator. There are three call options:
     3. Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
         order_x::Int64=2,order_y::Int64=order_x)
 
-1. If `typeof(u) <: Vector{Float64}` then uses a 1D second derviative SBP operator (option 1)
+1. 1D second derviative SBP operator
     - Returns a `Vector{Float64}` of length `n`.
 
-2. If `typeof(u) <: Matrix{Float64}` then uses a 2D second derivative SBP operator (option 2)
+2. 1D second derivative SBP operator along the dimension given by `dim`
     - dim ∈ [1,2]
         - If `dim==1` then takes derivative along rows (`u[:,i]`)
         - If `dim==2` then takes derivative along columns (`u[i,:]`)
@@ -36,34 +36,17 @@ function Dₓₓ(u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order
     return uₓₓ
 end
 ### 2D second derivative operator
-function Dₓₓ(u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
+function Dₓₓ(u::AbstractMatrix,n::Int64,Δ::Float64,c::AbstractMatrix,dim::Int64=1;order::Int64=2)
     # Multidimensional call for 2nd derivative SBP operator
-
     uₓₓ = zeros(eltype(u),size(u))
-
-    Dₓₓ!(uₓₓ,u,c,n,Δx,order=order)
-
-    if dim == 1
-        for i = 1:ny #column derivatives
-            uₓₓ[:,i] = Dₓₓ!(uₓₓ[:,i],u[:,i],c[:,i],nx,Δ,order=order)
-        end
-    elseif dim == 2
-        for i = 1:nx #row derivative
-            uₓₓ[i,:] = Dₓₓ!(uₓₓ[i,:],u[i,:],c[i,:],ny,Δ,order=order)
-        end
-    else
-        error("dim must be 1 or 2.")
-    end
-
+    Dₓₓ!(uₓₓ,u,c,n,Δ,dim,order)
     return uₓₓ
 end
 function Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
     order_x::Int64=2,order_y::Int64=order_x)
-
+    # 2D 2nd derivative SBP operator
     uₓₓ = SharedArray(zeros(Float64,nx,ny))
-
-    Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order_x=order_x,order_y=order_y)
-
+    Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order_x,order_y)
     return uₓₓ
 end
 
@@ -72,22 +55,33 @@ end
 
 
 
+"""
+    generate_Derivative
 
-
-
-
-
-
-
-
-
+Returns a function `Diff(uₓₓ,u,c...)` which computes the derivative in 1 or 2 dimensions
+"""
+function generate_Derivative end
 function generate_Derivative(n::Int64,Δx::Float64,order::Int64)
     let n = n, Δx=Δx, order=order
         Diff(uₓₓ,u,c) = Dₓₓ!(uₓₓ,u,c,n,Δx,order)
         return Diff
     end
 end
+function generate_Derivative(nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,order::Int64)
+    let nx=nx, ny=ny,
+            Δx=Δx, Δy=Δy,
+            order=order
+        Diff(uₓₓ,u,cx,cy) = Dₓₓ!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,order,order)
+        return Diff
+    end
+end
+
+
 """
+    Dₓₓ!
+
+
+
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
 or
     Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
@@ -110,38 +104,16 @@ function Dₓₓ! end
     uₓₓ
 end
 ### Multidimensional second derivative SBP operator
-function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
-
-    if dim == 1
-        @sync @distributed for i = 1:ny #column derivatives
-            uₓₓ[:,i] = SecondDerivativeInternal1D!(uₓₓ[:,i],u[:,i],c[:,i],Δ,nx)
-        end
-    elseif dim == 2
-        @sync @distributed for i = 1:nx #row derivative
-            uₓₓ[i,:] = SecondDerivativeInternal1D!(uₓₓ[i,:],u[i,:],c[i,:],Δ,ny)
-        end
-    else
-        error("dim must be 1 or 2.")
+function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,c::AbstractMatrix,n::Int64,Δ::Float64,dim::Int64=1,order::Int64=2)
+    loopdir = SelectLoopDirection(dim)    
+    for (T,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
+        Dₓₓ!(T,U,C,n,Δ,order)
     end
-
     return uₓₓ
 end
-
-
-
-
-
-### 2D at nodes
-function Dₓₓ(cache::AbstractVector,u::AbstractVector,c::AbstractVector,
-        n::Int,Δx::AbstractFloat,order::Int)
-
-    
-    
-end
-
-
+### 2D second  derviative mutable function
 function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,cx::AbstractMatrix,cy::AbstractMatrix,
-        nx::Int64,ny::Int64,Δx::Float64,Δy::Float64;
+        nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,
         order_x::Int64=2,order_y::Int64=order_x)
 
     # Half order

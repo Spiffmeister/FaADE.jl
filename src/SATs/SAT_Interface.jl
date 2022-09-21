@@ -37,15 +37,7 @@ end
 
 
 
-function select_SAT_direction(axis::Int)
-    if axis == 1
-        return eachcol
-    elseif axis == 2
-        return eachrow
-    else
-        error("axis must be 1 or 2")
-    end
-end
+
 
 
 

@@ -17,7 +17,8 @@ module Helpers
 
     # nifty import
     export check_order, check_boundary,
-        halforder, BoundaryNodeInput, BoundaryNodeOutput
+        halforder, BoundaryNodeInput, BoundaryNodeOutput,
+        SelectLoopDirection
 
     # grid import
     export GridType, Grid1D, Grid2D

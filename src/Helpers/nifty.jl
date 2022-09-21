@@ -54,3 +54,17 @@ Returns the number of nodes needed for the `BoundaryData1D` and `BoundaryData2D`
 @inline SATNodeOutput(order::Int) = order == 2 ? 2 : order+halforder(order)
 @inline SATNodeOutput(order::Int...) = SATNodeOutput.(order)
 
+
+#========
+    SELECT LOOPING DIRECTION
+========#
+function SelectLoopDirection(axis::Int)
+    if axis == 1
+        return eachcol
+    elseif axis == 2
+        return eachrow
+    else
+        error("axis must be 1 or 2")
+    end
+end
+
