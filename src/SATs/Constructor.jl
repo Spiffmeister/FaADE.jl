@@ -91,3 +91,54 @@ end
 
 
 
+
+abstract type Derivative{R,DIM} end
+
+struct SecondDerivative2D <: Derivative{2,1}
+    nx      ::Int
+    Δx      ::Float64
+    order   ::Int
+end
+
+function (D::Derivative{2,1})(uₓₓ,u,c)
+
+end
+
+
+
+
+abstract type Poly{R,T} end
+
+struct Polynomial1D{R} <: Poly{R,1}
+    coeffs::Vector{R}
+end
+struct Polynomial2D{R} <: Poly{R,2}
+    coeffs::Vector{R}
+end
+
+function (p::Poly{R,1})(x) where R
+    v = p.coeffs[end]
+    for i = (length(p.coeffs)-1):-1:1
+        v = v*x + p.coeffs[i]
+    end
+    return v
+end
+
+
+function (p::Poly{R,2})(x) where R
+    v = p.coeffs[end]
+    for i = (length(p.coeffs)-1):-1:1
+        v = v*x + p.coeffs[i] + 1
+    end
+    return v
+end
+
+(p::Poly{Int,1})() = p(5)
+(p::Poly{Int,2})() = p(1)
+
+
+
+p = Polynomial1D{Int}([1,10,100])
+
+p2 = Polynomial2D{Int}([1,10,100])
+
