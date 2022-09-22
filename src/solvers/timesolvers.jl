@@ -1,5 +1,10 @@
 
 
+
+
+
+
+
 function solve end
 
 """
@@ -11,7 +16,7 @@ function solve end
         c. Derivative function
     2. Solving
 """
-function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver)
+function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adaptive=false)
 
     DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
     CGBlock = ConjGradBlock{Float64}(grid.n)
@@ -52,10 +57,14 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver)
             DBlock.u .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
             copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
+            DBlock.Δt *= 1.05
+            t += DBlock.Δt
         else #If CG fails, reset and retry step
             DBlock.uₙ₊₁ .= DBlock.u
+            if DBlock.Δt < soln.Δt[1]/10.0
+                error("CG could not converge, aborting at t=",t," with Δt=",DBlock.Δt)
+            end
         end
-        t += Δt
     end
 
     push!(soln.u,DBlock.u)
@@ -63,7 +72,28 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver)
     return soln
 
 end
+# 2D Mode
 function solve(Prob::VariableCoefficientPDE2D)
+    _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+    _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
+    _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
+    _,SAT_Down  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
+
+    Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
+
+    function CGRHS!(cache::AbstractArray,u::AbstractArray,kx::AbstractArray,ky::AbstractAray)
+        Diff(cache,u,kx,ky)
+        SAT_Left(cache,u,kx,ky,SolutionMode)
+        SAT_Right(cache,u,kx,ky,SolutionMode)
+        SAT_Up(cache,u,kx,ky,SolutionMode)
+        SAT_Down(cache,u,kx,ky,SolutionMode)
+    end
+
+    t = Δt
+    DBlock.uₙ₊₁ .= DBlock.u
+
+    while t < t_f
+    end
 end
 
 

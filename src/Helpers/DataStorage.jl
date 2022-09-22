@@ -147,6 +147,13 @@ end
 
 
 
+function BuildStorage(Prob,grid,Δt)
+    DB = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
+    CG = ConjGradBlock{Float64}(grid.n)
+    return DB,CG
+end
+
+
 
 
 
@@ -182,12 +189,18 @@ end
 
 
 # function copySATtoU!(DBlock::DataBlock{T,1},order::Int) where T
-#     copySATtoU!(u,SAT_Left)
-#     copySATtoU!(u,SAT_Left)
+#     copySATtoU!(u,SAT_Left,Left,order)
+#     copySATtoU!(u,SAT_Right,Right,order)
+#     if DBlock <: DataBlock{T,2}
+#         copySATtoU!(u,SAT_Up,Up,order)
+#         copySATtoU!(u,SAT_Down,Down,order)
+#     end
 # end
-# function copySATtoU!(DBlock::DataBlock{T,2},order::Int) where T
-#     copySATtoU!(u,SAT_Left)
-#     copySATtoU!(u,SAT_Left)
-#     copySATtoU!(u,SAT_Left)
-#     copySATtoU!(u,SAT_Left)
+# function copyUtoSAT!(DBlock::DataBlock{T,1},order::Int) where T
+#     copyUtoSAT!(SAT_Left,u,Left,order)
+#     copyUtoSAT!(SAT_Right,u,Right,order)
+#     if DBlock <: DataBlock{T,2}
+#         copySATtoU!(u,SAT_Up,Up,order)
+#         copySATtoU!(u,SAT_Down,Down,order)
+#     end
 # end
