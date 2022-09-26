@@ -18,11 +18,11 @@ Dom = Grid1D(𝒟,n)
 
 K = zeros(Float64,n) .+ 1.0
 
-t_f = 2.1Δt
+t_f = 5Δt
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g₀(t) = 0.0
+g₀(t) = 1.0
 g₁(t) = 0.0
 
 BoundaryLeft = Boundary(Dirichlet,g₀,Left,1)
@@ -39,8 +39,10 @@ println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-# soln = solve(P,Dom,Δt,t_f,:cgie)
-@benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
+# @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
+
+soln = solve(P,Dom,Δt,t_f,:cgie)
+plot(soln.grid.grid,soln.u[2])
 
 # println("Plotting")
 

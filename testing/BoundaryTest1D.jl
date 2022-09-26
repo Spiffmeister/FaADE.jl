@@ -30,28 +30,50 @@ order = 2
 K = ones(Float64,n)
 Δt = 0.1Dom.Δx
 
-# Define some boundary conditions
-BoundaryLeft = Boundary(Dirichlet,g₀,Left,1)
-BoundaryRight = Boundary(Dirichlet,g₁,Right,1)
-
 # Define initial condition
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
-# Build PDE problem
-P = VariableCoefficientPDE1D(u₀,K,order,BoundaryLeft,BoundaryRight)
 
+# Define some boundary conditions
+BoundaryDirichletLeft = Boundary(Dirichlet,g₀,Left,1)
+BoundaryDirichletRight = Boundary(Dirichlet,g₁,Right,1)
+
+# Build PDE problem
+PD = VariableCoefficientPDE1D(u₀,K,order,BoundaryDirichletLeft,BoundaryDirichletRight)
 
 # Testing internal data storage construction
-BStor = SBP_operators.Helpers.BoundaryData1D{Float64}(P.BoundaryConditions,order)
-DStor = SBP_operators.Helpers.DataBlock{Float64}(P.BoundaryConditions,Dom,Δt,2,P.K)
+BStor = SBP_operators.Helpers.BoundaryData1D{Float64}(PD.BoundaryConditions,order)
+DStor = SBP_operators.Helpers.DataBlock{Float64}(PD.BoundaryConditions,Dom,Δt,2,PD.K)
 CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(n)
 
 
 
 # Testing internal boundary function construction
-SATDL = SBP_operators.SATs.SATDirichlet(P.BoundaryConditions[1].RHS,Dom.Δx,P.BoundaryConditions[1].side,P.BoundaryConditions[1].axis,order)
-SATDR = SBP_operators.SATs.SATDirichlet(P.BoundaryConditions[2].RHS,Dom.Δx,P.BoundaryConditions[1].side,P.BoundaryConditions[1].axis,order)
-SATD1, SATFn1 = SBP_operators.SATs.SAT(P.BoundaryConditions[1],Dom,order,:cgie)
-SATD2, SATFn2 = SBP_operators.SATs.SAT(P.BoundaryConditions[2],Dom,order,:cgie)
+SATDL = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[1].RHS,Dom.Δx,PD.BoundaryConditions[1].side,PD.BoundaryConditions[1].axis,order)
+SATDR = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[2].RHS,Dom.Δx,PD.BoundaryConditions[1].side,PD.BoundaryConditions[1].axis,order)
+SATD1, SATFn1 = SBP_operators.SATs.SAT(PD.BoundaryConditions[1],Dom,order,:cgie)
+SATD2, SATFn2 = SBP_operators.SATs.SAT(PD.BoundaryConditions[2],Dom,order,:cgie)
+
+
+
+#= Neumann Boundaries =#
+BoundaryNeumannLeft = Boundary(Neumann,g₀,Left,1)
+BoundaryNeumannRight = Boundary(Neumann,g₁,Right,1)
+
+PN = VariableCoefficientPDE1D(u₀,K,order,BoundaryNeumannLeft,BoundaryDirichletRight)
+
+SATNL = SBP_operators.SATs.SAT_Neumann(PN.BoundaryConditions[1].RHS,Dom.Δx,PN.BoundaryConditions[1].side,PN.BoundaryConditions[1].axis,order)
+SATNR = SBP_operators.SATs.SAT_Neumann(PN.BoundaryConditions[2].RHS,Dom.Δx,PN.BoundaryConditions[2].side,PN.BoundaryConditions[2].axis,order)
+SATN1, SATNf1 = SBP_operators.SATs.SAT(PN.BoundaryConditions[1],Dom,order,:cgie)
+SATN2, SATNf2 = SBP_operators.SATs.SAT(PN.BoundaryConditions[2],Dom,order,:cgie)
+
+
+
+
+
+
+
+#####################
+
 
 # Solution storage
 IC = u₀(Dom.grid)
