@@ -1,9 +1,9 @@
 
 
 """
-    SATDirichlet
+    SAT_Dirichlet
 """
-struct SATDirichlet{T} <: SimultanousApproximationTerm
+struct SAT_Dirichlet{T} <: SimultanousApproximationTerm
     type    :: BoundaryConditionType
     side    :: NodeType
     axis    :: Int
@@ -15,7 +15,7 @@ struct SATDirichlet{T} <: SimultanousApproximationTerm
     τ       :: T
 
     ### CONSTRUCTOR ###
-    function SATDirichlet(RHS::Function,Δx::T,side::NodeType,axis::Int,order::Int) where T
+    function SAT_Dirichlet(RHS::Function,Δx::T,side::NodeType,axis::Int,order::Int) where T
 
         check_boundary(side)
 
@@ -42,7 +42,7 @@ Generates mutating functions required for Dirichlet boundary conditions.
 If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
 If `solver ∈ [:euler]` then only one method is generated
 """
-function generate_Dirichlet(SATD::SATDirichlet,solver)
+function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
     # Choose the axis to loop over
     loopdirection = SelectLoopDirection(SATD.axis)
 
@@ -70,6 +70,7 @@ end
 
 
 #=== Explicit methods ===#
+function SAT_Dirichlet_explicit! end
 function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,RHS,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)
@@ -90,6 +91,7 @@ function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
 end
 
 #=== Implicit methods ===#
+function SAT_Dirichlet_implicit! end
 function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)
@@ -108,6 +110,7 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
         S[end] += τ*U[end]
     end
 end
+function SAT_Dirichlet_implicit_data! end
 function SAT_Dirichlet_implicit_data!(SAT::AbstractArray,::NodeType{:Left},u,c::AbstractArray,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)

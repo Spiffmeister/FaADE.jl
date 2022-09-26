@@ -38,7 +38,7 @@ module SBP_operators
 
     using SBP_operators.Derivatives: Dₓ, Dₓₓ, Dₓₓ!
     
-    using SBP_operators.SATs: SAT_Periodic, SATDirichlet, SimultanousApproximationTerm
+    using SBP_operators.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
 
     using SBP_operators.solvers: solve, build_H
 
@@ -54,10 +54,10 @@ module SBP_operators
     export solve, build_H
     
     export SimultanousApproximationTerm,
-        SAT_Dirichlet, SAT_Dirichlet!, SATDirichlet,
-        SAT_Periodic, SAT_Periodic!, 
-        Split_domain
-        #SAT_Neumann, SAT_Neumann!, 
+        SAT_Dirichlet,
+        SAT_Neumann,
+        SAT_Periodic
         #SAT_Robin, 
+        #Split_domain
 
 end # module

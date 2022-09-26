@@ -2,7 +2,7 @@ module SATs
 
 
     # import Base: +
-
+    using LinearAlgebra: dot
     using SBP_operators.Helpers
     # using StaticArrays
 
@@ -12,21 +12,20 @@ module SATs
     include("Boundary_Operators.jl")
 
     include("Dirichlet.jl")
-    # include("Neumann.jl")
+    include("Neumann.jl")
     # include("Robin.jl")
     include("Periodic.jl")
     # include("Split.jl")
 
 
-    export SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!
-    # export SAT_Neumann, SAT_Neumann!
+    export SAT_Dirichlet, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
+    export SAT_Neumann
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
     # export Split_domain
 
 
     export SimultanousApproximationTerm
-    export SATDirichlet
     export construct_SAT
     
 end

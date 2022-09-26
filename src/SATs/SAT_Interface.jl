@@ -16,7 +16,9 @@ function SAT(BoundCond::BoundaryConditionData,grid::GridType,order::Int,solver)
     end
     # Build Parametic things
     if BoundCond.type == Dirichlet
-        BD = SATDirichlet(BoundCond.RHS,Δ,BoundCond.side,BoundCond.axis,order)
+        BD = SAT_Dirichlet(BoundCond.RHS,Δ,BoundCond.side,BoundCond.axis,order)
+    elseif BoundCond.type == Neumann
+        BD = SAT_Neumann(BoundCond.RHS,Δ,BoundCond.side,BoundCond.axis,order)
     end
     # Build the SAT function
     SATFn = construct_SAT(BD,solver)
@@ -27,6 +29,7 @@ function construct_SAT(Term::SimultanousApproximationTerm,solver)
     if Term.type == Dirichlet
         SATFns = generate_Dirichlet(Term,solver)
     elseif Term.type == Neumann
+        SATFns = generate_Neumann(Term,solver)
     elseif Term.type == Robin
     elseif Term.type == Periodic
     else

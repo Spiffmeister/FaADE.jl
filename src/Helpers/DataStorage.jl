@@ -159,7 +159,7 @@ end
 
 """
     copyUtoSAT
-Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs.
+Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
 """
 function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
@@ -173,7 +173,19 @@ function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::I
         SAT .= u[:,end-nnodes+1:end]
     end
 end
+function copyUtoSAT!(DB::DataBlock,order::Int)
+    copyUtoSAT!(DB.boundary.SAT_Left,DB.u,Left,order)
+    copyUtoSAT!(DB.boundary.SAT_Right,DB.u,Right,order)
+    if typeof(DB) <: DataBlock{T,2} where T
+        copySATtoU!(DB.boundary.SAT_Up,DB.u,Up,order)
+        copySATtoU!(DB.boundary.SAT_Down,DB.u,Down,order)
+    end
+end
 
+"""
+    copySATtoU!
+Moves data from the `SAT_` field  on the given side in `BoundaryStorage` to `u`. Or moves all data from `u` to `SAT_` fields.
+"""
 function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
     if side == Left
@@ -186,21 +198,12 @@ function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::I
         u[:,end-nnodes+1:end] .= SAT
     end
 end
+function copySATtoU!(DB::DataBlock,order::Int)
+    copySATtoU!(DB.u,DB.boundary.SAT_Left,Left,order)
+    copySATtoU!(DB.u,DB.boundary.SAT_Right,Right,order)
+    if typeof(DB) <: DataBlock{T,2} where T
+        copySATtoU!(DB.u,DB.boundary.SAT_Up,Up,order)
+        copySATtoU!(DB.u,DB.boundary.SAT_Down,Down,order)
+    end
+end
 
-
-# function copySATtoU!(DBlock::DataBlock{T,1},order::Int) where T
-#     copySATtoU!(u,SAT_Left,Left,order)
-#     copySATtoU!(u,SAT_Right,Right,order)
-#     if DBlock <: DataBlock{T,2}
-#         copySATtoU!(u,SAT_Up,Up,order)
-#         copySATtoU!(u,SAT_Down,Down,order)
-#     end
-# end
-# function copyUtoSAT!(DBlock::DataBlock{T,1},order::Int) where T
-#     copyUtoSAT!(SAT_Left,u,Left,order)
-#     copyUtoSAT!(SAT_Right,u,Right,order)
-#     if DBlock <: DataBlock{T,2}
-#         copySATtoU!(u,SAT_Up,Up,order)
-#         copySATtoU!(u,SAT_Down,Down,order)
-#     end
-# end

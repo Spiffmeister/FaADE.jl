@@ -8,7 +8,7 @@ mutable struct solution{T}
     t       :: Vector{T}
     problem :: PDEProblem
 
-    function solution{T}(grid,t,Δt,prob::PDEProblem;preallocate=false) where T
+    function solution{T}(grid::GridType,t::T,Δt::T,prob::PDEProblem;preallocate=false) where T
         if preallocate
             N = ceil(Int64,t/Δt)
             n = length(x)
