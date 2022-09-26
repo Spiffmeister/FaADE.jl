@@ -2,7 +2,7 @@
 
 # abstract type Solution{T<:AbstractFloat} end
 abstract type DataBlockType{T<:AbstractFloat,N} end
-abstract type BoundaryStorage{T<:AbstractFloat} end
+abstract type BoundaryStorage{T<:AbstractFloat,N} end
 
 
 #========== WHOLE PROBLEM DATA ==========#
@@ -74,7 +74,7 @@ end
     BoundaryData1D{T}
 Data structure for storage of SATs in 1 dimensional problems
 """
-struct BoundaryData1D{T} <: BoundaryStorage{T}
+struct BoundaryData1D{T} <: BoundaryStorage{T,1}
     Type_Left   :: BoundaryConditionType
     Type_Right  :: BoundaryConditionType
 
@@ -106,7 +106,7 @@ end
     BoundaryData2D{T}
 Data structure for storage of SATs in 2 dimensional problems
 """
-struct BoundaryData2D{T} <: BoundaryStorage{T}
+struct BoundaryData2D{T} <: BoundaryStorage{T,2}
 
     Type_Left    :: BoundaryConditionType
     Type_Right   :: BoundaryConditionType
@@ -173,12 +173,12 @@ function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::I
         SAT .= u[:,end-nnodes+1:end]
     end
 end
-function copyUtoSAT!(DB::DataBlock,order::Int)
-    copyUtoSAT!(DB.boundary.SAT_Left,DB.u,Left,order)
-    copyUtoSAT!(DB.boundary.SAT_Right,DB.u,Right,order)
-    if typeof(DB) <: DataBlock{T,2} where T
-        copySATtoU!(DB.boundary.SAT_Up,DB.u,Up,order)
-        copySATtoU!(DB.boundary.SAT_Down,DB.u,Down,order)
+function copyUtoSAT!(Bound::BoundaryStorage,u::AbstractArray,order::Int)
+    copyUtoSAT!(Bound.SAT_Left,u,Left,order)
+    copyUtoSAT!(Bound.SAT_Right,u,Right,order)
+    if typeof(Bound) <: BoundaryStorage{T,2} where T
+        copySATtoU!(Bound.SAT_Up,u,Up,order)
+        copySATtoU!(Bound.SAT_Down,u,Down,order)
     end
 end
 
@@ -198,12 +198,12 @@ function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::I
         u[:,end-nnodes+1:end] .= SAT
     end
 end
-function copySATtoU!(DB::DataBlock,order::Int)
-    copySATtoU!(DB.u,DB.boundary.SAT_Left,Left,order)
-    copySATtoU!(DB.u,DB.boundary.SAT_Right,Right,order)
-    if typeof(DB) <: DataBlock{T,2} where T
-        copySATtoU!(DB.u,DB.boundary.SAT_Up,Up,order)
-        copySATtoU!(DB.u,DB.boundary.SAT_Down,Down,order)
+function copySATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
+    copySATtoU!(u,Bound.SAT_Left,Left,order)
+    copySATtoU!(u,Bound.SAT_Right,Right,order)
+    if typeof(Bound) <: BoundaryStorage{T,2} where T
+        copySATtoU!(u,Bound.SAT_Up,Up,order)
+        copySATtoU!(u,Bound.SAT_Down,Down,order)
     end
 end
 

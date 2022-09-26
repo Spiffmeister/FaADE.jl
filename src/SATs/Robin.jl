@@ -11,6 +11,31 @@
 Simulatenous approximation term for Robin boundary conditions
 `NodeType` is either `Left` or `Right`
 """
+struct SAT_Robin{T} <: SimultanousApproximationTerm
+    type    :: BoundaryConditionType
+    side    :: NodeType
+    axis    :: Int
+    order   :: Int
+    EDₓ     :: Vector{T}
+    RHS     :: Function
+    Δx      :: T
+    τ       :: T
+    a       :: T
+    b       :: T
+
+    function SAT_Robin(RHS::Function,a,b,Δx::T,side::NodeType,axis::Int,order::Int) where T
+        check_boundary(side)
+
+        τ = SATpenalties(Robin,a,Δx)
+
+        new{T}(Robin,side,axis)
+    end
+end
+
+
+
+
+
 function SAT_Robin end
 function SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
         order=2,a=1.0,b=1.0,forcing=false)

@@ -72,12 +72,12 @@ See also [`build_H`](@ref), [`A`](@ref)
 function conj_grad! end
 # VECTOR FORM
 # function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
-function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,order::Int;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
     
     # x₀ = uₙ #Initial guess
     CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,DBlock.Δt,DBlock.K)
+    A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,Δt,DBlock.K)
     CGB.rₖ .= CGB.rₖ .- CGB.b
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
@@ -86,7 +86,7 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,order::In
     rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ,order,DBlock.grid.Δx))
     unorm = sqrt(innerH(DBlock.uₙ₊₁,DBlock.uₙ₊₁,order,DBlock.grid.Δx))
     while (rnorm > tol) & (i < maxIT)
-        A!(CGB.Adₖ,CGB.dₖ,RHS,DBlock.Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
+        A!(CGB.Adₖ,CGB.dₖ,RHS,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
 
         dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,DBlock.grid.Δx)
         αₖ = -innerH(CGB.rₖ,CGB.dₖ, order,DBlock.grid.Δx)/dₖAdₖ
@@ -94,10 +94,10 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,order::In
         DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,DBlock.Δt,DBlock.K)
+        A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,Δt,DBlock.K)
         CGB.rₖ .= CGB.rₖ .- CGB.b
 
-        A!(CGB.Drₖ,CGB.rₖ,RHS,DBlock.Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
+        A!(CGB.Drₖ,CGB.rₖ,RHS,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
         βₖ = innerH(CGB.rₖ,CGB.Drₖ, order,DBlock.grid.Δx)/dₖAdₖ
         CGB.dₖ .= -CGB.rₖ .+ βₖ*CGB.dₖ

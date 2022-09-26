@@ -5,6 +5,7 @@
 
 
 
+
 function solve end
 
 """
@@ -20,7 +21,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
 
     DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
     CGBlock = ConjGradBlock{Float64}(grid.n)
-        
+    
     soln = solution{Float64}(grid,0.0,Δt,Prob)
 
     DBlock.u .= soln.u[1]
@@ -34,31 +35,37 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
     # Replace cache with the derivative of v + SATs
     function CGRHS!(cache::AbstractArray,u::AbstractArray,k::AbstractArray)
         Diff(cache,u,k)
-        # Dₓₓ!(cache,u,k,grid.n,grid.Δx,Prob.order)
         SAT_Left(cache,u,k,SolutionMode)
         SAT_Right(cache,u,k,SolutionMode)
     end
 
     t = Δt
     DBlock.uₙ₊₁ .= DBlock.u
-    copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
-    copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
+
+    copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
+    # copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
+    # copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
     
     while t < t_f
-        SAT_Left(DBlock.boundary.SAT_Left,DBlock.Δt * Prob.BoundaryConditions.Left.RHS(t),DBlock.K,DataMode)
-        SAT_Right(DBlock.boundary.SAT_Right,DBlock.Δt * Prob.BoundaryConditions.Right.RHS(t),DBlock.K,DataMode)
+        SAT_Left(DBlock.boundary.SAT_Left,Δt*Prob.BoundaryConditions.Left.RHS(t),DBlock.K,DataMode)
+        SAT_Right(DBlock.boundary.SAT_Right,Δt*Prob.BoundaryConditions.Right.RHS(t),DBlock.K,DataMode)
         
-        copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Left,Left,Prob.order)
-        copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Right,Right,Prob.order)
+        copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
-        conj_grad!(DBlock,CGBlock,CGRHS!,Prob.order)
+        # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Left,Left,Prob.order)
+        # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Right,Right,Prob.order)
+
+        conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
         if CGBlock.converged #If CG converges
             DBlock.u .= DBlock.uₙ₊₁
-            copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
-            copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
-            DBlock.Δt *= 1.05
-            t += DBlock.Δt
+            copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
+            # copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
+            # copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
+            if adaptive
+                Δt *= 1.05
+            end
+            t += Δt
         else #If CG fails, reset and retry step
             DBlock.uₙ₊₁ .= DBlock.u
             if DBlock.Δt < soln.Δt[1]/10.0
@@ -74,6 +81,14 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
 end
 # 2D Mode
 function solve(Prob::VariableCoefficientPDE2D)
+
+    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
+    CGBlock = ConjGradBlock{Float64}(grid.nx,grid.ny)
+
+    soln = solution{Float64}(grid,0.0,Δt,Prob)
+
+    DBlock.u .= soln.u[1]
+
     _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
     _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
     _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
@@ -81,18 +96,44 @@ function solve(Prob::VariableCoefficientPDE2D)
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,kx::AbstractArray,ky::AbstractAray)
+    function CGRHS!(cache::AbstractArray,u::AbstractArray,kx::AbstractArray,ky::AbstractArray)
         Diff(cache,u,kx,ky)
-        SAT_Left(cache,u,kx,ky,SolutionMode)
-        SAT_Right(cache,u,kx,ky,SolutionMode)
-        SAT_Up(cache,u,kx,ky,SolutionMode)
-        SAT_Down(cache,u,kx,ky,SolutionMode)
+        SAT_Left(cache,u,K[1],K[2],SolutionMode)
+        SAT_Right(cache,u,K[1],K[2],SolutionMode)
+        SAT_Up(cache,u,K[1],K[2],SolutionMode)
+        SAT_Down(cache,u,K[1],K[2],SolutionMode)
     end
 
     t = Δt
     DBlock.uₙ₊₁ .= DBlock.u
+    
+    copyUtoSAT!(DBlock,Prob.order)
 
     while t < t_f
+
+        SAT_Left(DBlock.boundary.SAT_Left, Δt*Prob.BoundaryConditions.Left.RHS(t), DBlock.K,DataMode)
+        SAT_Right(DBlock.boundary.SAT_Right, Δt*Prob.BoundaryConditions.Right.RHS(t), DBlock.K,DataMode)
+        SAT_Up(DBlock.boundary.SAT_Up, Δt*Prob.BoundaryConditions.Up.RHS(t), DBlock.K,DataMode)
+        SAT_Down(DBlock.boundary.SAT_Down, Δt*Prob.BoundaryConditions.Down.RHS(t), DBlock.K,DataMode)
+
+        copySATtoU!(DBlock,Prob.order)
+
+        conj_grad!()
+
+        if CGBlock
+            DBlock.u .= DBlock.uₙ₊₁
+            copyUtoSAT!(DBlock,Prob.order)
+            if adaptive
+                Δt *= 1.05
+            end
+            t += Δt
+        else
+            DBlock.uₙ₊₁ .= DBlock.u
+            if DBlock.Δt < soln.Δt[1]/10.0
+                error("CG could not converge, aborting at t=",t," with Δt=",DBlock.Δt)
+            end
+        end
+
     end
 end
 
