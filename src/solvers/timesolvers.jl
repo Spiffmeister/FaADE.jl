@@ -28,40 +28,44 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
     
     
     # Build functions
-    _,SAT_Left    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
-    _,SAT_Right   = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
+    if Prob.BoundaryConditions.Left.type == Periodic
+        _,SAT_LR    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+    elseif Prob.BoundaryConditions.Left.type != Periodic
+        _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+        _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
+    end
     Diff = generate_Derivative(grid.n,grid.Δx,Prob.order)
     
     # Replace cache with the derivative of v + SATs
     function CGRHS!(cache::AbstractArray,u::AbstractArray,k::AbstractArray)
         Diff(cache,u,k)
-        SAT_Left(cache,u,k,SolutionMode)
-        SAT_Right(cache,u,k,SolutionMode)
+        if Prob.BoundaryConditions[1].type != Periodic
+            SAT_Left(cache,u,k,SolutionMode)
+            SAT_Right(cache,u,k,SolutionMode)
+        else
+            SAT_LR(cache,u,k)
+        end
     end
 
     t = Δt
     DBlock.uₙ₊₁ .= DBlock.u
 
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-    # copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
-    # copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
     
     while t < t_f
-        SAT_Left(DBlock.boundary.SAT_Left,Δt*Prob.BoundaryConditions.Left.RHS(t),DBlock.K,DataMode)
-        SAT_Right(DBlock.boundary.SAT_Right,Δt*Prob.BoundaryConditions.Right.RHS(t),DBlock.K,DataMode)
+
+        if Prob.BoundaryConditions[1].type != Periodic
+            SAT_Left(DBlock.boundary.SAT_Left,Δt*Prob.BoundaryConditions.Left.RHS(t),DBlock.K,DataMode)
+            SAT_Right(DBlock.boundary.SAT_Right,Δt*Prob.BoundaryConditions.Right.RHS(t),DBlock.K,DataMode)
+        end
         
         copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
-
-        # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Left,Left,Prob.order)
-        # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary.SAT_Right,Right,Prob.order)
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
         if CGBlock.converged #If CG converges
             DBlock.u .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-            # copyUtoSAT!(DBlock.boundary.SAT_Left,DBlock.u,Left,Prob.order)
-            # copyUtoSAT!(DBlock.boundary.SAT_Right,DBlock.u,Right,Prob.order)
             if adaptive
                 Δt *= 1.05
             end
@@ -89,40 +93,60 @@ function solve(Prob::VariableCoefficientPDE2D)
 
     DBlock.u .= soln.u[1]
 
-    _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
-    _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
-    _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
-    _,SAT_Down  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
+    if Prob.BoundaryConditions.Left.type != Periodic
+        _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+        _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
+    else
+        _,SAT_LR    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+    end
+    if Prob.BoundaryConditions.Up.type != Periodic
+        _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
+        _,SAT_Down  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
+    else
+        _,SAT_UD    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+    end
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,kx::AbstractArray,ky::AbstractArray)
-        Diff(cache,u,kx,ky)
-        SAT_Left(cache,u,K[1],K[2],SolutionMode)
-        SAT_Right(cache,u,K[1],K[2],SolutionMode)
-        SAT_Up(cache,u,K[1],K[2],SolutionMode)
-        SAT_Down(cache,u,K[1],K[2],SolutionMode)
+    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::Vector{AbstractArray})
+        Diff(cache,u,K[1],K[2])
+        if Prob.BoundaryConditions.Left.type != Periodic
+            SAT_Left(cache,u,K[1],SolutionMode)
+            SAT_Right(cache,u,K[1],SolutionMode)
+        else
+            SAT_LR(cache,u,K[1])
+        end
+        if Prob.BoundaryConditions.Up.type != Periodic
+            SAT_Up(cache,u,K[2],SolutionMode)
+            SAT_Down(cache,u,K[2],SolutionMode)
+        else
+            SAT_UD(cache,u,K[2])
+        end
     end
 
     t = Δt
     DBlock.uₙ₊₁ .= DBlock.u
     
-    copyUtoSAT!(DBlock,Prob.order)
+    copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
 
     while t < t_f
 
-        SAT_Left(DBlock.boundary.SAT_Left, Δt*Prob.BoundaryConditions.Left.RHS(t), DBlock.K,DataMode)
-        SAT_Right(DBlock.boundary.SAT_Right, Δt*Prob.BoundaryConditions.Right.RHS(t), DBlock.K,DataMode)
-        SAT_Up(DBlock.boundary.SAT_Up, Δt*Prob.BoundaryConditions.Up.RHS(t), DBlock.K,DataMode)
-        SAT_Down(DBlock.boundary.SAT_Down, Δt*Prob.BoundaryConditions.Down.RHS(t), DBlock.K,DataMode)
+        if Prob.BoundaryConditions.Left.type != Periodic
+            SAT_Left(DBlock.boundary.SAT_Left, Δt*Prob.BoundaryConditions.Left.RHS(t), DBlock.K[1],DataMode)
+            SAT_Right(DBlock.boundary.SAT_Right, Δt*Prob.BoundaryConditions.Right.RHS(t), DBlock.K[1],DataMode)
+        end
+        if Prob.BoundaryConditions.Up.type != Periodic
+            SAT_Up(DBlock.boundary.SAT_Up, Δt*Prob.BoundaryConditions.Up.RHS(t), DBlock.K[2],DataMode)
+            SAT_Down(DBlock.boundary.SAT_Down, Δt*Prob.BoundaryConditions.Down.RHS(t), DBlock.K[2],DataMode)
+        end
 
-        copySATtoU!(DBlock,Prob.order)
+        copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
-        conj_grad!()
+        conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
         if CGBlock
             DBlock.u .= DBlock.uₙ₊₁
-            copyUtoSAT!(DBlock,Prob.order)
+            copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if adaptive
                 Δt *= 1.05
             end

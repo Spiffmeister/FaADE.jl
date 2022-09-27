@@ -69,6 +69,15 @@ SATN2, SATNf2 = SBP_operators.SATs.SAT(PN.BoundaryConditions[2],Dom,order,:cgie)
 
 
 
+#= Periodic Boundaries =#
+BoundaryPeriodicTest = PeriodicBoundary(1)
+
+PP = VariableCoefficientPDE1D(u₀,K,order,BoundaryPeriodicTest)
+
+SATP = SBP_operators.SATs.SAT_Periodic(Dom.Δx,PP.BoundaryConditions[1].axis,order)
+
+SATPf1 = SBP_operators.SATs.SAT(PP.BoundaryConditions[1],Dom,order,:cgie)
+
 
 
 
