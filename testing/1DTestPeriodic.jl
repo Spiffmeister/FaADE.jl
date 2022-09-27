@@ -22,16 +22,12 @@ t_f = 1000Δt
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-g₀(t) = 0.0
-g₁(t) = 0.0
-
-BoundaryLeft = Boundary(Neumann,g₀,Left,1)
-BoundaryRight = Boundary(Neumann,g₁,Right,1)
+Boundary = PeriodicBoundary(1)
 
 order = 2
 method = :cgie
 
-P = VariableCoefficientPDE1D(u₀,K,order,BoundaryLeft,BoundaryRight)
+P = VariableCoefficientPDE1D(u₀,K,order,Boundary)
 
 
 println(method)

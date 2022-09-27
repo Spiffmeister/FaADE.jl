@@ -56,7 +56,11 @@ end
 
 
 function VariableCoefficientPDE1D(u₀::Function,K::AbstractVector{T},order::Int,BCs::D...) where {T,D<:BoundaryConditionData}
-    BCs = (Left=BCs[1],Right=BCs[2])
+    if length(BCs) == 2
+        BCs = (Left=BCs[1],Right=BCs[2])
+    else
+        BCs = (Periodic=BCs[1],)
+    end
     VariableCoefficientPDE1D{T}(u₀,K,order,BCs)
 end
 

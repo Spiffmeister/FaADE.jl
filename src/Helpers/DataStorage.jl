@@ -90,14 +90,21 @@ struct BoundaryData1D{T} <: BoundaryStorage{T,1}
     function BoundaryData1D{T}(BC::NamedTuple,order::Int) where {T}
 
         nnodes = SATNodeOutput(order)
-
+        
         SAT_Left    = zeros(T,nnodes)
         SAT_Right   = zeros(T,nnodes)
 
         u_Left      = zeros(T,nnodes)
         u_Right     = zeros(T,nnodes)
 
-        new{T}(BC.Left.type,BC.Right.type,SAT_Left,SAT_Right,u_Left,u_Right,0.0,0.0)
+        if length(BC) == 2
+            BCL = BC.Left.type
+            BCR = BC.Right.type
+        elseif length(BC) == 1
+            BCL = BCR = Periodic
+        end
+
+        new{T}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,0.0,0.0)
 
     end
 end
