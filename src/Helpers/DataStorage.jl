@@ -23,7 +23,7 @@ struct DataBlock{T,N} <: DataBlockType{T,N}
             grid::GridType,
             Δt::T,
             order::Int,
-            K::AbstractArray{T}) where {T}
+            K::AbstractArray{T}...) where {T}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
@@ -35,8 +35,8 @@ struct DataBlock{T,N} <: DataBlockType{T,N}
         elseif typeof(grid) <: Grid2D
             u   = zeros(T,(grid.nx,grid.ny))
             uₓₓ = zeros(T,(grid.nx,grid.ny))
-            BStor = BoundaryData2D{T}(boundaries,grid.nx,grid.ny,order)
-            DiffCoeff = [K]
+            BStor = BoundaryData2D{T}(boundaries,grid,order)
+            DiffCoeff = [K[1],K[2]]
             dim = 2
         end
         new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,Δt)
@@ -130,9 +130,11 @@ struct BoundaryData2D{T} <: BoundaryStorage{T,2}
     u_Up        :: AbstractArray{T} #Solution along boundary with size determined by derivative order
     u_Down      :: AbstractArray{T} #Solution along boundary with size determined by derivative order
 
-    function BoundaryData2D{T}(type::Tuple{D},nx::Int,ny::Int,order::Int) where {T,D<:BoundaryConditionData}
+    function BoundaryData2D{T}(BC::NamedTuple,grid::Grid2D,order::Int) where {T}
 
         nnodes = SATNodeOutput(order)
+        ny = grid.ny
+        nx = grid.nx
 
         SAT_Left =  zeros(T,(nnodes,ny)) #x
         SAT_Right = zeros(T,(nnodes,ny)) #x
@@ -144,7 +146,7 @@ struct BoundaryData2D{T} <: BoundaryStorage{T,2}
         u_Up =      zeros(T,(nx,nnodes)) #y 
         u_Down =    zeros(T,(nx,nnodes)) #y
 
-        new{T}(type[1],type[2],type[3],type[4],
+        new{T}(BC.Left.type,BC.Right.type,BC.Up.type,BC.Down.type,
             SAT_Left,SAT_Right,SAT_Up,SAT_Down,
             u_Left,u_Right,u_Up,u_Down)
 
