@@ -1,10 +1,6 @@
 module solvers
 
-    using Distributed 
-    using SharedArrays
-    using LinearAlgebra
-
-
+    import LinearAlgebra: dot
 
     using SBP_operators.Helpers
 

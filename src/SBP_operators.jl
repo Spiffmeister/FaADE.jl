@@ -31,7 +31,7 @@ module SBP_operators
     # Include the files (add as completed)
     # Helpers export
     using SBP_operators.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
-    using SBP_operators.Helpers: Left, Internal, Right
+    using SBP_operators.Helpers: Left, Internal, Right, Up, Down
     using SBP_operators.Helpers: Grid1D, Grid2D
     using SBP_operators.Helpers: Boundary, PeriodicBoundary
     using SBP_operators.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
@@ -45,7 +45,7 @@ module SBP_operators
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
-    export Left, Internal, Right
+    export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, Boundary, PeriodicBoundary
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
 

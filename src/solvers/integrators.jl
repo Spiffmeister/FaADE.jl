@@ -58,21 +58,17 @@ function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,
     uⱼ = uₒ + Δt*RHS(uₙ,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y)
     return uⱼ
 end
-    
+
 
 
 """
-    conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
-or
-    conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,gx,gy,Hx::Vector{Float64},Hy::Vector{Float64}
-    ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
+    conj_grad!
+In-place conjugate gradient method.
 
-See also [`build_H`](@ref), [`A`](@ref)
+See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad! end
-# VECTOR FORM
-# function conj_grad(b::Vector,uⱼ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,H::Array,boundary;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
-function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;
+        tol::Float64=1e-5,maxIT::Int=10,warnings=false)
     
     # x₀ = uₙ #Initial guess
     CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
@@ -105,50 +101,13 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
         # rnorm = norm(rₖ)
         i += 1
     end
-    if (norm(CGB.rₖ)>tol) & warnings
+    if (norm(CGB.rₖ)>rtol*unorm) & warnings
         CGB.converged = false
         warnstr = string("CG did not converge")
         @warn warnstr
     end
     # return xₖ
 end
-
-
-function conj_grad(b::AbstractMatrix,uⱼ::AbstractMatrix,RHS::Function,nx::Int,ny::Int,x::Vector,y::Vector,Δx::Float64,Δy::Float64,t::Float64,Δt::Float64,kx::Matrix,ky::Matrix,Hx::Vector{Float64},Hy::Vector{Float64}
-    ;tol=1e-5,rtol=1e-10,maxIT=10,warnings=true)
-    # MATRIX FORM
-    converged = true
-    xₖ = uⱼ #Initial guess
-    rₖ = A(uⱼ,RHS,x,y,Δx,Δy,Δt,kx,ky) - b
-    dₖ = -rₖ
-    i = 0
-
-    Adₖ = zeros(Float64,(nx,ny))
-
-    rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
-    unorm = sqrt(innerH(uⱼ,Hx,Hy,uⱼ))
-    while (rnorm > rtol*unorm) & (i < maxIT)
-        Adₖ = A!(Adₖ,dₖ,RHS,Δt,kx,ky)
-        dₖAdₖ = innerH(dₖ,Hx,Hy,Adₖ)
-        αₖ = -innerH(rₖ,Hx,Hy,dₖ)/dₖAdₖ
-        xₖ = xₖ + αₖ*dₖ
-        rₖ = A!(rₖ,xₖ,RHS,Δt,kx,ky) .- b
-        βₖ = innerH(rₖ,Hx,Hy,A(rₖ,RHS,Δt,kx,ky))/dₖAdₖ
-        dₖ = - rₖ + βₖ*dₖ
-        rnorm = sqrt(innerH(rₖ,Hx,Hy,rₖ))
-        i += 1
-    end
-    # println(i," ",rnorm/unorm,"   ",rtol,"  ",t,"   ",Δt)
-    if (rnorm>rtol*unorm) & warnings
-        converged = false
-        warnstr = string("CG did not converge at t=",t,"    Δt=",Δt,"   # iters=",i)
-        @warn warnstr
-    end
-    return xₖ, converged
-end
-
-
-
 
 
 #= SUPPORT =#
@@ -179,29 +138,17 @@ end
 
 """
     A!
-
-    1. A(uⱼ::AbstractVector,PDE::Function,Δt::Float64,k::Vector{Float64})
-    2. A(uⱼ::AbstractMatrix,PDE::Function,Δt,kx,ky)
+Mutable ``u - ΔtD(u)``
 """
-function A! end
 function A!(tmp::AbstractArray,uⱼ::AbstractArray,PDE!::Function,Δt::Float64,k::AbstractArray)
-    # 1D A
     PDE!(tmp,uⱼ,k)
     tmp .= uⱼ .- Δt*tmp
-end
-function A!(tmp,uⱼ::AbstractMatrix,PDE!::Function,Δt::Float64,kx::AbstractArray,ky::AbstractArray)
-    # A for 2D arrays
-    PDE!(tmp,uⱼ,kx,ky)
-    tmp .= uⱼ .- Δt*tmp
-    return tmp
 end
 
 
 """
     innerH
-
-    1. innerH(u::AbstractVector,H::AbstractArray,v::AbstractVector)
-    2. innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
+Computes the ``H``-inner product between two vectors or matrices ``u`` and ``v``.
 """
 function innerH end
 # H inner product for 1D problems
@@ -224,7 +171,29 @@ function innerH(u::AbstractVector,v::AbstractVector,order::Int,Δ::Float64)
     end
 end
 # H inner product for 2D problems
+function innerH(u::AbstractMatrix,v::AbstractMatrix,order::Int,Δ::Float64)
+    tmp = 0.0
+    if order == 2
+        tmp += 0.25*Δ * u[1,1]*v[1,1]
+        tmp += 0.25*Δ * u[end,end]*v[end,end]
+        tmp += 0.25*Δ * u[1,end]*v[1,end]
+        tmp += 0.25*Δ * u[end,1]*v[end,1]
+
+        tmp += 0.5*Δ * dot(u[2:end-1,1],v[2:end-1,1])
+        tmp += 0.5*Δ * dot(u[2:end-1,end],v[2:end-1,end])
+        tmp += 0.5*Δ * dot(u[1,2:end-1],v[1,2:end-1])
+        tmp += 0.5*Δ * dot(u[end,2:end-1],v[end,2:end-1])
+
+        # Internal sum
+        tmp += sum(Δ * u[2:end-1,2:end-1].*v[2:end-1,2:end-1])
+    elseif order == 4
+    elseif order == 6
+    end
+    return tmp
+end
+
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
+    #= DEPRECATED =#
     nx,ny = size(u)
     tmp = 0.0
     for j = 1:ny
@@ -234,3 +203,4 @@ function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::Abstr
     end
     return tmp
 end
+

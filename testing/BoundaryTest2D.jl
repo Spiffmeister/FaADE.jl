@@ -17,28 +17,33 @@ push!(LOAD_PATH,"."); using SBP_operators
 
 
 
+𝒟x = [0.0,1.0]
+𝒟y = [0.0,1.0]
+nx = 41
+ny = 41
 
-
-𝒟 = [0.0,1.0]
-n = 41
-Dom = Grid1D(𝒟, n)
+Dom = Grid2D(𝒟x,𝒟y, nx,ny)
 
 order = 2
-K = ones(Float64,n)
+kx = zeros(Float64,nx,ny) .+ 1.0;
+ky = zeros(Float64,nx,ny) .+ 1.0;
 Δt = 0.1Dom.Δx
 
 # Define initial condition
-u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
+u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
+
 
 # Define some boundary conditions
-BoundaryDirichletLeft = Boundary(Dirichlet,t->0.0,Left,1)
-BoundaryDirichletRight = Boundary(Dirichlet,t->1.0,Right,1)
+BoundaryDirichletLeft   = Boundary(Dirichlet,t->0.0,Left,1)
+BoundaryDirichletRight  = Boundary(Dirichlet,t->1.0,Right,1)
+BoundaryDirichletUp     = Boundary(Dirichlet,t->0.0,Up,1)
+BoundaryDirichletDown   = Boundary(Dirichlet,t->1.0,Down,1)
 
 # Build PDE problem
-PD = VariableCoefficientPDE1D(u₀,K,order,BoundaryDirichletLeft,BoundaryDirichletRight)
+PD = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryDirichletLeft,BoundaryDirichletRight,BoundaryDirichletUp,BoundaryDirichletDown)
 
 # Testing internal data storage construction
-BStor = SBP_operators.Helpers.BoundaryData1D{Float64}(PD.BoundaryConditions,order)
+BStor = SBP_operators.Helpers.BoundaryData2D{Float64}(PD.BoundaryConditions,order)
 DStor = SBP_operators.Helpers.DataBlock{Float64}(PD.BoundaryConditions,Dom,Δt,2,PD.K)
 CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(n)
 
