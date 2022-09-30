@@ -19,7 +19,7 @@ push!(LOAD_PATH,"."); using SBP_operators
 
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
-nx = 41
+nx = 31
 ny = 41
 
 Dom = Grid2D(𝒟x,𝒟y, nx,ny)
@@ -48,3 +48,13 @@ DStor = SBP_operators.Helpers.DataBlock{Float64}(PD.BoundaryConditions,Dom,Δt,2
 CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(nx,ny)
 
 
+
+SATDL = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[1].RHS,Dom.Δx,PD.BoundaryConditions[1].side,PD.BoundaryConditions[1].axis,order)
+SATDR = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[2].RHS,Dom.Δx,PD.BoundaryConditions[2].side,PD.BoundaryConditions[2].axis,order)
+SATDU = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[3].RHS,Dom.Δy,PD.BoundaryConditions[3].side,PD.BoundaryConditions[3].axis,order)
+SATDD = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[4].RHS,Dom.Δy,PD.BoundaryConditions[4].side,PD.BoundaryConditions[4].axis,order)
+
+SATD1, SATFn1 = SBP_operators.SATs.SAT(PD.BoundaryConditions[1],Dom,order,:cgie)
+SATD2, SATFn2 = SBP_operators.SATs.SAT(PD.BoundaryConditions[2],Dom,order,:cgie)
+SATD3, SATFn3 = SBP_operators.SATs.SAT(PD.BoundaryConditions[3],Dom,order,:cgie)
+SATD4, SATFn4 = SBP_operators.SATs.SAT(PD.BoundaryConditions[4],Dom,order,:cgie)

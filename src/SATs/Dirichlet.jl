@@ -97,7 +97,10 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::Abstrac
         order::Int,loopaxis::Function)
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        S[1:order] .+= α*C[1]*BD*U[1]
+        for i = 1:order
+            S[i] += α*C[1]*BD[i]*U[1]
+        end
+        # S[1:order] .+= α*C[1]*BD*U[1]
         S[1] += τ*U[1]
     end
 end

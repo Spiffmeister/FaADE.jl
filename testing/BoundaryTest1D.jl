@@ -17,8 +17,6 @@ push!(LOAD_PATH,"."); using SBP_operators
 
 
 
-
-
 𝒟 = [0.0,1.0]
 n = 41
 Dom = Grid1D(𝒟, n)
@@ -46,7 +44,7 @@ CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(n)
 
 # Testing internal boundary function construction
 SATDL = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[1].RHS,Dom.Δx,PD.BoundaryConditions[1].side,PD.BoundaryConditions[1].axis,order)
-SATDR = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[2].RHS,Dom.Δx,PD.BoundaryConditions[1].side,PD.BoundaryConditions[1].axis,order)
+SATDR = SBP_operators.SATs.SAT_Dirichlet(PD.BoundaryConditions[2].RHS,Dom.Δx,PD.BoundaryConditions[2].side,PD.BoundaryConditions[1].axis,order)
 SATD1, SATFn1 = SBP_operators.SATs.SAT(PD.BoundaryConditions[1],Dom,order,:cgie)
 SATD2, SATFn2 = SBP_operators.SATs.SAT(PD.BoundaryConditions[2],Dom,order,:cgie)
 

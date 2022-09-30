@@ -3,6 +3,9 @@
 =#
 
 
+#========
+    CHECKING THINGS
+========#
 """
     check_order
 Ensure the users requested order makes sense
@@ -10,16 +13,24 @@ Ensure the users requested order makes sense
 @inline function check_order(order::Int)
     order ∈ [2,4,6] ? nothing : error("Order must be 2, 4 or 6")
 end
-
-#========
-    CHECKING THE NUMBER OF NODES REQUIRED GIVEN THE ORDER
-========#
 """
     check_boundary
 Some functions only work for `Left` or `Right` nodes.
 """
 @inline function check_boundary(side::NodeType)
-    side ∈ [Left,Right] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
+    side ∈ [Left,Right,Up,Down] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
+end
+"""
+    convert_boundary
+"""
+@inline function convert_boundary(side::NodeType)
+    if side == Up
+        return Left
+    elseif side == Down
+        return Right
+    else
+        return side
+    end
 end
 
 
@@ -68,3 +79,9 @@ function SelectLoopDirection(axis::Int)
     end
 end
 
+
+@inline function Base.sum(u::AbstractArray,v::AbstractArray)
+    
+    for (uᵢ,vᵢ) in zip(u,v)
+    end
+end

@@ -1,6 +1,6 @@
 module solvers
 
-    import LinearAlgebra: dot
+    import LinearAlgebra: dot, norm
 
     using SBP_operators.Helpers
 

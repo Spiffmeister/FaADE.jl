@@ -10,12 +10,12 @@ Node types are:
 - Internal
 - Right
 """
-struct NodeType{T} end
-const Left = NodeType{:Left}()
-const Internal = NodeType{:Internal}()
-const Right = NodeType{:Right}()
-const Up = NodeType{:Up}()
-const Down = NodeType{:Down}()
+struct NodeType{T,D} end
+const Left = NodeType{:Left,1}()
+const Internal = NodeType{:Internal,0}()
+const Right = NodeType{:Right,1}()
+const Up = NodeType{:Left,2}()
+const Down = NodeType{:Right,2}()
 
 
 

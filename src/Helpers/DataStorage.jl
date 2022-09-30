@@ -30,7 +30,7 @@ struct DataBlock{T,N} <: DataBlockType{T,N}
             u   = zeros(T,grid.n)
             uₓₓ = zeros(T,grid.n)
             BStor = BoundaryData1D{T}(boundaries,order)
-            DiffCoeff = K
+            DiffCoeff = K[1]
             dim = 1
         elseif typeof(grid) <: Grid2D
             u   = zeros(T,(grid.nx,grid.ny))
@@ -45,14 +45,14 @@ end
 
 
 #========== WHOLE PROBLEM DATA ==========#
-struct ConjGradBlock{T,N} <: DataBlockType{T,N}
+mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
     b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
     rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
     Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
     Drₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
     dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
 
-    converged :: Bool
+    converged   :: Bool
 
     function ConjGradBlock{T}(n::Int...) where T
         b   = zeros(T,n)
@@ -186,8 +186,8 @@ function copyUtoSAT!(Bound::BoundaryStorage,u::AbstractArray,order::Int)
     copyUtoSAT!(Bound.SAT_Left,u,Left,order)
     copyUtoSAT!(Bound.SAT_Right,u,Right,order)
     if typeof(Bound) <: BoundaryStorage{T,2} where T
-        copySATtoU!(Bound.SAT_Up,u,Up,order)
-        copySATtoU!(Bound.SAT_Down,u,Down,order)
+        copyUtoSAT!(Bound.SAT_Up,u,Up,order)
+        copyUtoSAT!(Bound.SAT_Down,u,Down,order)
     end
 end
 

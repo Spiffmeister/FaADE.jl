@@ -19,7 +19,17 @@ mutable struct solution{T}
             new(u,grid,Δt,collect(range(0.0,t,length=N)))
         else #If an adaptive time step is being used, preallocation is impossible
 
-            u = prob.InitialCondition(grid.grid)
+            if typeof(grid) <: Grid1D
+                u = prob.InitialCondition(grid.grid)
+            elseif typeof(grid) <: Grid2D
+                u = zeros(T,(grid.nx,grid.ny))
+                for j = 1:grid.ny
+                    for i = 1:grid.nx
+                        u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
+                    end
+                end
+            end
+
 
             new{T}([u],grid,[Δt],[t],prob)
         end

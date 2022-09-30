@@ -68,7 +68,7 @@ In-place conjugate gradient method.
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;
-        tol::Float64=1e-5,maxIT::Int=10,warnings=false)
+        atol::Float64=1e-5,rtol::Float64=1e-10,maxIT::Int=10,warnings=false)
     
     # x₀ = uₙ #Initial guess
     CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
@@ -81,7 +81,7 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
     i = 0
     rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ,order,DBlock.grid.Δx))
     unorm = sqrt(innerH(DBlock.uₙ₊₁,DBlock.uₙ₊₁,order,DBlock.grid.Δx))
-    while (rnorm > tol) & (i < maxIT)
+    while (rnorm > atol) & (i < maxIT)
         A!(CGB.Adₖ,CGB.dₖ,RHS,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
 
         dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,DBlock.grid.Δx)
@@ -185,7 +185,10 @@ function innerH(u::AbstractMatrix,v::AbstractMatrix,order::Int,Δ::Float64)
         tmp += 0.5*Δ * dot(u[end,2:end-1],v[end,2:end-1])
 
         # Internal sum
-        tmp += sum(Δ * u[2:end-1,2:end-1].*v[2:end-1,2:end-1])
+        for (uᵢ,vⱼ) in zip(u[2:end-1,2:end-1],v[2:end-1,2:end-1]) #TODO: Write this in nifty.jl
+            tmp += Δ * uᵢ*vⱼ
+        end
+        # tmp += sum(Δ * u[2:end-1,2:end-1].*v[2:end-1,2:end-1])
     elseif order == 4
     elseif order == 6
     end

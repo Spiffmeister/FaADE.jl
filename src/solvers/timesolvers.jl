@@ -85,9 +85,9 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D)
+function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adaptive=false)
 
-    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
+    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
     CGBlock = ConjGradBlock{Float64}(grid.nx,grid.ny)
 
     soln = solution{Float64}(grid,0.0,Δt,Prob)
@@ -109,7 +109,7 @@ function solve(Prob::VariableCoefficientPDE2D)
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::Vector{AbstractArray})
+    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
         Diff(cache,u,K[1],K[2])
         if Prob.BoundaryConditions.Left.type != Periodic
             SAT_Left(cache,u,K[1],SolutionMode)
@@ -145,7 +145,7 @@ function solve(Prob::VariableCoefficientPDE2D)
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
-        if CGBlock
+        if CGBlock.converged
             DBlock.u .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if adaptive
@@ -160,6 +160,9 @@ function solve(Prob::VariableCoefficientPDE2D)
         end
 
     end
+
+    push!(soln.u,DBlock.u)
+    return soln
 end
 
 

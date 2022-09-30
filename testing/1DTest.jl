@@ -3,6 +3,9 @@ using Printf
 using Plots
 
 using BenchmarkTools
+using Profile
+using PProf
+
 push!(LOAD_PATH,".")
 using SBP_operators
 
@@ -17,7 +20,7 @@ Dom = Grid1D(𝒟,n)
 K = zeros(Float64,n) .+ 1.0
 
 Δt = 0.05*Dom.Δx^2
-t_f = 1000Δt
+t_f = 10.1Δt
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
@@ -40,12 +43,18 @@ println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 ###
 # @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
 
-soln = solve(P,Dom,Δt,t_f,:cgie)
-plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
 
-# println("Plotting")
+# soln = solve(P,Dom,Δt,t_f,:cgie)
+# plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
 
-# N = length(soln.t)
+# solve(P,Dom,Δt,t_f,:cgie)
+# @pprof solve(P,Dom,Δt,t_f,:cgie)
+
+
+@time solve(P,Dom,Δt,t_f,:cgie)
+Profile.clear_malloc_data()
+@time solve(P,Dom,Δt,t_f,:cgie)
+
 
 # ###
 # anim = @animate for i=1:N
@@ -54,5 +63,3 @@ plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
 # gif(anim,"yes.gif",fps=50)
 
 
-
-# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
