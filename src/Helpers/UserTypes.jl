@@ -71,7 +71,7 @@ function Base.merge(Bound::NamedTuple,BC::PeriodicBoundary)
     if BC.axis == 1
         Bound = merge(Bound, (Left=BC,Right=BC))
     elseif BC.axis == 2
-        Bound = merge(Bound, (Up=BC,Right=BC))
+        Bound = merge(Bound, (Up=BC,Down=BC))
     end
     return Bound
 end
