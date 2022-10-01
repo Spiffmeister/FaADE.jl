@@ -29,22 +29,21 @@ t_f = 100Δt
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
-BoundaryLeft = Boundary(Neumann,t -> 0.0,Left,1)
-BoundaryRight = Boundary(Neumann,t -> 0.0,Right,1)
-BoundaryUp = Boundary(Neumann,t -> 0.0,Up,2)
-BoundaryDown = Boundary(Neumann,t -> 0.0,Down,2)
+BoundaryLeftRight = PeriodicBoundary(1)
+BoundaryUpDown = PeriodicBoundary(2)
+
 
 order = 2
 method = :cgie
 
-P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeftRight,BoundaryUpDown)
 
 println(method)
 println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###
-# @benchmark solve($P,$Dom,$Δt,$t_f,$method)
+@benchmark solve($P,$Dom,$Δt,$t_f,$method)
 
 
 
@@ -57,6 +56,6 @@ println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 
-@time solve(P,Dom,Δt,t_f,:cgie)
-Profile.clear_malloc_data()
-@time solve(P,Dom,Δt,t_f,:cgie)
+# @time solve(P,Dom,Δt,t_f,:cgie)
+# Profile.clear_malloc_data()
+# @time solve(P,Dom,Δt,t_f,:cgie)

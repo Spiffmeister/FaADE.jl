@@ -58,3 +58,19 @@ SATD1, SATFn1 = SBP_operators.SATs.SAT(PD.BoundaryConditions[1],Dom,order,:cgie)
 SATD2, SATFn2 = SBP_operators.SATs.SAT(PD.BoundaryConditions[2],Dom,order,:cgie)
 SATD3, SATFn3 = SBP_operators.SATs.SAT(PD.BoundaryConditions[3],Dom,order,:cgie)
 SATD4, SATFn4 = SBP_operators.SATs.SAT(PD.BoundaryConditions[4],Dom,order,:cgie)
+
+
+
+#= PERIODIC BOUNDARIES =#
+
+
+BoundaryPeriodicLeftRight = PeriodicBoundary(1)
+BoundaryPeriodicUpDown = PeriodicBoundary(2)
+
+PP = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryPeriodicLeftRight,BoundaryPeriodicUpDown)
+
+DStor = SBP_operators.Helpers.DataBlock{Float64}(PP.BoundaryConditions,Dom,Δt,2,PP.Kx,PP.Ky)
+BStor = SBP_operators.Helpers.BoundaryData2D{Float64}(PP.BoundaryConditions,Dom,order)
+
+
+

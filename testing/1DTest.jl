@@ -44,16 +44,16 @@ println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 # @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
 
 
-# soln = solve(P,Dom,Δt,t_f,:cgie)
-# plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
+soln = solve(P,Dom,Δt,t_f,:cgie)
+plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
 
 # solve(P,Dom,Δt,t_f,:cgie)
 # @pprof solve(P,Dom,Δt,t_f,:cgie)
 
 
-@time solve(P,Dom,Δt,t_f,:cgie)
-Profile.clear_malloc_data()
-@time solve(P,Dom,Δt,t_f,:cgie)
+# @time solve(P,Dom,Δt,t_f,:cgie)
+# Profile.clear_malloc_data()
+# @time solve(P,Dom,Δt,t_f,:cgie)
 
 
 # ###
