@@ -40,7 +40,7 @@ method = :cgie
 P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 println(method)
-println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
+println("(Δx,Δy)=",Dom.Δx,",",Dom.Δy,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 ###

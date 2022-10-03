@@ -85,12 +85,14 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adaptive=false)
+function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adaptive=false,penalty_fn!::Union{Nothing,Function}=nothing)
 
     DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
     CGBlock = ConjGradBlock{Float64}(grid.nx,grid.ny)
 
     soln = solution{Float64}(grid,0.0,Δt,Prob)
+
+    typeof(penalty_fn!) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
     DBlock.u .= soln.u[1]
 
@@ -144,6 +146,10 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
         copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
+
+        if penalty_function_enabled
+            penalty_fn!(DBlock.uₙ₊₁,DBlock.u,Δt)
+        end
 
         if CGBlock.converged
             DBlock.u .= DBlock.uₙ₊₁
