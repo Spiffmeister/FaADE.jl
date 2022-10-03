@@ -106,7 +106,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
         _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
         _,SAT_Down  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
     else
-        _,SAT_UD    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+        _,SAT_UD    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
     end
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
