@@ -67,15 +67,16 @@ function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
         L₁u = (U[1] - U[end])
         for i = 1:order
             S[i]        += τ₁*K[1]*BDₓᵀ[i]*L₁u
-            S[end-i+1]  += τ₁*K[end]*BDₓᵀ[i]*L₁u
+            S[end-order+i]  += -τ₁*K[end]*BDₓᵀ[i]*L₁u
             #Neumann terms
-            S[1]  += α₀ * K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-i+1]
-            S[end]+= α₀ * K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-i+1]
+            S[1]  += α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
+            S[end]+= α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
         end
         # S[1:order]        .+= τ₁ * K[1] * BDₓᵀ*L₁u
         # S[end-order+1:end].+= -τ₁ * K[end] * BDₓᵀ*L₁u
-        # Neumann terms
-        # S[1]  += α₀ * K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end])
-        # S[end]+= α₀ * K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end])
+        # # Neumann terms
+        # S[1]  += α₀ * (K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end]))
+        # S[end]+= α₀ * (K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end]))
     end
+    cache
 end
