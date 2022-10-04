@@ -38,6 +38,7 @@ function construct_SAT(Term::SimultanousApproximationTerm,solver)
     elseif Term.type == Neumann
         SATFns = generate_Neumann(Term,solver)
     elseif Term.type == Robin
+        error("Robin not implemented")
     elseif Term.type == Periodic
         SATFns = generate_Periodic(Term,solver)
     else
