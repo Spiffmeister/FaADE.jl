@@ -29,7 +29,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0;
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 100Δt
+t_f = 5Δt
 
 u₀(x,y) = (x-0.5)/(0.68-0.5)
 
@@ -118,7 +118,7 @@ end
 # println("Benchmarking")
 # @benchmark solve(P,Dom,Δt,t_f,:cgie)
 
-
+println("Plotting")
 soln = solve(P,Dom,Δt,t_f,:cgie)
 using Plots
 surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],

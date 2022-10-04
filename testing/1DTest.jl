@@ -22,13 +22,12 @@ K = zeros(Float64,n) .+ 1.0
 Δt = 0.05*Dom.Δx^2
 t_f = 10.1Δt
 
-u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
+# u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
+u₀(x) = x
 
-g₀(t) = 0.0
-g₁(t) = 0.0
 
-BoundaryLeft = Boundary(Neumann,t->0.0,Left,1)
-BoundaryRight = Boundary(Neumann,t->0.0,Right,1)
+BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
+BoundaryRight = Boundary(Dirichlet,t->1.0,Right,1)
 
 order = 2
 method = :cgie
