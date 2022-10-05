@@ -168,6 +168,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
     end
 
     push!(soln.u,DBlock.u)
+    push!(soln.Δt,Δt)
     return soln
 end
 
