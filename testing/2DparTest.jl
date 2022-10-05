@@ -29,7 +29,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0;
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 5Δt
+t_f = 100Δt
 
 u₀(x,y) = (x-0.5)/(0.68-0.5)
 
@@ -81,12 +81,12 @@ H_y = 1.0 ./H_y.^2
 function penalty_fn(u,uₒ,Δt)
     # umw = zeros(Float64,nx,ny)
 
-    interp = LinearInterpolation((x,y),u)
+    interp = LinearInterpolation((Dom.gridx,Dom.gridy),uₒ)
 
     for j = 1:ny
         for i = 1:nx
 
-            umw[i,j] = 2u[i,j] - (uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
+            # umw[i,j] = 2u[i,j] - (uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
 
 
             if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]
@@ -110,20 +110,20 @@ function penalty_fn(u,uₒ,Δt)
 
         end
     end
-    return u#, norm(umw)
+    # return u#, norm(umw)
 end
 
 
 
 # println("Benchmarking")
-# @benchmark solve(P,Dom,Δt,t_f,:cgie)
+# @benchmark solve(P,Dom,Δt,t_f,:cgie,penalty_func=penalty_fn)
 
 println("Plotting")
-soln = solve(P,Dom,Δt,t_f,:cgie)
+@time soln = solve(P,Dom,Δt,2.1Δt,:cgie,penalty_func=penalty_fn)
+@time soln = solve(P,Dom,Δt,t_f,:cgie,penalty_func=penalty_fn)
 using Plots
 surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],
-    xlabel="y",ylabel="x",zlabel="Temp",
-    xlims=(0.0,1.0), ylims=(0.0,1.0), zlims=(0.0,1.0))
+    xlabel="y",ylabel="x",zlabel="Temp")
 
 # @time solve(P,Dom,Δt,t_f,:cgie)
 # Profile.clear_malloc_data()

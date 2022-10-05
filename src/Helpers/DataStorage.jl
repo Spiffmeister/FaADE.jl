@@ -216,3 +216,24 @@ function copySATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
     end
 end
 
+
+function addSATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
+    nnodes = SATNodeOutput(order)
+    if side == Left
+        u[1:nnodes,:] .+= SAT
+    elseif side == Right
+        u[end-nnodes+1:end,:] .+= SAT
+    elseif side == Up
+        u[:,1:nnodes] .+= SAT
+    elseif side == Down
+        u[:,end-nnodes+1:end] .+= SAT
+    end
+end
+function addSATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
+    addSATtoU!(u,Bound.SAT_Left,Left,order)
+    addSATtoU!(u,Bound.SAT_Right,Right,order)
+    if typeof(Bound) <: BoundaryStorage{T,2} where T
+        addSATtoU!(u,Bound.SAT_Up,Up,order)
+        addSATtoU!(u,Bound.SAT_Down,Down,order)
+    end
+end
