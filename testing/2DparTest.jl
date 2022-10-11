@@ -119,8 +119,8 @@ end
 # @benchmark solve(P,Dom,Δt,t_f,:cgie,penalty_func=penalty_fn)
 
 println("Plotting")
-@time soln = solve(P,Dom,Δt,2.1Δt,:cgie,penalty_func=penalty_fn)
-@time soln = solve(P,Dom,Δt,t_f,:cgie,penalty_func=penalty_fn)
+@time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true)#,penalty_func=penalty_fn)
+@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true)#,penalty_func=penalty_fn)
 using Plots
 surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],
     xlabel="y",ylabel="x",zlabel="Temp")
