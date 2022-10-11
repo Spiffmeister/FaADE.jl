@@ -20,18 +20,6 @@ Some functions only work for `Left` or `Right` nodes.
 @inline function check_boundary(side::NodeType)
     side ∈ [Left,Right,Up,Down] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
 end
-"""
-    convert_boundary
-"""
-@inline function convert_boundary(side::NodeType)
-    if side == Up
-        return Left
-    elseif side == Down
-        return Right
-    else
-        return side
-    end
-end
 
 
 #========
@@ -80,8 +68,10 @@ function SelectLoopDirection(axis::Int)
 end
 
 
-@inline function Base.sum(u::AbstractArray,v::AbstractArray)
-    
-    for (uᵢ,vᵢ) in zip(u,v)
-    end
-end
+# @inline function Base.sum(u::AbstractArray{T},v::AbstractArray{T}) where T
+#     tmp::T = 0
+#     for (uᵢ,vᵢ) in zip(u,v)
+#         tmp += uᵢ*vᵢ
+#     end
+# end
+

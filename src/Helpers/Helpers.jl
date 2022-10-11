@@ -8,6 +8,8 @@ module Helpers
 
     include("DataStorage.jl")
 
+    include("postnifty.jl")
+
 
 
     # types import
@@ -19,7 +21,7 @@ module Helpers
     export check_order, check_boundary,
         halforder, BoundaryNodeInput, BoundaryNodeOutput,
         SelectLoopDirection
-
+    
     # grid import
     export GridType, Grid1D, Grid2D
 
@@ -32,6 +34,9 @@ module Helpers
         DataBlock, ConjGradBlock,
         BoundaryData1D, BoundaryData2D, 
         copyUtoSAT!, copySATtoU!
+    
+    # PostNifty import
+    export GetAxis, GetDim
     
 end
 
