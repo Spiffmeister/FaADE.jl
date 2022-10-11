@@ -1,7 +1,7 @@
 
 
 
-abstract type GridType{T<:AbstractFloat,N} end
+abstract type GridType{T<:AbstractFloat,D} end
 
 
 """
