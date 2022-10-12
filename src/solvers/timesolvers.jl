@@ -128,6 +128,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
     end
 
     t = Δt
+    Δt₀ = Δt
     DBlock.uₙ₊₁ .= DBlock.u
     
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
@@ -154,7 +155,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
         if CGBlock.converged
             DBlock.u .= DBlock.uₙ₊₁
             # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-            if adaptive
+            if adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
             end
             t += Δt
@@ -169,6 +170,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
 
     push!(soln.u,DBlock.u)
     push!(soln.Δt,Δt)
+    push!(soln.t,t)
     return soln
 end
 

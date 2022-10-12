@@ -15,7 +15,7 @@ struct DataBlock{T,N} <: DataBlockType{T,N}
     grid        :: GridType
     u           :: AbstractArray{T}
     uₙ₊₁        :: AbstractArray{T}
-    K           :: Union{Vector{T},Vector{AbstractArray{T}}}
+    K           :: Union{Vector,Vector{AbstractArray{T}}}
     boundary    :: BoundaryStorage
     Δt          :: T
     function DataBlock{T}(
