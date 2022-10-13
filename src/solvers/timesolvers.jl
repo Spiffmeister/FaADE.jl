@@ -8,22 +8,17 @@
 
 
 """
-solve
+    solve
 
-1. Construction
-a. DataBlock
-b. SATs
-c. Derivative function
-2. Solving
+Solve the 1D or 2D PDE on the given grid
 """
 function solve end
 #= 1D SOLVER =#
-function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adaptive=false)
+function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing) where T
 
-    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
-    CGBlock = ConjGradBlock{Float64}(grid.n)
-    
-    soln = solution{Float64}(grid,0.0,Δt,Prob)
+    DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
+    CGBlock = ConjGradBlock{T}(grid.n)
+    soln = solution{T}(grid,0.0,Δt,Prob)
 
     DBlock.u .= soln.u[1]
     
@@ -38,7 +33,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
     Diff = generate_Derivative(grid.n,grid.Δx,Prob.order)
     
     # Replace cache with the derivative of v + SATs
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,k::AbstractArray)
+    function CGRHS!(cache::AbstractArray{T},u::AbstractArray{T},k::AbstractArray{T})
         Diff(cache,u,k)
         if Prob.BoundaryConditions[1].type != Periodic
             SAT_Left(cache,u,k,SolutionMode)
@@ -49,6 +44,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
     end
 
     t = Δt
+    Δt₀ = Δt
     DBlock.uₙ₊₁ .= DBlock.u
 
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
@@ -67,7 +63,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
         if CGBlock.converged #If CG converges
             DBlock.u .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-            if adaptive
+            if adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
             end
             t += Δt
@@ -80,17 +76,18 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType,Δt,t_f,solver;adap
     end
 
     push!(soln.u,DBlock.u)
+    push!(soln.t,t)
+    push!(soln.Δt,Δt)
 
     return soln
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adaptive::Bool=false,penalty_func=nothing)
+function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,source::Union{Nothing,Function}=nothing) where T
 
-    DBlock = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
-    CGBlock = ConjGradBlock{Float64}(grid.nx,grid.ny)
-
-    soln = solution{Float64}(grid,0.0,Δt,Prob)
+    DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
+    CGBlock = ConjGradBlock{T}(grid.nx,grid.ny)
+    soln = solution{T}(grid,0.0,Δt,Prob)
 
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
@@ -111,7 +108,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType,Δt,t_f,solver;adap
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
+    function CGRHS!(cache::AbstractArray{T},u::AbstractArray{T},K::AbstractArray{T})
         Diff(cache,u,K[1],K[2])
         if Prob.BoundaryConditions.Left.type != Periodic
             SAT_Left(cache,u,K[1],SolutionMode)
