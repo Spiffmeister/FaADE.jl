@@ -154,11 +154,12 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
-        if penalty_function_enabled
-            penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
-        end
-
-        if CGBlock.converged
+        
+        if CGBlock.converged | !adaptive
+            # If CG converges OR adaptive time stepping is off
+            if penalty_function_enabled # Add parallel penalty
+                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+            end
             DBlock.u .= DBlock.uₙ₊₁
             # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if adaptive & (Δt<300Δt₀)
@@ -166,10 +167,11 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             end
             t += Δt
         else
+            # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u
             Δt = Δt/2.0
             CGBlock.converged = true
-            if (Δt < Δt₀/10.0) | !adaptive
+            if (Δt < Δt₀/10.0) #If Δt ~ 𝒪(Δt₀/10)
                 error("CG could not converge, aborting at t=",t," with Δt=",DBlock.Δt)
             end
         end
