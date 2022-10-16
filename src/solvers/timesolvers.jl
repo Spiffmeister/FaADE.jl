@@ -17,7 +17,7 @@ function solve end
 function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
-    CGBlock = ConjGradBlock{T}(grid.n)
+    CGBlock = ConjGradBlock{T}(grid)
     soln = solution{T}(grid,0.0,Δt,Prob)
 
     DBlock.u .= soln.u[1]
@@ -52,8 +52,11 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
     while t < t_f
 
         if Prob.BoundaryConditions[1].type != Periodic
-            SAT_Left(DBlock.boundary.SAT_Left,Δt*Prob.BoundaryConditions.Left.RHS(t),DBlock.K,DataMode)
-            SAT_Right(DBlock.boundary.SAT_Right,Δt*Prob.BoundaryConditions.Right.RHS(t),DBlock.K,DataMode)
+            DBlock.boundary.RHS_Left = Prob.BoundaryConditions.Left.RHS(t)
+            DBlock.boundary.RHS_Right = Prob.BoundaryConditions.Right.RHS(t)
+
+            SAT_Left(DBlock.boundary.SAT_Left, Δt*DBlock.boundary.RHS_Left,DBlock.K,DataMode)
+            SAT_Right(DBlock.boundary.SAT_Right, Δt*DBlock.boundary.RHS_Right,DBlock.K,DataMode)
         end
         
         copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
@@ -69,8 +72,8 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
             t += Δt
         else #If CG fails, reset and retry step
             DBlock.uₙ₊₁ .= DBlock.u
-            if DBlock.Δt < soln.Δt[1]/10.0
-                error("CG could not converge, aborting at t=",t," with Δt=",DBlock.Δt)
+            if Δt < Δt₀/10.0
+                error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
         end
     end
@@ -86,7 +89,7 @@ end
 function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,source::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
-    CGBlock = ConjGradBlock{T}(grid.nx,grid.ny)
+    CGBlock = ConjGradBlock{T}(grid)
     soln = solution{T}(grid,0.0,Δt,Prob)
 
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
@@ -108,7 +111,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
 
     Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray{T},u::AbstractArray{T},K::AbstractArray{T})
+    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
         Diff(cache,u,K[1],K[2])
         if Prob.BoundaryConditions.Left.type != Periodic
             SAT_Left(cache,u,K[1],SolutionMode)
@@ -133,12 +136,18 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
     while t < t_f
 
         if Prob.BoundaryConditions.Left.type != Periodic
-            SAT_Left(DBlock.uₙ₊₁, Δt*Prob.BoundaryConditions.Left.RHS(t), DBlock.K[1],DataMode)
-            SAT_Right(DBlock.uₙ₊₁, Δt*Prob.BoundaryConditions.Right.RHS(t), DBlock.K[1],DataMode)
+            DBlock.boundary.RHS_Left .= Δt*Prob.BoundaryConditions.Left.RHS(t)
+            DBlock.boundary.RHS_Right .= Δt*Prob.BoundaryConditions.Right.RHS(t)
+
+            SAT_Left(DBlock.uₙ₊₁, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
+            SAT_Right(DBlock.uₙ₊₁, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if Prob.BoundaryConditions.Up.type != Periodic
-            SAT_Up(DBlock.uₙ₊₁, Δt*Prob.BoundaryConditions.Up.RHS(t), DBlock.K[2],DataMode)
-            SAT_Down(DBlock.uₙ₊₁, Δt*Prob.BoundaryConditions.Down.RHS(t), DBlock.K[2],DataMode)
+            DBlock.boundary.RHS_Up .= Δt*Prob.BoundaryConditions.Up.RHS(t)
+            DBlock.boundary.RHS_Down .= Δt*Prob.BoundaryConditions.Down.RHS(t)
+
+            SAT_Up(DBlock.uₙ₊₁, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
+            SAT_Down(DBlock.uₙ₊₁, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
         end
 
         # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
@@ -158,7 +167,9 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             t += Δt
         else
             DBlock.uₙ₊₁ .= DBlock.u
-            if DBlock.Δt < soln.Δt[1]/10.0
+            Δt = Δt/2.0
+            CGBlock.converged = true
+            if (Δt < Δt₀/10.0) | !adaptive
                 error("CG could not converge, aborting at t=",t," with Δt=",DBlock.Δt)
             end
         end

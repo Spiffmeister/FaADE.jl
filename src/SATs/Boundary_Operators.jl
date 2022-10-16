@@ -3,9 +3,18 @@
 
 Used to construct `EDₓᵀ` where `E=E₀` or `Eₙ`.
 """
-function BoundaryDerivativeTranspose(order::Int,Δx::Float64)
+function BoundaryDerivativeTranspose(::NodeType{:Left},order::Int,Δx::Float64)
     if order == 2
-        return [-1.0,1.0]/Δx
+        return [-1.0,0.5]/Δx
+    elseif order == 4
+        return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+    elseif order == 6
+        return [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]/Δx
+    end
+end
+function BoundaryDerivativeTranspose(::NodeType{:Right},order::Int,Δx::Float64)
+    if order == 2
+        return [-0.5,1.0]/Δx
     elseif order == 4
         return [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
     elseif order == 6

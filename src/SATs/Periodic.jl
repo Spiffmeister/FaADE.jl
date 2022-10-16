@@ -6,7 +6,8 @@ struct SAT_Periodic{T} <: SimultanousApproximationTerm
     type        :: BoundaryConditionType
     axis        :: Int
     order       :: Int
-    BDₓᵀ        :: Vector{T}
+    DₓᵀE₀       :: Vector{T}
+    DₓᵀEₙ       :: Vector{T}
     E₀Dₓ        :: Vector{T}
     EₙDₓ        :: Vector{T}
     Δx          :: T
@@ -16,13 +17,14 @@ struct SAT_Periodic{T} <: SimultanousApproximationTerm
 
     function SAT_Periodic(Δx::T,axis::Int,order::Int) where T
 
-        BDₓᵀ = BoundaryDerivativeTranspose(order,Δx)
+        DₓᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+        DₓᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
         E₀Dₓ = BoundaryDerivative(Left,Δx,order)
         EₙDₓ = BoundaryDerivative(Right,Δx,order)
 
         α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
 
-        new{T}(Periodic,axis,order,BDₓᵀ,E₀Dₓ,EₙDₓ,Δx,α₀,τ₁,τ₀)
+        new{T}(Periodic,axis,order,DₓᵀE₀,DₓᵀEₙ,E₀Dₓ,EₙDₓ,Δx,α₀,τ₁,τ₀)
     end
 end
 
@@ -37,11 +39,11 @@ function generate_Periodic(SATP::SAT_Periodic,solver)
     loopdirection = SelectLoopDirection(SATP.axis)
 
     let α₀ = SATP.α₀, τ₀ = SATP.τ₀, τ₁ = SATP.τ₁,
-        E₀Dₓ = SATP.E₀Dₓ, EₙDₓ = SATP.EₙDₓ, BDₓᵀ = SATP.BDₓᵀ, 
+        E₀Dₓ = SATP.E₀Dₓ, EₙDₓ = SATP.EₙDₓ, DₓᵀE₀ = SATP.DₓᵀE₀, DₓᵀEₙ = SATP.DₓᵀEₙ,
         order=SATP.order
 
         Term(cache,u,c) = 
-            SAT_Periodic!(cache,u,c,α₀,τ₀,τ₁,E₀Dₓ,EₙDₓ,BDₓᵀ,order,loopdirection)
+            SAT_Periodic!(cache,u,c,α₀,τ₀,τ₁,E₀Dₓ,EₙDₓ,DₓᵀE₀,DₓᵀEₙ,order,loopdirection)
         return Term
     end
 end
@@ -56,7 +58,7 @@ end
 """
 function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
         α₀::T,τ₀::Function,τ₁::T,
-        E₀Dₓ::Vector{T},EₙDₓ::Vector{T},BDₓᵀ::Vector{T},
+        E₀Dₓ::Vector{T},EₙDₓ::Vector{T},DₓᵀE₀::Vector{T},DₓᵀEₙ::Vector{T},
         order::Int,loopaxis::Function) where T
 
     for (S,U,K) in zip(loopaxis(cache),loopaxis(u),loopaxis(c))
@@ -66,8 +68,8 @@ function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
         # Symmeteriser
         L₁u = (U[1] - U[end])
         for i = 1:order
-            S[i]        += τ₁*K[1]*BDₓᵀ[i]*L₁u
-            S[end-order+i]  += -τ₁*K[end]*BDₓᵀ[i]*L₁u
+            S[i]        += τ₁*K[1]*DₓᵀE₀[i]*L₁u
+            S[end-order+i]  += -τ₁*K[end]*DₓᵀEₙ[i]*L₁u
             #Neumann terms
             S[1]  += α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
             S[end]+= α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])

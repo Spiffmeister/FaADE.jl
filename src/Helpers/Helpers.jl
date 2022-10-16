@@ -33,10 +33,11 @@ module Helpers
     export DataBlockType, BoundaryStorage, 
         DataBlock, ConjGradBlock,
         BoundaryData1D, BoundaryData2D, 
-        copyUtoSAT!, copySATtoU!
+        copyUtoSAT!, copySATtoU!, addSATtoU!
     
     # PostNifty import
-    export GetAxis, GetDim
+    export GetAxis, GetDim,
+        GetMinΔ
     
 end
 

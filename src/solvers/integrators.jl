@@ -68,24 +68,24 @@ In-place conjugate gradient method.
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;
-        atol::Float64=1e-5,rtol::Float64=1e-10,maxIT::Int=10,warnings=false)
+        atol::Float64=1.e-5,rtol::Float64=1.e-10,maxIT::Int=10,warnings=true)
     
     # x₀ = uₙ #Initial guess
     CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,Δt,DBlock.K)
+    A!(CGB.rₖ,DBlock.u,RHS,Δt,DBlock.K)
     CGB.rₖ .= CGB.rₖ .- CGB.b
+    DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
     
     i = 0
-    rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ,order,DBlock.grid.Δx))
-    unorm = sqrt(innerH(DBlock.uₙ₊₁,DBlock.uₙ₊₁,order,DBlock.grid.Δx))
-    while (rnorm > atol) & (i < maxIT)
+    rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ,order,CGB.Δ))
+    unorm = sqrt(innerH(DBlock.uₙ₊₁,DBlock.uₙ₊₁,order,CGB.Δ))
+    while (rnorm > rtol*unorm) & (i < maxIT)
         A!(CGB.Adₖ,CGB.dₖ,RHS,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
-
-        dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,DBlock.grid.Δx)
-        αₖ = -innerH(CGB.rₖ,CGB.dₖ, order,DBlock.grid.Δx)/dₖAdₖ
+        dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,CGB.Δ)
+        αₖ = -innerH(CGB.rₖ,CGB.dₖ, order,CGB.Δ)/dₖAdₖ
 
         DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
@@ -95,46 +95,21 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
 
         A!(CGB.Drₖ,CGB.rₖ,RHS,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
-        βₖ = innerH(CGB.rₖ,CGB.Drₖ, order,DBlock.grid.Δx)/dₖAdₖ
+        βₖ = innerH(CGB.rₖ,CGB.Drₖ, order,CGB.Δ)/dₖAdₖ
         CGB.dₖ .= -CGB.rₖ .+ βₖ*CGB.dₖ
-        rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ, order,DBlock.grid.Δx))
-        # rnorm = norm(rₖ)
+        rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ, order,CGB.Δ))
         i += 1
     end
-    if (norm(CGB.rₖ)>rtol*unorm) & warnings
+    if (rnorm>rtol*unorm) & warnings
         CGB.converged = false
-        warnstr = string("CG did not converge")
+        warnstr = string("CG did not converge with Δt=",Δt)
         @warn warnstr
     end
-    # return xₖ
 end
 
 
 #= SUPPORT =#
-"""
-    build_H(n::Int64,order::Int64)
-"""
-function build_H(n::Int64,order::Int64)
-    H = ones(n)
-    if order == 2
-        H[1] = H[end] = 0.5
-    elseif order == 4
-        H[1] = H[end] = 17.0/48.0
-        H[2] = H[end-1] = 59.0/48.0
-        H[3] = H[end-2] = 43.0/48.0
-        H[4] = H[end-3] = 49.0/48.0
-    elseif order == 6
-        H[1] = H[end] = 13649.0/43200.0
-        H[2] = H[end-1] = 12013.0/8640.0
-        H[3] = H[end-2] = 2711.0/4320.0
-        H[4] = H[end-3] = 5359.0/4320.0
-        H[5] = H[end-4] = 7877.0/8640.0
-        H[6] = H[end-5] = 43801.0/43200.0
-    else
-        error("Order must be 2,4 or 6")
-    end
-    return H
-end
+
 
 """
     A!
@@ -194,6 +169,31 @@ end
     elseif order == 6
     end
     return tmp
+end
+
+"""
+    build_H(n::Int64,order::Int64)
+"""
+function build_H(n::Int64,order::Int64)
+    H = ones(n)
+    if order == 2
+        H[1] = H[end] = 0.5
+    elseif order == 4
+        H[1] = H[end] = 17.0/48.0
+        H[2] = H[end-1] = 59.0/48.0
+        H[3] = H[end-2] = 43.0/48.0
+        H[4] = H[end-3] = 49.0/48.0
+    elseif order == 6
+        H[1] = H[end] = 13649.0/43200.0
+        H[2] = H[end-1] = 12013.0/8640.0
+        H[3] = H[end-2] = 2711.0/4320.0
+        H[4] = H[end-3] = 5359.0/4320.0
+        H[5] = H[end-4] = 7877.0/8640.0
+        H[6] = H[end-5] = 43801.0/43200.0
+    else
+        error("Order must be 2,4 or 6")
+    end
+    return H
 end
 
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)

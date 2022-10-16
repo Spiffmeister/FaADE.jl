@@ -53,8 +53,18 @@ mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
     dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
 
     converged   :: Bool
+    Δ           :: T
 
-    function ConjGradBlock{T}(n::Int...) where T
+    function ConjGradBlock{T}(grid::GridType) where T
+
+        if typeof(grid) <: Grid1D
+            Δ = grid.Δx
+            n = grid.n
+        elseif typeof(grid) <: Grid2D
+            Δ = min(grid.Δx,grid.Δy)
+            n = (grid.nx,grid.ny)
+        end
+
         b   = zeros(T,n)
         rₖ  = zeros(T,n)
         Adₖ = zeros(T,n)
@@ -63,7 +73,7 @@ mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
 
         dims = length(n)
 
-        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true)
+        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true, Δ)
     end
 end
 
@@ -74,7 +84,7 @@ end
     BoundaryData1D{T}
 Data structure for storage of SATs in 1 dimensional problems
 """
-struct BoundaryData1D{T} <: BoundaryStorage{T,1}
+mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
     Type_Left   :: BoundaryConditionType
     Type_Right  :: BoundaryConditionType
 
@@ -130,6 +140,11 @@ struct BoundaryData2D{T} <: BoundaryStorage{T,2}
     u_Up        :: AbstractArray{T} #Solution along boundary with size determined by derivative order
     u_Down      :: AbstractArray{T} #Solution along boundary with size determined by derivative order
 
+    RHS_Left    :: AbstractArray{T}
+    RHS_Right   :: AbstractArray{T}
+    RHS_Up      :: AbstractArray{T}
+    RHS_Down    :: AbstractArray{T}
+
     function BoundaryData2D{T}(BC::NamedTuple,grid::Grid2D,order::Int) where {T}
 
         nnodes = SATNodeOutput(order)
@@ -146,9 +161,15 @@ struct BoundaryData2D{T} <: BoundaryStorage{T,2}
         u_Up =      zeros(T,(nx,nnodes)) #y 
         u_Down =    zeros(T,(nx,nnodes)) #y
 
+        RHS_Left =    zeros(T,(1,ny)) #x
+        RHS_Right =   zeros(T,(1,ny)) #x
+        RHS_Up =      zeros(T,(nx,1)) #y 
+        RHS_Down =    zeros(T,(nx,1)) #y
+
         new{T}(BC.Left.type,BC.Right.type,BC.Up.type,BC.Down.type,
             SAT_Left,SAT_Right,SAT_Up,SAT_Down,
-            u_Left,u_Right,u_Up,u_Down)
+            u_Left,u_Right,u_Up,u_Down,
+            RHS_Left,RHS_Right,RHS_Up,RHS_Down)
 
     end
 end

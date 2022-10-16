@@ -19,7 +19,7 @@ struct SAT_Dirichlet{T} <: SimultanousApproximationTerm
 
         check_boundary(side)
 
-        ED = BoundaryDerivativeTranspose(order,Δx)
+        ED = BoundaryDerivativeTranspose(side,order,Δx)
         α,τ = SATpenalties(Dirichlet,Δx,order)
 
         # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
