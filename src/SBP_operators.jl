@@ -2,14 +2,12 @@
 Module for `SBP_operators.jl` package - for computing finite differences by Summation by Parts 
     with Simulatenous Approximation Terms.
 
-# Public functions
+# Submodules
 
-- [`Dₓ`](@ref)
-- [`Dₓₓ`](@ref)
-- [`SAT`](@ref)
-- [`SAT_Periodic`](@ref)
-- [`Split_domain`](@ref)
-- [`time_solver`](@ref)
+- [`Helpers`](@ref)
+- [`Derivatives`](@ref)
+- [`SATs`](@ref)
+- [`solvers`](@ref)
 
 """
 module SBP_operators

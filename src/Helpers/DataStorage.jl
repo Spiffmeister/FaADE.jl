@@ -45,6 +45,9 @@ end
 
 
 #========== WHOLE PROBLEM DATA ==========#
+"""
+    ConjGradBlock
+"""
 mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
     b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
     rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
@@ -188,7 +191,7 @@ end
 
 
 """
-    copyUtoSAT
+    copyUtoSAT!
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
 """
 function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::Int)
@@ -237,7 +240,10 @@ function copySATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
     end
 end
 
-
+"""
+    addSATtoU!
+Add data from the `SAT_` field  on the given side in `BoundaryStorage` to `u`. Or add all data from `u` to `SAT_` fields.
+"""
 function addSATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
     if side == Left

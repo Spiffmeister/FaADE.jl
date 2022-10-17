@@ -2,12 +2,6 @@
 """
     SAT_Robin
 
-1. SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
-    order=2,a=1.0,b=1.0,forcing=false)
-2. SAT_Robin(::NodeType{:Left},u::AbstractVector,Δx::Float64,RHS;
-    order=2,a=1.0,b=1.0,forcing=false)
-
-
 Simulatenous approximation term for Robin boundary conditions
 `NodeType` is either `Left` or `Right`
 """

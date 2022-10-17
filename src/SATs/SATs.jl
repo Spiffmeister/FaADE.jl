@@ -1,3 +1,8 @@
+"""
+    SATs
+
+Submodule containing the simulatenous approximation term constructor and functions.
+"""
 module SATs
 
 

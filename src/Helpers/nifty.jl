@@ -57,6 +57,10 @@ Returns the number of nodes needed for the `BoundaryData1D` and `BoundaryData2D`
 #========
     SELECT LOOPING DIRECTION
 ========#
+"""
+    SelectLoopDirection
+Used to tell the SATs over which axis to loop
+"""
 function SelectLoopDirection(axis::Int)
     if axis == 1
         return eachcol

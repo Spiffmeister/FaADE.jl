@@ -9,14 +9,14 @@ Below are the first and second derivative summation by parts operators.
 The below operators are for first derivatives
 
 ```@docs
-SBP_operators.Dₓ
+SBP_operators.Derivatives.Dₓ
 ```
 
 
 ## Second Derivative operators
 
 ```@docs
-SBP_operators.Dₓₓ
+SBP_operators.Derivatives.Dₓₓ
 ```
 
 ### As iterators
@@ -24,7 +24,7 @@ SBP_operators.Dₓₓ
 The following functions are also available as iterators
 
 ```@docs
-SBP_operators.Dₓₓ!
+SBP_operators.Derivatives.Dₓₓ!
 ```
 
 
@@ -37,8 +37,8 @@ SBP_operators.Dₓₓ!
 Must be called by `SBP_operators.`
 
 ```@docs
-SBP_operators.FirstDerivative
-SBP_operators.SecondDerivative
+SBP_operators.Derivatives.FirstDerivative
+SBP_operators.Derivatives.SecondDerivative
 ```
 
 

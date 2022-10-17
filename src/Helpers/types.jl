@@ -9,6 +9,8 @@ Node types are:
 - Left
 - Internal
 - Right
+- Up
+- Down
 """
 struct NodeType{T,D} end
 const Left = NodeType{:Left,1}()

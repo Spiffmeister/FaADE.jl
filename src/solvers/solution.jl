@@ -1,6 +1,8 @@
 
 
-
+"""
+    solution
+"""
 mutable struct solution{T}
     u       :: Vector{AbstractArray{T}}
     grid    :: GridType
@@ -42,5 +44,5 @@ end
 
 
 
-function UpdateSolution()
-end
+# function UpdateSolution()
+# end

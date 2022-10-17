@@ -6,7 +6,8 @@ abstract type PDEProblem end
 
 
 """
-    User defined boundary types
+    Boundary
+User defined boundary conditions.
 """
 struct Boundary <: BoundaryConditionData
     type    :: BoundaryConditionType
@@ -18,6 +19,10 @@ struct Boundary <: BoundaryConditionData
         new(type,RHS,side,axis)
     end
 end
+"""
+    PeriodicBoundary
+User defined periodic boundary conditions.
+"""
 struct PeriodicBoundary <: BoundaryConditionData
     type    :: BoundaryConditionType
     axis    :: Int
@@ -30,7 +35,8 @@ end
 
 
 """
-    PDE Problem type for user input
+    VariableCoefficientPDE1D
+PDE Problem type for user input
 """
 struct VariableCoefficientPDE1D{T} <: PDEProblem
     InitialCondition    :: Function
@@ -45,6 +51,10 @@ struct VariableCoefficientPDE1D{T} <: PDEProblem
         new{T}(u₀,K,order,Bounds)
     end
 end
+"""
+    VariableCoefficientPDE2D
+PDE Problem type for user input
+"""
 struct VariableCoefficientPDE2D{T} <: PDEProblem
     InitialCondition    :: Function
     Kx                  :: AbstractArray{T}

@@ -4,18 +4,12 @@
 """
     SAT_Neumann
 
-1. SAT_Neumann(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
-    c=1.0,order::Int64=2,forcing::Bool=false)
-2. SAT_Neumann(::NodeType{:Left},u::AbstractVector,Δx::Float64,RHS;
-    c=1.0,order::Int64=2,forcing::Bool=false)
-
 Simulatenous approximation term for Neumann boundary conditions
     ``\\left.\\frac{\\partial u}{\\partial x}\\right|_{x_i} = g(t)``
 where ``i\\in\\{0,N\\}``
 
 `NodeType` is either `Left` or `Right`
 """
-
 struct SAT_Neumann{T} <: SimultanousApproximationTerm
     type    :: BoundaryConditionType
     side    :: NodeType

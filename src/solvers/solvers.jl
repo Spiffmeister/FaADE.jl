@@ -1,3 +1,9 @@
+"""
+    solvers
+Module containting the time and spatial solvers.
+
+WARNING: IMPLICIT METHODS ARE DEPRECATED
+"""
 module solvers
 
     import LinearAlgebra: dot, norm

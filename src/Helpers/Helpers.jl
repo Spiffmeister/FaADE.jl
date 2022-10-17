@@ -1,3 +1,7 @@
+"""
+    Helpers
+Module contains many of the data structures for users and internal use, as well as internal helper functions.
+"""
 module Helpers
 
     include("types.jl")

@@ -1,9 +1,7 @@
 #= EXPLICIT METHODS =#
 
 """
-    forward_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,g)
-or
-    function forward_euler(DBlock::DataBlock,RHS::Function)
+    forward_euler
 """
 function forward_euler end
 function forward_euler(DBlock::DataBlock,RHS::Function)
@@ -19,7 +17,7 @@ end
 
 
 """
-    RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
+    RK4
 """
 function RK4 end
 function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
@@ -35,9 +33,7 @@ end
 
 #= IMPLICIT METHODS =#
 """
-    implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
-or
-    function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,Δy::Float64,Δt::Float64,kx::Matrix,ky::Matrix,t::Float64,x::Vector,y::Vector,boundary_x,boundary_y;maxIT::Int=100,α::Float64=1.5)
+    implicit_euler
 """
 function implicit_euler end
 # Vector form
@@ -172,8 +168,9 @@ end
 end
 
 """
-    build_H(n::Int64,order::Int64)
+    build_H
 """
+function build_H end
 function build_H(n::Int64,order::Int64)
     H = ones(n)
     if order == 2
@@ -195,7 +192,6 @@ function build_H(n::Int64,order::Int64)
     end
     return H
 end
-
 function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
     #= DEPRECATED =#
     nx,ny = size(u)
