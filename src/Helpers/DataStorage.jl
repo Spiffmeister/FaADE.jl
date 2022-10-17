@@ -264,3 +264,20 @@ function addSATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
         addSATtoU!(u,Bound.SAT_Down,Down,order)
     end
 end
+
+"""
+    addSource
+Add the source term `F(x,y,t)` to the array `u`.
+"""
+function addSource! end
+function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T) where T
+    for j in 1:grid.ny
+        for i in 1:grid.nx
+            u[i,j] += F(grid.gridx[i],grid.gridy[j],t)
+        end
+    end
+end
+function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T) where T
+    u += F.(grid,t)
+end
+

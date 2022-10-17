@@ -137,8 +137,8 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
     while t < t_f
 
         if Prob.BoundaryConditions.Left.type != Periodic
-            DBlock.boundary.RHS_Left .= Δt*Prob.BoundaryConditions.Left.RHS(t)
-            DBlock.boundary.RHS_Right .= Δt*Prob.BoundaryConditions.Right.RHS(t)
+            DBlock.boundary.RHS_Left .= Δt*Prob.BoundaryConditions.Left.RHS(grid.gridx,t)
+            DBlock.boundary.RHS_Right .= Δt*Prob.BoundaryConditions.Right.RHS(grid.gridx,t)
 
             # SAT_Left(DBlock.uₙ₊₁, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
             # SAT_Right(DBlock.uₙ₊₁, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
@@ -146,8 +146,8 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if Prob.BoundaryConditions.Up.type != Periodic
-            DBlock.boundary.RHS_Up .= Δt*Prob.BoundaryConditions.Up.RHS(t)
-            DBlock.boundary.RHS_Down .= Δt*Prob.BoundaryConditions.Down.RHS(t)
+            DBlock.boundary.RHS_Up .= Δt*Prob.BoundaryConditions.Up.RHS(grid.gridy,t)
+            DBlock.boundary.RHS_Down .= Δt*Prob.BoundaryConditions.Down.RHS(grid.gridy,t)
 
             # SAT_Up(DBlock.uₙ₊₁, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
             # SAT_Down(DBlock.uₙ₊₁, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
@@ -155,7 +155,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             SAT_Down(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
         end
         if typeof(source) <: Function
-            source(CGBlock.b,t)
+            addSource!(source,CGBlock.b,grid,t)
         end
         # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
