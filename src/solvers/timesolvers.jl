@@ -130,6 +130,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
     t = Δt
     Δt₀ = Δt
     DBlock.uₙ₊₁ .= DBlock.u
+    CGBlock.b .= DBlock.u
     
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
 
@@ -139,17 +140,23 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             DBlock.boundary.RHS_Left .= Δt*Prob.BoundaryConditions.Left.RHS(t)
             DBlock.boundary.RHS_Right .= Δt*Prob.BoundaryConditions.Right.RHS(t)
 
-            SAT_Left(DBlock.uₙ₊₁, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
-            SAT_Right(DBlock.uₙ₊₁, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
+            # SAT_Left(DBlock.uₙ₊₁, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
+            # SAT_Right(DBlock.uₙ₊₁, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
+            SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
+            SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if Prob.BoundaryConditions.Up.type != Periodic
             DBlock.boundary.RHS_Up .= Δt*Prob.BoundaryConditions.Up.RHS(t)
             DBlock.boundary.RHS_Down .= Δt*Prob.BoundaryConditions.Down.RHS(t)
 
-            SAT_Up(DBlock.uₙ₊₁, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
-            SAT_Down(DBlock.uₙ₊₁, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
+            # SAT_Up(DBlock.uₙ₊₁, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
+            # SAT_Down(DBlock.uₙ₊₁, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
+            SAT_Up(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
+            SAT_Down(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
         end
-
+        if typeof(source) <: Function
+            source(CGBlock.b,t)
+        end
         # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
@@ -161,6 +168,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
             end
             DBlock.u .= DBlock.uₙ₊₁
+            CGBlock.b .= DBlock.uₙ₊₁
             # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
@@ -169,6 +177,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u
+            # CGBlock.b .= DBlock.u
             Δt = Δt/2.0
             CGBlock.converged = true
             if (Δt < Δt₀/10.0) #If Δt ~ 𝒪(Δt₀/10)

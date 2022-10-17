@@ -71,11 +71,11 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
         atol::Float64=1.e-5,rtol::Float64=1.e-10,maxIT::Int=10,warnings=true)
     
     # x₀ = uₙ #Initial guess
-    CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
+    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
     A!(CGB.rₖ,DBlock.u,RHS,Δt,DBlock.K)
     CGB.rₖ .= CGB.rₖ .- CGB.b
-    DBlock.uₙ₊₁ .= DBlock.u
+    # DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
     
