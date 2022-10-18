@@ -277,7 +277,17 @@ function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T) where 
         end
     end
 end
-function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T) where T
-    u += F.(grid,t)
+function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T,Δt::T) where T
+    u += Δt*F(grid,t)
 end
+
+"""
+    addBoundary!
+"""
+function addBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt) where T
+    for i = 1:n
+        Bound[i] = Δt*RHS(grid[i],t)
+    end
+end
+
 

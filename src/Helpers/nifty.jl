@@ -22,6 +22,18 @@ Some functions only work for `Left` or `Right` nodes.
 end
 
 
+function check_boundary_args(f::Function)
+    methods(f)[1].nargs - 1 == 2 ? nothing : error("Boundary conditions should be function with inputs f(x,t)")
+end
+function check_boundary_args(B::NamedTuple)
+    for N in eachindex(B)
+        if methods(B[N].RHS)[1].nargs - 1 == 2 
+            error("Boundary conditions should be function with inputs f(x,t) at boundary ",N)
+        end
+    end
+end
+
+
 #========
     CHECKING THE NUMBER OF NODES REQUIRED GIVEN THE ORDER
 ========#

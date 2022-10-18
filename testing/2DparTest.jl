@@ -24,18 +24,18 @@ nx = 41
 ny = 41
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-kx = zeros(Float64,nx,ny) .+ 1.0;
-ky = zeros(Float64,nx,ny) .+ 1.0;
+kx = zeros(Float64,nx,ny) .+ 1.0e-8;
+ky = zeros(Float64,nx,ny) .+ 1.0e-8;
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 100Δt
+t_f = 10_000Δt
 
 u₀(x,y) = (x-0.5)/(0.68-0.5)
 
 
-BoundaryLeft = Boundary(Dirichlet,t -> 0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,t -> 1.0,Right,1)
+BoundaryLeft = Boundary(Dirichlet,(y,t) -> 0.0,Left,1)
+BoundaryRight = Boundary(Dirichlet,(y,t) -> 1.0,Right,1)
 BoundaryUpDown = PeriodicBoundary(2)
 
 
@@ -116,11 +116,11 @@ end
 
 
 # println("Benchmarking")
-# @benchmark solve(P,Dom,Δt,t_f,:cgie,penalty_func=penalty_fn)
+# @benchmark solve($P,$Dom,$Δt,$t_f,:cgie,penalty_func=$penalty_fn)
 
+@time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
+@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=penalty_fn)
 println("Plotting")
-@time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true)#,penalty_func=penalty_fn)
-@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true)#,penalty_func=penalty_fn)
 using Plots
 surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],
     xlabel="y",ylabel="x",zlabel="Temp")
