@@ -270,10 +270,10 @@ end
 Add the source term `F(x,y,t)` to the array `u`.
 """
 function addSource! end
-function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T) where T
+function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T,Δt) where T
     for j in 1:grid.ny
         for i in 1:grid.nx
-            u[i,j] += F(grid.gridx[i],grid.gridy[j],t)
+            u[i,j] += Δt*F(grid.gridx[i],grid.gridy[j],t)
         end
     end
 end
@@ -284,7 +284,7 @@ end
 """
     addBoundary!
 """
-function addBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt) where T
+function setBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt) where T
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end

@@ -38,7 +38,7 @@ module Helpers
         DataBlock, ConjGradBlock,
         BoundaryData1D, BoundaryData2D, 
         copyUtoSAT!, copySATtoU!, addSATtoU!,
-        addSource!, addBoundary!
+        addSource!, setBoundary!
     
     # PostNifty import
     export GetAxis, GetDim,
