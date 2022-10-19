@@ -34,14 +34,33 @@ F(x,y,t) = -2π*sin(2π*t)*sin(2π*x+cx)*sin(2π*y+cy) +
     K * 4π^2 * (ωx^2 + ωy^2) * cos(2π*t)*sin(2π*x*ωx+cx)*sin(2π*y*ωy+cy) #F = ∂ₜũ - K∇ũ 
 
 
+
+#=== Define a function to generate the MMS solution ===#
+function generate_MMS(MMS::Function,grid::SBP_operators.Helpers.Grid2D,t::Float64)
+    u_MMS = zeros(grid.nx,grid.ny)
+    for j = 1:ny
+        for i = 1:nx
+            u_MMS[i,j] = MMS(grid.gridx[i],grid.gridy[j],t)
+        end
+    end
+    return u_MMS
+end
+
+
 #=== Problem setup ===#
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
-nx = 41
-ny = 41
-Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-Δt = 0.1* min(Dom.Δx^2,Dom.Δy^2)
+npts = [11,21,31,41,51]
+Dom = []
+Δt = []
+for n in npts
+    push!(Dom,grid2D(𝒟x,𝒟y,n,n))
+end
+for D in Dom
+    push!(Δt,D.Δx^2,D.Δy^2)
+end
+
 t_f = 1_000Δt
 
 # Diffusion coefficients
@@ -61,8 +80,20 @@ P = VariableCoefficientPDE2D(ũ₀,kx,ky,order,BoundaryLeft,BoundaryRight,Bound
 
 ###
 
-println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f,",    solver=",method,".")
-soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=false,source=F)
+
+println("Solving...")
+num_solns = []
+for D in Dom
+    println("n=",D.nx," case.")
+    push!(num_solns,solve(P,D,Δt,t_f,:cgie,source=F))
+end
+
+println("Build ")
+u_MMS = []
+for (D,dt) in zip(Dom,Δt)
+    push!(u_MMS,generate_MMS(ũ,D,t_f))
+end
+
 println("plotting")
 using Plots
 
@@ -71,13 +102,8 @@ using Plots
 #     xlims=(0.0,2π), ylims=(0.0,2π))
 
 
-u_MMS = zeros(Dom.nx,Dom.ny);
-for j = 1:Dom.ny
-    for i = 1:Dom.nx
-        u_MMS[i,j] = ũ(soln.grid.gridx[i],soln.grid.gridy[j],t_f)
-    end
-end
-surface(soln.grid.gridy,soln.grid.gridx,u_MMS.-soln.u[2])
+
+
 
 # surface(soln.grid.gridy,soln.grid.gridx,u_MMS)
 # surface(soln.grid.gridy,soln.grid.gridx,soln.u[2])

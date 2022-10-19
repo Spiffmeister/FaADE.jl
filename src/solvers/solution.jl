@@ -2,6 +2,12 @@
 
 """
     solution
+Solution data structure, contains the initial condition and the solution at time of
+ simulation termination. Also contains the grid structure and the PDE problem that was provided
+ originally by the user.
+
+Fields:
+ - `u`, `grid`, `Δt`, `t`, `problem`
 """
 mutable struct solution{T}
     u       :: Vector{AbstractArray{T}}
