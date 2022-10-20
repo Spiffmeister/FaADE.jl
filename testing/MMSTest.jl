@@ -27,8 +27,12 @@ ũ(x,y,t) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy) #Solution
 
 ũ₀(x,y) = sin(2π*x*ωx + cx) * sin(2π*y + cy) #Initial condition
 
-Bxũ(y,t) = 0.0 #cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x
-Byũ(x,t) = 0.0 #cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y
+BxLũ(y,t) = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x
+ByLũ(x,t) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y
+BxRũ(y,t;Lx=1) = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x
+ByRũ(x,t;Ly=1) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y
+
+
 
 F(x,y,t) = -2π*sin(2π*t)*sin(2π*x+cx)*sin(2π*y+cy) + 
     K * 4π^2 * (ωx^2 + ωy^2) * cos(2π*t)*sin(2π*x*ωx+cx)*sin(2π*y*ωy+cy) #F = ∂ₜũ - K∇ũ 
@@ -51,10 +55,10 @@ end
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
 # Boundary conditions from the MMS
-BoundaryLeft = Boundary(Dirichlet,Bxũ,Left,1)
-BoundaryRight = Boundary(Dirichlet,Bxũ,Right,1)
-BoundaryUp = Boundary(Dirichlet,Byũ,Up,2)
-BoundaryDown = Boundary(Dirichlet,Byũ,Down,2)
+BoundaryLeft = Boundary(Dirichlet,BxLũ,Left,1)
+BoundaryRight = Boundary(Dirichlet,BxLũ,Right,1)
+BoundaryUp = Boundary(Dirichlet,(y,t) -> BxRũ(x,y,Lx=𝒟x[2]),Up,2)
+BoundaryDown = Boundary(Dirichlet,(y,t) -> ByRũ(x,y,Ly=𝒟y[2]),Down,2)
 
 order = 2
 method = :cgie
