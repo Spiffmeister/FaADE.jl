@@ -23,7 +23,7 @@ struct parallel_storage
     B_plane
 end
 
-function P_∥(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,w_f::Function,w_b::Function,nx::Int,ny::Int,τ::T,κ::T) where T
+function P_∥(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,w_f::Function,w_b::Function,grid::GridType,τ::T,κ::T) where T
     u_f = w_f()
     u_b = w_b()
     for j = 1:ny
@@ -33,3 +33,11 @@ function P_∥(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,w_f::Function,w
         end
     end
 end
+
+
+# function forward_map(interp,foward_points)
+# end
+
+# function backward_map(interp,backward_points)
+# end
+

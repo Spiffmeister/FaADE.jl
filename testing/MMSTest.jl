@@ -67,8 +67,8 @@ relerr = []
 for n in npts
     Dom = Grid2D(𝒟x,𝒟y,n,n)
     
-    Δt = 1.0e-6
-    t_f = 10_000Δt
+    Δt = 0.01*Dom.Δx^2
+    t_f = 0.1
 
     # Diffusion coefficients
     kx = ky = zeros(Float64,n,n) .+ 1.0;
@@ -87,7 +87,7 @@ for n in npts
 end
 
 
-
+log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:6-1].-1))./(1 ./ (npts[2:6].-1) ))
 
 
 # println("plotting")
