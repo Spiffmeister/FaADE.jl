@@ -100,19 +100,19 @@ function SAT_Neumann_implicit!(SAT::AbstractArray{T},::NodeType{:Right},u::Abstr
     end
 end
 function SAT_Neumann_implicit_data! end
-function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},u,c::AbstractArray{T},
+function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray,c::AbstractArray{T},
         τ::T,BD::AbstractArray{T},
         order::Int,loopaxis::Function) where T
     
-    for S in loopaxis(SAT)
-        S[1] -= τ*u[1]
+    for (S,U) in zip(loopaxis(SAT),loopaxis(u))
+        S[1] -= τ*U[1]
     end
 end
-function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u,c::AbstractArray{T},
+function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u::AbstractArray,c::AbstractArray{T},
         τ::T,BD::AbstractArray{T},
         order::Int,loopaxis::Function) where T
     
-    for S in loopaxis(SAT)
-        S[end] -= -τ*u[end]
+    for (S,U) in zip(loopaxis(SAT),loopaxis(u))
+        S[end] -= -τ*U[1]
     end
 end
