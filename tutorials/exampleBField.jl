@@ -7,7 +7,7 @@
 # ```
 # 
 # ```math
-#   \frac{\partial u}{\partial t} = K\nabla_\perp u
+#   \frac{\partial u}{\partial t} = (\kappa_\perp \nabla_\perp^2 + \kappa_\parallel \nabla_\parallel^2)u
 # ```
 #
 
@@ -55,7 +55,18 @@ Kx = Ky = ones(Float64,nx,ny);
 
 ## The parallel term
 
-function P∥(u,uₒ,)
+H_x = SBP_operators.build_H(ny,order)
+H_x = 1.0 ./H_x.^2
+
+H_y = SBP_operators.build_H(nx,order)
+H_y = 1.0 ./H_y.^2
+
+function P∥(u,uₒ,Δt)
+    for j = 1:ny
+        for i = 1:nx
+            u[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) * (uₒ[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*([i,j] + [i,j]))
+        end
+    end
 end
 
 
@@ -72,6 +83,6 @@ t_f = 100Δt;
 
 # Finally we call the solver (currently not working)
 # 
-# `soln = solve(P,grid,Δt,t_f,method);`
+# `soln = solve(P,grid,Δt,t_f,method,penalty_func=P∥);`
 
 #

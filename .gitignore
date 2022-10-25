@@ -8,3 +8,4 @@
 *.mem
 *.txt
 *.bak
+!/docs/src/example*D.md
