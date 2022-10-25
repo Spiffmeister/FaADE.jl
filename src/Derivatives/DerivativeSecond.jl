@@ -5,9 +5,9 @@
 
 
 """
-    SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,type::NodeType;order::Int64=2)
+    SecondDerivative
 
-Inbuilt method for the second derviative SBP operator
+Single node stencil for second derviative SBP operator
     ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right) \\sim D_{xx}^{(c)}u``
 
 - If `NodeType==Internal` then computes the second derviative for a node away from the boundaries (see next point for info).

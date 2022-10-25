@@ -42,3 +42,4 @@ Penalties are constructed with the following,
 SBP_operators.SATs.SATpenalties
 SBP_operators.SATs.hval
 ```
+

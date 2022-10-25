@@ -1,11 +1,18 @@
 # Time Integration
 
+
+
 ```@docs
 SBP_operators.solvers
 ```
 
 ```@docs
 SBP_operators.solvers.solve
+```
+
+
+```@docs
+SBP_operators.solvers.solution
 ```
 
 
@@ -28,4 +35,5 @@ SBP_operators.solvers.implicit_euler
 ```@docs
 SBP_operators.solvers.build_H
 SBP_operators.solvers.A!
+SBP_operators.solvers.innerH
 ```

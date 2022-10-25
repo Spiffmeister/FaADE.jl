@@ -40,8 +40,9 @@ end
 Generates mutating functions required for Dirichlet boundary conditions.
 
 If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
-If `solver ∈ [:euler]` then only one method is generated
+#TODO: If `solver ∈ [:euler]` then only one method is generated
 """
+function  generate_Dirichlet end
 function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
     # Choose the axis to loop over
     loopdirection = SelectLoopDirection(SATD.axis)
@@ -70,6 +71,10 @@ end
 
 
 #=== Explicit methods ===#
+"""
+    SAT_Dirichlet_explicit!
+Dirichlet boundary SAT for explicit solvers.
+"""
 function SAT_Dirichlet_explicit! end
 function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,RHS,
         α::Float64,τ::Float64,BD::AbstractVector,
@@ -91,6 +96,10 @@ function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
 end
 
 #=== Implicit methods ===#
+"""
+    SAT_Dirichlet_implicit!
+Solution term for the Dirichlet boundary conditions for SATs for implicit methods. See [`SAT_Dirichlet_implicit_data!`](@ref) for the data term.
+"""
 function SAT_Dirichlet_implicit! end
 function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,
         α::Float64,τ::Float64,BD::AbstractVector,
@@ -117,6 +126,10 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::Abstra
     end
     SAT
 end
+"""
+    SAT_Dirichlet_implicit_data!
+Data term for the Dirichlet boundary conditions for SATs for implicit methods. See [`SAT_Dirichlet_implicit!`](@ref) for the solution term.
+"""
 function SAT_Dirichlet_implicit_data! end
 function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},
         α::Float64,τ::Float64,BD::AbstractVector,

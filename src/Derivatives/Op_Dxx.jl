@@ -2,12 +2,11 @@
 """
     Dₓₓ
 
-The second derivative SBP operator. There are three call options:
-    1. Dₓₓ(u::AbstractVector,c::Vector,n::Int64,Δx::Float64;order::Int64=2)
-    2. Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
-    3. Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
-        order_x::Int64=2,order_y::Int64=order_x)
-
+    Dₓₓ(u::AbstractVector,c::Vector,n::Int64,Δx::Float64;order::Int64=2)
+    Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
+    Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
+    order_x::Int64=2,order_y::Int64=order_x)
+    
 1. 1D second derviative SBP operator
     - Returns a `Vector{Float64}` of length `n`.
 
@@ -80,12 +79,8 @@ end
 """
     Dₓₓ!
 
-
-
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},n::Int64,Δx::Float64;order::Int64=2)
-or
     Dₓₓ!(uₓₓ::AbstractMatrix{Float64},u::AbstractMatrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix{Float64};dim::Int64=1,order::Int64=2)
-or
     Dₓₓ!(uₓₓ::AbstractVector{Float64},u::AbstractVector{Float64},c::AbstractVector{Float64},m::Int64,Δ::Float64;order::Int64=2)
 
 Mutable function for 1D and 2D second derviative SBP operator
@@ -211,7 +206,7 @@ Use 1. for internal nodes, 2. and 3. for non-corner boundaries, 4. for corners.
 
 Computes the 2D finite difference stencil at a given node
 """
-function Stencil2D end
+function Stencil2D! end
 
 function Stencil2D!(uₓₓ::AbstractMatrix,u::AbstractMatrix,::NodeType{:Internal},::NodeType{:Internal},Δx,Δy,cx,cy;
     order_x=2,order_y=order_x)

@@ -5,7 +5,7 @@ The best place to start is in the Examples section below
 # Examples
 
 ```@contents
-Pages = ["example1D.md","example2D.md"]
+Pages = ["example1D.md","example2D.md","exampleBField.md"]
 Depth=1
 ```
 

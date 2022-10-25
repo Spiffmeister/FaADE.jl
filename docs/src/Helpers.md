@@ -7,7 +7,7 @@ SBP_operators.Helpers
 ## User interaction
 
 ```@docs
-SBP_operators.Helpers.Boundary
+Boundary
 SBP_operators.Helpers.PeriodicBoundary
 ```
 

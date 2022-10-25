@@ -1,3 +1,7 @@
+"""
+    Derivatives
+Module containing first and second derivative variable coefficient SBP operators.
+"""
 module Derivatives
 
     using Distributed

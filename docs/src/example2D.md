@@ -1,16 +1,18 @@
 ```@meta
-EditURL = "<unknown>/../tutorials/example1D.jl"
+EditURL = "<unknown>/../tutorials/example2D.jl"
 ```
 
-# 1D example
+# 2D example
 
-````@example example1D
+The 2D code works similarly to the 1D version, with a few different function calls.
+
+````@example example2D
 using SBP_operators
 ````
 
-As an example we'll solve the 1D heat equation
+For this we'll solve the 2D heat equation
 ```math
-      \frac{\partial u}{\partial t} = K\frac{\partial}{\partial x}\frac{\partial u}{\partial x}
+      \frac{\partial u}{\partial t} = K\frac\Delta u
 ```
 with boundary conditions
 ```math
@@ -22,48 +24,50 @@ and initial condition
 ```
 
 
-We first need to create a domain to solve the PDE using [`Grid1D`](@ref SBP_operators.Helpers.Grid1D),
+We first need to create a domain to solve the PDE using [`Grid2D`](@ref SBP_operators.Helpers.Grid2D)
 
-````@example example1D
-𝒟 = [0.0,1.0]
-n = 41
-grid = Grid1D(𝒟,n)
+````@example example2D
+𝒟x = [0.0,1.0]
+𝒟y = [0.0,1.0]
+nx = ny = 41
+grid = Grid2D(𝒟x,𝒟y,nx,ny)
 ````
 
 The initial condition is a simple function
 
-````@example example1D
-u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
+````@example example2D
+u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 ````
 
 The boundary conditions are defined by creating [`Boundary`](@ref SBP_operators.Helpers.Boundary) objects, which will then be fed to the PDE structure
 
-````@example example1D
+````@example example2D
 BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
 BoundaryRight = Boundary(Neumann,t->0.0,Right,1)
+BoundaryUpDown = PeriodicBoundary(2)
 ````
 
 Create a few more things we'll need for the PDE and the solver
 
-````@example example1D
+````@example example2D
 order = 2
 method = :cgie
 
-K = ones(Float64,n);
+Kx = Ky = ones(Float64,nx,ny);
 nothing #hide
 ````
 
 NOTE: currently only conjugate gradient implicit Euler (`:cgie`) works as a solver
 
-Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE1D`](@ref SBP_operators.Helpers.VariableCoefficientPDE1D),
+Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SBP_operators.Helpers.VariableCoefficientPDE2D),
 
-````@example example1D
-P = VariableCoefficientPDE1D(u₀,K,order,BoundaryLeft,BoundaryRight)
+````@example example2D
+P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 ````
 
 Lastly before solving we define our time step and simulation time,
 
-````@example example1D
+````@example example2D
 Δt = 0.01grid.Δx;
 t_f = 100Δt;
 nothing #hide
@@ -73,7 +77,7 @@ Finally we call the solver (currently not working with `Documenter.jl`)
 
 `soln = solve(P,grid,Δt,t_f,method);`
 
-The solver outputs a [`solution`](@ref SBP_operators.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
+The solver ourputs a [`solution`](@ref SBP_operators.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 the problem from the final state if we wanted to restart.
 
 No visualisation routines are written at the moment but we imported the `Plots.jl` package earlier so we'll use that

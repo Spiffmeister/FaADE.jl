@@ -19,9 +19,8 @@ using SBP_operators
 # ```
 #
 # 
-# We first need to create a domain to solve the PDE,
-# `Grid1D` ([link](@ref Grid1D))
-#
+# We first need to create a domain to solve the PDE using [`Grid1D`](@ref SBP_operators.Helpers.Grid1D),
+# 
 
 𝒟 = [0.0,1.0]
 n = 41
@@ -30,7 +29,7 @@ grid = Grid1D(𝒟,n)
 # The initial condition is a simple function
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-# The boundary conditions are defined by creating `Boundary` objects, which will then be fed to the PDE structure
+# The boundary conditions are defined by creating [`Boundary`](@ref SBP_operators.Helpers.Boundary) objects, which will then be fed to the PDE structure
 BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
 BoundaryRight = Boundary(Neumann,t->0.0,Right,1)
 
@@ -43,7 +42,7 @@ K = ones(Float64,n);
 
 # NOTE: currently only conjugate gradient implicit Euler (`:cgie`) works as a solver
 #
-# Now we can create a PDE object to pass to the solver, in this case a `VariableCoefficientPDE1D` ([link](@ref VariableCoefficientPDE1D)),
+# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE1D`](@ref SBP_operators.Helpers.VariableCoefficientPDE1D),
 
 P = VariableCoefficientPDE1D(u₀,K,order,BoundaryLeft,BoundaryRight)
 
@@ -52,16 +51,16 @@ P = VariableCoefficientPDE1D(u₀,K,order,BoundaryLeft,BoundaryRight)
 Δt = 0.01grid.Δx;
 t_f = 100Δt;
 
-# Finally we call the solver (currently not working)
+# Finally we call the solver (currently not working with `Documenter.jl`)
 # 
 # `soln = solve(P,grid,Δt,t_f,method);`
 
 #
-# The solver ourputs a [`solution`](@ref solution) data structure, with everything packaged in that we would need to reconstruct
+# The solver outputs a [`solution`](@ref SBP_operators.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 # the problem from the final state if we wanted to restart.
 # 
 # No visualisation routines are written at the moment but we imported the `Plots.jl` package earlier so we'll use that
 
-# using Plots
-# plot(soln.grid.grid,soln.u[2])
+# `using Plots`
+# `plot(soln.grid.grid,soln.u[2])`
 

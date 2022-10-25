@@ -29,8 +29,7 @@ using SBP_operators
 # ```
 #
 # 
-# We first need to create a domain to solve the PDE,
-# `Grid1D` ([link](@ref Grid1D))
+# We first need to create a domain to solve the PDE using [`Grid2D`](@ref SBP_operators.Helpers.Grid2D)
 #
 
 𝒟x = [0.0,1.0]
@@ -41,7 +40,7 @@ grid = Grid2D(𝒟x,𝒟y,nx,ny)
 # The initial condition is a simple function
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
-# The boundary conditions are defined by creating `Boundary` objects, which will then be fed to the PDE structure
+# The boundary conditions are defined by creating [`Boundary`](@ref SBP_operators.Helpers.Boundary) objects, which will then be fed to the PDE structure
 BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
 BoundaryRight = Boundary(Neumann,t->0.0,Right,1)
 BoundaryUpDown = PeriodicBoundary(2)
@@ -61,7 +60,7 @@ H_x = 1.0 ./H_x.^2
 H_y = SBP_operators.build_H(nx,order)
 H_y = 1.0 ./H_y.^2
 
-function P∥(u,uₒ,Δt)
+function Ppar(u,uₒ,Δt)
     for j = 1:ny
         for i = 1:nx
             u[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) * (uₒ[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*([i,j] + [i,j]))
@@ -72,7 +71,7 @@ end
 
 # NOTE: currently only conjugate gradient implicit Euler (`:cgie`) works as a solver
 #
-# Now we can create a PDE object to pass to the solver, in this case a `VariableCoefficientPDE1D` ([link](@ref VariableCoefficientPDE1D)),
+# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SBP_operators.Helpers.VariableCoefficientPDE2D),
 
 P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
@@ -81,8 +80,8 @@ P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,Boundar
 Δt = 0.01grid.Δx;
 t_f = 100Δt;
 
-# Finally we call the solver (currently not working)
+# Finally we call the solver (currently not working with `Documenter.jl`)
 # 
-# `soln = solve(P,grid,Δt,t_f,method,penalty_func=P∥);`
+# `soln = solve(P,grid,Δt,t_f,method,penalty_func=Ppar);`
 
 #

@@ -7,9 +7,9 @@
 
 
 """
-    FirstDerivative(u::AbstractVector{Float64},Δx::Float64,n::Int64,::NodeType;order::Int64=2)
+    FirstDerivative
 
-Inbuilt method for the first derivative SBP operator
+Single node stencil for first derivative SBP operator
     ``\\frac{\\partial u}{\\partial x} \\sim D_{xx}u``
 
 - If `NodeType==Internal` then takes first derivative on a node away from the boundaries (internal to domain). Order determines the number of nodes required:

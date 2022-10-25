@@ -33,7 +33,9 @@ end
 
 """
     generate_Neumann
+Generates SAT functions for Neumann boundary conditions.
 """
+function generate_Neumann end
 function generate_Neumann(SATN::SAT_Neumann,solver)
     loopdirection = SelectLoopDirection(SATN.axis)
 
@@ -63,6 +65,10 @@ end
 
 
 #=== Explicit methods ===#
+"""
+    SAT_Neumann_explicit!
+Neumann boundary SAT for explicit solvers.
+"""
 function SAT_Neumann_explicit! end
 function SAT_Neumann_explicit!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS,
         τ::T,BD::AbstractArray{T},
@@ -82,6 +88,11 @@ function SAT_Neumann_explicit!(SAT::AbstractArray{T},::NodeType{:Right},u::Abstr
 end
 
 #=== Implicit methods ===#
+"""
+    SAT_Neumann_implicit!
+
+Solution term for the Neumann boundary conditions for SATs for implicit methods. See [`SAT_Neumann_implicit_data!`](@ref) for the data term.
+"""
 function SAT_Neumann_implicit! end
 function SAT_Neumann_implicit!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},
     τ::T,BD::AbstractArray{T},
@@ -99,6 +110,10 @@ function SAT_Neumann_implicit!(SAT::AbstractArray{T},::NodeType{:Right},u::Abstr
         S[end] -= τ*(C[end] * dot(BD,U[end-order+1:end]))
     end
 end
+"""
+    SAT_Neumann_implicit_data!
+Data term for the Neumann boundary conditions for SATs for implicit methods. See [`SAT_Neumann_implicit!`](@ref) for the solution term.
+"""
 function SAT_Neumann_implicit_data! end
 function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray,c::AbstractArray{T},
         τ::T,BD::AbstractArray{T},
