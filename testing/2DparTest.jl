@@ -106,7 +106,7 @@ function penalty_fn(u,uₒ,Δt)
             end
 
             u[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
-                (uₒ[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
+                (uₒ[i,j] - Δt*κ_para*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
 
         end
     end
