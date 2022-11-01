@@ -3,8 +3,7 @@ using Printf
 # using GLMakie
 # pyplot()
 
-using BenchmarkTools
-using Profile
+using JLD2
 
 using Pkg
 Pkg.activate(".")
@@ -99,25 +98,25 @@ println("The convergence rate of this MMS setup is: ",conv_rate," for order ",or
 
 
 # println("plotting")
-using Plots
+# using Plots
 
-# l = @layout [a b c]
-p = surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2],
-    #layout=l,
-    reuse=false,
-    xlabel="y",ylabel="x",zlabel="Solution",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
+# # l = @layout [a b c]
+# p = surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2],
+#     #layout=l,
+#     reuse=false,
+#     xlabel="y",ylabel="x",zlabel="Solution",
+#     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
-surface(#p[2],
-    grids[end].gridy,grids[end].gridx,MMS_soln[end],
-    reuse=false,
-    xlabel="y",ylabel="x",zlabel="MMS Solution",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
+# surface(#p[2],
+#     grids[end].gridy,grids[end].gridx,MMS_soln[end],
+#     reuse=false,
+#     xlabel="y",ylabel="x",zlabel="MMS Solution",
+#     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
-surface(#p[3],
-    grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
-    xlabel="y",ylabel="x",zlabel="Relative error",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
+# surface(#p[3],
+#     grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
+#     xlabel="y",ylabel="x",zlabel="Relative error",
+#     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
 
 # surface(soln.grid.gridy,soln.grid.gridx,u_MMS)
@@ -128,3 +127,6 @@ surface(#p[3],
 # @time solve(P,Dom,Δt,t_f,:cgie)
 # Profile.clear_malloc_data()
 # @time solve(P,Dom,Δt,t_f,:cgie)
+
+
+jldsave("./testing/MMS/MMSDNeumann.jld2";comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate)
