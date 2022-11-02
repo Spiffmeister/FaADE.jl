@@ -9,3 +9,4 @@
 *.txt
 *.bak
 !/docs/src/example*D.md
+*.jld2

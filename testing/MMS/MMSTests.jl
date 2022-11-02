@@ -36,47 +36,40 @@ ũ₀(x,y;
 # Dirichlet boundaries
 Dx0_Lũ(y,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) = 
-                cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy)
+    ωy=1.0,cy=0.0) =        cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy)
 DxL_Rũ(y,t;
     ωx=1.0,cx=0.0,Lx=1.0,
-    ωy=1.0,cy=0.0) = 
-                cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy)
+    ωy=1.0,cy=0.0) =        cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy)
 
 Dy0_Lũ(x,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) = 
-                cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy)
+    ωy=1.0,cy=0.0) =        cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy)
 DyL_Rũ(x,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0,Ly=1.0) = 
-                cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy)
+    ωy=1.0,cy=0.0,Ly=1.0) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy)
 
 
 # Neumann boundaries
 Nx0_Lũ(y,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) =
-                2π*ωx * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy)
+    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy)
 NxL_Rũ(y,t;
     ωx=1.0,cx=0.0,Lx=1.0,
-    ωy=1.0,cy=0.0) = 
-                2π*ωx * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) 
+    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) 
 
 Ny0_Lũ(x,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) = 
-                2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy)
+    ωy=1.0,cy=0.0) =        2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy)
 NyL_Rũ(x,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=1.0,Ly=1.0) =
-                2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy)
+    ωy=1.0,cy=1.0,Ly=1.0) = 2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy)
 
 
 
 
 # Source term based on MMS
 #F = ∂ₜũ - K∇ũ
+K = 1.0
 F(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = 
@@ -103,7 +96,10 @@ end
 
 
 
-function comp_MMS(Dx,Dy,npts,BoundaryX0,BX0Type,BoundaryXL,BXLType,BoundaryY0,BY0Type,BoundaryYL,BYLType,F,ũ;
+function comp_MMS(Dx,Dy,npts,
+        BoundaryX0,BX0Type,BoundaryXL,BXLType,
+        BoundaryY0,BY0Type,BoundaryYL,BYLType,
+        F,ũ;
         dt_scale=0.01,t_f=0.1,kx=1.0,ky=1.0,
         ωx=1.0,ωy=1.0,cx=0.0,cy=0.0,Lx=1.0,Ly=1.0)
 
@@ -120,20 +116,23 @@ function comp_MMS(Dx,Dy,npts,BoundaryX0,BX0Type,BoundaryXL,BXLType,BoundaryY0,BY
     end
     # Y boundaries
     if BY0Type != Periodic
-        By0 = Boundary(BY0Type,(x,t)->BoundaryY0(x,t,ωx=ωx,cx=cx,ωy=ωy,cy=cy),Left,2)
-        ByL = Boundary(BYLType,(x,t)->BoundaryYL(x,t,ωx=ωx,cx=cx,ωy=ωy,cy=cy,Ly=Ly),Right,2)
+        By0 = Boundary(BY0Type,(x,t)->BoundaryY0(x,t,ωx=ωx,cx=cx,ωy=ωy,cy=cy),Up,2)
+        ByL = Boundary(BYLType,(x,t)->BoundaryYL(x,t,ωx=ωx,cx=cx,ωy=ωy,cy=cy,Ly=Ly),Down,2)
     else
         By0L = PeriodicBoundary(2)
     end
+
     # Construct the correct problem
-    if (BX0Type != Periodic) & (BY0Type != Periodic)
-        MakeProb(kx,ky) = VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0,ByL)
-    elseif (BX0Type != Periodic) & (BY0Type = Periodic) 
-        MakeProb(kx,ky) = VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0L)
-    elseif (BX0Type = Periodic) & (BY0Type != Periodic)
-        MakeProb(kx,ky) = VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0,ByL)
-    else
-        MakeProb(kx,ky) = VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0L)
+    function MakeProb(kx,ky)
+        if (BX0Type != Periodic) & (BY0Type != Periodic)
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0,ByL)
+        elseif (BX0Type != Periodic) & (BY0Type == Periodic) 
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0L)
+        elseif (BX0Type == Periodic) & (BY0Type != Periodic)
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0,ByL)
+        else
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0L)
+        end
     end
 
     # Loop
@@ -141,7 +140,7 @@ function comp_MMS(Dx,Dy,npts,BoundaryX0,BX0Type,BoundaryXL,BXLType,BoundaryY0,BY
         
         Dom = Grid2D(Dx,Dy,n,n)
         
-        Δt = dt_scale*Dom.Δx
+        Δt = dt_scale*Dom.Δx^2
 
         Kx = zeros(Float64,n,n) .+ kx
         Ky = zeros(Float64,n,n) .+ ky
@@ -171,6 +170,7 @@ end
 ###=== MMS TESTS ===###
 
 # Dirichlet
+println("Dirichlet")
 DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Dy0_Lũ,Dirichlet,DyL_Rũ,Dirichlet,
@@ -179,6 +179,7 @@ DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
     ωy=2.5,cy=1.0)
 
 # Neumann
+println("Neumann")
 NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
     Nx0_Lũ,Neumann,NxL_Rũ,Neumann,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
@@ -187,6 +188,7 @@ NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
     ωy=2.5,cy=1.0)
 
 # Dirichlet x Neumann y
+println("Dirichlet x Neumann y")
 DirichXNeuYMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
@@ -195,9 +197,19 @@ DirichXNeuYMMS = comp_MMS(𝒟x,𝒟y,npts,
     ωy=2.5,cy=1.0)
 
 # Periodic
+println("Periodic")
 PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
     nothing,Periodic,nothing,Periodic,
     nothing,Periodic,nothing,Periodic,
     F,ũ,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
+
+
+#=
+###=== PLOTTING ===###
+
+p = plot(log.(DirichletMMS.npts), DirichletMMS.relerr)
+plot!(p,log.(NeumannMMS.npts), NeumannMMS.relerr)
+plot!(p,log.(DirichXNeuYMMS.npts), DirichXNeuYMMS.relerr)
+=#

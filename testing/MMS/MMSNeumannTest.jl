@@ -127,6 +127,3 @@ println("The convergence rate of this MMS setup is: ",conv_rate," for order ",or
 # @time solve(P,Dom,Δt,t_f,:cgie)
 # Profile.clear_malloc_data()
 # @time solve(P,Dom,Δt,t_f,:cgie)
-
-
-jldsave("./testing/MMS/MMSDNeumann.jld2";comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate)
