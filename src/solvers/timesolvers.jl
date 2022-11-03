@@ -34,6 +34,7 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
     CGBlock = ConjGradBlock{T}(grid)
     soln = solution{T}(grid,0.0,Δt,Prob)
+    BoundaryConditions = Prob.BoundaryConditions
 
     DBlock.u .= soln.u[1]
     
@@ -61,25 +62,25 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
     t = Δt
     Δt₀ = Δt
     DBlock.uₙ₊₁ .= DBlock.u
+    CGBlock.b .= DBlock.u
 
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
     
     while t < t_f
 
         if Prob.BoundaryConditions[1].type != Periodic
-            DBlock.boundary.RHS_Left = Prob.BoundaryConditions.Left.RHS(t)
-            DBlock.boundary.RHS_Right = Prob.BoundaryConditions.Right.RHS(t)
+            setBoundary!(BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,t,Δt)
+            setBoundary!(BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,t,Δt)
 
-            SAT_Left(DBlock.boundary.SAT_Left, Δt*DBlock.boundary.RHS_Left,DBlock.K,DataMode)
-            SAT_Right(DBlock.boundary.SAT_Right, Δt*DBlock.boundary.RHS_Right,DBlock.K,DataMode)
+            SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K, DataMode)
+            SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K, DataMode)
         end
-        
-        copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
-        if CGBlock.converged #If CG converges
+        if CGBlock.converged | !adaptive #If CG converges
             DBlock.u .= DBlock.uₙ₊₁
+            CGBlock.b .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
@@ -154,22 +155,14 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
         if Prob.BoundaryConditions.Left.type != Periodic
             setBoundary!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
-            # DBlock.boundary.RHS_Left .= Δt*Prob.BoundaryConditions.Left.RHS.(grid.gridy,t)
-            # DBlock.boundary.RHS_Right .= Δt*Prob.BoundaryConditions.Right.RHS.(grid.gridy,t)
 
-            # SAT_Left(DBlock.uₙ₊₁, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
-            # SAT_Right(DBlock.uₙ₊₁, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
             SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
             SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if Prob.BoundaryConditions.Up.type != Periodic
             setBoundary!(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
-            # DBlock.boundary.RHS_Up .= Δt*Prob.BoundaryConditions.Up.RHS.(grid.gridx,t)
-            # DBlock.boundary.RHS_Down .= Δt*Prob.BoundaryConditions.Down.RHS.(grid.gridx,t)
 
-            # SAT_Up(DBlock.uₙ₊₁, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
-            # SAT_Down(DBlock.uₙ₊₁, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
             SAT_Up(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
             SAT_Down(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
         end

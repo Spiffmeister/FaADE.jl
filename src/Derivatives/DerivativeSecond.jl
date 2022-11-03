@@ -434,33 +434,60 @@ end
     SecondDerivative!
 """
 @views @inline function SecondDerivativeInternal1D!(uₓₓ::AbstractVector,u::AbstractVector,cx::AbstractVector,
-    Δx::AbstractFloat,nx::Int)
+        Δx::AbstractFloat,nx::Int,order::Int)
 
-    for i = 2:nx-1
-            @inbounds uₓₓ[i-1] = 
-                ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2.0Δx^2)
-    end
-    uₓₓ
-end
-@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
-    Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int)
-
-    for j = 2:ny-1
+    if order == 2
         for i = 2:nx-1
-            @inbounds uₓₓ[i-1,j-1] = 
-                ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
-                ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
+                @inbounds uₓₓ[i-1] = 
+                    ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
+        end
+    elseif order == 4
+        for i = 7:nx-6
+            uₓₓ[i-6] = 
+                ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
+                (-cx[i-2]/0.6e1 - cx[i+1]/0.6e1 - cx[i-1]/0.2e1 - cx[i]/0.2e1)*u[i-1] +
+                (cx[i-2]/0.24e2 + 0.5e1/0.6e1*cx[i-1] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
+                (-cx[i-1]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
+                (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
         end
     end
     uₓₓ
 end
+@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
+        Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int,order::Int)
 
+    if order == 2
+        #= 2nd order =#
+        for j = 2:ny-1
+            for i = 2:nx-1
+                @inbounds uₓₓ[i-1,j-1] = 
+                    ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
+                    ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
+            end
+        end
+        println("Yes")
+    elseif order == 4
+        #= 4th order =#
+        for j = 3:ny-2
+            for i = 3:nx-2
+                uₓₓ[i-2,j-2] = 
+                    ((-cx[i,j-1]/0.6e1 + cx[i,j-2]/0.8e1 + cx[i,j]/0.8e1)*u[i,j-2] +
+                        (-cx[i,j-2]/0.6e1 - cx[i,j+1]/0.6e1 - cx[i,j-1]/0.2e1 - cx[i,j]/0.2e1)*u[i,j-1] +
+                        (cx[i,j-2]/0.24e2 + 0.5e1/0.6e1*cx[i,j-1] + 0.5e1/0.6e1*cx[i,j+1] + cx[i,j+2]/0.24e2 + 0.3e1/0.4e1*cx[i,j])*u[i,j] +
+                        (-cx[i,j-1]/0.6e1 - cx[i,j+2]/0.6e1 - cx[i,j]/0.2e1 - cx[i,j+1]/0.2e1)*u[i,j+1] +
+                        (-cx[i,j+1]/0.6e1 + cx[i,j]/0.8e1 + cx[i,j+2]/0.8e1)*u[i,j+2])/(-2Δx^2) +
+                    ((-cx[i-1,j]/0.6e1 + cx[i-2,j]/0.8e1 + cx[i,j]/0.8e1)*u[i-2,j] +
+                        (-cx[i-2,j]/0.6e1 - cx[i+1,j]/0.6e1 - cx[i-1,j]/0.2e1 - cx[i,j]/0.2e1)*u[i-1,j] +
+                        (cx[i-2,j]/0.24e2 + 0.5e1/0.6e1*cx[i-1,j] + 0.5e1/0.6e1*cx[i+1,j] + cx[i+2,j]/0.24e2 + 0.3e1/0.4e1*cx[i,j])*u[i,j] +
+                        (-cx[i-1,j]/0.6e1 - cx[i+2,j]/0.6e1 - cx[i,j]/0.2e1 - cx[i+1,j]/0.2e1)*u[i+1,j] +
+                        (-cx[i+1,j]/0.6e1 + cx[i,j]/0.8e1 + cx[i+2,j]/0.8e1)*u[i+2,j])/(-2Δy^2)
+            end
+        end
+        println("Hi")
 
-
-
-
-
-
+    end
+    uₓₓ
+end
 
 
 

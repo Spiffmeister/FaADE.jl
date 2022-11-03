@@ -70,7 +70,7 @@ function generate_Derivative(nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,order
     let nx=nx, ny=ny,
             Δx=Δx, Δy=Δy,
             order=order
-        Diff(uₓₓ,u,cx,cy) = Dₓₓ!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,order,order)
+        Diff(uₓₓ,u,cx,cy) = Dₓₓ!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,order)
         return Diff
     end
 end
@@ -91,11 +91,13 @@ function Dₓₓ! end
     #TODO HIGHER ORDER METHODS
     # half = halforder(order)
     # adj = BoundaryNodeOutput(order)
+    adj = BoundaryNodeInput(order)
+    ret = BoundaryNodeOutput(order)
     
-    SecondDerivativeInternal1D!(@views(uₓₓ[2:n-1]),u,c,Δx,n)
+    SecondDerivativeInternal1D!(@views(uₓₓ[ret+1:n-ret+1]),u,c,Δx,n,order)
 
-    SecondDerivative!(uₓₓ,u[1:order],c[1:order],Δx,Left,order=order)
-    SecondDerivative!(uₓₓ,u[n-order+1:n],c[n-order+1:n],Δx,Right,order=order)
+    SecondDerivative!(uₓₓ,u[1:adj],c[1:adj],Δx,Left,order=order)
+    SecondDerivative!(uₓₓ,u[n-adj+1:n],c[n-adj+1:n],Δx,Right,order=order)
     uₓₓ
 end
 ### Multidimensional second derivative SBP operator
@@ -127,7 +129,7 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,cx::AbstractMatrix,c
     order_y == 2 ? inty = 1 : inty = order_y+1
 
 
-    SecondDerivativeInternal2D!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny)
+    SecondDerivativeInternal2D!(@views(uₓₓ[2:nx-1,2:ny-1]),u,cx,cy,Δx,Δy,nx,ny,order_x)
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries
