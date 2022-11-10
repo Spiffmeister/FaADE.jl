@@ -74,15 +74,15 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
     # DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
+
     
     i = 0
-    rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ,order,CGB.Δ))
-    unorm = sqrt(innerH(DBlock.uₙ₊₁,DBlock.uₙ₊₁,order,CGB.Δ))
+    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+    unorm = sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁))
     while (rnorm > rtol*unorm) & (i < maxIT)
         A!(CGB.Adₖ,CGB.dₖ,RHS,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
-        dₖAdₖ = innerH(CGB.dₖ,CGB.Adₖ, order,CGB.Δ)
-        αₖ = -innerH(CGB.rₖ,CGB.dₖ, order,CGB.Δ)/dₖAdₖ
-
+        dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
+        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
         DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
@@ -91,9 +91,9 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
 
         A!(CGB.Drₖ,CGB.rₖ,RHS,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
-        βₖ = innerH(CGB.rₖ,CGB.Drₖ, order,CGB.Δ)/dₖAdₖ
+        βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
         CGB.dₖ .= -CGB.rₖ .+ βₖ*CGB.dₖ
-        rnorm = sqrt(innerH(CGB.rₖ,CGB.rₖ, order,CGB.Δ))
+        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
@@ -117,90 +117,92 @@ function A!(tmp::AbstractArray,uⱼ::AbstractArray,PDE!::Function,Δt::Float64,k
 end
 
 
-"""
-    innerH
-Computes the ``H``-inner product between two vectors or matrices ``u`` and ``v``.
-"""
-function innerH end
-# H inner product for 1D problems
-@views function innerH(u::AbstractVector,v::AbstractVector,order::Int,Δ::Float64)
-    tmp = 0.0
-    if order == 2
-        tmp += 0.5*Δ * u[1]*v[1]
-        tmp += 0.5*Δ * u[end]*v[end]
-        tmp += Δ*dot(u[2:end-1],v[2:end-1])
-        return tmp
-    elseif order == 4
-        tmp += sum([17.0/48.0, 59.0/48.0, 43.0/48.0, 49.0/48.0]*Δ .* u[1:4] .* v[1:4])
-        tmp += sum([49.0/48.0, 43.0/48.0, 59.0/48.0, 17.0/48.0]*Δ .* u[end-3:end] .* v[end-3:end])
-        tmp += Δ*dot(u[5:end-4],v[5:end-4])
-        return tmp
-    elseif order == 6
-        tmp += sum([13649.0/43200.0, 12013.0/8640.0, 2711.0/4320.0, 5359.0/4320.0, 7877.0/8640.0, 43801.0/43200.0])
-        tmp += sum([43801.0/43200.0, 7877.0/8640.0, 5359.0/4320.0, 2711.0/4320.0, 12013.0/8640.0, 13649.0/43200.0])
-        tmp += Δ*dot(u[7:end-6],v[7:end-6])
-    end
-end
-# H inner product for 2D problems
-@views function innerH(u::AbstractMatrix,v::AbstractMatrix,order::Int,Δ::Float64)
-    tmp = 0.0
-    if order == 2
-        tmp += 0.25*Δ * u[1,1]*v[1,1]
-        tmp += 0.25*Δ * u[end,end]*v[end,end]
-        tmp += 0.25*Δ * u[1,end]*v[1,end]
-        tmp += 0.25*Δ * u[end,1]*v[end,1]
+# """
+#     innerH
+# Computes the ``H``-inner product between two vectors or matrices ``u`` and ``v``.
+# """
+# function innerH end
+# # H inner product for 1D problems
+# @views function innerH(u::AbstractVector,v::AbstractVector,order::Int,Δ::Float64)
+#     tmp = 0.0
+#     if order == 2
+#         tmp += 0.5*Δ * u[1]*v[1]
+#         tmp += 0.5*Δ * u[end]*v[end]
+#         tmp += Δ*dot(u[2:end-1],v[2:end-1])
+#         return tmp
+#     elseif order == 4
+#         tmp += sum([17.0/48.0, 59.0/48.0, 43.0/48.0, 49.0/48.0]*Δ .* u[1:4] .* v[1:4])
+#         tmp += sum([49.0/48.0, 43.0/48.0, 59.0/48.0, 17.0/48.0]*Δ .* u[end-3:end] .* v[end-3:end])
+#         tmp += Δ*dot(u[5:end-4],v[5:end-4])
+#         return tmp
+#     elseif order == 6
+#         tmp += sum([13649.0/43200.0, 12013.0/8640.0, 2711.0/4320.0, 5359.0/4320.0, 7877.0/8640.0, 43801.0/43200.0])
+#         tmp += sum([43801.0/43200.0, 7877.0/8640.0, 5359.0/4320.0, 2711.0/4320.0, 12013.0/8640.0, 13649.0/43200.0])
+#         tmp += Δ*dot(u[7:end-6],v[7:end-6])
+#     end
+# end
+# # H inner product for 2D problems
+# @views function innerH(u::AbstractMatrix,v::AbstractMatrix,order::Int,Δ::Float64)
+#     tmp = 0.0
+#     if order == 2
+#         tmp += 0.25*Δ * u[1,1]*v[1,1]
+#         tmp += 0.25*Δ * u[end,end]*v[end,end]
+#         tmp += 0.25*Δ * u[1,end]*v[1,end]
+#         tmp += 0.25*Δ * u[end,1]*v[end,1]
 
-        tmp += 0.5*Δ * dot(u[2:end-1,1],v[2:end-1,1])
-        # tmp += 0.5*Δ * dot(@views(u[2:end-1,1]),@views(v[2:end-1,1]))
-        tmp += 0.5*Δ * dot(u[2:end-1,end],v[2:end-1,end])
-        tmp += 0.5*Δ * dot(u[1,2:end-1],v[1,2:end-1])
-        tmp += 0.5*Δ * dot(u[end,2:end-1],v[end,2:end-1])
+#         tmp += 0.5*Δ * dot(u[2:end-1,1],v[2:end-1,1])
+#         # tmp += 0.5*Δ * dot(@views(u[2:end-1,1]),@views(v[2:end-1,1]))
+#         tmp += 0.5*Δ * dot(u[2:end-1,end],v[2:end-1,end])
+#         tmp += 0.5*Δ * dot(u[1,2:end-1],v[1,2:end-1])
+#         tmp += 0.5*Δ * dot(u[end,2:end-1],v[end,2:end-1])
 
-        # Internal sum
-        # for (uᵢ,vⱼ) in zip(u[2:end-1,2:end-1],v[2:end-1,2:end-1]) #TODO: Write this in nifty.jl
-        #     tmp += Δ * uᵢ*vⱼ
-        # end
-        tmp += Δ * dot(u[2:end-1,2:end-1],v[2:end-1,2:end-1])  #see LinearAlgebra.dot
-    elseif order == 4
-    elseif order == 6
-    end
-    return tmp
-end
+#         # Internal sum
+#         # for (uᵢ,vⱼ) in zip(u[2:end-1,2:end-1],v[2:end-1,2:end-1]) #TODO: Write this in nifty.jl
+#         #     tmp += Δ * uᵢ*vⱼ
+#         # end
+#         tmp += Δ * dot(u[2:end-1,2:end-1],v[2:end-1,2:end-1])  #see LinearAlgebra.dot
+#     elseif order == 4
 
-"""
-    build_H
-"""
-function build_H end
-function build_H(n::Int64,order::Int64)
-    H = ones(n)
-    if order == 2
-        H[1] = H[end] = 0.5
-    elseif order == 4
-        H[1] = H[end] = 17.0/48.0
-        H[2] = H[end-1] = 59.0/48.0
-        H[3] = H[end-2] = 43.0/48.0
-        H[4] = H[end-3] = 49.0/48.0
-    elseif order == 6
-        H[1] = H[end] = 13649.0/43200.0
-        H[2] = H[end-1] = 12013.0/8640.0
-        H[3] = H[end-2] = 2711.0/4320.0
-        H[4] = H[end-3] = 5359.0/4320.0
-        H[5] = H[end-4] = 7877.0/8640.0
-        H[6] = H[end-5] = 43801.0/43200.0
-    else
-        error("Order must be 2,4 or 6")
-    end
-    return H
-end
-function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
-    #= DEPRECATED =#
-    nx,ny = size(u)
-    tmp = 0.0
-    for j = 1:ny
-        for i = 1:nx
-            tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
-        end
-    end
-    return tmp
-end
+
+#     elseif order == 6
+#     end
+#     return tmp
+# end
+
+# """
+#     build_H
+# """
+# function build_H end
+# function build_H(n::Int64,order::Int64)
+#     H = ones(n)
+#     if order == 2
+#         H[1] = H[end] = 0.5
+#     elseif order == 4
+#         H[1] = H[end]   = 17.0/48.0
+#         H[2] = H[end-1] = 59.0/48.0
+#         H[3] = H[end-2] = 43.0/48.0
+#         H[4] = H[end-3] = 49.0/48.0
+#     elseif order == 6
+#         H[1] = H[end] = 13649.0/43200.0
+#         H[2] = H[end-1] = 12013.0/8640.0
+#         H[3] = H[end-2] = 2711.0/4320.0
+#         H[4] = H[end-3] = 5359.0/4320.0
+#         H[5] = H[end-4] = 7877.0/8640.0
+#         H[6] = H[end-5] = 43801.0/43200.0
+#     else
+#         error("Order must be 2 or 4, 6 not yet implemented")
+#     end
+#     return H
+# end
+# function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
+#     #= DEPRECATED =#
+#     nx,ny = size(u)
+#     tmp = 0.0
+#     for j = 1:ny
+#         for i = 1:nx
+#             tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
+#         end
+#     end
+#     return tmp
+# end
 

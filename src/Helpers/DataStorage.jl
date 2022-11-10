@@ -1,8 +1,6 @@
 
 
 # abstract type Solution{T<:AbstractFloat} end
-abstract type DataBlockType{T<:AbstractFloat,N} end
-abstract type BoundaryStorage{T<:AbstractFloat,N} end
 
 
 #========== WHOLE PROBLEM DATA ==========#
@@ -46,41 +44,6 @@ end
 
 
 #========== WHOLE PROBLEM DATA ==========#
-"""
-    ConjGradBlock
-"""
-mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
-    b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
-    rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
-    Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
-    Drₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
-    dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
-
-    converged   :: Bool
-    Δ           :: T
-
-    function ConjGradBlock{T}(grid::GridType) where T
-
-        if typeof(grid) <: Grid1D
-            Δ = grid.Δx
-            n = grid.n
-        elseif typeof(grid) <: Grid2D
-            Δ = min(grid.Δx,grid.Δy)
-            n = (grid.nx,grid.ny)
-        end
-
-        b   = zeros(T,n)
-        rₖ  = zeros(T,n)
-        Adₖ = zeros(T,n)
-        Arₖ = zeros(T,n)
-        dₖ  = zeros(T,n)
-
-        dims = length(n)
-
-        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true, Δ)
-    end
-end
-
 
 
 #========== BOUNDARY DATA ==========#

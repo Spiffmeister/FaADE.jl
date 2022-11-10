@@ -10,6 +10,7 @@ module Helpers
     include("grid.jl")
     include("UserTypes.jl")
 
+    include("ConjGradData.jl")
     include("DataStorage.jl")
 
     include("postnifty.jl")
@@ -35,10 +36,12 @@ module Helpers
     
     # DataStorage import
     export DataBlockType, BoundaryStorage, 
-        DataBlock, ConjGradBlock,
+        DataBlock,
         BoundaryData1D, BoundaryData2D, 
         copyUtoSAT!, copySATtoU!, addSATtoU!,
         addSource!, setBoundary!
+    
+    export ConjGradBlock, build_H
     
     # PostNifty import
     export GetAxis, GetDim,

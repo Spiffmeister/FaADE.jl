@@ -32,7 +32,7 @@ function solve end
 function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
-    CGBlock = ConjGradBlock{T}(grid)
+    CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
     BoundaryConditions = Prob.BoundaryConditions
 
@@ -105,7 +105,7 @@ end
 function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,source::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
-    CGBlock = ConjGradBlock{T}(grid)
+    CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
 
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
@@ -170,8 +170,10 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
             addSource!(source,CGBlock.b,grid,t,Δt)
         end
         # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
+        # println(norm(CGBlock.b),"   ",norm(DBlock.u),"  ",norm(CGBlock.b .- DBlock.u),"  ",norm(CGBlock.b .- DBlock.u)/norm(CGBlock.b))
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
+
 
         
         if CGBlock.converged | !adaptive

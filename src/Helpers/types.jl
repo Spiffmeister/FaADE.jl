@@ -48,3 +48,9 @@ Used when the conjugate gradient solver is being used so the solver knows which 
 struct SATMode{T} end
 const DataMode = SATMode{:DataMode}()
 const SolutionMode = SATMode{:SolutionMode}()
+
+
+
+
+abstract type DataBlockType{T<:AbstractFloat,N} end
+abstract type BoundaryStorage{T<:AbstractFloat,N} end

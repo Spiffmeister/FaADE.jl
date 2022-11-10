@@ -20,6 +20,6 @@ module solvers
     include("timesolvers.jl")
     include("integrators.jl")
 
-    export build_H, solve
+    export solve
 
 end

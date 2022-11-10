@@ -158,7 +158,19 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u
 end
 
 
-
+# function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},RHS::Function,c::AbstractArray{T},
+#         t::T,Δt::T,x::AbstractArray{T}, #time, dt, grid points
+#         α::Float64,τ::Float64,BD::AbstractVector,
+#         order::Int,loopaxis::Function) where {T}
+#     for (S,X,C) in zip(loopaxis(SAT),loopaxis(x),loopaxis(c))
+#         for i = 1:order
+#             S[end-order+i] -= α*C[end]*BD[i]*Δt*RHS(X,t)
+#         end
+#         # S[end-order+1:end] .-= α*C[end]*BD*u[end]
+#         S[end] -= τ*Δt*RHS(X,t)
+#     end
+#     SAT
+# end
 
 
 
