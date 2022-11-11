@@ -95,7 +95,6 @@ function Dₓₓ! end
     ret = BoundaryNodeOutput(order)
     
     SecondDerivativeInternal1D!(@views(uₓₓ[ret+1:n-ret+1]),u,c,Δx,n,order)
-
     SecondDerivative!(uₓₓ,u[1:adj],c[1:adj],Δx,Left,order=order)
     SecondDerivative!(uₓₓ,u[n-adj+1:n],c[n-adj+1:n],Δx,Right,order=order)
     uₓₓ
