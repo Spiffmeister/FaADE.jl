@@ -16,7 +16,6 @@ struct innerH{T,N}
     function innerH(grid::GridType{T,N},order::Int) where {T,N}
         if typeof(grid) <: Grid1D
             H = build_H(order,grid.n)
-            println(H)
             new{T,N}(H,[1.0], grid.n,1, grid.Δx)
             
         elseif typeof(grid) <: Grid2D
