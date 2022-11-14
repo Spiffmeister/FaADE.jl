@@ -83,7 +83,7 @@ function SAT_Neumann_explicit!(SAT::AbstractArray{T},::NodeType{:Right},u::Abstr
         order::Int,loopdirection::Function) where T
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
-        S[end] = τ*(C[end] * dot(BD,U[end-order+1:end]) - RHS[end])
+        S[end] -= τ*(C[end] * dot(BD,U[end-order+1:end]) - RHS[end])
     end
 end
 
@@ -128,6 +128,6 @@ function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u::
         order::Int,loopaxis::Function) where T
     
     for (S,U) in zip(loopaxis(SAT),loopaxis(u))
-        S[end] -= -τ*U[1]
+        S[end] -= -τ*U[end]
     end
 end

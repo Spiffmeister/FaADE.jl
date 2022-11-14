@@ -18,7 +18,7 @@ using SBP_operators
 
 method = :cgie
 # Number of grid points in each solution
-npts = [11,21,31,41,51,61]
+npts = [21,31,41,51,61]
 
 ###=== MMS ===###
 
@@ -100,7 +100,7 @@ end
 function comp_MMS(Dx,Dy,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         BoundaryY0,BY0Type,BoundaryYL,BYLType,
-        F,ũ,ũ₀;
+        F,ũ,ũ₀,order;
         dt_scale=0.01,t_f=0.1,kx=1.0,ky=1.0,
         ωx=1.0,ωy=1.0,cx=0.0,cy=0.0,Lx=1.0,Ly=1.0)
 
@@ -178,7 +178,7 @@ println("Dirichlet")
 O2_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Dy0_Lũ,Dirichlet,DyL_Rũ,Dirichlet,
-    F,ũ,ũ₀,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 #=
@@ -187,7 +187,7 @@ println("Neumann")
 O2_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
     Nx0_Lũ,Neumann,NxL_Rũ,Neumann,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
-    F,ũ,ũ₀,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 
@@ -196,7 +196,7 @@ println("Dirichlet x Neumann y")
 O2_DirichXNeuYMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 
@@ -205,10 +205,10 @@ println("Periodic")
 O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
     nothing,Periodic,nothing,Periodic,
     nothing,Periodic,nothing,Periodic,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
-
+=#
 
 ### Order 4
 order = 4
@@ -219,16 +219,16 @@ println("Dirichlet")
 O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Dy0_Lũ,Dirichlet,DyL_Rũ,Dirichlet,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
-
+#=
 # Neumann
 println("Neumann")
 O4_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
     Nx0_Lũ,Neumann,NxL_Rũ,Neumann,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 
@@ -237,7 +237,7 @@ println("Dirichlet x Neumann y")
 O4_DirichXNeuYMMS = comp_MMS(𝒟x,𝒟y,npts,
     Dx0_Lũ,Dirichlet,DxL_Rũ,Dirichlet,
     Ny0_Lũ,Neumann,NyL_Rũ,Neumann,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 
@@ -246,7 +246,7 @@ println("Periodic")
 O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
     nothing,Periodic,nothing,Periodic,
     nothing,Periodic,nothing,Periodic,
-    F,ũ,
+    F,ũ,ũ₀,order,
     ωx=1.0,cx=0.0,
     ωy=2.5,cy=1.0)
 =#
@@ -255,18 +255,18 @@ O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
 
 ###=== PLOTTING ===###
 println("Order 2 convergence rates=",O2_DirichletMMS.conv_rate)#,O2_NeumannMMS.conv_rate,O2_DirichXNeuYMMS.conv_rate,O2_PeriodicMMS.conv_rate)
-# println("Order 4 convergence rates=",O4_DirichletMMS.conv_rate,O4_NeumannMMS.conv_rate,O4_DirichXNeuYMMS.conv_rate,O4_PeriodicMMS.conv_rate)
+println("Order 4 convergence rates=",O4_DirichletMMS.conv_rate)#,O4_NeumannMMS.conv_rate,O4_DirichXNeuYMMS.conv_rate,O4_PeriodicMMS.conv_rate)
 
 
 ###=== PLOTTING ===###
 
 p = plot(   log.(O2_DirichletMMS.npts),     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
+plot!(p,    log.(O4_DirichletMMS.npts),     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
 #=
 plot!(p,    log.(O2_NeumannMMS.npts),       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$")
 plot!(p,    log.(O2_DirichXNeuYMMS.npts),   O2_DirichXNeuYMMS.relerr,   label=L"Dirichlet and Neumann $\mathcal{O}(h^2)$")
 plot!(p,    log.(O2_PeriodicMMS.npts),      O2_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^2)$")
 
-plot!(p,    log.(O4_DirichletMMS.npts),     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
 plot!(p,    log.(O4_NeumannMMS.npts),       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$")
 plot!(p,    log.(O4_DirichXNeuYMMS.npts),   O4_DirichXNeuYMMS.relerr,   label=L"Dirichlet and Neumann $\mathcal{O}(h^4)$")
 plot!(p,    log.(O4_PeriodicMMS.npts),      O4_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^4)$")

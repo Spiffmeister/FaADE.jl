@@ -62,10 +62,11 @@ BoundaryRight = Boundary(Neumann,(y,t) -> BxRũ(y,t,Lx=𝒟x[2]),Right,1)
 BoundaryUp = Boundary(Neumann,ByLũ,Up,2)
 BoundaryDown = Boundary(Neumann,(x,t) -> ByRũ(x,t,Ly=𝒟y[2]),Down,2)
 
-order = 2
+order = 4
 method = :cgie
 
-npts = [11,21,31,41,51,61]
+npts = [21,31,41,51,61]
+# npts = [41]
 comp_soln = []
 MMS_soln = []
 grids = []
@@ -75,6 +76,7 @@ for n in npts
     
     Δt = 0.01*Dom.Δx^2
     t_f = 0.1
+    # t_f = 200Δt
 
     # Diffusion coefficients
     kx = ky = zeros(Float64,n,n) .+ 1.0;
@@ -98,7 +100,7 @@ println("The convergence rate of this MMS setup is: ",conv_rate," for order ",or
 
 
 # println("plotting")
-# using Plots
+using Plots
 
 # # l = @layout [a b c]
 # p = surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2],
@@ -119,8 +121,9 @@ println("The convergence rate of this MMS setup is: ",conv_rate," for order ",or
 #     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
 
-# surface(soln.grid.gridy,soln.grid.gridx,u_MMS)
-# surface(soln.grid.gridy,soln.grid.gridx,soln.u[2])
+surface(grids[end].gridy,grids[end].gridx,MMS_soln[end])
+surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2])
+surface(grids[1].gridy,grids[1].gridx,comp_soln[1].u[2] .- MMS_soln[end])
 
 # scatter(1:Dom.nx,soln.u[2][:,1:end],legend=false)
 
