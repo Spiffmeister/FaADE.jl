@@ -71,9 +71,11 @@ function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
             S[i]        += τ₁*K[1]*DₓᵀE₀[i]*L₁u
             S[end-order+i]  += -τ₁*K[end]*DₓᵀEₙ[i]*L₁u
             #Neumann terms
-            S[1]  += α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
-            S[end]+= α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
+            # S[1]  += α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
+            # S[end]+= α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
         end
+        S[1]  += α₀ * (K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end]))
+        S[end]+= α₀ * (K[1]*dot(E₀Dₓ,U[1:order]) - K[end]*dot(EₙDₓ,U[end-order+1:end]))
         # S[1:order]        .+= τ₁ * K[1] * BDₓᵀ*L₁u
         # S[end-order+1:end].+= -τ₁ * K[end] * BDₓᵀ*L₁u
         # # Neumann terms

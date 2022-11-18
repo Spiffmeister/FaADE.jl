@@ -129,17 +129,17 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
 
     function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
         Diff(cache,u,K[1],K[2])
-        if Prob.BoundaryConditions.Left.type != Periodic
+        if Prob.BoundaryConditions.Left.type != Periodic #Left/Right boundaries
             SAT_Left(cache,u,K[1],SolutionMode)
             SAT_Right(cache,u,K[1],SolutionMode)
         else
-            SAT_LR(cache,u,K[1])
+            SAT_LR(cache,u,K[1]) #Periodic SAT
         end
-        if Prob.BoundaryConditions.Up.type != Periodic
+        if Prob.BoundaryConditions.Up.type != Periodic #Up/Down boundaries
             SAT_Up(cache,u,K[2],SolutionMode)
             SAT_Down(cache,u,K[2],SolutionMode)
         else
-            SAT_UD(cache,u,K[2])
+            SAT_UD(cache,u,K[2]) #Periodic SAT
         end
     end
 
@@ -152,14 +152,14 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
 
     while t < t_f
 
-        if Prob.BoundaryConditions.Left.type != Periodic
+        if Prob.BoundaryConditions.Left.type != Periodic #Left/Right boundaries
             setBoundary!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
 
             SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
             SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
-        if Prob.BoundaryConditions.Up.type != Periodic
+        if Prob.BoundaryConditions.Up.type != Periodic #Up/Down boundaries
             setBoundary!(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
 

@@ -42,7 +42,6 @@ Generates mutating functions required for Dirichlet boundary conditions.
 If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
 #TODO: If `solver ∈ [:euler]` then only one method is generated
 """
-function  generate_Dirichlet end
 function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
     # Choose the axis to loop over
     loopdirection = SelectLoopDirection(SATD.axis)
