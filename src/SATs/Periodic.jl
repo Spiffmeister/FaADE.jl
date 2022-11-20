@@ -68,7 +68,7 @@ function SAT_Periodic!(cache::AbstractArray,u::AbstractArray,c::AbstractArray,
         # Symmeteriser
         L₁u = (U[1] - U[end])
         for i = 1:order
-            S[i]        += τ₁*K[1]*DₓᵀE₀[i]*L₁u
+            S[i]            += τ₁*K[1]*DₓᵀE₀[i]*L₁u
             S[end-order+i]  += -τ₁*K[end]*DₓᵀEₙ[i]*L₁u
             #Neumann terms
             # S[1]  += α₀ * (K[1]*E₀Dₓ[i]*U[i] - K[end]*EₙDₓ[i]*U[end-order+i])
