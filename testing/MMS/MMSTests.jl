@@ -274,17 +274,54 @@ O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
 println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$")
+plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$")
 plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$")
+
 println("=====")
 
 
+plot!(p,xaxis=:log,yaxis=:log)
 
 
+order2rate = npts
 
 
 #=
 
 
 savefig(p,".//testing//MMS//MMSTests.eps")
+=#
+
+
+
+#=
+
+pO2 = plot()
+
+plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$")
+plot!(pO2,    log.(O2_PeriodicMMS.npts),      log.(O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$")
+
+plot!(pO2, log.([npts[2],npts[end-1]]), -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2) .+ log(sum(O2_DirichletMMS.relerr[1:2]/2)),
+    linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
+
+savefig(pO2,".//testing//MMS//MMSTests_order2.eps")
+savefig(pO2,".//testing//MMS//MMSTests_order2.png")
+
+
+pO4 = plot()
+plot!(pO4,    log.(O4_DirichletMMS.npts),     log.(O4_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
+plot!(pO4,    log.(O4_NeumannMMS.npts),       log.(O4_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
+plot!(pO4,    log.(O4_PeriodicMMS.npts),      log.(O4_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
+
+plot!(pO4, log.([npts[2],npts[end-1]]), 
+    -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2) .+ log(sum(O4_DirichletMMS.relerr[1:2]/2)),
+    linestyle=:dash, linecolor=:black, label=L"$\mathcal{O}(h^2)$")
+plot!(pO4, log.([npts[2],npts[end-1]]), 
+    -log.([npts[2],npts[end-1]].^4) .+ log(npts[2]^4) .+ log(sum(O4_DirichletMMS.relerr[1:2]/2)),
+    linestyle=:dashdot, linecolor=:black, label=L"$\mathcal{O}(h^4)$")
+
+savefig(pO4,".//testing//MMS//MMSTests_order4.eps")
+savefig(pO4,".//testing//MMS//MMSTests_order4.png")
+
 =#
