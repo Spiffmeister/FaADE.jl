@@ -16,10 +16,10 @@ using SBP_operators
 #=== MMS ===#
 # Setting up the manufactured solution
 
-cx = 0.0
-cy = 1.0
-ωy = 2.5
-ωx = 1.0
+cx = 1.0
+cy = 0.0
+ωx = 2.5
+ωy = 2.0 #MUST BE INTEGER FOR PERIODIC
 K = 1.0
 
 
@@ -58,13 +58,16 @@ end
 # Boundary conditions from the MMS
 BoundaryLeft = Boundary(Dirichlet,BxLũ,Left,1)
 BoundaryRight = Boundary(Dirichlet,(y,t) -> BxRũ(y,t,Lx=𝒟x[2]),Right,1)
+
+
 BoundaryUp = Boundary(Dirichlet,ByLũ,Up,2)
 BoundaryDown = Boundary(Dirichlet,(x,t) -> ByRũ(x,t,Ly=𝒟y[2]),Down,2)
+
 
 order = 4
 method = :cgie
 
-npts = [21,31,41,51,61]
+npts = [21,31,41,51]#,61,71,81,91,101]
 # npts = [41]
 comp_soln = []
 MMS_soln = []
@@ -75,7 +78,7 @@ for n in npts
     
     Δt = 0.01*Dom.Δx^2
     # t_f = 200Δt
-    t_f = 0.1
+    t_f = 0.01
 
     # Diffusion coefficients
     kx = ky = zeros(Float64,n,n) .+ 1.0;
@@ -115,15 +118,15 @@ using Plots
 #     xlabel="y",ylabel="x",zlabel="MMS Solution",
 #     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
-# surface(#p[3],
-#     grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
-#     xlabel="y",ylabel="x",zlabel="Relative error",
-#     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
+surface(#p[3],
+    grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
+    xlabel="y",ylabel="x",zlabel="Relative error",
+    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
 
-surface(grids[end].gridy,grids[end].gridx,MMS_soln[end])
-surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2])
-surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2] .- MMS_soln[end])
+# surface(grids[end].gridy,grids[end].gridx,MMS_soln[end])
+# surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2])
+# surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2] .- MMS_soln[end])
 
 
 # plot(comp_soln[end].u[2][:,1]); plot!(MMS_soln[end][:,1])

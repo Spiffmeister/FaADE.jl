@@ -18,7 +18,7 @@ using plas_diff
 
 
 ###
-𝒟x = [0.5,0.68]
+𝒟x = [0.0,1.0]
 𝒟y = [-π,π]
 nx = 41
 ny = 41
@@ -31,7 +31,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8;
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
 t_f = 10_000Δt
 
-u₀(x,y) = (x-0.5)/(0.68-0.5)
+u₀(x,y) = x
 
 
 BoundaryLeft = Boundary(Dirichlet,(y,t) -> 0.0,Left,1)
@@ -51,7 +51,7 @@ P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeft,BoundaryRight,Boundar
 
 
 # params = plas_diff.SampleFields.H_params([0.],[0.],[0.])
-χₘₙ = 2.1e-3
+χₘₙ = 2.1e-3 + 5.0e-3
 params = plas_diff.SampleFields.H_params([χₘₙ/2., χₘₙ/3.],[2.0, 3.0],[1.0, 2.0])
 
 function χ_h!(χ,x::Array{Float64},p,t)
@@ -128,4 +128,45 @@ surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],
 # @time solve(P,Dom,Δt,t_f,:cgie)
 # Profile.clear_malloc_data()
 # @time solve(P,Dom,Δt,t_f,:cgie)
+
+
+
+pdata = plas_diff.poincare(χ_h!,params,x=[0.0,1.0],y=[-π,π])
+
+
+plas_diff.plot_grid(gdata)
+
+
+
+
+
+p1 = scatter(pdata.θ,pdata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,xlims=𝒟y,ylabel="ψ",xlabel="θ",legend=false,dpi=600,fmt=:png)
+savefig(p1,"SBP_operators//figures//CTAC_Poincare")
+
+
+p2 = contour(soln.grid.gridy,soln.grid.gridx,soln.u[2],dpi=600,fmt=:png,linewidth=2)
+scatter!(pdata.θ,pdata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,ylabel="ψ",xlabel="θ",legend=false)
+savefig(p2,"SBP_operators//figures/CTAC_Contour")
+
+
+
+
+p3 = GLMakie.Figure()
+
+ax3 = GLMakie.Axis3(p3[1,1])
+
+GLMakie.surface!(ax3,soln.grid.gridy,soln.grid.gridx,soln.u[2]',colormap=(:viridis, 0.5),transparency=true,alpha=0.5)
+GLMakie.wireframe!(ax3,soln.grid.gridy,soln.grid.gridx,soln.u[2]',color=(:black,0.2),transparency=true,linewidth=1.0)
+GLMakie.scatter!(ax3,pdata.θ[0.0 .≤ pdata.ψ .≤ 1.0],pdata.ψ[0.0 .≤ pdata.ψ .≤ 1.0],zeros(length(pdata.ψ[0.0 .≤ pdata.ψ .≤ 1.0])),color=:black,markersize=2.0)
+
+
+
+GLMakie.scale!(ax3,(1.0,2.0,1.0))
+
+
+using GLMakie
+# GLMakie.wireframe(soln.grid.gridy,soln.grid.gridx,soln.u[2])
+# GLMakie.scatter(pdata.θ[0.0 .≤ pdata.ψ .≤ 1.0],pdata.ψ[0.0 .≤ pdata.ψ .≤ 1.0],markersize=1.0,color=:black)
+# GLMakie.contour!(soln.grid.gridy,soln.grid.gridx,soln.u[2]',linewidth=2,levels=10)
+# GLMakie.Colorbar!()
 

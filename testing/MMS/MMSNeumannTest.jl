@@ -17,10 +17,10 @@ using SBP_operators
 #=== MMS ===#
 # Setting up the manufactured solution
 
-cx = 0.0
-cy = 1.0
-ωy = 2.5
-ωx = 1.0
+cx = 1.0
+cy = 0.0
+ωx = 2.5
+ωy = 2.0
 K = 1.0
 
 
@@ -65,7 +65,7 @@ BoundaryDown = Boundary(Neumann,(x,t) -> ByRũ(x,t,Ly=𝒟y[2]),Down,2)
 order = 4
 method = :cgie
 
-npts = [21,31,41,51,61]
+npts = [21,31,41,51]
 # npts = [41]
 comp_soln = []
 MMS_soln = []
@@ -75,7 +75,7 @@ for n in npts
     Dom = Grid2D(𝒟x,𝒟y,n,n)
     
     Δt = 0.01*Dom.Δx^2
-    t_f = 0.1
+    t_f = 0.01
     # t_f = 200Δt
 
     # Diffusion coefficients
@@ -115,15 +115,15 @@ using Plots
 #     xlabel="y",ylabel="x",zlabel="MMS Solution",
 #     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
-# surface(#p[3],
-#     grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
-#     xlabel="y",ylabel="x",zlabel="Relative error",
-#     xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
+surface(#p[3],
+    grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
+    xlabel="y",ylabel="x",zlabel="Absolute error",
+    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
 
-surface(grids[end].gridy,grids[end].gridx,MMS_soln[end])
-surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2])
-surface(grids[1].gridy,grids[1].gridx,comp_soln[1].u[2] .- MMS_soln[end])
+# surface(grids[end].gridy,grids[end].gridx,MMS_soln[end])
+# surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2])
+# surface(grids[1].gridy,grids[1].gridx,comp_soln[1].u[2] .- MMS_soln[end])
 
 # scatter(1:Dom.nx,soln.u[2][:,1:end],legend=false)
 
