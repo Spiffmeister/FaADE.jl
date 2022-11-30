@@ -273,10 +273,10 @@ end
     # internal x side y
     halfx = halforder(order_x) # half way
     (ynode == Right) & (order_y > 2) ? offset = halforder(order_y) : offset = 0
-    Inx = BoundaryNodeInput(order_y)
+    Iny = BoundaryNodeInput(order_y)
 
     for i = 1:nx
-        SecondDerivative!(uₓₓ[i,:],u[i+halfx,:],cy[i+halfx,:],Δy,ynode,order=order_y)
+        SecondDerivative!(uₓₓ[i,Yrng],u[i+halfx,1:Iny],cy[i+halfx,1:Iny],Δy,ynode,order=order_y)
         for j = Yrng
             uₓₓ[i,j] += SecondDerivative(u[i:i+order_y,j+offset],cx[i:i+order_y,j+offset],Δx,Internal,order=order_x)
         end
