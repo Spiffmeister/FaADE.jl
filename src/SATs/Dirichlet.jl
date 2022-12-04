@@ -148,10 +148,10 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u
         order::Int,loopaxis::Function) where {T}
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
         for i = 1:order
-            S[end-order+i] -= α*C[end]*BD[i]*U[1]
+            S[end-order+i] -= α*C[end]*BD[i]*U[end]
         end
         # S[end-order+1:end] .-= α*C[end]*BD*u[end]
-        S[end] -= τ*U[1]
+        S[end] -= τ*U[end]
     end
     SAT
 end
