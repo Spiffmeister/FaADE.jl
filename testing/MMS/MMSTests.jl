@@ -294,9 +294,37 @@ savefig(p,".//testing//MMS//MMSTests.eps")
 
 
 
+
+O2Conv = (n=npts,
+    conv_D = O2_DirichletMMS.conv_rate,
+    conv_N = O2_NeumannMMS.conv_rate,
+    conv_P = O2_PeriodicMMS.conv_rate,
+    relerr_D = O2_DirichletMMS.relerr,
+    relerr_N = O2_NeumannMMS.relerr,
+    relerr_P = O2_PeriodicMMS.relerr
+    )
+
+O4Conv = (n=npts,
+    conv_D = O4_DirichletMMS.conv_rate,
+    conv_N = O4_NeumannMMS.conv_rate,
+    conv_P = O4_PeriodicMMS.conv_rate,
+    relerr_D = O4_DirichletMMS.relerr,
+    relerr_N = O4_NeumannMMS.relerr,
+    relerr_P = O4_PeriodicMMS.relerr
+    )
+
+using JLD2
+jldsave("testing/MMS/FullMMS.jld2";O2Conv,O4Conv)
+
+
+
+
 #=
 
-pO2 = plot()
+pO2 = plot(axis=:log,minorgrid=true)
+plot!(pO2,    (O2_DirichletMMS.npts),     (O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
+plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
 
 plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$"), markershape=:circle
@@ -323,5 +351,23 @@ plot!(pO4, log.([npts[2],npts[end-1]]),
 
 savefig(pO4,".//testing//MMS//MMSTests_order4.eps")
 savefig(pO4,".//testing//MMS//MMSTests_order4.png")
+
+=#
+
+
+#=
+
+using DelimitedFiles
+
+
+open("testing/MMS/MMSTests_O2.csv","w") do io
+    writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
+end
+
+
+open("testing/MMS/MMSTests_O4.csv","w") do io
+    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
+end
+
 
 =#

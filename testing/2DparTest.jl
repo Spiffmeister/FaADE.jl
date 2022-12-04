@@ -29,7 +29,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8;
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 10_000Δt
+t_f = 1000Δt
 
 u₀(x,y) = (x-0.5)/(0.68-0.5)
 
