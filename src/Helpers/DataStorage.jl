@@ -242,7 +242,7 @@ function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T,Δt) wh
     end
 end
 function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T,Δt::T) where T
-    u += Δt*F(grid,t)
+    u .+= Δt*F.(grid.grid,t)
 end
 
 """
