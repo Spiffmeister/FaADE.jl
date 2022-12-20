@@ -81,6 +81,9 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
             SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K, DataMode)
             SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K, DataMode)
         end
+        if typeof(source) <: Function
+            addSource!(source,CGBlock.b,grid,t,Δt)
+        end
 
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
