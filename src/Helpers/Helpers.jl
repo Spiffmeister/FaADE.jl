@@ -15,6 +15,8 @@ module Helpers
 
     include("postnifty.jl")
 
+    include("penaltyfn.jl")
+
 
 
     # types import
@@ -46,6 +48,9 @@ module Helpers
     # PostNifty import
     export GetAxis, GetDim,
         GetMinΔ
+    
+    # Parallel penalty functions
+    export ParallelGrid, generate_parallel_penalty
     
 end
 

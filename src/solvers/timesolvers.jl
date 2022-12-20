@@ -29,12 +29,18 @@ Optional inputs:
 """
 function solve end
 #= 1D SOLVER =#
-function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
     BoundaryConditions = Prob.BoundaryConditions
+
+    typeof(Pgrid) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
+    if penalty_function_enabled
+        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order,interpfn=interpfn)
+    end
+
 
     DBlock.u .= soln.u[1]
     
@@ -79,6 +85,9 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
         conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
         if CGBlock.converged | !adaptive #If CG converges
+            if penalty_function_enabled
+                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+            end
             DBlock.u .= DBlock.uₙ₊₁
             CGBlock.b .= DBlock.uₙ₊₁
             copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
@@ -88,6 +97,8 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
             t += Δt
         else #If CG fails, reset and retry step
             DBlock.uₙ₊₁ .= DBlock.u
+            Δt /= 2.0
+            CGBlock.converged = true
             if Δt < Δt₀/10.0
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
