@@ -67,6 +67,7 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 
     H = build_H(order,grid.n)
+    H = 1.0 ./ H.^2
 
     let H=H, grid=grid, τ=τ, κ=κ, planes=planes
 
@@ -74,7 +75,7 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 end
 
-function generate_parallel_penalty(planes::ParallelGrid,grid::GridType,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:linear) where T
+function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:linear) where T
 
     interp = choose_interpmode(interpmode=interpmode)
 
@@ -100,7 +101,7 @@ function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
     I = interp((grid.grid),u₀)
 
     for i = 1:grid.n
-        u[i] = 1.0/(1.0 - κ/2.0 * Δt * H[i]) * (u₀[i] - Δt*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
+        u[i] = 1.0/(1.0 - κ/2.0 * Δt * H[i]) * (u[i] - Δt*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
     end
 end
 
@@ -110,7 +111,7 @@ function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
 
     for j = 1:ny
         for i = 1:nx
-            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u₀[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(I(F_plane[i,j]) + I(B_plane([i,j]))))
+            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(I(F_plane[i,j]) + I(B_plane([i,j]))))
         end
     end
 end
