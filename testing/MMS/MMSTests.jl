@@ -355,7 +355,7 @@ savefig(pO4,".//testing//MMS//MMSTests_order4.png")
 =#
 
 
-#=
+
 
 using DelimitedFiles
 
@@ -363,11 +363,15 @@ using DelimitedFiles
 open("testing/MMS/MMSTests_O2.csv","w") do io
     writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
 end
-
+open("testing/MMS/MMSTests_O2_rates.csv","w") do io
+    writedlm(io,[O2_DirichletMMS.conv_rate O2_NeumannMMS.conv_rate O2_PeriodicMMS.conv_rate])
+end
 
 open("testing/MMS/MMSTests_O4.csv","w") do io
-    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
+    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
+end
+open("testing/MMS/MMSTests_O4_rates.csv","w") do io
+    writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
 end
 
 
-=#
