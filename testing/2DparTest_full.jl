@@ -75,6 +75,9 @@ H_y = 1.0 ./H_y.^2
 τ_para = -1.0
 
 
+PGrid = SBP_operators.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
+
+
 
 
 ### Parallel Penalty ###
@@ -112,6 +115,11 @@ function penalty_fn(u,uₒ,Δt)
     end
     # return u#, norm(umw)
 end
+
+
+
+
+# PGrid = SBP_operators.Helpers.ParallelGrid()
 
 
 
@@ -181,7 +189,7 @@ GLMakie.scatter!(ax3,zeros(2), [θ[pickapoint],gdata.z_planes[1].y[pickapoint]],
 GLMakie.lines!(ax3, π*sin.(t), -(π*cos.(t) .+ (-(θ[pickapoint]*(1.0.-t/2π) + gdata.z_planes[1].y[pickapoint]*t/2π) .- π)), collect(range(ψ[pickapoint],gdata.z_planes[1].x[pickapoint],length=100)) )
 
 
-GLMakie.save("SBP_operators//figures//AustMS_2022.jpeg", p3, resolution=(1600,1200))
+GLMakie.save("SBP_operators//figures//AustMS_2022.png", p3, resolution=(1600,1200), transparency=true)
 
 
 

@@ -27,7 +27,7 @@ Storage for parallel grids
 struct ParallelGrid{T,N}
     z               :: Vector{T}
     nz              :: Int
-    FowardPlane     :: AbstractArray{T}
+    FowardPlane     :: AbstractArray{T} #Need x and y for 2D grid
     BackwardPlane   :: AbstractArray{T}
 
     function ParallelGrid(ForwardGrids,BackwardGrids,z::T) where T
@@ -67,7 +67,7 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 
     H = build_H(order,grid.n)
-    H = 1.0 ./ H.^2
+    H = H.^-2.0
 
     let H=H, grid=grid, τ=τ, κ=κ, planes=planes
 
@@ -75,9 +75,12 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 end
 
-function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:linear) where T
+function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:linear,interpfn::Union{Nothing,Function}=nothing) where T
 
-    interp = choose_interpmode(interpmode=interpmode)
+    # interp = choose_interpmode(interpmode=interpmode)
+    if typeof(interpfn) == Nothing
+        error("No interpolation function specified.")
+    end
 
     H_x = SBP_operators.build_H(grid.ny,order)
     H_y = SBP_operators.build_H(grid.nx,order)
@@ -98,10 +101,14 @@ end
 
 
 function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{T,1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
-    I = interp((grid.grid),u₀)
-
+    I = interp(grid.grid,u₀)
+println("penalty fn")
+println("u=",u)
     for i = 1:grid.n
-        u[i] = 1.0/(1.0 - κ/2.0 * Δt * H[i]) * (u[i] - Δt*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
+        u[i] = 1.0/(1.0 - κ*τ/2.0 * Δt * H[i]) * 
+            (u[i] - Δt*κ*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
+        
+            println((I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
     end
 end
 
