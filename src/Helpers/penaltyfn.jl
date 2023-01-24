@@ -102,13 +102,10 @@ end
 
 function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{T,1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
     I = interp(grid.grid,u₀)
-println("penalty fn")
-println("u=",u)
     for i = 1:grid.n
         u[i] = 1.0/(1.0 - κ*τ/2.0 * Δt * H[i]) * 
             (u[i] - Δt*κ*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
         
-            println((I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
     end
 end
 

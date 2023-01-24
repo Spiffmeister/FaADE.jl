@@ -29,17 +29,17 @@ Optional inputs:
 """
 function solve end
 #= 1D SOLVER =#
-function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,interpfn::Union{Nothing,Function}=nothing,sample_rate::Float64=0.0) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
     BoundaryConditions = Prob.BoundaryConditions
 
-    typeof(Pgrid) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
-    if penalty_function_enabled
+    if typeof(Pgrid) <: ParallelGrid
         penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order,interpfn=interpfn)
     end
+    typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
 
     DBlock.u .= soln.u[1]
@@ -106,6 +106,10 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
         end
+        # if sample < t
+        #     sample += sample
+        #     UpdateSolution!(soln,DBlock.u,t,Δt)
+        # end 
     end
 
     push!(soln.u,DBlock.u)
@@ -116,12 +120,15 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,source::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
 
+    if typeof(Pgrid) <: ParallelGrid
+        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order,interpfn=interpfn)
+    end
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
     DBlock.u .= soln.u[1]
