@@ -67,7 +67,10 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 
     H = build_H(order,grid.n)
-    H = H.^-2.0
+    H = H.^-1.0
+    
+    α = -2.0
+    τ = α/2.0
 
     let H=H, grid=grid, τ=τ, κ=κ, planes=planes
 
@@ -87,6 +90,9 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;
 
     H_x = 1.0 ./H_x.^2
     H_y = 1.0 ./H_y.^2
+
+    # α = -2.0
+    # τ = α/2.0 #TODO MIGHT BE A SQUARED HERE
 
     let H_x=H_x, H_y=H_y,
             grid=grid,
