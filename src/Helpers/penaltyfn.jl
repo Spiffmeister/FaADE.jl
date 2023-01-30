@@ -4,6 +4,7 @@
 """
 parallel_storage{T,N}
 """
+
 # struct parallel_storage{T,N}
 #     F_plane :: AbstractArray{T}
 #     B_plane :: AbstractArray{T}
@@ -44,6 +45,25 @@ struct ParallelGrid{T,N}
         end
     end
 end
+
+
+struct PGrid1D{T} <: ParallelGridStorage{T,1}
+    z               :: Vector{T}
+    nz              :: Int
+    ForwardPlane    :: AbstractArray{T}
+    BackwardPlane   :: AbstractArray{T}
+end
+
+struct PGrid2D{T} <: ParallelGridStorage{T,2}
+    z               :: Vector{T}
+    nz              :: Int
+    ForwardPlaneX   :: AbstractArray{T}
+    ForwardPlaneY   :: AbstractArray{T}
+    BackwardPlaneX  :: AbstractArray{T}
+    BackwardPlaneY  :: AbstractArray{T}
+end
+
+
 
 
 # struct P∥{T,N}
