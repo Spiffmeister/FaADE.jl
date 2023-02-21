@@ -1,11 +1,14 @@
-using LinearAlgebra
+using Distributed
+addprocs(4)
 
-using Plots
-using LaTeXStrings
+@everywhere using LinearAlgebra
 
-using Pkg
-Pkg.activate(".")
-using SBP_operators
+# using Plots
+# using LaTeXStrings
+
+@everywhere using Pkg
+@everywhere Pkg.activate(".")
+@everywhere using SBP_operators
 
 
 
@@ -24,28 +27,12 @@ method = :cgie
 
 
 
-# Neumann boundaries
-Nx0_Lũ(y,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy)
-NxL_Rũ(y,t;
-    ωx=1.0,cx=0.0,Lx=1.0,
-    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) 
-
-Ny0_Lũ(x,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) =        2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy)
-NyL_Rũ(x,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=1.0,Ly=1.0) = 2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy)
-
-
 
 
 
 
 # Generates the exact MMS solution
-function generate_MMS(MMS::Function,grid::SBP_operators.Helpers.Grid2D,t::Float64)
+@everywhere function generate_MMS(MMS::Function,grid::SBP_operators.Helpers.Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx
@@ -65,91 +52,109 @@ function comp_MMS(Dx,Dy,npts,
         F,ũ,ũ₀,order;
         dt_scale=0.01,t_f=0.01,kx=1.0,ky=kx)
 
-    comp_soln = []
-    MMS_soln = []
-    grids = []
-    relerr = []
-    # X boundaries
-    if BX0Type != Periodic
-        Bx0 = Boundary(BX0Type,BoundaryX0,Left,1)
-        BxL = Boundary(BXLType,BoundaryXL,Right,1)
-    else
-        Bx0L = PeriodicBoundary(1)
-    end
-    # Y boundaries
-    if BY0Type != Periodic
-        By0 = Boundary(BY0Type,BoundaryY0,Up,2)
-        ByL = Boundary(BYLType,BoundaryYL,Down,2)
-    else
-        By0L = PeriodicBoundary(2)
-    end
-
-    # Construct the correct problem
-    function MakeProb(kx,ky)
-        if (BX0Type != Periodic) & (BY0Type != Periodic)
-            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0,ByL)
-        elseif (BX0Type != Periodic) & (BY0Type == Periodic) 
-            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0L)
-        elseif (BX0Type == Periodic) & (BY0Type != Periodic)
-            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0,ByL)
-        else
-            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0L)
-        end
-    end
+    comp_soln   = []
+    MMS_soln    = []
+    grids       = []
+    relerr      = []
 
     # Loop
-    for n in npts
-        Dom = Grid2D(Dx,Dy,n,n)
-        
-        Δt = dt_scale*Dom.Δx^2
+    @everywhere function subtest(n,Dx,Dy,kx,ky,
+        BoundaryX0,BX0Type,BoundaryXL,BXLType,
+        BoundaryY0,BY0Type,BoundaryYL,BYLType,
+        F,ũ,ũ₀,order,
+        dt_scale,t_f)
 
         Kx = zeros(Float64,n,n) .+ kx
         Ky = zeros(Float64,n,n) .+ ky
 
-        P = MakeProb(Kx,Ky)
+        # X boundaries
+        if BX0Type != Periodic
+            Bx0 = Boundary(BX0Type,BoundaryX0,Left,1)
+            BxL = Boundary(BXLType,BoundaryXL,Right,1)
+        else
+            Bx0L = PeriodicBoundary(1)
+        end
+        # Y boundaries
+        if BY0Type != Periodic
+            By0 = Boundary(BY0Type,BoundaryY0,Up,2)
+            ByL = Boundary(BYLType,BoundaryYL,Down,2)
+        else
+            By0L = PeriodicBoundary(2)
+        end
+
+
+        if (BX0Type != Periodic) & (BY0Type != Periodic)
+            P = VariableCoefficientPDE2D(ũ₀,Kx,Ky,order,Bx0,BxL,By0,ByL)
+        elseif (BX0Type != Periodic) & (BY0Type == Periodic) 
+            P = VariableCoefficientPDE2D(ũ₀,Kx,Ky,order,Bx0,BxL,By0L)
+        elseif (BX0Type == Periodic) & (BY0Type != Periodic)
+            P = VariableCoefficientPDE2D(ũ₀,Kx,Ky,order,Bx0L,By0,ByL)
+        else
+            P = VariableCoefficientPDE2D(ũ₀,Kx,Ky,order,Bx0L,By0L)
+        end
+
+        Dom = Grid2D(Dx,Dy,n,n)
+        
+        Δt = dt_scale*Dom.Δx^2
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
 
-        u_MMS = generate_MMS(ũ,Dom,t_f)
+        # u_MMS = generate_MMS(ũ,Dom,t_f)
+        u_MMS = zeros(Dom.nx,Dom.ny)
+        for j = 1:Dom.ny
+            for i = 1:Dom.nx
+                u_MMS[i,j] = ũ(Dom.gridx[i],Dom.gridy[j],t_f)
+            end
+        end
 
-        push!(comp_soln,soln)
-        push!(grids,Dom)
-        push!(MMS_soln,u_MMS)
-        push!(relerr, norm(u_MMS .- soln.u[2])/norm(u_MMS))
+        test = (soln=soln,grid=Dom,MMS=u_MMS)
+        return test
     end
 
+
+    test = pmap(n -> subtest(n,
+    Dx,Dy,kx,ky,BoundaryX0,BX0Type,BoundaryXL,BXLType,BoundaryY0,BY0Type,BoundaryYL,BYLType,F,ũ,ũ₀,order,dt_scale,t_f),
+        npts)
+
+    for i in 1:length(npts)
+        push!(comp_soln,test[i].soln)
+        push!(grids,test[i].grid)
+        push!(MMS_soln,test[i].MMS)
+
+        push!(relerr, norm(test[i].MMS .- test[i].soln.u[2])/norm(test[i].MMS))
+    end
+    # push!(relerr, norm(test.u_MMS .- test[1]soln.u[2])/norm(MMS_soln))
     conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
 
     return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
+    # return test
 end
 
 
 
 
 ###=== MMS TESTS ===###
-p = plot()
+# p = plot()
 
-# npts = [21,31,41,51,61]
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61]
+# npts = [21,31,41,51,61,71,81,91,101]
 
 
 # Solution
-ũ(x,y,t;
+@everywhere ũ(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
 
 # Initial condition
-ũ₀(x,y;
+@everywhere ũ₀(x,y;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy)
 
 
-K = 1.0
-# K = 1.0e-5
-# K = 1.0e-4
-# K = 1.0e-8
-F(x,y,t;
+@everywhere K = 1.0
+
+@everywhere F(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0,
     K = 1.0) = 
@@ -162,21 +167,21 @@ println("=== K=",K," ===")
 # Dirichlet
 println("=====")
 println("Dirichlet")
-cx=1.0
-cy=0.0
-ωx=9.0
-ωy=7.5
+@everywhere cx=1.0
+@everywhere cy=0.0
+@everywhere ωx=9.0
+@everywhere ωy=7.5
 
 println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+@everywhere analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-BxLũ(y,t)           = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t)           = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-ByRũ(x,t;Ly=1.0)    = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+@everywhere BxLũ(y,t)           = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
+@everywhere BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+@everywhere ByLũ(x,t)           = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
+@everywhere ByRũ(x,t;Ly=1.0)    = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
 order = 2
 println("order=",order)
@@ -197,8 +202,8 @@ O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-plot!(p,    O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
-plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
+# plot!(p,    O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
+# plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
 
 println("=====")
 
