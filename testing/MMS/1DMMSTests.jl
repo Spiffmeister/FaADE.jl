@@ -106,8 +106,8 @@ ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
 ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
-K = 1.0
-F(x,t;ωx=1.0,cx=0.0) = 
+K = 1.0e-1
+F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
         -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
             
@@ -124,7 +124,7 @@ println("ωx=",ωx,",  cx=",cx)
 
 analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
 IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-FD(x,t) = F(x,t, ωx=ωx, cx=cx)
+FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
 
 BxLũ(t) = cos(2π*t) * sin(cx) #Boundary condition x=0
 BxRũ(t;Lx=1.0) = cos(2π*t) * sin(2π*Lx*ωx + cx) #Boundary condition x=Lx
@@ -133,13 +133,15 @@ order = 2
 println("order=",order)
 O2_DirichletMMS = comp_MMS(𝒟x,npts,
     BxLũ,Dirichlet,BxRũ,Dirichlet,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
 order = 4
 println("order=",order)
 O4_DirichletMMS = comp_MMS(𝒟x,npts,
     BxLũ,Dirichlet,BxRũ,Dirichlet,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
 println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
@@ -162,22 +164,24 @@ println("ωx=",ωx,"  cx=",cx)
 
 analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
 IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-FD(x,t) = F(x,t, ωx=ωx, cx=cx)
+FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
 
-BxLũ(t) =         2π*ωx * cos(2π*t) * cos(cx) #Boundary condition x=0
-BxRũ(t;Lx=1.0) =  2π*ωx * cos(2π*t) * cos(2π*Lx*ωx + cx) #Boundary condition x=Lx
+BxLũ(t) =         2π*ωx * K * cos(2π*t) * cos(cx) #Boundary condition x=0
+BxRũ(t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx) #Boundary condition x=Lx
 
 order = 2
 println("order=",order)
 O2_NeumannMMS = comp_MMS(𝒟x,npts,
     BxLũ,Neumann,BxRũ,Neumann,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
 order = 4
 println("order=",order)
 O4_NeumannMMS = comp_MMS(𝒟x,npts,
     BxLũ,Neumann,BxRũ,Neumann,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
 println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
 println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
@@ -200,23 +204,25 @@ println("ωx=",ωx,",  cx=",cx)
 
 analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
 IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-FD(x,t) = F(x,t, ωx=ωx, cx=cx)
+FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
 
 order = 2
 O2_PeriodicMMS = comp_MMS(𝒟x,npts,
     nothing,Periodic,nothing,Periodic,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
 order = 4
 O4_PeriodicMMS = comp_MMS(𝒟x,npts,
     nothing,Periodic,nothing,Periodic,
-    FD,analytic,IC,order)
+    FD,analytic,IC,order,
+    k=K)
 
-println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
-println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
+println("Order 2 Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
+println("Order 4 Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$")
-plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$")
+plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^2)$")
+plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^4)$")
 
 println("=====")
 
