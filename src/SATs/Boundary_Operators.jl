@@ -64,9 +64,9 @@ function SATpenalties end
 
     α = 1.0/Δx # α/Δx -- #1/h accounted for in BoundaryDerivativeTranspose
 
-    τ = 1.0
-    τ = -(1.0 + τ) * (h * Δx)^-2 # τ*H^{-1}H^{-1}
-    return α, τ
+    τ₁ = 1.0
+    τ₀ = -(1.0 + τ₁) * (h * Δx)^-2 # τ*H^{-1}H^{-1}
+    return α, τ₀
 end
 @inline function SATpenalties(::BoundaryConditionType{:Neumann},Δx::Float64,order::Int64)
     # For reading in penalty parameters for Neumann SATs
@@ -86,7 +86,7 @@ end
 
     α₀ = 0.5/(h*Δx)
     τ₁ = -0.5/Δx #1/h accounted for in BoundaryDerivativeTranspose
-    τ₀(c) = -max(c[1],c[end])/(2*(h*Δx)^2)
+    τ₀(c) = -(1.0+1.0)*max(c[1],c[end])/(2*(h*Δx)^2)
 
     return α₀,τ₁,τ₀
 end
