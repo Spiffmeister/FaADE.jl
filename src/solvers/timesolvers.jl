@@ -85,26 +85,30 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
             addSource!(source,CGBlock.b,grid,t,Δt)
         end
 
-        conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
 
-        if CGBlock.converged | !adaptive #If CG converges
-            if penalty_function_enabled
-                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+        if solver == :cgie
+            conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
+
+            if CGBlock.converged | !adaptive #If CG converges
+                if penalty_function_enabled
+                    penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+                end
+                DBlock.u .= DBlock.uₙ₊₁
+                CGBlock.b .= DBlock.uₙ₊₁
+                copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
+                if adaptive & (Δt<300Δt₀)
+                    Δt *= 1.05
+                end
+                t += Δt
+            else #If CG fails, reset and retry step
+                DBlock.uₙ₊₁ .= DBlock.u
+                Δt /= 2.0
+                CGBlock.converged = true
+                if Δt < Δt₀/10.0
+                    error("CG could not converge, aborting at t=",t," with Δt=",Δt)
+                end
             end
-            DBlock.u .= DBlock.uₙ₊₁
-            CGBlock.b .= DBlock.uₙ₊₁
-            copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-            if adaptive & (Δt<300Δt₀)
-                Δt *= 1.05
-            end
-            t += Δt
-        else #If CG fails, reset and retry step
-            DBlock.uₙ₊₁ .= DBlock.u
-            Δt /= 2.0
-            CGBlock.converged = true
-            if Δt < Δt₀/10.0
-                error("CG could not converge, aborting at t=",t," with Δt=",Δt)
-            end
+        elseif solver == :RK4
         end
         # if sample < t
         #     sample += sample

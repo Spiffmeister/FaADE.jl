@@ -5,7 +5,7 @@ Used to construct `EH⁻¹Dₓᵀ` where `E=E₀` or `Eₙ`.
 """
 function BoundaryDerivativeTranspose(::NodeType{:Left},order::Int,Δx::Float64)
     if order == 2
-        return [-1.0,0.5]/Δx
+        return [-2.0,1.0]/Δx
     elseif order == 4
         #[-24.0/17.0 * 48.0/17.0, 59.0/34.0 * 48.0/59.0, -4.0/17.0 * 48.0/43.0, -3.0/34.0 * 48.0/49.0]/Δx
         return [-1152.0/289.0, 24.0/17.0, -192.0/731.0, -72.0/833.0]/Δx #H⁻¹Dᵀ
@@ -15,7 +15,7 @@ function BoundaryDerivativeTranspose(::NodeType{:Left},order::Int,Δx::Float64)
 end
 function BoundaryDerivativeTranspose(::NodeType{:Right},order::Int,Δx::Float64)
     if order == 2
-        return [-0.5,1.0]/Δx
+        return [-1.0,2.0]/Δx
     elseif order == 4
         # return -[-3.0/34.0 * 48.0/49.0, -4.0/17.0 * 48.0/43.0, 59.0/34.0 * 48.0/59.0, -24.0/17.0 * 48.0/17.0]/Δx
         return [72.0/833.0, 192.0/731.0, -24.0/17.0, 1152.0/289.0]/Δx #H⁻¹Dᵀ

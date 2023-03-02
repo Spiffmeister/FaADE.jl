@@ -19,14 +19,25 @@ end
 """
     RK4
 """
-function RK4 end
-function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
-    k1 = RHS(uₙ,uₒ        ,n,x,Δx,t,Δt,k,       boundary)
-    k2 = RHS(uₙ,uₒ+Δt/2*k1,n,x,Δx,t+0.5Δt,Δt,k, boundary)
-    k3 = RHS(uₙ,uₒ+Δt/2*k2,n,x,Δx,t+0.5Δt,Δt,k, boundary)
-    k4 = RHS(uₙ,uₒ+Δt*k3  ,n,x,Δx,t+Δt,Δt,k,    boundary)
-    uₙ = uₒ + Δt/6 * (k1 + 2k2 + 2k3 + k4)
-    return uₙ
+# function RK4 end
+# function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
+function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,k::Vector,Δt::Float64,t::Float64)
+    
+    DBlock.uₙ₊₁ .= uₙ
+
+    RK.k1 = RHS(DBlock.uₙ,t,k)
+    DBlock.uₙ₊₁ .+= Δt/6.0 * RK.k1
+    
+    RK.k2 = RHS(DBlock.uₙ,t+0.5,k)
+    DBlock.uₙ₊₁ .+= Δt/3.0 * RK.k2
+    
+    RK.k3 = RHS(DBlock.uₙ,t+0.5,k)
+    DBlock.uₙ₊₁ .+= Δt/3.0 * RK.k3
+    
+    RK.k4 = RHS(DBlock.uₙ,t+Δt,k)
+    DBlock.uₙ₊₁ .+= Δt/6.0 * RK.k4
+
+    # DBlock.uₙ₊₁ .= uₙ .+ Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 end
 
 

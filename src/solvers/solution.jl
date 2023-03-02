@@ -50,5 +50,12 @@ end
 
 
 
-# function UpdateSolution()
-# end
+function UpdateSolution!(soln::solution{T},u::AbstractArray{T},t::T,Δt::T) where T
+    push!(soln.u,u)
+    push!(soln.t,t)
+    push!(soln.Δt,Δt)
+end
+
+
+
+

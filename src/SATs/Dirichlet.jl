@@ -60,8 +60,9 @@ function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
                     SAT_Dirichlet_implicit_data!(cache,side,RHS,c,α,τ,BD,order,loopdirection)
 
                 return CGTerm
-        elseif solver ∈ [:euler]
-            Term(cache,u,c) = SAT_Dirichlet_explicit!(cache,side,u,c,SATD.RHS,α,τ,BD,order,loopdirection)
+        elseif solver ∈ [:euler,:RK4]
+            Term(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = SAT_Dirichlet_explicit!(cache,side,u,c,SATD.RHS,α,τ,BD,order,loopdirection)
+            Term(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = nothing #placeholder until update for time solver
 
             return Term
         end
