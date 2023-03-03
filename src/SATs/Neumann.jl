@@ -51,8 +51,8 @@ function generate_Neumann(SATN::SAT_Neumann,solver)
                 SAT_Neumann_implicit_data!(cache,side,RHS,c,τ,BD,order,loopdirection)
 
             return CGTerm
-        elseif solver ∈ [:euler]
-            Term(cache,u,c) = SAT_Neumann_explicit!(cache,side,u,c,SATN.RHS,τ,BD,order,loopdirection)
+        elseif solver ∈ [:euler,:RK4]
+            Term(cache,u,c,t) = SAT_Neumann_explicit!(SATN.RHS,cache,side,u,c,t,τ,BD,order,loopdirection)
 
             return Term
         end
@@ -70,20 +70,20 @@ end
 Neumann boundary SAT for explicit solvers.
 """
 function SAT_Neumann_explicit! end
-function SAT_Neumann_explicit!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},RHS,
+function SAT_Neumann_explicit!(RHS::Function,SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},t::Float64,
         τ::T,BD::AbstractArray{T},
         order::Int,loopaxis::Function) where T
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
-        S[1] = τ*(C[1] * dot(BD,U[1:order]) - RHS[1])
+        S[1] = τ*(C[1] * dot(BD,U[1:order]) - RHS(t))
     end
 end
-function SAT_Neumann_explicit!(SAT::AbstractArray{T},::NodeType{:Right},u::AbstractArray{T},c::AbstractArray{T},RHS,
+function SAT_Neumann_explicit!(RHS::Function,SAT::AbstractArray{T},::NodeType{:Right},u::AbstractArray{T},c::AbstractArray{T},t::Float64,
         τ::T,BD::AbstractArray{T},
-        order::Int,loopdirection::Function) where T
+        order::Int,loopaxis::Function) where T
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
-        S[end] -= τ*(C[end] * dot(BD,U[end-order+1:end]) - RHS[end])
+        S[end] -= τ*(C[end] * dot(BD,U[end-order+1:end]) - RHS(t))
     end
 end
 

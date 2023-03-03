@@ -43,7 +43,7 @@ module Helpers
         copyUtoSAT!, copySATtoU!, addSATtoU!,
         addSource!, setBoundary!
     
-    export ConjGradBlock, build_H, ExplicitBlock
+    export ConjGradBlock, build_H
     
     # PostNifty import
     export GetAxis, GetDim,

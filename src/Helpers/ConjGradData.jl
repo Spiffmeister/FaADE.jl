@@ -104,30 +104,5 @@ end
 
 
 
-mutable struct ExplicitBlock{T,N} <: DataBlockType{T,N}
-    k1  :: AbstractArray{T,N}
-    k2  :: AbstractArray{T,N}
-    k3  :: AbstractArray{T,N}
-    k4  :: AbstractArray{T,N}
 
-    function ExplicitBlock{T}(grid::GridType,order::Int;ntegrator::Symbol=:RK4) where T
-        if typeof(grid) <: Grid1D
-            Δ = mind(grid.Δx,grid.Δy)
-            n = grid.n
-        elseif typeof(grid) <: Grid2D
-            n = (grid.nx,grid.ny)
-        end
-
-        dims = length(n)
-
-        if integrator == :RK4
-            k1 = zeros(T,n)
-            k2 = zeros(T,n)
-            k3 = zeros(T,n)
-            k4 = zeros(T,n)
-        end
-
-        new{T,dims}(k1,k2,k3,k4)
-    end
-end
 

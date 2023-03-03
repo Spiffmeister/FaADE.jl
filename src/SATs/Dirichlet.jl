@@ -61,8 +61,8 @@ function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
 
                 return CGTerm
         elseif solver ∈ [:euler,:RK4]
-            Term(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = SAT_Dirichlet_explicit!(cache,side,u,c,SATD.RHS,α,τ,BD,order,loopdirection)
-            Term(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = nothing #placeholder until update for time solver
+            Term(cache::Array,u::Array,c::Array,t::Float64) = SAT_Dirichlet_explicit!(SATD.RHS,cache,side,u,c,t,α,τ,BD,order,loopdirection)
+            # Term(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 0.0 #placeholder until update for time solver
 
             return Term
         end
@@ -76,22 +76,22 @@ end
 Dirichlet boundary SAT for explicit solvers.
 """
 function SAT_Dirichlet_explicit! end
-function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,RHS,
+function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,t::Float64,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)
         
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS)
-        S[1] += τ*(U[1] - RHS)
+        S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS(t))
+        S[1] += τ*(U[1] - RHS(t))
     end
 end
-function SAT_Dirichlet_explicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,RHS,
+function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,t::Float64,
         α::Float64,τ::Float64,BD::AbstractVector,
         order::Int,loopaxis::Function)
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS)
-        S[end] += τ*(U[end] - RHS)
+        S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS(t))
+        S[end] += τ*(U[end] - RHS(t))
     end
 end
 

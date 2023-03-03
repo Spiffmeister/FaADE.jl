@@ -19,25 +19,45 @@ end
 """
     RK4
 """
+mutable struct ExplicitBlock{T,N} <: DataBlockType{T,N}
+    k1  :: AbstractArray{T,N}
+    k2  :: AbstractArray{T,N}
+    k3  :: AbstractArray{T,N}
+    k4  :: AbstractArray{T,N}
+    Δt  :: T
+
+    function ExplicitBlock{T}(grid::GridType,Δt::T,integrator::Symbol=:RK4) where T
+        if typeof(grid) <: Grid1D
+            n = grid.n
+        elseif typeof(grid) <: Grid2D
+            n = (grid.nx,grid.ny)
+        end
+
+        dims = length(n)
+
+        # if integrator == :RK4
+            k1 = zeros(T,n)
+            k2 = zeros(T,n)
+            k3 = zeros(T,n)
+            k4 = zeros(T,n)
+        # end
+
+        new{T,dims}(k1,k2,k3,k4,Δt)
+    end
+end
 # function RK4 end
 # function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
-function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,k::Vector,Δt::Float64,t::Float64)
+function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
     
-    DBlock.uₙ₊₁ .= uₙ
+    DBlock.uₙ₊₁ .= DBlock.u
 
-    RK.k1 = RHS(DBlock.uₙ,t,k)
-    DBlock.uₙ₊₁ .+= Δt/6.0 * RK.k1
-    
-    RK.k2 = RHS(DBlock.uₙ,t+0.5,k)
-    DBlock.uₙ₊₁ .+= Δt/3.0 * RK.k2
-    
-    RK.k3 = RHS(DBlock.uₙ,t+0.5,k)
-    DBlock.uₙ₊₁ .+= Δt/3.0 * RK.k3
-    
-    RK.k4 = RHS(DBlock.uₙ,t+Δt,k)
-    DBlock.uₙ₊₁ .+= Δt/6.0 * RK.k4
+    RHS(RK.k1,DBlock.u,         DBlock.K,t)
+    # RHS(RK.k2,DBlock.u+0.5RK.k1,DBlock.K,t+0.5RK.Δt)
+    # RHS(RK.k3,DBlock.u+0.5RK.k2,DBlock.K,t+0.5RK.Δt)
+    # RHS(RK.k4,DBlock.u+RK.k3,   DBlock.K,t+RK.Δt)
+    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt*RK.k1
+    # DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 
-    # DBlock.uₙ₊₁ .= uₙ .+ Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 end
 
 
