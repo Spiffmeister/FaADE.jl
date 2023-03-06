@@ -1,6 +1,7 @@
 /kenneth matlab
 *.png 
 *.jpg 
+*.jpeg
 *.gif
 *.pdf
 /docs/build/
@@ -9,3 +10,5 @@
 *.txt
 *.bak
 !/docs/src/example*D.md
+*.jld2
+*.csv

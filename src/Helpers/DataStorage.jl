@@ -1,8 +1,6 @@
 
 
 # abstract type Solution{T<:AbstractFloat} end
-abstract type DataBlockType{T<:AbstractFloat,N} end
-abstract type BoundaryStorage{T<:AbstractFloat,N} end
 
 
 #========== WHOLE PROBLEM DATA ==========#
@@ -10,13 +8,14 @@ abstract type BoundaryStorage{T<:AbstractFloat,N} end
     DataBlock{T}
 Passed around internally between functions. Only contains data required for current timestep.
 """
-struct DataBlock{T,N} <: DataBlockType{T,N}
+mutable struct DataBlock{T,N} <: DataBlockType{T,N}
     dim         :: Int
     grid        :: GridType
     u           :: AbstractArray{T}
     uₙ₊₁        :: AbstractArray{T}
     K           :: Union{Vector,Vector{AbstractArray{T}}}
     boundary    :: BoundaryStorage
+    t           :: T
     Δt          :: T
     function DataBlock{T}(
             boundaries::NamedTuple,
@@ -39,47 +38,12 @@ struct DataBlock{T,N} <: DataBlockType{T,N}
             DiffCoeff = [K[1],K[2]]
             dim = 2
         end
-        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,Δt)
+        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,0,Δt)
     end
 end
 
 
 #========== WHOLE PROBLEM DATA ==========#
-"""
-    ConjGradBlock
-"""
-mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
-    b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
-    rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
-    Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
-    Drₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
-    dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
-
-    converged   :: Bool
-    Δ           :: T
-
-    function ConjGradBlock{T}(grid::GridType) where T
-
-        if typeof(grid) <: Grid1D
-            Δ = grid.Δx
-            n = grid.n
-        elseif typeof(grid) <: Grid2D
-            Δ = min(grid.Δx,grid.Δy)
-            n = (grid.nx,grid.ny)
-        end
-
-        b   = zeros(T,n)
-        rₖ  = zeros(T,n)
-        Adₖ = zeros(T,n)
-        Arₖ = zeros(T,n)
-        dₖ  = zeros(T,n)
-
-        dims = length(n)
-
-        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true, Δ)
-    end
-end
-
 
 
 #========== BOUNDARY DATA ==========#
@@ -97,8 +61,8 @@ mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
     u_Left      :: AbstractArray{T}
     u_Right     :: AbstractArray{T}
 
-    RHS_Left    :: Float64
-    RHS_Right   :: Float64
+    RHS_Left    :: AbstractArray{T}
+    RHS_Right   :: AbstractArray{T}
 
     function BoundaryData1D{T}(BC::NamedTuple,order::Int) where {T}
 
@@ -117,7 +81,7 @@ mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
             BCL = BCR = Periodic
         end
 
-        new{T}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,0.0,0.0)
+        new{T}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,[0.0],[0.0])
 
     end
 end
@@ -266,7 +230,7 @@ function addSATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
 end
 
 """
-    addSource
+    addSource!
 Add the source term `F(x,y,t)` to the array `u`.
 """
 function addSource! end
@@ -278,16 +242,30 @@ function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T,Δt) wh
     end
 end
 function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T,Δt::T) where T
-    u += Δt*F(grid,t)
+    u .+= Δt*F.(grid.grid,t)
 end
 
 """
-    addBoundary!
+    setBoundary!
 """
-function setBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt) where T
+function setBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt::T) where T
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end
 end
+function setBoundary!(RHS::Function,Bound::AbstractArray{T},t::T,Δt::T) where T
+        Bound[1] = Δt*RHS(t)
+end
 
-
+# function setBoundary!(BC::NamedTuple,BoundStore::BoundaryStorage{T,N},grid::AbstractArray{T},t::T,Δt::T,side::NodeType)
+#     if side == Left
+#         setBoundary!(BC.Left.RHS,BoundStore.RHS_Left,grid,n,t,Δt)
+#     elseif side == Right
+#     elseif side == Up
+#     elseif side == Down
+#     end
+# end
+# function setBoundaries!(BCs::NamedTuple,BoundaryStore::BoundaryStorage{T,N},grid::GridType,t::T,Δt::T,sides::NodeType...)
+#     if GetDim(BoundaryStore) == 2
+#     end
+# end

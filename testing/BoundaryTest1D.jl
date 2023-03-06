@@ -38,7 +38,11 @@ PD = VariableCoefficientPDE1D(u₀,K,order,BoundaryDirichletLeft,BoundaryDirichl
 # Testing internal data storage construction
 BStor = SBP_operators.Helpers.BoundaryData1D{Float64}(PD.BoundaryConditions,order)
 DStor = SBP_operators.Helpers.DataBlock{Float64}(PD.BoundaryConditions,Dom,Δt,2,PD.K)
-CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(n)
+CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(Dom,order)
+
+x = rand(n); y = ones(n);
+
+CGStor.innerprod(x,y) == (x[1]*0.5 + x[end]*0.5 + sum(x[2:end-1])) * Dom.Δx
 
 
 

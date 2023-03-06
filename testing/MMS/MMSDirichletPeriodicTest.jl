@@ -18,10 +18,10 @@ using SBP_operators
 #=== MMS ===#
 # Setting up the manufactured solution
 
-cx = 0.0
-cy = 1.0
-ωy = 2.5
-ωx = 1.0
+cx = 1.0
+cy = 0.0
+ωx = 7.5
+ωy = 6.0 #MUST BE INTEGER FOR PERIODIC
 K = 1.0
 
 
@@ -31,8 +31,7 @@ ũ₀(x,y) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy) #Initial condition
 
 BxLũ(y,t) = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
 BxRũ(y,t;Lx=1.0) = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-ByRũ(x,t;Ly=1.0) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+
 
 
 
@@ -60,13 +59,12 @@ end
 # Boundary conditions from the MMS
 BoundaryLeft = Boundary(Dirichlet,BxLũ,Left,1)
 BoundaryRight = Boundary(Dirichlet,(y,t) -> BxRũ(y,t,Lx=𝒟x[2]),Right,1)
-BoundaryUp = Boundary(Dirichlet,ByLũ,Up,2)
-BoundaryDown = Boundary(Dirichlet,(x,t) -> ByRũ(x,t,Ly=𝒟y[2]),Down,2)
+BoundaryUpDown = PeriodicBoundary(2)
 
-order = 2
+order = 4
 method = :cgie
 
-npts = [11,21,31,41,51,61]
+npts = [51,61,71,81,91]
 comp_soln = []
 MMS_soln = []
 grids = []
@@ -75,12 +73,12 @@ for n in npts
     Dom = Grid2D(𝒟x,𝒟y,n,n)
     
     Δt = 0.01*Dom.Δx^2
-    t_f = 0.1
+    t_f = 0.01
 
     # Diffusion coefficients
     kx = ky = zeros(Float64,n,n) .+ 1.0;
 
-    P = VariableCoefficientPDE2D(ũ₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+    P = VariableCoefficientPDE2D(ũ₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
     println("Solving n=",Dom.nx," case with Δt=",Δt)
     soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
@@ -96,8 +94,9 @@ end
 conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
 
 println("The convergence rate of this MMS setup is: ",conv_rate," for order ",order," SBP operators.")
+println("relative error(s) are: ",relerr,".")
 
-
+#=
 # println("plotting")
 using Plots
 
@@ -128,3 +127,5 @@ surface(#p[3],
 # @time solve(P,Dom,Δt,t_f,:cgie)
 # Profile.clear_malloc_data()
 # @time solve(P,Dom,Δt,t_f,:cgie)
+
+=#

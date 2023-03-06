@@ -28,7 +28,7 @@ mutable struct solution{T}
         else #If an adaptive time step is being used, preallocation is impossible
 
             if typeof(grid) <: Grid1D
-                u = prob.InitialCondition(grid.grid)
+                u = prob.InitialCondition.(grid.grid)
             elseif typeof(grid) <: Grid2D
                 u = zeros(T,(grid.nx,grid.ny))
                 for j = 1:grid.ny
@@ -50,5 +50,12 @@ end
 
 
 
-# function UpdateSolution()
-# end
+function UpdateSolution!(soln::solution{T},u::AbstractArray{T},t::T,Δt::T) where T
+    push!(soln.u,u)
+    push!(soln.t,t)
+    push!(soln.Δt,Δt)
+end
+
+
+
+

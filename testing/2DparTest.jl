@@ -29,7 +29,7 @@ ky = zeros(Float64,nx,ny) .+ 1.0e-8;
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 10_000Δt
+t_f = 1000Δt
 
 u₀(x,y) = (x-0.5)/(0.68-0.5)
 
@@ -63,10 +63,10 @@ end
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
 
-H_x = SBP_operators.build_H(ny,order)
+H_x = SBP_operators.build_H(order,ny)
 H_x = 1.0 ./H_x.^2
 
-H_y = SBP_operators.build_H(nx,order)
+H_y = SBP_operators.build_H(order,nx)
 H_y = 1.0 ./H_y.^2
 
 # Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
@@ -106,7 +106,7 @@ function penalty_fn(u,uₒ,Δt)
             end
 
             u[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
-                (uₒ[i,j] - Δt*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
+                (uₒ[i,j] - Δt*κ_para*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
 
         end
     end

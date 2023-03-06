@@ -15,12 +15,10 @@ For Dirichlet, Neumann, Robin the workflow is:
 
 push!(LOAD_PATH,"."); using SBP_operators
 
-
-
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
-nx = 31
-ny = 41
+nx = 11
+ny = 16
 
 Dom = Grid2D(𝒟x,𝒟y, nx,ny)
 
@@ -45,7 +43,10 @@ PD = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryDirichletLeft,BoundaryDir
 # Testing internal data storage construction
 BStor = SBP_operators.Helpers.BoundaryData2D{Float64}(PD.BoundaryConditions,Dom,order)
 DStor = SBP_operators.Helpers.DataBlock{Float64}(PD.BoundaryConditions,Dom,Δt,2,PD.Kx,PD.Ky)
-CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(nx,ny)
+CGStor = SBP_operators.Helpers.ConjGradBlock{Float64}(Dom,order)
+
+
+
 
 
 

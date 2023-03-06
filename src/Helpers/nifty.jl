@@ -46,14 +46,16 @@ Returns ``order/2``
 
 """
     BoundaryNodeInput
-Returns the required number of nodes needed to compute `SecondDerivative` on the boundary
+Returns the required number of nodes needed to compute `SecondDerivative` on the boundary.
+``order == 2, return 1``, ``order > 2, return 2order``
 """
 @inline BoundaryNodeInput(order::Int) = order == 2 ? 1 : 2order
 @inline BoundaryNodeInput(order::Int...) = BoundaryNodeInput.(order)
 
 """
     BoundaryNodeOutput
-Returns the size of the array output by `SecondDerivative` on the boundary
+Returns the size of the array output by `SecondDerivative` on the boundary.
+``order == 2, return 1``, ``order > 2, return order+order/2``
 """
 @inline BoundaryNodeOutput(order::Int) = order == 2 ? 1 : order+halforder(order)
 @inline BoundaryNodeOutput(order::Int...) = BoundaryNodeOutput.(order)
@@ -61,6 +63,7 @@ Returns the size of the array output by `SecondDerivative` on the boundary
 """
     SATNodeOutput
 Returns the number of nodes needed for the `BoundaryData1D` and `BoundaryData2D` data structures.
+``order == 2, return 2``, ``order > 2, return order+order/2``
 """
 @inline SATNodeOutput(order::Int) = order == 2 ? 2 : order+halforder(order)
 @inline SATNodeOutput(order::Int...) = SATNodeOutput.(order)
