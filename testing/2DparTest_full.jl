@@ -75,7 +75,7 @@ H_y = 1.0 ./H_y.^2
 τ_para = -1.0
 
 
-PGrid = SBP_operators.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
+# PGrid = SBP_operators.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
 
 
 
