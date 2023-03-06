@@ -103,7 +103,7 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
                 addSource!(source,CGBlock.b,grid,t,Δt)
             end
 
-            conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
+            conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
 
             if CGBlock.converged | !adaptive #If CG converges
                 if penalty_function_enabled
@@ -212,12 +212,8 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
         if typeof(source) <: Function
             addSource!(source,CGBlock.b,grid,t,Δt)
         end
-        # copySATtoU!(DBlock.uₙ₊₁,DBlock.boundary,Prob.order)
-        # println(norm(CGBlock.b),"   ",norm(DBlock.u),"  ",norm(CGBlock.b .- DBlock.u),"  ",norm(CGBlock.b .- DBlock.u)/norm(CGBlock.b))
 
-        conj_grad!(DBlock,CGBlock,CGRHS!,Δt,Prob.order)
-
-
+        conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
         
         if CGBlock.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
@@ -234,7 +230,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u
-            # CGBlock.b .= DBlock.u
+            CGBlock.b .= DBlock.u
             Δt = Δt/2.0
             CGBlock.converged = true
             if (Δt < Δt₀/10.0) #If Δt ~ 𝒪(Δt₀/10)

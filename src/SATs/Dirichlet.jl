@@ -56,13 +56,12 @@ function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
             # Defines 2 methods
             CGTerm(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = 
                 SAT_Dirichlet_implicit!(cache,side,u,c,α,τ,BD,order,loopdirection)
-            CGTerm(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 
-                    SAT_Dirichlet_implicit_data!(cache,side,RHS,c,α,τ,BD,order,loopdirection)
+            CGTerm(cache::Array,c::Array,::SATMode{:DataMode}) = 
+                    SAT_Dirichlet_implicit_data!(cache,side,c,α,τ,BD,order,loopdirection)
 
                 return CGTerm
         elseif solver ∈ [:euler,:RK4]
             Term(cache::Array,u::Array,c::Array,t::Float64) = SAT_Dirichlet_explicit!(SATD.RHS,cache,side,u,c,t,α,τ,BD,order,loopdirection)
-            # Term(cache::Array,RHS,c::Array,::SATMode{:DataMode}) = 0.0 #placeholder until update for time solver
 
             return Term
         end
@@ -131,46 +130,32 @@ end
 Data term for the Dirichlet boundary conditions for SATs for implicit methods. See [`SAT_Dirichlet_implicit!`](@ref) for the solution term.
 """
 function SAT_Dirichlet_implicit_data! end
-function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},u::AbstractArray{T},c::AbstractArray{T},
-        α::Float64,τ::Float64,BD::AbstractVector,
-        order::Int,loopaxis::Function) where T
+function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},c::AbstractArray{T},
+        α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function) where T
 
-    for (S,U,C) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
+    for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         for i = 1:order
+            # S[i] -= -Δt* α*C[1]*BD[i]*RHS(t) #DₓᵀE₀
             S[i] -= -α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
-        # S[1:order] .-= α*C[1]*BD*u[1]
+        # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
         S[1] -= τ*C[1]*U[1]
     end
     SAT
 end
-function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u::AbstractArray{T},c::AbstractArray{T},
-        α::Float64,τ::Float64,BD::AbstractVector,
-        order::Int,loopaxis::Function) where {T}
-    for (S,U,C) in zip(loopaxis(SAT),loopaxis(u),loopaxis(c))
+function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},c::AbstractArray{T},
+        α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function) where {T}
+    for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         for i = 1:order
-            S[end-order+i] -= α*C[end]*BD[i]*U[end] #DₓᵀEₙ
+            # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #DₓᵀEₙ
+            S[end-order+i] -= Δt* α*C[end]*BD[i]*U[end] #DₓᵀEₙ
         end
-        # S[end-order+1:end] .-= α*C[end]*BD*u[end]
-        S[end] -= τ*C[end]*U[end]
+        # S[end] -= Δt* τ*C[end]*RHS(t)
+        S[end] -= Δt* τ*C[end]*U[end]
     end
     SAT
 end
 
-
-# function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},RHS::Function,c::AbstractArray{T},
-#         t::T,Δt::T,x::AbstractArray{T}, #time, dt, grid points
-#         α::Float64,τ::Float64,BD::AbstractVector,
-#         order::Int,loopaxis::Function) where {T}
-#     for (S,X,C) in zip(loopaxis(SAT),loopaxis(x),loopaxis(c))
-#         for i = 1:order
-#             S[end-order+i] -= α*C[end]*BD[i]*Δt*RHS(X,t)
-#         end
-#         # S[end-order+1:end] .-= α*C[end]*BD*u[end]
-#         S[end] -= τ*Δt*RHS(X,t)
-#     end
-#     SAT
-# end
 
 
 

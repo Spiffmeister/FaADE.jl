@@ -35,12 +35,14 @@ mutable struct ExplicitBlock{T,N} <: DataBlockType{T,N}
 
         dims = length(n)
 
-        # if integrator == :RK4
-            k1 = zeros(T,n)
+        k1 = zeros(T,n)
+        if integrator == :RK4
             k2 = zeros(T,n)
             k3 = zeros(T,n)
             k4 = zeros(T,n)
-        # end
+        elseif integrator == :euler
+            k2 = k3 = k4 = zeros(T,0)
+        end
 
         new{T,dims}(k1,k2,k3,k4,Δt)
     end
@@ -52,11 +54,18 @@ function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
     DBlock.uₙ₊₁ .= DBlock.u
 
     RHS(RK.k1,DBlock.u,         DBlock.K,t)
-    # RHS(RK.k2,DBlock.u+0.5RK.k1,DBlock.K,t+0.5RK.Δt)
-    # RHS(RK.k3,DBlock.u+0.5RK.k2,DBlock.K,t+0.5RK.Δt)
-    # RHS(RK.k4,DBlock.u+RK.k3,   DBlock.K,t+RK.Δt)
+    RHS(RK.k2,DBlock.u+0.5RK.k1,DBlock.K,t+0.5RK.Δt)
+    RHS(RK.k3,DBlock.u+0.5RK.k2,DBlock.K,t+0.5RK.Δt)
+    RHS(RK.k4,DBlock.u+RK.k3,   DBlock.K,t+RK.Δt)
+    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
+
+end
+function (ForwardEuler::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
+    
+    DBlock.uₙ₊₁ .= DBlock.u
+
+    RHS(RK.k1,DBlock.u,DBlock.K,t)
     DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt*RK.k1
-    # DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 
 end
 
@@ -94,13 +103,13 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Float64,order::Int;
+function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Float64;
         atol::Float64=1.e-5,rtol::Float64=1.e-10,maxIT::Int=10,warnings=true)
     
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(CGB.rₖ,DBlock.u,RHS,Δt,DBlock.K)
+    A!(RHS,CGB.rₖ,DBlock.u,Δt,DBlock.K)
     CGB.rₖ .= CGB.rₖ .- CGB.b
     # DBlock.uₙ₊₁ .= DBlock.u
 
@@ -111,16 +120,16 @@ function conj_grad!(DBlock::DataBlock,CGB::ConjGradBlock,RHS::Function,Δt::Floa
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
     unorm = sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁))
     while (rnorm > rtol*unorm) & (i < maxIT)
-        A!(CGB.Adₖ,CGB.dₖ,RHS,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
+        A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
         αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
         DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(CGB.rₖ,DBlock.uₙ₊₁,RHS,Δt,DBlock.K)
+        A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
         CGB.rₖ .= CGB.rₖ .- CGB.b
 
-        A!(CGB.Drₖ,CGB.rₖ,RHS,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
+        A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
         βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
         CGB.dₖ .= -CGB.rₖ .+ βₖ*CGB.dₖ
@@ -142,98 +151,8 @@ end
     A!
 Mutable ``u - ΔtD(u)``
 """
-function A!(tmp::AbstractArray,uⱼ::AbstractArray,PDE!::Function,Δt::Float64,k::AbstractArray)
+function A!(PDE!::Function,tmp::AbstractArray,uⱼ::AbstractArray,Δt::Float64,k::AbstractArray)
     PDE!(tmp,uⱼ,k)
     tmp .= uⱼ .- Δt*tmp
 end
-
-
-# """
-#     innerH
-# Computes the ``H``-inner product between two vectors or matrices ``u`` and ``v``.
-# """
-# function innerH end
-# # H inner product for 1D problems
-# @views function innerH(u::AbstractVector,v::AbstractVector,order::Int,Δ::Float64)
-#     tmp = 0.0
-#     if order == 2
-#         tmp += 0.5*Δ * u[1]*v[1]
-#         tmp += 0.5*Δ * u[end]*v[end]
-#         tmp += Δ*dot(u[2:end-1],v[2:end-1])
-#         return tmp
-#     elseif order == 4
-#         tmp += sum([17.0/48.0, 59.0/48.0, 43.0/48.0, 49.0/48.0]*Δ .* u[1:4] .* v[1:4])
-#         tmp += sum([49.0/48.0, 43.0/48.0, 59.0/48.0, 17.0/48.0]*Δ .* u[end-3:end] .* v[end-3:end])
-#         tmp += Δ*dot(u[5:end-4],v[5:end-4])
-#         return tmp
-#     elseif order == 6
-#         tmp += sum([13649.0/43200.0, 12013.0/8640.0, 2711.0/4320.0, 5359.0/4320.0, 7877.0/8640.0, 43801.0/43200.0])
-#         tmp += sum([43801.0/43200.0, 7877.0/8640.0, 5359.0/4320.0, 2711.0/4320.0, 12013.0/8640.0, 13649.0/43200.0])
-#         tmp += Δ*dot(u[7:end-6],v[7:end-6])
-#     end
-# end
-# # H inner product for 2D problems
-# @views function innerH(u::AbstractMatrix,v::AbstractMatrix,order::Int,Δ::Float64)
-#     tmp = 0.0
-#     if order == 2
-#         tmp += 0.25*Δ * u[1,1]*v[1,1]
-#         tmp += 0.25*Δ * u[end,end]*v[end,end]
-#         tmp += 0.25*Δ * u[1,end]*v[1,end]
-#         tmp += 0.25*Δ * u[end,1]*v[end,1]
-
-#         tmp += 0.5*Δ * dot(u[2:end-1,1],v[2:end-1,1])
-#         # tmp += 0.5*Δ * dot(@views(u[2:end-1,1]),@views(v[2:end-1,1]))
-#         tmp += 0.5*Δ * dot(u[2:end-1,end],v[2:end-1,end])
-#         tmp += 0.5*Δ * dot(u[1,2:end-1],v[1,2:end-1])
-#         tmp += 0.5*Δ * dot(u[end,2:end-1],v[end,2:end-1])
-
-#         # Internal sum
-#         # for (uᵢ,vⱼ) in zip(u[2:end-1,2:end-1],v[2:end-1,2:end-1]) #TODO: Write this in nifty.jl
-#         #     tmp += Δ * uᵢ*vⱼ
-#         # end
-#         tmp += Δ * dot(u[2:end-1,2:end-1],v[2:end-1,2:end-1])  #see LinearAlgebra.dot
-#     elseif order == 4
-
-
-#     elseif order == 6
-#     end
-#     return tmp
-# end
-
-# """
-#     build_H
-# """
-# function build_H end
-# function build_H(n::Int64,order::Int64)
-#     H = ones(n)
-#     if order == 2
-#         H[1] = H[end] = 0.5
-#     elseif order == 4
-#         H[1] = H[end]   = 17.0/48.0
-#         H[2] = H[end-1] = 59.0/48.0
-#         H[3] = H[end-2] = 43.0/48.0
-#         H[4] = H[end-3] = 49.0/48.0
-#     elseif order == 6
-#         H[1] = H[end] = 13649.0/43200.0
-#         H[2] = H[end-1] = 12013.0/8640.0
-#         H[3] = H[end-2] = 2711.0/4320.0
-#         H[4] = H[end-3] = 5359.0/4320.0
-#         H[5] = H[end-4] = 7877.0/8640.0
-#         H[6] = H[end-5] = 43801.0/43200.0
-#     else
-#         error("Order must be 2 or 4, 6 not yet implemented")
-#     end
-#     return H
-# end
-# function innerH(u::AbstractMatrix,Hx::AbstractVector,Hy::AbstractVector,v::AbstractMatrix)
-#     #= DEPRECATED =#
-#     nx,ny = size(u)
-#     tmp = 0.0
-#     for j = 1:ny
-#         for i = 1:nx
-#             tmp += u[i,j]*Hx[i]*Hy[j]*v[i,j]
-#         end
-#     end
-#     return tmp
-# end
 
