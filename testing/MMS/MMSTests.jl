@@ -16,29 +16,7 @@ using SBP_operators
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
 
-method = :cgie
-# Number of grid points in each solution
-# npts = [21,31,41,51,61,71,81,91,101]
-
 ###=== MMS ===###
-
-
-
-# Neumann boundaries
-Nx0_Lũ(y,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy)
-NxL_Rũ(y,t;
-    ωx=1.0,cx=0.0,Lx=1.0,
-    ωy=1.0,cy=0.0) =        2π*ωx * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) 
-
-Ny0_Lũ(x,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) =        2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy)
-NyL_Rũ(x,t;
-    ωx=1.0,cx=0.0,
-    ωy=1.0,cy=1.0,Ly=1.0) = 2π*ωy * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy)
-
 
 
 
@@ -128,9 +106,6 @@ end
 
 
 ###=== MMS TESTS ===###
-p = plot()
-
-# npts = [21,31,41,51,61]
 npts = [21,31,41,51,61,71,81,91,101]
 
 
@@ -146,9 +121,6 @@ ũ₀(x,y;
 
 
 K = 1.0
-# K = 1.0e-5
-# K = 1.0e-4
-# K = 1.0e-8
 F(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0,
@@ -197,13 +169,10 @@ O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-plot!(p,    O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
-plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
-#=
+
 # Neumann
 println("=====")
 println("Neumann")
@@ -243,9 +212,6 @@ O4_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
 println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-plot!(p,    O2_NeumannMMS.npts,       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$")
-plot!(p,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
@@ -256,8 +222,8 @@ println("Dirichlet/Periodic")
 
 cx=1.0
 cy=0.0
-ωx=2.0
-ωy=2.0
+ωx=7.0
+ωy=6.0
 
 println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
@@ -285,23 +251,8 @@ O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
 println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$")
-plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$")
-
 println("=====")
 
-
-plot!(p,xaxis=:log,yaxis=:log)
-
-
-order2rate = npts
-
-
-#=
-
-
-savefig(p,".//testing//MMS//MMSTests.eps")
-=#
 
 
 
@@ -400,4 +351,3 @@ open(string("testing/MMS/MMS_Rates_O4",nameappend,".csv"),"w") do io
 end
 
 
-=#

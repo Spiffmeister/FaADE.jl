@@ -16,14 +16,8 @@ using SBP_operators
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
 
-method = :cgie
-# Number of grid points in each solution
-# npts = [21,31,41,51,61,71,81,91,101]
 
 ###=== MMS ===###
-
-
-
 
 # Generates the exact MMS solution
 function generate_MMS(MMS::Function,grid::SBP_operators.Helpers.Grid1D,t::Float64)
@@ -47,6 +41,7 @@ function comp_MMS(Dx,npts,
     MMS_soln = []
     grids = []
     relerr = []
+    interr = []
     # X boundaries
     if BX0Type != Periodic
         Bx0 = Boundary(BX0Type,BoundaryX0,Left,1)
@@ -82,21 +77,21 @@ function comp_MMS(Dx,npts,
         push!(comp_soln,soln)
         push!(grids,Dom)
         push!(MMS_soln,u_MMS)
-        push!(relerr, norm(u_MMS .- soln.u[2])/norm(MMS_soln))
+        
+        push!(relerr, norm(u_MMS .- soln.u[2])/norm(u_MMS))
+        push!(interr, norm(u_MMS[order:end-order+1] .- soln.u[2][order:end-order+1])/norm(u_MMS[order:end-order+1]))
     end
 
     conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
 
-    return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
+    return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,interr=interr,conv_rate=conv_rate,npts=npts)
 end
 
 
 
 
 ###=== MMS TESTS ===###
-p = plot()
-
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
 
 
 # Solution
@@ -106,19 +101,19 @@ ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
 ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
-K = 1.0e-1
+K = 1.0
 F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
         -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
             
     
-
+println("K=",K)
 
 # Dirichlet
 println("=====")
 println("Dirichlet")
 cx=1.0
-ωx=8.5
+ωx=8.0
 
 println("ωx=",ωx,",  cx=",cx)
 
@@ -145,9 +140,6 @@ O4_DirichletMMS = comp_MMS(𝒟x,npts,
 
 println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
-
-plot!(p,    O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
-plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
 
 println("=====")
 
@@ -186,9 +178,6 @@ O4_NeumannMMS = comp_MMS(𝒟x,npts,
 println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
 println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-plot!(p,    O2_NeumannMMS.npts,       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$")
-plot!(p,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
@@ -221,16 +210,8 @@ O4_PeriodicMMS = comp_MMS(𝒟x,npts,
 println("Order 2 Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
 println("Order 4 Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^2)$")
-plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Periodic $\mathcal{O}(h^4)$")
-
 println("=====")
 
-
-plot!(p,xaxis=:log,yaxis=:log)
-
-
-order2rate = npts
 
 
 #=
@@ -302,19 +283,22 @@ savefig(pO4,".//testing//MMS//MMSTests_order4.png")
 =#
 
 
-#=
+
 
 using DelimitedFiles
 
+nameappend=string("K=",K)
 
-open("testing/MMS/1DMMSTests_O2.csv","w") do io
+open(string("testing/MMS/1DMMS_Tests_O2",nameappend,".csv"),"w") do io
     writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
 end
-
-
-open("testing/MMS/1DMMSTests_O4.csv","w") do io
-    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
+open(string("testing/MMS/1DMMS_Rates_O2",nameappend,".csv"),"w") do io
+    writedlm(io,[O2_DirichletMMS.conv_rate O2_NeumannMMS.conv_rate O2_PeriodicMMS.conv_rate])
 end
 
-
-=#
+open(string("testing/MMS/1DMMS_Tests_O4",nameappend,".csv"),"w") do io
+    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
+end
+open(string("testing/MMS/1DMMS_Rates_O4",nameappend,".csv"),"w") do io
+    writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
+end

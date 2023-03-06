@@ -19,10 +19,6 @@ addprocs(4)
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
 
-method = :cgie
-# Number of grid points in each solution
-# npts = [21,31,41,51,61,71,81,91,101]
-
 ###=== MMS ===###
 
 
@@ -124,7 +120,6 @@ function comp_MMS(Dx,Dy,npts,
 
         push!(relerr, norm(test[i].MMS .- test[i].soln.u[2])/norm(test[i].MMS))
     end
-    # push!(relerr, norm(test.u_MMS .- test[1]soln.u[2])/norm(MMS_soln))
     conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
 
     return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
@@ -135,10 +130,8 @@ end
 
 
 ###=== MMS TESTS ===###
-# p = plot()
 
-npts = [21,31,41,51,61]
-# npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61,71,81,91,101]
 
 
 # Solution
@@ -202,13 +195,10 @@ O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-# plot!(p,    O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$")
-# plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
-#=
+
 # Neumann
 println("=====")
 println("Neumann")
@@ -220,14 +210,14 @@ cy=0.0
 
 println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+@everywhere analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-BxLũ(y,t) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
+@everywhere BxLũ(y,t) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+@everywhere BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+@everywhere ByLũ(x,t) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+@everywhere ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
 order = 2
 println("order=",order)
@@ -248,9 +238,6 @@ O4_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
 println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-plot!(p,    O2_NeumannMMS.npts,       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$")
-plot!(p,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
@@ -266,12 +253,12 @@ cy=0.0
 
 println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+@everywhere analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+@everywhere FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-BxLũ(y,t)           = cos(2π*t) * sin(cx)               * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx)    * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+@everywhere BxLũ(y,t)           = cos(2π*t) * sin(cx)               * sin(2π*y*ωy + cy) #Boundary condition x=0
+@everywhere BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx)    * sin(2π*y*ωy + cy) #Boundary condition x=Lx
 
 order = 2
 O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
@@ -290,23 +277,10 @@ O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
 println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
 println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-plot!(p,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$")
-plot!(p,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$")
-
 println("=====")
 
 
-plot!(p,xaxis=:log,yaxis=:log)
 
-
-order2rate = npts
-
-
-#=
-
-
-savefig(p,".//testing//MMS//MMSTests.eps")
-=#
 
 
 
@@ -370,7 +344,7 @@ savefig(pO4,".//testing//MMS//MMSTests_order4.png")
 surface(O4_PeriodicMMS.comp_soln[end].u[2] .- O4_PeriodicMMS.MMS_soln[end])
 
 
-surface(O4_PeriodicMMS.grids[4].gridx,O4_PeriodicMMS.grids[4].gridy,O4_PeriodicMMS.comp_soln[4].u[2] .- O4_PeriodicMMS.MMS_soln[4],xlabel="x",ylabel="y")
+surface(O4_PeriodicMMS.grids[end].gridx,O4_PeriodicMMS.grids[end].gridy,O4_PeriodicMMS.comp_soln[end].u[2] .- O4_PeriodicMMS.MMS_soln[end],xlabel="x",ylabel="y")
 surface(O4_PeriodicMMS.grids[end].gridx,O4_PeriodicMMS.grids[end].gridy,O4_PeriodicMMS.comp_soln[end].u[2] .- O4_PeriodicMMS.MMS_soln[end],xlabel="x",ylabel="y")
 
 surface(O2_PeriodicMMS.grids[4].gridx,O2_PeriodicMMS.grids[4].gridy,O2_PeriodicMMS.comp_soln[4].u[2] .- O2_PeriodicMMS.MMS_soln[4],xlabel="x",ylabel="y")
@@ -405,4 +379,3 @@ open(string("testing/MMS/MMS_Rates_O4",nameappend,".csv"),"w") do io
 end
 
 
-=#
