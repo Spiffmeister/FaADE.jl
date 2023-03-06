@@ -108,7 +108,6 @@ function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::Abstrac
         for i = 1:order
             S[i] += -α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
-        # S[1:order] += α*C[1]*BD*U[1]
         S[1] += τ*C[1]*U[1]
     end
     SAT
@@ -135,8 +134,7 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},c:
 
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         for i = 1:order
-            # S[i] -= -Δt* α*C[1]*BD[i]*RHS(t) #DₓᵀE₀
-            S[i] -= -α*C[1]*BD[i]*U[1] #DₓᵀE₀
+            S[i] += α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
         S[1] -= τ*C[1]*U[1]
@@ -147,8 +145,7 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},c
         α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function) where {T}
     for (S,C) in zip(loopaxis(SAT),loopaxis(c))
         for i = 1:order
-            # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #DₓᵀEₙ
-            S[end-order+i] -= Δt* α*C[end]*BD[i]*U[end] #DₓᵀEₙ
+            S[end-order+i] += -α*C[end]*BD[i]*U[end] #DₓᵀEₙ
         end
         # S[end] -= Δt* τ*C[end]*RHS(t)
         S[end] -= Δt* τ*C[end]*U[end]
