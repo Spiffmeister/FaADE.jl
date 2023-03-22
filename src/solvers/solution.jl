@@ -7,7 +7,7 @@ Solution data structure, contains the initial condition and the solution at time
  originally by the user.
 
 Fields:
- - `u`, `grid`, `Δt`, `t`, `problem`
+ - `u`, `grid`, `Δt`, `t`, `problem`, `Δu`
 """
 mutable struct solution{T}
     u       :: Vector{AbstractArray{T}}
@@ -15,7 +15,8 @@ mutable struct solution{T}
     Δt      :: Union{T,Vector{T}}
     t       :: Vector{T}
     problem :: PDEProblem
-
+    Δu      :: T
+    
     function solution{T}(grid::GridType,t::T,Δt::T,prob::PDEProblem;preallocate=false) where T
         if preallocate
             N = ceil(Int64,t/Δt)
@@ -39,7 +40,7 @@ mutable struct solution{T}
             end
 
 
-            new{T}([u],grid,[Δt],[t],prob)
+            new{T}([u],grid,[Δt],[t],prob,0.0)
         end
 
     end
