@@ -19,7 +19,7 @@ end
 """
     RK4
 """
-mutable struct ExplicitBlock{T,N} <: DataBlockType{T,N}
+mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
     k1  :: AbstractArray{T,N}
     k2  :: AbstractArray{T,N}
     k3  :: AbstractArray{T,N}
@@ -40,16 +40,18 @@ mutable struct ExplicitBlock{T,N} <: DataBlockType{T,N}
             k2 = zeros(T,n)
             k3 = zeros(T,n)
             k4 = zeros(T,n)
+            O = 4
         elseif integrator == :euler
             k2 = k3 = k4 = zeros(T,0)
+            O = 1
         end
 
-        new{T,dims}(k1,k2,k3,k4,Δt)
+        new{T,dims,O}(k1,k2,k3,k4,Δt)
     end
 end
 # function RK4 end
 # function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
-function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
+function (RK::ExplicitBlock{T,N,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
     
     DBlock.uₙ₊₁ .= DBlock.u
 
@@ -60,7 +62,7 @@ function (RK::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
     DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 
 end
-function (ForwardEuler::ExplicitBlock)(RHS::Function,DBlock::DataBlock,t::Float64)
+function (ForwardEuler::ExplicitBlock{T,N,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
     
     DBlock.uₙ₊₁ .= DBlock.u
 
