@@ -38,36 +38,36 @@ end
     VariableCoefficientPDE1D
 PDE Problem type for user input
 """
-struct VariableCoefficientPDE1D{T} <: PDEProblem
+struct VariableCoefficientPDE1D <: PDEProblem
     InitialCondition    :: Function
-    K                   :: AbstractArray{T}
+    K                   :: Function
     order               :: Int
     BoundaryConditions  :: NamedTuple
-    function VariableCoefficientPDE1D(u₀::Function,K::AbstractVector{T},order::Int,BCs::BoundaryConditionData...) where T
+    function VariableCoefficientPDE1D(u₀::Function,K::Function,order::Int,BCs::BoundaryConditionData...)
         Bounds = NamedTuple()
         for BC in BCs
             Bounds = merge(Bounds,BC)
         end
-        new{T}(u₀,K,order,Bounds)
+        new(u₀,K,order,Bounds)
     end
 end
 """
     VariableCoefficientPDE2D
 PDE Problem type for user input
 """
-struct VariableCoefficientPDE2D{T} <: PDEProblem
+struct VariableCoefficientPDE2D <: PDEProblem
     InitialCondition    :: Function
-    Kx                  :: AbstractArray{T}
-    Ky                  :: AbstractArray{T}
+    Kx                  :: Function
+    Ky                  :: Function
     order               :: Int
     BoundaryConditions  :: NamedTuple
-    function VariableCoefficientPDE2D(u₀,Kx::AbstractArray{T},Ky::AbstractArray{T},order::Int,BCs::BoundaryConditionData...) where T
+    function VariableCoefficientPDE2D(u₀,Kx::Function,Ky::Function,order::Int,BCs::BoundaryConditionData...)
 
         Bounds = NamedTuple()
         for BC in BCs
             Bounds = merge(Bounds,BC)
         end
-        new{T}(u₀,Kx,Ky,order,Bounds)
+        new(u₀,Kx,Ky,order,Bounds)
     end
 end
 

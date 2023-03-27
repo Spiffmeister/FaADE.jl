@@ -9,7 +9,6 @@
 Passed around internally between functions. Only contains data required for current timestep.
 """
 mutable struct DataBlock{T,N} <: DataBlockType{T,N}
-    dim         :: Int
     grid        :: GridType
     u           :: AbstractArray{T}
     uₙ₊₁        :: AbstractArray{T}
@@ -18,32 +17,38 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
     t           :: T
     Δt          :: T
     function DataBlock{T}(
-            boundaries::NamedTuple,
-            grid::GridType,
+            PDE::PDEProblem,
+            grid::GridType{T,D},
             Δt::T,
-            order::Int,
-            K::AbstractArray{T}...) where {T}
+            K::Vector{Function}...) where {T,D}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
             u   = zeros(T,grid.n)
-            uₓₓ = zeros(T,grid.n)
-            BStor = BoundaryData1D{T}(boundaries,order)
-            DiffCoeff = K[1]
+            uₙ₊₁ = zeros(T,grid.n)
+            BStor = BoundaryData1D{T}(PDE.BoundaryConditions,PDE.order)
+
+            DiffCoeff = zeros(T,grid.n)
+            setCoefficient!(PDE.K,DiffCoeff,grid)
+
             dim = 1
+            
         elseif typeof(grid) <: Grid2D
             u   = zeros(T,(grid.nx,grid.ny))
-            uₓₓ = zeros(T,(grid.nx,grid.ny))
-            BStor = BoundaryData2D{T}(boundaries,grid,order)
+            uₙ₊₁ = zeros(T,(grid.nx,grid.ny))
+            BStor = BoundaryData2D{T}(PDE.BoundaryConditions,grid,PDE.order)
+
             DiffCoeff = [K[1],K[2]]
+            DiffCoeff = [zeros(T,(grid.nx,grid.ny)),zeros(T,(grid.nx,grid.ny))]
+            setCoefficient!(PDE.K[1],DiffCoeff[1],grid)
+            setCoefficient!(PDE.K[2],DiffCoeff[2],grid)
+
             dim = 2
+
         end
-        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,0,Δt)
+        new{T,dim}(grid,u,uₙ₊₁,DiffCoeff,BStor,T(0),Δt)
     end
 end
-
-
-#========== WHOLE PROBLEM DATA ==========#
 
 
 #========== BOUNDARY DATA ==========#
@@ -269,3 +274,20 @@ end
 #     if GetDim(BoundaryStore) == 2
 #     end
 # end
+"""
+    setCoefficient!
+Sets the diffusion coefficient
+"""
+function setCoefficient! end
+function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid1D)
+    for i = 1:grid.n
+        κ[i] = K(grid.grid[i])
+    end
+end
+function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid2D)
+    for i = 1:grid.nx
+        for j = 1:grid.ny
+            κ[i,j] = K(grid.gridx[i],grid.gridy[j])
+        end
+    end
+end
