@@ -1,23 +1,7 @@
-#= EXPLICIT METHODS =#
-
 """
-    forward_euler
-"""
-function forward_euler end
-function forward_euler(DBlock::DataBlock,RHS::Function)
-    # Simple forward euler method
-    RHS(DBlock.uₙ₊₁,DBlock.u,DBlock.K)
-    DBlock.uₙ₊₁ .= DBlock.u .+ DBlock.Δt*DBlock.uₙ₊₁
-end
-function forward_euler(uₒ::AbstractMatrix,RHS::Function,Δt::Float64)
-    # Simple forward euler method
-    uₙ = uₒ + Δt*RHS(uₙ,uₒ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,gx,gy)
-    return uₙ
-end
-
-
-"""
-    RK4
+    ExplicitBlock{T,N,O}
+Data storage block for explicit integrators.
+O<:Integer is the order of the integrator
 """
 mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
     k1  :: AbstractArray{T,N}
@@ -49,8 +33,11 @@ mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
         new{T,dims,O}(k1,k2,k3,k4,Δt)
     end
 end
-# function RK4 end
-# function RK4(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary)
+
+"""
+    (RK::ExplicitBlock{T,N,4})
+RK4 integrator
+"""
 function (RK::ExplicitBlock{T,N,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
     
     DBlock.uₙ₊₁ .= DBlock.u
@@ -62,6 +49,10 @@ function (RK::ExplicitBlock{T,N,4})(RHS::Function,DBlock::DataBlock,t::Float64) 
     DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
 
 end
+"""
+    (ForwardEuler::ExplicitBlock{T,N,1})
+Forward Euler integrator
+"""
 function (ForwardEuler::ExplicitBlock{T,N,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
     
     DBlock.uₙ₊₁ .= DBlock.u
@@ -144,10 +135,6 @@ function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Floa
         @warn warnstr
     end
 end
-
-
-#= SUPPORT =#
-
 
 """
     A!
