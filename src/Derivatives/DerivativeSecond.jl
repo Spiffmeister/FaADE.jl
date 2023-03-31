@@ -1,33 +1,36 @@
 #======================================#
-#======== SECOND ORDER METHODS ========#
+#====== Second Derivative Methods =====#
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
 
 """
     SecondDerivative
+Allocating functions for second derivative, useful when need to add value to a matrix.
 
-Single node stencil for second derviative SBP operator
-    ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right) \\sim D_{xx}^{(c)}u``
-
-- If `NodeType==Internal` then computes the second derviative for a node away from the boundaries (see next point for info).
-    - `order==2`: 3 nodes
-    - `order==4`: 5 nodes
-    - `order==6`: 7 nodes
-    - Returns `Float64`
-- If `NodeType==Left` or `NodeType==Right` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
-    - `order==2`: 1 node, returns `Vector{Float64}` with length 1
-    - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
-    - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
-    - Returns `Vector{Float64}`
-
-See also [`NodeType`](@ref)
-
+See also [`SecondDerivativeInternal!`](@ref) and [`SecondDerivativeBoundary!`](@ref)
 """
 function SecondDerivative end
-### Internal single point 1D stencil
-function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Internal};order::Int64=2)
+### Internal nodes
+function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
+    uₓₓ = zeros(T,length(u))
+    SecondDerivativeInternal!(uₓₓ,u,c,Δx,length(u),order)
+    return uₓₓ
+end
+### Boundary nodes
+function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,node::NodeType;order::Integer=2) where T
+    uₓₓ = zeros(BoundaryNodeOutput(order))
+    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,node,order)
+    return uₓₓ
+end
 
+"""
+    SecondDerivativeInternal
+Single node 1D second derivative function.
+
+See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
+"""
+@inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
     if order == 2
         j = 2
         uₓₓ = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
@@ -53,24 +56,16 @@ function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,::Nod
     end
 
 end
-function SecondDerivative(u::AbstractVector,c::AbstractVector,Δx::Float64,node::NodeType;order::Int64=2)
-    uₓₓ = zeros(BoundaryNodeOutput(order))
-    SecondDerivative!(uₓₓ,u,c,Δx,node,order=order)
-    return uₓₓ
-end
-
-
-
-
-
 
 
 """
-    SecondDerivative!
+    SecondDerivativeInternal!
+1D and 2D in place functions for second derivative on internal nodes of a domain
 """
-@views @inline function SecondDerivativeInternal1D!(uₓₓ::AbstractVector,u::AbstractVector,cx::AbstractVector,
-        Δx::AbstractFloat,nx::Int,order::Int)
-
+######### 1D FUNCTION
+@views @inline function SecondDerivativeInternal!(uₓₓ::AbstractVector{T},
+        u::AbstractVector{T},cx::AbstractVector{T},
+        Δx::T,nx::Integer,order::Integer) where T
     if order == 2
         for i = 2:nx-1
                 @inbounds uₓₓ[i] = 
@@ -88,14 +83,15 @@ end
     end
     uₓₓ
 end
-@views @inline function SecondDerivativeInternal2D!(uₓₓ::AbstractArray,u::AbstractArray,cx::AbstractArray,cy::AbstractArray,
-        Δx::AbstractFloat,Δy::AbstractFloat,nx::Int,ny::Int,order::Int)
-
+######### 2D FUNCTION
+@views @inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
+        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
+        Δx::T,Δy::T,nx::Integer,ny::Integer,order::Integer) where T
     if order == 2
         #= 2nd order =#
         for j = 2:ny-1
             for i = 2:nx-1
-                uₓₓ[i,j] = 
+                @inbounds uₓₓ[i,j] = 
                     ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
                     ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
             end
@@ -125,19 +121,14 @@ end
 end
 
 
-
-
-
-
-
-
-
-
 """
-    SecondDerivative!
+    SecondDerivativeBoundary!
+1D in place function for second derivative on boundary nodes
 """
 ### Left boundary
-@views function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,Δx::Float64,::NodeType{:Left};order::Int64=2)
+@views function SecondDerivativeBoundary!(uₓₓ::AbstractVector{T},
+        u::AbstractVector{T},c::AbstractVector{T},
+        Δx::T,::NodeType{:Left},order::Integer) where T
     if order == 2
         uₓₓ[1] = 0.0
         # return uₓₓ
@@ -190,9 +181,6 @@ end
             (-c[5]/0.6e1- c[8]/0.6e1-c[6]/0.2e1-c[7]/0.2e1).*u[7] + 
             (-c[7]/0.6e1 + c[6]/0.8e1 + c[8]/0.8e1).*u[8]
             
-        # println("B₁Su   ",B₁Su)
-        # println("uₓₓ    ",uₓₓ[1])
-        
         uₓₓ[1:6]    ./= Δx
         uₓₓ[1]      = 48/(17Δx)*(-uₓₓ[1]+B₁Su)
         uₓₓ[2]      = 48/(59Δx)*(-uₓₓ[2])
@@ -315,7 +303,9 @@ end
 end
 
 
-@views function SecondDerivative!(uₓₓ::AbstractVector,u::AbstractVector{Float64},c::AbstractVector{Float64},Δx::Float64,::NodeType{:Right};order::Int64=2)
+@views function SecondDerivativeBoundary!(uₓₓ::AbstractVector{T},
+        u::AbstractVector{T},c::AbstractVector{T},
+        Δx::T,::NodeType{:Right},order::Integer) where T
     if order == 2
         uₓₓ[end] = 0.0
     elseif order == 4
@@ -502,26 +492,3 @@ end
 
 
 
-
-
-#=
-function SecondDerivative_Order2()
-    (0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1])/Δx^2
-end
-function SecondDerivative_Order4()
-    -((-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
-        (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
-        (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
-        (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
-        (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2])/Δx^2
-end
-function SecondDerivative_InternalStencil_Order6()
-    -((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
-        (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
-        (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
-        (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
-        (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
-        (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
-        (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
-end
-=#

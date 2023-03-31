@@ -29,7 +29,16 @@ Optional inputs:
 """
 function solve end
 #= 1D SOLVER =#
-function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,interpfn::Union{Nothing,Function}=nothing,sample_rate::Float64=0.0) where T
+function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,source::Union{Nothing,Function}=nothing,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,interpfn::Union{Nothing,Function}=nothing,sample_rate::Float64=0.0) where T
+
+    target_state = 0.0
+    if t_f == Inf
+        target_state = 1e-5
+        println("Going for steady state at rel-error Δu=",target_state)
+        @warn "MAX ITERATIONS NOT SET"
+        @warn "MAX ITERATIONS NOT SET"
+        @warn "MAX ITERATIONS NOT SET"
+    end
 
     DBlock = DataBlock{T}(Prob,grid,Δt)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
@@ -52,7 +61,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
         _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
         _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
     end
-    Diff = generate_Derivative(grid.n,grid.Δx,Prob.order)
+    Diff = generate_SecondDerivative(grid.n,grid.Δx,Prob.order)
     
     if solver == :cgie
         # Replace cache with the derivative of v + SATs
@@ -106,9 +115,17 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
             conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
 
             if CGBlock.converged | !adaptive #If CG converges
+
                 if penalty_function_enabled
                     penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
                 end
+
+                # USED FOR DETERMINING EQUILIBRIUM
+                DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
+                if (DBlock.Δu ≤ target_state) & (t_f == Inf)
+                    t_f = t
+                end
+
                 DBlock.u .= DBlock.uₙ₊₁
                 CGBlock.b .= DBlock.uₙ₊₁
                 copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
@@ -116,6 +133,9 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
                     Δt *= 1.05
                 end
                 t += Δt
+
+                
+
             else #If CG fails, reset and retry step
                 DBlock.uₙ₊₁ .= DBlock.u
                 Δt /= 2.0
@@ -142,7 +162,16 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
+
+    target_state = 0.0
+    if t_f == Inf
+        target_state = 1e-5
+        println("Going for steady state at rel-error Δu=",target_state)
+        @warn "MAX ITERATIONS NOT SET"
+        @warn "MAX ITERATIONS NOT SET"
+        @warn "MAX ITERATIONS NOT SET"
+    end
 
     DBlock = DataBlock{T}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.Kx,Prob.Ky)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
@@ -168,7 +197,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         _,SAT_UD    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
     end
 
-    Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
+    Diff = generate_SecondDerivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
     function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
         Diff(cache,u,K[1],K[2])
@@ -220,6 +249,11 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
             if penalty_function_enabled # Add parallel penalty
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
             end
+            # USED FOR DETERMINING EQUILIBRIUM
+            DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
+            if (DBlock.Δu ≤ target_state) & (t_f == Inf)
+                t_f = t
+            end
             DBlock.u .= DBlock.uₙ₊₁
             CGBlock.b .= DBlock.uₙ₊₁
             # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
@@ -243,6 +277,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     push!(soln.u,DBlock.u)
     push!(soln.Δt,Δt)
     push!(soln.t,t)
+    soln.Δu = DBlock.Δu
     return soln
 end
 

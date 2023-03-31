@@ -10,7 +10,7 @@ module solvers
 
     using SBP_operators.Helpers
 
-    using SBP_operators.Derivatives: Dₓₓ!, generate_Derivative
+    using SBP_operators.Derivatives: generate_SecondDerivative
     
     using SBP_operators.SATs: SAT, construct_SAT, 
     SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!
