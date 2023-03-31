@@ -1,8 +1,4 @@
 
-# struct Diff{T,N} 
-# end
-
-
 
 """
     generate_SecondDerivative
