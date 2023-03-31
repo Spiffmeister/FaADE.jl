@@ -17,6 +17,7 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
     boundary    :: BoundaryStorage
     t           :: T
     Δt          :: T
+    Δu          :: T
     function DataBlock{T}(
             boundaries::NamedTuple,
             grid::GridType,
@@ -38,7 +39,7 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
             DiffCoeff = [K[1],K[2]]
             dim = 2
         end
-        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,0,Δt)
+        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,0,Δt,0.0)
     end
 end
 
