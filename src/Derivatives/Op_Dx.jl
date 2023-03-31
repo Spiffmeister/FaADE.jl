@@ -1,29 +1,40 @@
+#=====================================#
+#====== FIRST DERIVATIVE METHODS =====#
+#=====================================#
+# Author: Dean Muir, Kenneth Duru
 
 """
     Dₓ
 
-Internally uses [`Dₓ!`](@ref)
+- Dₓ(u,n,Δx; order=2)
+- Dₓ(u,nx,ny,Δx,Δy; order=2)
+
+1D and 2D first derivative operator. 
+
+Also available as and internally uses in place operator [`Dₓ!`](@ref).
 """
 function Dₓ end
 # 1D First derivative
-function Dₓ(u::AbstractVector{T},Δx::T;order::Integer=2) where T
+function Dₓ(u::AbstractVector{T},Δx::T;
+        order::Integer=2) where T
     uₓ = zeros(T,length(u))
     Dₓ!(uₓ,u,length(u),Δx,order)
     return uₓ
 end
 # 2D First derivative
-function Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;order::Integer=2) where T
-    
+function Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;
+        order::Integer=2) where T
     uₓ = zeros(T,size(u))
     Dₓ!(uₓ,u,nx,ny,Δx,Δy,order)
-    
     return uₓ
 end
 
 
 """
     Dₓ!
-In place first derivative operator uses [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref)
+1D and 2D in place first derivative operator.
+
+See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
 """
 function Dₓ! end
 # 1D
@@ -35,7 +46,7 @@ function Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
 end
 # 1D for 2D
 function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,
-        dim::Integer,order::Integer) where T
+        order::Integer,dim::Integer) where T
     loopdir = SelectLoopDirection(dim)
     for (cache,U) in zip(loopdir(uₓ),loopdir(u))
         Dₓ!(cache,U,n,Δ,order)
@@ -46,29 +57,41 @@ end
 function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
         order::Integer) where T
     
-    rx = 
+    order == 2 ? ret = 1 : ret = order
+    order == 2 ? nin = 2 : nin = order + halforder(order)
+    order == 2 ? ein = 1 : ein = halforder(order)
+
+    
 
     FirstDerivativeInternal!(uₓ,u,Δx,Δy,nx,ny,order)
 
     #Boundary nodes
-    FirstDerivativeBoundaryStencil!(uₓ,
-        u[1:order],Left,Internal,Δx,Δy,nx,ny,order)
-    FirstDerivativeBoundaryStencil!(uₓ,
-        u[1:order],Right,Internal,Δx,Δy,nx,ny,order)
-    FirstDerivativeBoundaryStencil!(uₓ,
-        u[1:order],Internal,Left,Δx,Δy,nx,ny,order)
-    FirstDerivativeBoundaryStencil!(uₓ,
-        u[1:order],Internal,Right,Δx,Δy,nx,ny,order)
+    FirstDerivativeBoundaryStencil!(uₓ[1:ret,order+1:ny-order+1],
+        u[1:nin,ein:ny-ein+1],
+        Left,Internal,Δx,Δy,nx,ny,order)
+    FirstDerivativeBoundaryStencil!(uₓ[n-ret+1:n,order+1:ny-order+1],
+        u[nx-nin+1:nx,ein:ny-ein+1],
+        Right,Internal,Δx,Δy,nx,ny,order)
+    FirstDerivativeBoundaryStencil!(uₓ[order+1:nx-order+1,1:ret],
+        u[ein:nx-ein+1,1:order],
+        Internal,Left,Δx,Δy,nx,ny,order)
+    FirstDerivativeBoundaryStencil!(uₓ[order+1:nx-order+1,n-ret+1:n],
+        u[ein:nx-ein+1,ny-nin+1:nx],
+        Internal,Right,Δx,Δy,nx,ny,order)
 
     #Corner nodes
-    FirstDerivativeCornerStencil!(uₓ,
-        u[1:order],Left,Left,Δx,Δy,nx,ny,order)
-    FirstDerivativeCornerStencil!(uₓ,
-        u[1:order],Left,Right,Δx,Δy,nx,ny,order)
-    FirstDerivativeCornerStencil!(uₓ,
-        u[1:order],Right,Right,Δx,Δy,nx,ny,order)
-    FirstDerivativeCornerStencil!(uₓ,
-        u[1:order],Right,Left,Δx,Δy,nx,ny,order)
+    FirstDerivativeCornerStencil!(uₓ[1:ret,1:ret],
+        u[1:nin,1:nin],
+        Left,Left,Δx,Δy,nx,ny,order)
+    FirstDerivativeCornerStencil!(uₓ[1:ret,ny-ret+1:ny],
+        u[1:nin,ny-nin+1:ny],
+        Left,Right,Δx,Δy,nx,ny,order)
+    FirstDerivativeCornerStencil!(uₓ[nx-ret+1:nx,ny-ret+1:ny],
+        u[nx-nin+1:nx,ny-nin+1:ny],
+        Right,Right,Δx,Δy,nx,ny,order)
+    FirstDerivativeCornerStencil!(uₓ[nx-ret+1:nx,1:ret],
+        u[nx-nin+1:nx,1:nin],
+        Right,Left,Δx,Δy,nx,ny,order)
     
     uₓ
 end
@@ -76,6 +99,7 @@ end
 
 """
     FirstDerivativeBoundaryStencil!
+2D first derivative on a boundary.
 """
 function FirstDerivativeBoundaryStencil! end
 function FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
@@ -110,7 +134,7 @@ function FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
     for i = 1:nx
         FirstDerivativeBoundary!(uₓ[i,Yrng],u[i+halfx,1:Iny],Δy,ny,ynode,order)
         for j = Yrng
-            uₓₓ[i,j] += FirstDerivativeInternal(u[i:i+order_y,j+offset],Δx,order)
+            uₓₓ[i,j] += FirstDerivativeInternal(u[i:i+order_y,j+offset],Δx,nx,order)
         end
     end
     return uₓₓ
@@ -118,6 +142,7 @@ end
 
 """
     FirstDerivativeCornerStencil!
+2D first derivative on a corner.
 """
 function FirstDerivativeCornerStencil!(uₓ::AbstractArray{T},
         u::AbstractArray{T},

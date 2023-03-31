@@ -1,12 +1,14 @@
 #=====================================#
 #====== FIRST DERIVATIVE METHODS =====#
-# 
-# 
 #=====================================#
+# Author: Dean Muir, Kenneth Duru
 
 
 """
     FirstDerivative
+Allocating functions for first derivative, useful when need to add value to a matrix.
+
+See also [`FirstDerivativeInternal!`](@ref) and [`FirstDerivativeBoundary`](@ref)
 """
 function FirstDerivative end
 ### Internal nodes
@@ -25,7 +27,9 @@ end
 
 """
     FirstDerivativeInternal
-Single node 1D first derivative function
+Single node 1D first derivative function.
+
+See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
 """
 @inline function FirstDerivativeInternal(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer) where T
     if order == 2
@@ -42,6 +46,7 @@ end
 
 """
     FirstDerivativeInternal!
+1D and 2D in place functions for first derivative on internal nodes of a domain
 """
 ######### 1D FUNCTION
 @views @inline function FirstDerivativeInternal!(uₓ::AbstractVector{T},u::AbstractVector{T},Δx::T,n::Integer,order::Integer) where T
@@ -92,7 +97,8 @@ end
 
 
 """
-    FirstDerivativeBoundary1D!
+    FirstDerivativeBoundary!
+1D in place function for first derivative on boundary nodes
 """
 @views function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
         u::AbstractVector{T},Δx::T,n::Integer,NT::NodeType,order::Integer) where T

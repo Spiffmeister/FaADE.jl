@@ -1,27 +1,14 @@
 #======================================#
-#======== SECOND ORDER METHODS ========#
+#====== Second Derivative Methods =====#
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
 
 """
     SecondDerivative
+Allocating functions for second derivative, useful when need to add value to a matrix.
 
-Single node stencil for second derviative SBP operator
-    ``\\frac{\\partial}{\\partial x}\\left(c\\frac{\\partial u}{\\partial x}\\right) \\sim D_{xx}^{(c)}u``
-
-- If `NodeType==Internal` then computes the second derviative for a node away from the boundaries (see next point for info).
-    - `order==2`: 3 nodes
-    - `order==4`: 5 nodes
-    - `order==6`: 7 nodes
-    - Returns `Float64`
-- If `NodeType==Left` or `NodeType==Right` then takes the second derivative along the left (right) boundary. Order determines the number of nodes required
-    - `order==2`: 1 node, returns `Vector{Float64}` with length 1
-    - `order==4`: 8 nodes, returns `Vector{Float64}` with length 6
-    - `order==6`: 12 nodes, returns `Vector{Float64}` with length 9
-    - Returns `Vector{Float64}`
-
-See also [`NodeType`](@ref)
+See also [`SecondDerivativeInternal!`](@ref) and [`SecondDerivativeBoundary!`](@ref)
 """
 function SecondDerivative end
 ### Internal nodes
@@ -39,7 +26,9 @@ end
 
 """
     SecondDerivativeInternal
-Single node 1D second derivative function
+Single node 1D second derivative function.
+
+See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
 """
 @inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
     if order == 2
@@ -71,7 +60,7 @@ end
 
 """
     SecondDerivativeInternal!
-Second derivative for internal nodes
+1D and 2D in place functions for second derivative on internal nodes of a domain
 """
 ######### 1D FUNCTION
 @views @inline function SecondDerivativeInternal!(uₓₓ::AbstractVector{T},
@@ -134,6 +123,7 @@ end
 
 """
     SecondDerivativeBoundary!
+1D in place function for second derivative on boundary nodes
 """
 ### Left boundary
 @views function SecondDerivativeBoundary!(uₓₓ::AbstractVector{T},
