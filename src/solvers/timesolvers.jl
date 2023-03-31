@@ -52,7 +52,7 @@ function solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f:
         _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
         _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
     end
-    Diff = generate_Derivative(grid.n,grid.Δx,Prob.order)
+    Diff = generate_SecondDerivative(grid.n,grid.Δx,Prob.order)
     
     if solver == :cgie
         # Replace cache with the derivative of v + SATs
@@ -168,7 +168,7 @@ function solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f:
         _,SAT_UD    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
     end
 
-    Diff = generate_Derivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
+    Diff = generate_SecondDerivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
     function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
         Diff(cache,u,K[1],K[2])
