@@ -2,106 +2,118 @@
 #====== FIRST DERIVATIVE METHODS =====#
 # 
 # 
-# TODO: Add 3D methods
 #=====================================#
 
 
 """
     FirstDerivative
-
-Single node stencil for first derivative SBP operator
-    ``\\frac{\\partial u}{\\partial x} \\sim D_{xx}u``
-
-- If `NodeType==Internal` then takes first derivative on a node away from the boundaries (internal to domain). Order determines the number of nodes required:
-    - `order==2`: 3 nodes
-    - `order==4`: 5 nodes
-    - `order==6`: 7 nodes
-    - Returns `Float64`
-- If `NodeType==Left` or `NodeType==Right` then takes the first derivative along the `Left` or `Right` boundary. Order determines the number of nodes required:
-    - `order==2`: 2 nodes    
-    - `order==4`: 6 nodes
-    - `order==6`: 9 nodes
-    - Returns `Vector{Float64}`
 """
 function FirstDerivative end
-### Internal Node
-function FirstDerivative(u::AbstractVector{Float64},Δx::Float64,n::Int64,::NodeType{:Internal};order::Int64=2)
+### Internal nodes
+function FirstDerivative(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer) where T
+    uₓ = zeros(T,length(u))
+    FirstDerivativeBoundary!(uₓ,u,Δx,length(u),node,order)
+    return uₓ
+end
+### Boundary nodes
+function FirstDerivative(u::AbstractVector{T},Δx::T,node::NodeType,order::Integer) where T
+    order == 2 ? nnodes = 1 : nnodes = order
+    uₓ = zeros(T,nnodes)
+    FirstDerivativeBoundary!(uₓ,u,Δx,length(u),node,order)
+    return uₓ
+end
 
+"""
+    FirstDerivativeInternal
+Single node 1D first derivative function
+"""
+@inline function FirstDerivativeInternal(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer) where T
     if order == 2
-        j = 1
-        uₓ = (u[j+1] - u[j-1])/2.0
-        return uₓ/Δx
+        j = 2
+        return (u[j+1] - u[j-1])/(T(2)*Δx)
     elseif order == 4
         j = 3
-        uₓ = 1/12*u[j-2] - 2/3*u[j-1]  + 2/3*u[j+1] - 1/12*u[j+2]
-        return uₓ/Δx
+        return (T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
     elseif order == 6
         j = 4
-        uₓ = -1/60*u[j-3] + 3/20*u[j-2] - 3/4*u[j-1] + 3/4*u[j+1] - 3/20*u[j+2] + 1/60*u[j+3]
-        return uₓ/Δx
+        return (-T(1/60)*u[i-3] + T(3/20)*u[j-2] - T(3/4)*u[i-1] + T(3/4)*u[i+1] - T(3/20)*u[i+2] + T(1/60)*u[i+3])/Δx
     end
 end
-### Left boundary
-function FirstDerivative(u::AbstractVector{Float64},Δx::Float64,n::Int64,::NodeType{:Left};order::Int64=2)
+
+"""
+    FirstDerivativeInternal!
+"""
+######### 1D FUNCTION
+@views @inline function FirstDerivativeInternal!(uₓ::AbstractVector{T},u::AbstractVector{T},Δx::T,n::Integer,order::Integer) where T
     if order == 2
-        return (u[2] - u[1])/Δx
+        for i = 2:n-1
+            uₓ[i] = (u[j+1] - u[j-1])/(T(2)*Δx)
+        end
     elseif order == 4
-        uₓ = zeros(Float64,4)
-        uₓ[1] = -24/17*u[1] + 59/34*u[2]  - 4/17*u[3] - 3/34*u[4]
-        uₓ[2] = -1/2*u[1] + 1/2*u[3]
-        uₓ[3] = 4/43*u[1] - 59/86*u[2]  + 59/86*u[4] - 4/43*u[5]
-        uₓ[4] = 3/98*u[1] - 59/98*u[3]  + 32/49*u[5] - 4/49*u[6]
-        return uₓ./Δx
+        for i = 3:n-2
+            uₓ[i] = (T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
+        end
     elseif order == 6
-        uₓ = zeros(Float64,6)
-        uₓ[1]   = -1.582533518939116*u[1]   + 2.033378678700676*u[2] - 0.141512858744873*u[3] +
-            -0.450398306578272*u[4] + 0.104488069284042*u[5] + 0.036577936277544*u[6]
-        uₓ[2]   = -0.462059195631158*u[1] + 0.287258622978251*u[3] + 0.258816087376832*u[4] +
-            -0.069112065532624*u[5] - 0.014903449191300*u[6]
-        uₓ[3]   = 0.071247104721830*u[1] - 0.636451095137907*u[2] + 0.606235523609147*u[4] +
-            -0.022902190275815*u[5] - 0.018129342917256*u[6]
-        uₓ[4]   = 0.114713313798970*u[1] - 0.290087484386815*u[2] - 0.306681191361148*u[3] +
-            0.520262285050482*u[5] - 0.051642265516119*u[6] + 0.013435342414630*u[7]
-        uₓ[5]   = -0.036210680656541*u[1] + 0.105400944933782*u[2] + 0.015764336127392*u[3] +
-            -0.707905442575989*u[4] + 0.769199413962647*u[6] - 0.164529643265203*u[7] + 0.018281071473911*u[8]
-        uₓ[6]   = -0.011398193015050*u[1] + 0.020437334208704*u[2] + 0.011220896474665*u[3] + 
-            0.063183694641876*u[4] - 0.691649024426814*u[5] + 0.739709139060752*u[7] +
-            - 0.147941827812150*u[8] + 0.016437980868017*u[9]
-        return uₓ./Δx
+        for i = 4:n-3
+            uₓ[i] = (-T(1/60)*u[i-3] + T(3/20)*u[j-2] - T(3/4)*u[i-1] + T(3/4)*u[i+1] - T(3/20)*u[i+2] + T(1/60)*u[i+3])/Δx
+        end
     end
 end
-### Right boundary
-function FirstDerivative(u::AbstractVector{Float64},Δx::Float64,n::Int64,::NodeType{:Right};order::Int64=2)
+######### 2D FUNCTION
+@views @inline function FirstDerivativeInternal!(uₓ::AbstractArray{T},
+        u::AbstractArray{T},
+        Δx::T,Δy::T,nx::Integer,ny::Integer,order::Integer) where T
+
     if order == 2
-        return (u[2] - u[1])/Δx
+        # SECOND ORDER METHOD
+        for j=2:ny-1
+            for i = 2:nx-1
+                uₓ[i,j] = (u[i+1,j] - u[i-1,j])/(T(2)*Δx) + (u[i,j+1] - u[i,j-1])/(T(2)*Δy)
+            end
+        end
     elseif order == 4
-        m = 4
-        n = 6
-        uₓ = zeros(Float64,4)
-        uₓ[m] = 24/17*u[n] - 59/34*u[n-1]  + 4/17*u[n-2] + 3/34*u[n-3]
-        uₓ[m-1] = 1/2*u[n] - 1/2*u[n-2]
-        uₓ[m-2] = -4/43*u[n] + 59/86*u[n-1]  - 59/86*u[n-3] + 4/43*u[n-4]
-        uₓ[m-3] = -3/98*u[n] + 59/98*u[n-2]  - 32/49*u[n-4] + 4/49*u[n-5]
-        return uₓ./Δx
+        # FOURTH ORDER METHOD
+        for j = 3:ny-2
+            for i = 3:nx-2
+                uₓ[i,j] = (T(1/12)*u[i-2,j] - T(2/3)*u[i-1,j] + T(2/3)*u[i+1,j] - T(1/12)*u[i+2,j])/Δx + 
+                (T(1/12)*u[i,j-2] - T(2/3)*u[i,j-1] + T(2/3)*u[i,j+1] - T(1/12)*u[i,j+2])/Δy
+            end
+        end
     elseif order == 6
-        m = 6
-        n = 9
-        uₓ = zeros(Float64,6)
-        uₓ[m]      = 1.582533518939116*u[n]   - 2.033378678700676*u[n-1] + 0.141512858744873*u[n-2] +
-            0.450398306578272*u[n-3] - 0.104488069284042*u[n-4] - 0.036577936277544*u[n-5]
-        uₓ[m-1]    = 0.462059195631158*u[n] - 0.287258622978251*u[n-2] - 0.258816087376832*u[n-3] +
-            0.069112065532624*u[n-4] + 0.014903449191300*u[n-5]
-        uₓ[m-2]    = -0.071247104721830*u[n] + 0.636451095137907*u[n-1] - 0.606235523609147*u[n-3] +
-            0.022902190275815*u[n-4] + 0.018129342917256*u[n-5]
-        uₓ[m-3]    = -0.114713313798970*u[n] + 0.290087484386815*u[n-1] + 0.306681191361148*u[n-2] +
-            -0.520262285050482*u[n-4] + 0.051642265516119*u[n-5] - 0.013435342414630*u[n-6]
-        uₓ[m-4]    = 0.036210680656541*u[n] - 0.105400944933782*u[n-1] + 0.015764336127392*u[n-2] +
-            0.707905442575989*u[n-3] - 0.769199413962647*u[n-5] + 0.164529643265203*u[n-6] - 0.018281071473911*u[n-7]
-        uₓ[m-5]    = 0.011398193015050*u[n] - 0.020437334208704*u[n-1] - 0.011220896474665*u[n-2] + 
-            -0.063183694641876*u[n-3] + 0.691649024426814*u[n-4] - 0.739709139060752*u[n-6] +
-            0.147941827812150*u[n-7] - 0.016437980868017*u[n-8]
-        return uₓ./Δx
+        # SIXTH ORDER METHOD
+        for j = 4:ny-3
+            for i = 4:nx-3
+                uₓ[i,j] = (-T(1/60)*u[i-3,j] + T(3/20)*u[i-2,j] - T(3/4)*u[i-1,j] + T(3/4)*u[i+1,j] - T(3/20)*u[i+2,j] + T(1/60)*u[i+3,j])/Δx +
+                            (-T(1/60)*u[i,j-3] + T(3/20)*u[i,j-2] - T(3/4)*u[i,j-1] + T(3/4)*u[i,j+1] - T(3/20)*u[i,j+2] + T(1/60)*u[i,j+3])/Δy
+            end
+        end
     end
 end
 
 
+"""
+    FirstDerivativeBoundary1D!
+"""
+@views function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
+        u::AbstractVector{T},Δx::T,n::Integer,NT::NodeType,order::Integer) where T
+    NT <: Left ? i = 1 : i = -1
+    NT <: Left ? j = 1 : j = n
+    if order == 2
+        uₓ[j] = (u[j+i] - u[j])/Δx
+        uₓ[j] = uₓ[j]/Δx
+    elseif order == 4
+        uₓ[j]       = T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
+        uₓ[j+i]     = T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx
+        uₓ[j+2i]    = T(i)*(T(4/43)*u[j]  - T(59/86)*u[j+i]   + T(59/86)*u[j+3i]  - T(4/43)*u[j+4i])/Δx
+        uₓ[j+3i]    = T(i)*(T(3/98)*u[j]  - T(59/98)*u[j+2i]  + T(32/49)*u[j+4i]  - T(4/49)*u[j+5i])/Δx
+        uₓ[j:i:j+3i] = uₓ[j:i:j+5i]/Δx
+    elseif order == 6
+        uₓ[j]       = T(i)*( T(-1.582533518939116)*u[j] + T(2.033378678700676)*u[j+i] - T(0.141512858744873)*u[j+2i] + T(-0.450398306578272)*u[j+3i] + T(0.104488069284042)*u[j+4i] + T(0.036577936277544)*u[j+5i] )
+        uₓ[j+i]     = T(i)*( T(-0.462059195631158)*u[j] + T(0.287258622978251)*u[j+2i] + T(0.258816087376832)*u[j+3i] + T(-0.069112065532624)*u[j+4i] - T(0.014903449191300)*u[j+5i] )
+        uₓ[j+2i]    = T(i)*( T(0.071247104721830)* u[j] - T(0.636451095137907)*u[j+i] + T(0.606235523609147)*u[j+3i] + T(-0.022902190275815)*u[j+4i] - T(0.018129342917256)*u[j+5i] )
+        uₓ[j+3i]    = T(i)*( T(0.114713313798970)* u[j] - T(0.290087484386815)*u[j+i] - T(0.306681191361148)*u[j+2i] + T(0.520262285050482)*u[j+4i]  - T(0.051642265516119)*u[j+5i] + T(0.013435342414630)*u[j+6i] )
+        uₓ[j+4i]    = T(i)*( T(-0.036210680656541)*u[j] + T(0.105400944933782)*u[j+i] + T(0.015764336127392)*u[j+2i] + T(-0.707905442575989)*u[j+3i] + T(0.769199413962647)*u[j+5i] - T(0.164529643265203)*u[j+6i] + T(0.018281071473911)*u[j+7i] )
+        uₓ[j+5i]    = T(i)*( T(-0.011398193015050)*u[j] + T(0.020437334208704)*u[j+i] + T(0.011220896474665)*u[j+2i] + T( 0.063183694641876)*u[j+3i] - T(0.691649024426814)*u[j+4i] + T(0.739709139060752)*u[j+6i] + T(-0.147941827812150)*u[j+7i] + T(0.016437980868017)*u[j+8i] )
+        uₓ[j:i:j+5i] = uₓ[j:i:j+5i]/Δx
+    end
+end

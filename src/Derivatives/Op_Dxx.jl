@@ -1,9 +1,11 @@
 
+
+
+
 """
     Dₓₓ
 
     Dₓₓ(u::AbstractVector,c::Vector,n::Int64,Δx::Float64;order::Int64=2)
-    Dₓₓ(u::Matrix{Float64},nx::Int64,ny::Int64,Δ::Float64,c::AbstractMatrix;dim::Int64=1,order::Int64=2)
     Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
     order_x::Int64=2,order_y::Int64=order_x)
     
@@ -28,52 +30,22 @@ This is also available is an iterator [`Dₓₓ!`](@ref)
 Internally uses [`SecondDerivative`](@ref)
 """
 function Dₓₓ end
-function Dₓₓ(u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64;order::Int64=2)
-    # Function call for the 1D 2nd derivative SBP operator
-    uₓₓ = zeros(eltype(u),size(u))
-    Dₓₓ!(uₓₓ,u,c,n,Δx,order)
+# 1D second derivative SBP operator
+function Dₓₓ(u::AbstractVector{T},c::AbstractVector{T},Δx::T;
+        order::Integer=2) where T
+    uₓₓ = zeros(T,size(u))
+    Dₓₓ!(uₓₓ,u,c,size(u),Δx,order)
     return uₓₓ
 end
-### 2D second derivative operator
-function Dₓₓ(u::AbstractMatrix,n::Int64,Δ::Float64,c::AbstractMatrix,dim::Int64=1;order::Int64=2)
-    # Multidimensional call for 2nd derivative SBP operator
-    uₓₓ = zeros(eltype(u),size(u))
-    Dₓₓ!(uₓₓ,u,c,n,Δ,dim,order)
-    return uₓₓ
-end
-function Dₓₓ(u::AbstractMatrix,nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,cx::AbstractMatrix,cy::AbstractMatrix;
-    order_x::Int64=2,order_y::Int64=order_x)
-    # 2D 2nd derivative SBP operator
-    uₓₓ = SharedArray(zeros(Float64,nx,ny))
-    Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order_x,order_y)
+# 2D second derivative SBP operator
+function Dₓₓ(u::AbstractMatrix{T},Δx::T,Δy::T,cx::AbstractMatrix{T},cy::AbstractMatrix{T};
+        order::Integer=2) where T
+    uₓₓ = zeros(T,size(u))
+    Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order,order)
     return uₓₓ
 end
 
 
-
-
-
-
-"""
-    generate_Derivative
-
-Returns a function `Diff(uₓₓ,u,c...)` which computes the derivative in 1 or 2 dimensions
-"""
-function generate_Derivative end
-function generate_Derivative(n::Int64,Δx::Float64,order::Int64)
-    let n = n, Δx=Δx, order=order
-        Diff(uₓₓ,u,c) = Dₓₓ!(uₓₓ,u,c,n,Δx,order)
-        return Diff
-    end
-end
-function generate_Derivative(nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,order::Int64)
-    let nx=nx, ny=ny,
-            Δx=Δx, Δy=Δy,
-            order=order
-        Diff(uₓₓ,u,cx,cy) = Dₓₓ!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,order)
-        return Diff
-    end
-end
 
 
 """
@@ -86,35 +58,27 @@ end
 Mutable function for 1D and 2D second derviative SBP operator
 """
 function Dₓₓ! end
-### 1D second derviative mutable function
-@inline function Dₓₓ!(uₓₓ::AbstractVector,u::AbstractVector,c::AbstractVector,n::Int64,Δx::Float64,order::Int64)
-    #TODO HIGHER ORDER METHODS
-    # half = halforder(order)
-    # adj = BoundaryNodeOutput(order)
+### 1D second derviative function
+function Dₓₓ!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Integer) where T
     adj = BoundaryNodeInput(order)
-    ret = BoundaryNodeOutput(order)
     
-    SecondDerivativeInternal1D!(uₓₓ,u,c,Δx,n,order)
-
-    # println("Internal   ",uₓₓ)
-    SecondDerivative!(uₓₓ,u[1:adj],c[1:adj],Δx,Left,order=order)
-    # println("left   ",uₓₓ)
-    SecondDerivative!(uₓₓ,u[n-adj+1:n],c[n-adj+1:n],Δx,Right,order=order)
-    # println("right    ",uₓₓ)
+    SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,order)
+    SecondDerivativeBoundary!(uₓₓ,u[1:adj],c[1:adj],Δx,Left,order=order)
+    SecondDerivativeBoundary!(uₓₓ,u[n-adj+1:n],c[n-adj+1:n],Δx,Right,order=order)
     uₓₓ
 end
-### Multidimensional second derivative SBP operator
-function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,c::AbstractMatrix,n::Int64,Δ::Float64,dim::Int64=1,order::Int64=2)
+### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
+function Dₓₓ!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMatrix{T},n::Integer,Δ::T,dim::Integer=1,order::Integer=2) where T
     loopdir = SelectLoopDirection(dim)    
-    for (T,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
-        Dₓₓ!(T,U,C,n,Δ,order)
+    for (cache,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
+        Dₓₓ!(cache,U,C,n,Δ,order)
     end
-    return uₓₓ
+    uₓₓ
 end
-### 2D second  derviative mutable function
-function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,cx::AbstractMatrix,cy::AbstractMatrix,
-        nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,
-        order_x::Int64=2,order_y::Int64=order_x)
+### 2D second derviative function
+function Dₓₓ!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},cx::AbstractMatrix{T},cy::AbstractMatrix{T},
+        nx::Integer,ny::Integer,Δx::T,Δy::T,
+        order_x::Integer=2,order_y::Integer=order_x) where T
 
     # Half order
     halfx = Int64(order_x/2) #half way
@@ -138,7 +102,7 @@ function Dₓₓ!(uₓₓ::AbstractMatrix,u::AbstractMatrix,cx::AbstractMatrix,c
     iy = BoundaryNodeInput(order_y)
 
 
-    SecondDerivativeInternal2D!(uₓₓ,u,cx,cy,Δx,Δy,nx,ny,order_x)
+    SecondDerivativeInternal!(uₓₓ,u,cx,cy,Δx,Δy,nx,ny,order_x)
 
     ### Boundary nodes - avoiding corners
     # left and right x boundaries, for a matrix zeros(nx,ny) this is the 'top' and 'bottom' boundaries
@@ -256,10 +220,10 @@ function Stencil2D! end
     Inx = BoundaryNodeInput(order_x) # for order > 2, u has more rows
 
     for j = 1:ny #boundaries nxodes[1]:nxodes[2]
-        SecondDerivative!(uₓₓ[Xrng,j],u[1:Inx,j+halfy],cx[1:Inx,j+halfy],Δx,xnode,order=order_x)
+        SecondDerivativeBoundary!(uₓₓ[Xrng,j],u[1:Inx,j+halfy],cx[1:Inx,j+halfy],Δx,xnode,order_x)
         for i = Xrng #cross terms
             """ j:j+order_y in u because u[,1] is uₓₓ[,-2] """
-            uₓₓ[i,j] += SecondDerivative(u[i+offset,j:j+order_y],cy[i+offset,j:j+order_y],Δy,Internal,order=order_y)
+            uₓₓ[i,j] += SecondDerivativeInternal(u[i+offset,j:j+order_y],cy[i+offset,j:j+order_y],Δy,Internal,order=order_y)
         end
     end
     return uₓₓ
@@ -276,9 +240,9 @@ end
     Iny = BoundaryNodeInput(order_y)
 
     for i = 1:nx
-        SecondDerivative!(uₓₓ[i,Yrng],u[i+halfx,1:Iny],cy[i+halfx,1:Iny],Δy,ynode,order=order_y)
+        SecondDerivativeBoundary!(uₓₓ[i,Yrng],u[i+halfx,1:Iny],cy[i+halfx,1:Iny],Δy,ynode,order_y)
         for j = Yrng
-            uₓₓ[i,j] += SecondDerivative(u[i:i+order_y,j+offset],cx[i:i+order_y,j+offset],Δx,Internal,order=order_x)
+            uₓₓ[i,j] += SecondDerivativeInternal(u[i:i+order_y,j+offset],cx[i:i+order_y,j+offset],Δx,Internal,order=order_x)
         end
     end
     return uₓₓ
@@ -293,7 +257,7 @@ end
     (xnode == Right)  & (order_x > 2) ? oy = halforder(order_x) : oy = 0 #x node offset for left boundary
     (ynode == Right)  & (order_y > 2) ? ox = halforder(order_y) : ox = 0 #y node offset for left boundary
     for j = Yrng # x direction - top/bottom
-        SecondDerivative!(uₓₓ[Xrng,j],u[:,j+ox],cx[:,j+ox],Δx,xnode,order=order_x)
+        SecondDerivativeBoundary!(uₓₓ[Xrng,j],u[:,j+ox],cx[:,j+ox],Δx,xnode,order_x)
     end
     for i = Xrng # y direction - left/right
         uₓₓ[i,Yrng] += SecondDerivative(u[i+oy,:],cy[i+oy,:],Δy,ynode,order=order_y)
