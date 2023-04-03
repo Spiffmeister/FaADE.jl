@@ -17,8 +17,9 @@ module solvers
     
 
     include("solution.jl")
-    include("timesolvers.jl")
+    include("IntegeratorData.jl")
     include("integrators.jl")
+    include("timesolvers.jl")
 
     export solve
 

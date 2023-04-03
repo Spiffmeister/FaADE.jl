@@ -10,10 +10,8 @@ module Helpers
     include("grid.jl")
     include("UserTypes.jl")
 
-    include("ConjGradData.jl")
+    include("HMatrix.jl")
     include("DataStorage.jl")
-
-    include("postnifty.jl")
 
     include("penaltyfn.jl")
 
@@ -43,7 +41,7 @@ module Helpers
         copyUtoSAT!, copySATtoU!, addSATtoU!,
         addSource!, setBoundary!
     
-    export ConjGradBlock, build_H
+    export build_H, innerH
     
     # PostNifty import
     export GetAxis, GetDim,

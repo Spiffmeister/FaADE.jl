@@ -1,4 +1,18 @@
 
+
+
+"""
+    SAT_Split
+"""
+struct SAT_Split{T} <: SimultanousApproximationTerm
+
+    function SAT_Split(Δx,axis,order) where T
+    end
+end
+
+
+
+
 """
 Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
     order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)

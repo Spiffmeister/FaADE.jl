@@ -1,38 +1,3 @@
-"""
-    ExplicitBlock{T,N,O}
-Data storage block for explicit integrators.
-O<:Integer is the order of the integrator
-"""
-mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
-    k1  :: AbstractArray{T,N}
-    k2  :: AbstractArray{T,N}
-    k3  :: AbstractArray{T,N}
-    k4  :: AbstractArray{T,N}
-    Δt  :: T
-
-    function ExplicitBlock{T}(grid::GridType,Δt::T,integrator::Symbol=:RK4) where T
-        if typeof(grid) <: Grid1D
-            n = grid.n
-        elseif typeof(grid) <: Grid2D
-            n = (grid.nx,grid.ny)
-        end
-
-        dims = length(n)
-
-        k1 = zeros(T,n)
-        if integrator == :RK4
-            k2 = zeros(T,n)
-            k3 = zeros(T,n)
-            k4 = zeros(T,n)
-            O = 4
-        elseif integrator == :euler
-            k2 = k3 = k4 = zeros(T,0)
-            O = 1
-        end
-
-        new{T,dims,O}(k1,k2,k3,k4,Δt)
-    end
-end
 
 """
     (RK::ExplicitBlock{T,N,4})
@@ -140,7 +105,7 @@ end
     A!
 Mutable ``u - ΔtD(u)``
 """
-function A!(PDE!::Function,tmp::AbstractArray,uⱼ::AbstractArray,Δt::Float64,k::AbstractArray)
+function A!(PDE!::Function,tmp::AbstractArray{T},uⱼ::AbstractArray{T},Δt::T,k::AbstractArray) where T
     PDE!(tmp,uⱼ,k)
     tmp .= uⱼ .- Δt*tmp
 end

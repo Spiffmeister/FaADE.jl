@@ -24,8 +24,8 @@ nx = 21
 ny = 21
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-kx = zeros(Float64,nx,ny) .+ 1.0e-8;
-ky = zeros(Float64,nx,ny) .+ 1.0e-8;
+kx(x,y) = 1.0e-8
+ky(x,y) = 1.0e-8
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)

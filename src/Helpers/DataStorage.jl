@@ -21,7 +21,7 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
             PDE::PDEProblem,
             grid::GridType{T,D},
             Δt::T,
-            K::Vector{Function}...) where {T,D}
+            K::Function...) where {T,D}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
@@ -39,15 +39,14 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
             uₙ₊₁ = zeros(T,(grid.nx,grid.ny))
             BStor = BoundaryData2D{T}(PDE.BoundaryConditions,grid,PDE.order)
 
-            DiffCoeff = [K[1],K[2]]
             DiffCoeff = [zeros(T,(grid.nx,grid.ny)),zeros(T,(grid.nx,grid.ny))]
-            setCoefficient!(PDE.K[1],DiffCoeff[1],grid)
-            setCoefficient!(PDE.K[2],DiffCoeff[2],grid)
+            setCoefficient!(PDE.Kx,DiffCoeff[1],grid)
+            setCoefficient!(PDE.Ky,DiffCoeff[2],grid)
 
             dim = 2
 
         end
-        new{T,dim}(dim,grid,u,uₓₓ,DiffCoeff,BStor,0,Δt,0.0)
+        new{T,dim}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
     end
 end
 
