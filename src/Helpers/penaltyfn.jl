@@ -1,35 +1,13 @@
 
-
-
-"""
-parallel_storage{T,N}
-"""
-
-# struct parallel_storage{T,N}
-#     F_plane :: AbstractArray{T}
-#     B_plane :: AbstractArray{T}
-# end
-
-# function parallel_storage()
-#     if typeof(grid) == Grid1D
-#         F = zeros(T,grid.n)
-#         B = zeros(T,grid.n)
-#         new(F,B)
-
-#     elseif typeof(grid) == Grid2D
-#     end
-# end
-
-
 """
     parallel_grid
 Storage for parallel grids
 """
-struct ParallelGrid{T,N}
-    z               :: Vector{T}
-    nz              :: Int
+struct ParallelGrid{T,N} #T<:Type. N<:Dimensional
+    z               :: Vector{T}        #z coordinate
+    nz              :: Int              #Number of z planes
     FowardPlane     :: AbstractArray{T} #Need x and y for 2D grid
-    BackwardPlane   :: AbstractArray{T}
+    BackwardPlane   :: AbstractArray{T} #Need x and y for 2D grid
 
     function ParallelGrid(ForwardGrids,BackwardGrids,z::T) where T
         if typeof(z) == Float64
@@ -38,37 +16,28 @@ struct ParallelGrid{T,N}
             zplanes = z
         end
 
-        if ndims(ForwardGrids) == 1
-            new{T,1}(zplanes,length(zplanes),ForwardGrids,BackwardGrids)
-        elseif ndims(ForwardGrids) == 2
-            new{T,2}(zplanes,length(zplanes),ForwardGrids,BackwardGrids)
+        if ndims(ForwardGrids.X) == 1
+            new{T,1}(zplanes,length(zplanes),ForwardGrids.X,BackwardGrids.X)
+        elseif ndims(ForwardGrids.X) == 2
+            new{T,2}(zplanes,length(zplanes),ForwardGrids.X,BackwardGrids.X)
         end
     end
 end
 
+"""
+    ParallelPlane
+Single parallel plane element
 
-struct PGrid1D{T} <: ParallelGridStorage{T,1}
-    z               :: Vector{T}
-    nz              :: Int
-    ForwardPlane    :: AbstractArray{T}
-    BackwardPlane   :: AbstractArray{T}
-end
-
-struct PGrid2D{T} <: ParallelGridStorage{T,2}
-    z               :: Vector{T}
-    nz              :: Int
-    ForwardPlaneX   :: AbstractArray{T}
-    ForwardPlaneY   :: AbstractArray{T}
-    BackwardPlaneX  :: AbstractArray{T}
-    BackwardPlaneY  :: AbstractArray{T}
+- ParallelPlane.grid is a 1D or 2D array of x(-y) coordinates of the grid points
+"""
+struct ParallelPlane{T}
+    z   :: T
+    X   :: AbstractArray{T}
 end
 
 
+Base.show(io::IO,PG::ParallelGrid) = print("Generated parallel grid with ",length(PG.z)," planes.")
 
-
-# struct P∥{T,N}
-
-# end
 
 
 
@@ -131,7 +100,6 @@ function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
     for i = 1:grid.n
         u[i] = 1.0/(1.0 - κ*τ/2.0 * Δt * H[i]) * 
             (u[i] - Δt*κ*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
-        
     end
 end
 

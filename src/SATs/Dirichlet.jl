@@ -134,6 +134,7 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},DA
 
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
         for i = 1:order
+            # S[i] += Δt * α*C[1]*BD[i]*RHS(t)
             S[i] += α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]

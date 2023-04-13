@@ -87,14 +87,6 @@ function SelectLoopDirection(axis::Int)
 end
 
 
-# @inline function Base.sum(u::AbstractArray{T},v::AbstractArray{T}) where T
-#     tmp::T = 0
-#     for (uᵢ,vᵢ) in zip(u,v)
-#         tmp += uᵢ*vᵢ
-#     end
-# end
-
-
 """
     GetAxis
 Return the axis along which the node lies
