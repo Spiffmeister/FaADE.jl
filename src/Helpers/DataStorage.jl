@@ -5,7 +5,7 @@
 
 #========== WHOLE PROBLEM DATA ==========#
 """
-    DataBlock{T}
+    DataBlock
 Passed around internally between functions. Only contains data required for current timestep.
 """
 mutable struct DataBlock{T,N} <: DataBlockType{T,N}
@@ -53,7 +53,7 @@ end
 
 #========== BOUNDARY DATA ==========#
 """
-    BoundaryData1D{T}
+    BoundaryData1D
 Data structure for storage of SATs in 1 dimensional problems
 """
 mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
@@ -92,7 +92,7 @@ mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
 end
 
 """
-    BoundaryData2D{T}
+    BoundaryData2D
 Data structure for storage of SATs in 2 dimensional problems
 """
 struct BoundaryData2D{T} <: BoundaryStorage{T,2}
@@ -163,6 +163,7 @@ end
     copyUtoSAT!
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
 """
+function copyUtoSAT! end
 function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
     if side == Left
@@ -188,6 +189,7 @@ end
     copySATtoU!
 Moves data from the `SAT_` field  on the given side in `BoundaryStorage` to `u`. Or moves all data from `u` to `SAT_` fields.
 """
+function copySATtoU! end
 function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
     if side == Left
@@ -213,6 +215,7 @@ end
     addSATtoU!
 Add data from the `SAT_` field  on the given side in `BoundaryStorage` to `u`. Or add all data from `u` to `SAT_` fields.
 """
+function addSATtoU! end
 function addSATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
     nnodes = SATNodeOutput(order)
     if side == Left
@@ -252,7 +255,9 @@ end
 
 """
     setBoundary!
+Sets the value of the boundary.
 """
+function setBoundary! end
 function setBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt::T) where T
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
@@ -262,18 +267,6 @@ function setBoundary!(RHS::Function,Bound::AbstractArray{T},t::T,Δt::T) where T
         Bound[1] = Δt*RHS(t)
 end
 
-# function setBoundary!(BC::NamedTuple,BoundStore::BoundaryStorage{T,N},grid::AbstractArray{T},t::T,Δt::T,side::NodeType)
-#     if side == Left
-#         setBoundary!(BC.Left.RHS,BoundStore.RHS_Left,grid,n,t,Δt)
-#     elseif side == Right
-#     elseif side == Up
-#     elseif side == Down
-#     end
-# end
-# function setBoundaries!(BCs::NamedTuple,BoundaryStore::BoundaryStorage{T,N},grid::GridType,t::T,Δt::T,sides::NodeType...)
-#     if GetDim(BoundaryStore) == 2
-#     end
-# end
 """
     setCoefficient!
 Sets the diffusion coefficient

@@ -4,8 +4,16 @@
 
 
 """
-    Grid1D{T}
-Grid data structure for 1 dimensional problems
+    Grid1D
+Grid data structure for 1 dimensional problems.
+    
+    `Grid1D{T}(𝒟::Vector,n::Integer)`
+Inputs:
+- Vector of domain boundaries `[x_0,x_N]`
+- Number of grid points.
+
+Returns:
+- Struct for 1D grid object containing vector of grid points, ``\\Delta x`` and ``n``.
 """
 struct Grid1D{T} <: GridType{T,1}
     grid    :: Vector{T}
@@ -21,8 +29,18 @@ end
 
 
 """
-    Grid2D{T}
-Grid data structure for 2 dimensional problems
+    Grid2D
+Grid data structure for 2 dimensional problems.
+
+    `Grid2D{T}(𝒟x::Vector,𝒟y::Vector,nx::Integer,ny::Integer)`
+Inputs:
+- Domain boundaries in ``x``
+- Domain boundaries in ``y``
+- Number of nodes in ``x``
+- Number of nodes in ``y``
+
+Returns:
+- Struct for 2D grid object containing grid points in ``x`` and ``y``, ``\\Delta x`` and ``\\Delta y``, and ``n_x`` and ``n_y``.
 """
 struct Grid2D{T} <: GridType{T,2}
     gridx   :: AbstractArray{T}
@@ -46,7 +64,7 @@ end
 
 """
     GetMinΔ
-Return the miniumum
+Return the miniumum grid size between ``\\Delta x`` and ``\\Delta y``
 """
 function GetMinΔ end
 GetMinΔ(grid::Grid1D) = grid.Δx

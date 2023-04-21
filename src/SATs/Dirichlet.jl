@@ -12,7 +12,7 @@ struct SAT_Dirichlet{T} <: SimultanousApproximationTerm
     RHS     :: Function
     Δx      :: T
     α       :: T
-    τ       :: T
+    τ       :: Function
 
     ### CONSTRUCTOR ###
     function SAT_Dirichlet(RHS::Function,Δx::T,side::NodeType,axis::Int,order::Int) where T
@@ -76,21 +76,21 @@ Dirichlet boundary SAT for explicit solvers.
 """
 function SAT_Dirichlet_explicit! end
 function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,t::Float64,
-        α::Float64,τ::Float64,BD::AbstractVector,
+        α::Float64,τ::Function,BD::AbstractVector,
         order::Int,loopaxis::Function)
         
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS(t))
-        S[1] += τ*(U[1] - RHS(t))
+        S[1] += τ(C[1])*(U[1] - RHS(t))
     end
 end
 function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,t::Float64,
-        α::Float64,τ::Float64,BD::AbstractVector,
+        α::Float64,τ::Function,BD::AbstractVector,
         order::Int,loopaxis::Function)
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS(t))
-        S[end] += τ*(U[end] - RHS(t))
+        S[end] += τ(C[end])*(U[end] - RHS(t))
     end
 end
 
@@ -101,26 +101,26 @@ Solution term for the Dirichlet boundary conditions for SATs for implicit method
 """
 function SAT_Dirichlet_implicit! end
 function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,
-        α::Float64,τ::Float64,BD::AbstractVector,
+        α::Float64,τ::Function,BD::AbstractVector,
         order::Int,loopaxis::Function)
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         for i = 1:order
             S[i] += -α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
-        S[1] += τ*C[1]*U[1]
+        S[1] += τ(C[1])*C[1]*U[1]
     end
     SAT
 end
 function SAT_Dirichlet_implicit!(SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,
-        α::Float64,τ::Float64,BD::AbstractVector,
+        α::Float64,τ::Function,BD::AbstractVector,
         order::Int,loopaxis::Function)
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         for i = 1:order
             S[end-order+i] += α*C[end]*BD[i]*U[end] #DₓᵀEₙ
         end
         # S[end-order+1:end] .+= α*C[end]*BD*U[end]
-        S[end] += τ*C[end]*U[end]
+        S[end] += τ(C[end])*C[end]*U[end]
     end
     SAT
 end
@@ -130,7 +130,7 @@ Data term for the Dirichlet boundary conditions for SATs for implicit methods. S
 """
 function SAT_Dirichlet_implicit_data! end
 function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},DATA::AbstractArray{T},c::AbstractArray{T},
-        α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function) where T
+        α::Float64,τ::Function,BD::AbstractVector,order::Int,loopaxis::Function) where T
 
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
         for i = 1:order
@@ -138,19 +138,19 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},DA
             S[i] += α*C[1]*BD[i]*U[1] #DₓᵀE₀
         end
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
-        S[1] -= τ*C[1]*U[1]
+        S[1] -= τ(C[1])*C[1]*U[1]
     end
     SAT
 end
 function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},DATA::AbstractArray,c::AbstractArray{T},
-        α::Float64,τ::Float64,BD::AbstractVector,order::Int,loopaxis::Function) where {T}
+        α::Float64,τ::Function,BD::AbstractVector,order::Int,loopaxis::Function) where {T}
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
         for i = 1:order
             # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #DₓᵀEₙ
             S[end-order+i] -= α*C[end]*BD[i]*U[end] #DₓᵀEₙ
         end
         # S[end] -= Δt* τ*C[end]*RHS(t)
-        S[end] -= τ*C[end]*U[end]
+        S[end] -= τ(C[end])*C[end]*U[end]
     end
     SAT
 end

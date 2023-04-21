@@ -4,27 +4,26 @@
 SBP_operators.SATs
 ```
 
-
-Users can use the generic SBP operator
+Users can create a generic SBP operator with the function,
 ```@docs
 SBP_operators.SATs.SAT
 ```
+Note that this requires users to first create a boundary condition with [`BoundaryConditions`](@ref)
 
 ## Boundary operators
 
-The following are for boundary conditions on either side of the domain.
+The following are for boundary conditions
 ```@docs
 SBP_operators.SATs.SAT_Dirichlet
 SBP_operators.SATs.SAT_Neumann
 ```
 
-If periodic boundaries are applied to both sides of the domain.
+If periodic boundaries are applied
 ```@docs
 SBP_operators.SATs.SAT_Periodic
 ```
 
 If a domain is split along some boundary then the following matches the values at the interface.
-
 
 
 

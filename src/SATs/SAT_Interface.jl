@@ -1,13 +1,29 @@
 
 
 
-
+"""
+    SimultanousApproximationTerm
+Abstract type for SAT data structures
+"""
 abstract type SimultanousApproximationTerm end
 
 
 
 """
-    SAT
+    SAT(BoundCond::BoundaryConditionData,grid::GridType,order::Int,solver)
+Creates a Dirichlet, Neumann or Periodic SAT function(s).
+
+Inputs: 
+- [`BoundaryConditionData`](@ref SBP_operators.Helpers.BoundaryConditionData)
+- [`GridType`](@ref)
+- Order of method
+- Solver type (see [`solvers`](@ref))
+
+Returns:
+- BD: SAT Struct
+- SATFn: SAT function(s)
+
+If the solver is an implicit method, `SATFn` will have two methods, if explicit it will be a single method.
 """
 function SAT(BoundCond::BoundaryConditionData,grid::GridType,order::Int,solver)
     # Is the problem 1 or 2D
@@ -30,7 +46,8 @@ function SAT(BoundCond::BoundaryConditionData,grid::GridType,order::Int,solver)
 end
 
 """
-    construct_SAT
+    construct_SAT(Term::SimultanousApproximationTerm,solver)
+Internal method for generating SAT functions.
 """
 function construct_SAT(Term::SimultanousApproximationTerm,solver)
     if Term.type == Dirichlet

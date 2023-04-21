@@ -12,7 +12,12 @@ SBP_operators.Derivatives
 The below operators are for first derivatives
 
 ```@docs
-SBP_operators.Derivatives.Dₓ
+Dₓ
+```
+
+### As iterators
+```@docs
+SBP_operators.Derivatives.Dₓ!
 ```
 
 
@@ -34,12 +39,20 @@ SBP_operators.Derivatives.Dₓₓ!
 
 
 
-## Internal Stencils
+## Internal Functions
 
 
 
 
 ```@docs
 SBP_operators.Derivatives.FirstDerivative
+SBP_operators.Derivatives.FirstDerivativeInternal
+SBP_operators.Derivatives.FirstDerivativeInternal!
+SBP_operators.Derivatives.FirstDerivativeBoundary!
+SBP_operators.Derivatives.FirstDerivativeBoundaryStencil!
+
+```
+
+```@docs
 SBP_operators.Derivatives.SecondDerivative
 ```

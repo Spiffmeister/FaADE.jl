@@ -5,6 +5,14 @@
 """
     innerH
 Method for a 1 or 2 dimensional H inner product.
+        
+    `innerH{T,N}(grid::GridType{T,N},order::Int)`
+Inputs:
+- [`GridType`](@ref)
+- Order of method
+
+Returns:
+- Method-like struct for H-inner products
 """
 struct innerH{T,N}
     Hx  :: AbstractArray{T}
@@ -26,6 +34,10 @@ struct innerH{T,N}
     end
 end
 
+"""
+    (H::InnerH)
+1D or 2D H-inner product constructed from [`innerH`](@ref)
+"""
 function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) where T
     tmp = 0.0
     for i = 1:H.nx
@@ -33,7 +45,6 @@ function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) where T
     end
     return tmp
 end
-
 function (H::innerH{T,2})(u::AbstractArray{T},v::AbstractArray{T}) where T
     tmp = 0.0
     for j = 1:H.ny

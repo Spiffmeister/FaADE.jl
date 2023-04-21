@@ -8,7 +8,7 @@
 ========#
 """
     check_order
-Ensure the users requested order makes sense
+Ensure the users requested order makes sense.
 """
 @inline function check_order(order::Int)
     order ∈ [2,4,6] ? nothing : error("Order must be 2, 4 or 6")
@@ -21,7 +21,11 @@ Some functions only work for `Left` or `Right` nodes.
     side ∈ [Left,Right,Up,Down] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
 end
 
-
+"""
+    check_boundary_args
+Check the number of arguments supplied to a function.
+"""
+function check_boundary_args end
 function check_boundary_args(f::Function)
     methods(f)[1].nargs - 1 == 2 ? nothing : error("Boundary conditions should be function with inputs f(x,t)")
 end
@@ -46,7 +50,7 @@ Returns ``order/2``
 
 """
     BoundaryNodeInput
-Returns the required number of nodes needed to compute `SecondDerivative` on the boundary.
+Returns the required number of nodes needed to compute [`SBP_operators.Derivatives.SecondDerivative`](@ref) on the boundary.
 ``order == 2, return 1``, ``order > 2, return 2order``
 """
 @inline BoundaryNodeInput(order::Int) = order == 2 ? 1 : 2order
@@ -54,7 +58,7 @@ Returns the required number of nodes needed to compute `SecondDerivative` on the
 
 """
     BoundaryNodeOutput
-Returns the size of the array output by `SecondDerivative` on the boundary.
+Returns the size of the array output by [`SBP_operators.Derivatives.SecondDerivative`](@ref) on the boundary.
 ``order == 2, return 1``, ``order > 2, return order+order/2``
 """
 @inline BoundaryNodeOutput(order::Int) = order == 2 ? 1 : order+halforder(order)
@@ -62,7 +66,7 @@ Returns the size of the array output by `SecondDerivative` on the boundary.
 
 """
     SATNodeOutput
-Returns the number of nodes needed for the `BoundaryData1D` and `BoundaryData2D` data structures.
+Returns the number of nodes needed for the [`BoundaryData1D`](@ref) and [`BoundaryData2D`](@ref) data structures.
 ``order == 2, return 2``, ``order > 2, return order+order/2``
 """
 @inline SATNodeOutput(order::Int) = order == 2 ? 2 : order+halforder(order)

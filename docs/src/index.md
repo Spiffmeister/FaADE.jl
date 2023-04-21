@@ -1,8 +1,18 @@
-# SBP_Operators.jl Documentation
+# SBP_Operators.jl
 
-The best place to start is in the Examples section below
+_A package for solving the magnetic field aligned Anisotropic Diffusion Equation using the SBP-SAT formulation._ 
+
+
+
+
+
+
+
+
 
 # Examples
+
+The best place to start is in the Examples section below.
 
 ```@contents
 Pages = ["example1D.md","example2D.md","exampleBField.md"]
@@ -16,7 +26,14 @@ SBP_operators
 ```
 
 ```@contents
-Pages = ["SATs.md","Derivatives.md","Helpers.md","solvers.md"]
+Pages = ["SATs.md","Derivatives.md","Helpers.md","solvers.md","BoundaryConditions.md"]
 Depth=2
 ```
+
+# Similar software
+
+
+
+# Citing
+
 

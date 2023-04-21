@@ -1,6 +1,6 @@
 """
     Helpers
-Module contains many of the data structures for users and internal use, as well as internal helper functions.
+Module contains many of the data structures for users and internal use, as well as nifty functions.
 """
 module Helpers
 
