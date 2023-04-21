@@ -5,23 +5,27 @@
 
 """
     Dₓ
-
-- Dₓ(u,n,Δx; order=2)
-- Dₓ(u,nx,ny,Δx,Δy; order=2)
-
 1D and 2D first derivative operator. 
-
+    
 Also available as and internally uses in place operator [`Dₓ!`](@ref).
 """
-function Dₓ end
+function Dₓ() end
 # 1D First derivative
+"""
+    Dₓfunction Dₓ(u::AbstractVector{T},Δx::T;order::Integer=2)
+1D implementation of ``D_x`` operator.
+"""
 function Dₓ(u::AbstractVector{T},Δx::T;
-        order::Integer=2) where T
+    order::Integer=2) where T
     uₓ = zeros(T,length(u))
     Dₓ!(uₓ,u,length(u),Δx,order)
     return uₓ
 end
 # 2D First derivative
+"""
+    Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;order::Integer=2)
+2D implementation of ``D_x`` operator
+"""
 function Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;
         order::Integer=2) where T
     uₓ = zeros(T,size(u))
@@ -36,8 +40,12 @@ end
 
 See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
 """
-function Dₓ! end
+function Dₓ!() end
 # 1D
+"""
+    Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
+1D [`Dₓ!`](@ref).
+"""
 function Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
         order::Integer) where T
     FirstDerivativeBoundary!(uₓ,u,Δx,n,Left,order)
@@ -45,6 +53,10 @@ function Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
     FirstDerivativeBoundary!(uₓ,u,Δx,n,Right,order)
 end
 # 1D for 2D
+"""
+    function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
+1D implementation for 2D problems for [`Dₓ!`](@ref).
+"""
 function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,
         order::Integer,dim::Integer) where T
     loopdir = SelectLoopDirection(dim)
@@ -53,6 +65,10 @@ function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,
     end
     uₓ
 end
+"""
+    function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,order::Integer)
+2D [`Dₓ!`](@ref).
+"""
 # 2D
 function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
         order::Integer) where T
@@ -101,7 +117,14 @@ end
     FirstDerivativeBoundaryStencil!
 2D first derivative on a boundary.
 """
-function FirstDerivativeBoundaryStencil! end
+function FirstDerivativeBoundaryStencil!() end
+"""
+    FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
+        u::AbstractArray{T},
+        xnode::NodeType,::NodeType{:Internal},
+        Δx::T,Δy::T,nx::Integer,ny::Integer,order::Integer,
+        Xrng::UnitRange=1:order,Yrng::UnitRange=1:order)
+"""
 function FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
         u::AbstractArray{T},
         xnode::NodeType,::NodeType{:Internal},
@@ -121,6 +144,13 @@ function FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
     end
     return uₓₓ
 end
+"""
+    FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
+        u::AbstractArray{T},
+        ::NodeType{:Internal},ynode::NodeType,
+        Δx::T,Δy::T,nx::Integer,ny::Integer,order::Integer,
+        Xrng::UnitRange=1:order,Yrng::UnitRange=1:order)
+"""
 function FirstDerivativeBoundaryStencil!(uₓ::AbstractArray{T},
         u::AbstractArray{T},
         ::NodeType{:Internal},ynode::NodeType,

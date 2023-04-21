@@ -81,7 +81,7 @@ function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Le
         
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS(t))
-        S[1] += τ(C[end])*(U[1] - RHS(t))
+        S[1] += τ(C[1])*(U[1] - RHS(t))
     end
 end
 function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,t::Float64,

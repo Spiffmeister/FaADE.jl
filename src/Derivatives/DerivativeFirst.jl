@@ -10,14 +10,22 @@ Allocating functions for first derivative, useful when need to add value to a ma
 
 See also [`FirstDerivativeInternal!`](@ref) and [`FirstDerivativeBoundary`](@ref)
 """
-function FirstDerivative end
+function FirstDerivative() end
 ### Internal nodes
+"""
+    FirstDerivative(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer)
+Internal node function.
+"""
 function FirstDerivative(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer) where T
     uₓ = zeros(T,length(u))
     FirstDerivativeBoundary!(uₓ,u,Δx,length(u),node,order)
     return uₓ
 end
 ### Boundary nodes
+"""
+    FirstDerivative(u::AbstractVector{T},Δx::T,node::NodeType,order::Integer)
+Boundary node function.
+"""
 function FirstDerivative(u::AbstractVector{T},Δx::T,node::NodeType,order::Integer) where T
     order == 2 ? nnodes = 1 : nnodes = order
     uₓ = zeros(T,nnodes)
@@ -26,7 +34,7 @@ function FirstDerivative(u::AbstractVector{T},Δx::T,node::NodeType,order::Integ
 end
 
 """
-    FirstDerivativeInternal
+    FirstDerivativeInternal(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer)
 Single node 1D first derivative function.
 
 See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
@@ -48,6 +56,7 @@ end
     FirstDerivativeInternal!
 1D and 2D in place functions for first derivative on internal nodes of a domain
 """
+function FirstDerivativeInternal!() end
 ######### 1D FUNCTION
 @views @inline function FirstDerivativeInternal!(uₓ::AbstractVector{T},u::AbstractVector{T},Δx::T,n::Integer,order::Integer) where T
     if order == 2

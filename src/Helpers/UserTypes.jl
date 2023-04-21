@@ -1,13 +1,30 @@
 
 
-
+"""
+    BoundaryConditionData
+Abstract type for boundary condition input structs
+"""
 abstract type BoundaryConditionData end
+"""
+    PDEProblem
+Abstract type for the problem struct
+"""
 abstract type PDEProblem end
 
 
 """
-    Boundary
-User defined boundary conditions.
+    Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
+User defined boundary conditions for Dirichlet or Neumann.
+TODO: Robin boundaries
+
+Inputs:
+- `Dirichlet` or `Neumann` (see [`BoundaryConditionType`](@ref)).
+- `f(x,t)` or `f(x,y,t)` depending on the function which gives the boundary condition.
+- `Left`, `Right`, `Up`, or `Down` (see [`NodeType`](@ref))
+- `1` if along the ``x`` axis or `2` along the ``y`` axis. _TODO: Remove this requirement._ 
+
+Returns:
+- Struct required for `SAT` construction.
 """
 struct Boundary <: BoundaryConditionData
     type    :: BoundaryConditionType
@@ -20,8 +37,14 @@ struct Boundary <: BoundaryConditionData
     end
 end
 """
-    PeriodicBoundary
-User defined periodic boundary conditions.
+    PeriodicBoundary(axis::Int)
+User defined periodic boundary conditions for Periodic boundaries.
+
+Inputs: 
+- `1` if periodic in ``x`` and `2` if periodic in ``y``.
+
+Returns:
+- Struct required for `SAT` construction.
 """
 struct PeriodicBoundary <: BoundaryConditionData
     type    :: BoundaryConditionType
@@ -35,8 +58,17 @@ end
 
 
 """
-    VariableCoefficientPDE1D
+    VariableCoefficientPDE1D(u₀::Function,K::Function,order::Int,BCs::BoundaryConditionData...)
 PDE Problem type for user input
+
+Inputs:
+- Initial condition
+- Diffusion coefficient function
+- Solution order
+- Boundary conditions given by [`Boundary`](@ref) or [`PeriodicBoundary`](@ref)
+
+Returns
+- Struct of data required for `solver`
 """
 struct VariableCoefficientPDE1D <: PDEProblem
     InitialCondition    :: Function
@@ -54,6 +86,16 @@ end
 """
     VariableCoefficientPDE2D
 PDE Problem type for user input
+
+Inputs:
+- Initial condition
+- Diffusion coefficient function in ``x``
+- Diffusion coefficient function in ``y``
+- Solution order
+- Boundary conditions given by [`Boundary`](@ref) or [`PeriodicBoundary`](@ref)
+    
+Returns
+- Struct of data required for `solver`
 """
 struct VariableCoefficientPDE2D <: PDEProblem
     InitialCondition    :: Function

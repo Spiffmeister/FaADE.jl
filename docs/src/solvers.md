@@ -17,20 +17,18 @@ SBP_operators.solvers.solution
 
 
 ## Integrators
+
+### Implicit
 ```@docs
 SBP_operators.solvers.conj_grad!
 ```
 
-### Deprecated solvers
 
-```@docs
-SBP_operators.solvers.forward_euler
-SBP_operators.solvers.RK4
-SBP_operators.solvers.implicit_euler
-```
+### Explicit
 
 
-### Conjugate Gradient helpers
+
+## Conjugate Gradient helpers
 
 ```@docs
 SBP_operators.solvers.build_H

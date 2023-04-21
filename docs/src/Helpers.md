@@ -7,7 +7,7 @@ SBP_operators.Helpers
 ## User interaction
 
 ```@docs
-Boundary
+SBP_operators.Helpers.Boundary
 SBP_operators.Helpers.PeriodicBoundary
 ```
 
@@ -37,7 +37,6 @@ SBP_operators.Helpers.BoundaryConditionType
 These data blocks are used internally and are not interacted with by the user,
 ```@docs
 SBP_operators.Helpers.DataBlock
-SBP_operators.Helpers.ConjGradBlock
 SBP_operators.Helpers.BoundaryData1D
 SBP_operators.Helpers.BoundaryData2D
 ```
