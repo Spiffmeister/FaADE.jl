@@ -1,13 +1,9 @@
 
 
-
-struct plane
-    x   :: AbstractArray
-    y   :: AbstractArray
-end
-
 struct ParallelGrid
-    X   :: AbstractArray
+    Plane   :: AbstractArray
+    Fplane  :: AbstractArray
+    Bplane  :: AbstractArray
 end
 
 
@@ -20,13 +16,14 @@ function construct_grid(χ::Function,grid::Grid2D,z::Vector)
     if typeof(grid) <: Grid2D
         xy = [[x,y] for x in grid.gridx for y in grid.gridy]
     end
-
+    # χₘₙ = 2.1e-3 + 5.0e-3
+    # params = (ϵₘₙ=[χₘₙ/2., χₘₙ/3.],m=[2.0, 3.0],n=[1.0, 2.0])
     BPlane = construct_plane(χ,xy,z[1],(grid.nx,grid.ny))
     FPlane = construct_plane(χ,xy,z[2],(grid.nx,grid.ny))
 
-    # Pgrid = ParallelGrid(FPlane,BPlane)
+    Pgrid = ParallelGrid(hcat(xy...),FPlane,BPlane)
 
-    return BPlane
+    return Pgrid
 end
 
 
@@ -44,12 +41,11 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     P = ODEProblem(χ,X[1],(T(0),T(periods)*z))
     EP = EnsembleProblem(P,prob_func=prob_fn)
 
-    sim = solve(EP,Tsit5(),EnsembleDistributed(),trajectories=prod(n),save_on=false,save_end=true)
-    
+    sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),save_on=false,save_end=true)
     for i = 1:length(sim.u)
-        plane[:,i] = sim.u[i].u[:]
+        plane[:,i] = sim.u[i].u[2]
     end
-
+    return plane
 end
 
 
