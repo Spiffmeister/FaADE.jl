@@ -23,6 +23,7 @@ module SBP_operators
     include("Helpers/Helpers.jl")
     include("Derivatives/Derivatives.jl")
     include("SATs/SATs.jl")
+    include("Parallel/Parallel.jl")
     include("solvers/solvers.jl")
 
 

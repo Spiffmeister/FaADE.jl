@@ -13,9 +13,6 @@ module Helpers
     include("HMatrix.jl")
     include("DataStorage.jl")
 
-    include("penaltyfn.jl")
-
-
 
     # types import
     export NodeType, Left, Internal, Right, Up, Down
@@ -46,9 +43,6 @@ module Helpers
     # PostNifty import
     export GetAxis, GetDim,
         GetMinΔ
-    
-    # Parallel penalty functions
-    export ParallelGrid, generate_parallel_penalty
     
 end
 
