@@ -1,53 +1,5 @@
 
-"""
-    parallel_grid
-Storage for parallel grids
-"""
-struct ParallelGrid{T,N} #T<:Type. N<:Dimensional
-    z               :: Vector{T}        #z coordinate
-    nz              :: Int              #Number of z planes
-    FowardPlane     :: AbstractArray{T} #Need x and y for 2D grid
-    BackwardPlane   :: AbstractArray{T} #Need x and y for 2D grid
 
-    function ParallelGrid(ForwardGrids,BackwardGrids,z::T) where T
-        if typeof(z) == Float64
-            zplanes = [z]
-        elseif typeof(z) == AbstractArray
-            zplanes = z
-        end
-
-        if ndims(ForwardGrids.X) == 1
-            new{T,1}(zplanes,length(zplanes),ForwardGrids.X,BackwardGrids.X)
-        elseif ndims(ForwardGrids.X) == 2
-            new{T,2}(zplanes,length(zplanes),ForwardGrids.X,BackwardGrids.X)
-        end
-    end
-end
-
-"""
-    ParallelPlane
-Single parallel plane element
-
-- ParallelPlane.grid is a 1D or 2D array of x(-y) coordinates of the grid points
-"""
-struct ParallelPlane{T}
-    z   :: T
-    X   :: AbstractArray{T}
-end
-
-
-Base.show(io::IO,PG::ParallelGrid) = print("Generated parallel grid with ",length(PG.z)," planes.")
-
-
-
-
-# function choose_interpmode(;interpmode::Symbol=:linear)
-#     if interpmode == :linear
-#         return Interpolations.LinearInterpolation
-#     else
-#         error("interpmode must be :linear")
-#     end
-# end
 
 function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where T
     # interp= choose_interpmode(interpmode=interpmode)

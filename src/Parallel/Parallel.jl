@@ -4,7 +4,8 @@ Methods for constructing the parallel operator
 """
 module Parallel
 
-    using DifferentialEquations
+    using DifferentialEquations: ODEProblem, EnsembleProblem, EnsembleSerial, solve, Tsit5, remake
+    using Interpolations: LinearInterpolation
 
     using SBP_operators.Helpers
 
