@@ -1,15 +1,12 @@
 
 
-"""
-    ParallelGrid
-Stores the current, forward and backward planes for the parallel tracing.
+struct plane
+    x   :: AbstractArray
+    y   :: AbstractArray
+end
 
-In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
-"""
 struct ParallelGrid
-    plane   :: AbstractArray
-    Bplane  :: AbstractArray
-    Fplane  :: AbstractArray
+    X   :: AbstractArray
 end
 
 
@@ -34,16 +31,14 @@ function construct_grid(χ::Function,grid::Grid2D,z::Vector;xmode=:stop,ymode=:p
     if typeof(grid) <: Grid2D
         xy = [[x,y] for x in grid.gridx for y in grid.gridy]
     end
-
+    # χₘₙ = 2.1e-3 + 5.0e-3
+    # params = (ϵₘₙ=[χₘₙ/2., χₘₙ/3.],m=[2.0, 3.0],n=[1.0, 2.0])
     BPlane = construct_plane(χ,xy,z[1],(grid.nx,grid.ny))
     FPlane = construct_plane(χ,xy,z[2],(grid.nx,grid.ny))
 
-    postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
-    postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
-    
-    Pgrid = ParallelGrid(hcat(xy...),BPlane,FPlane)
+    # Pgrid = ParallelGrid(FPlane,BPlane)
 
-    return Pgrid
+    return BPlane
 end
 
 
@@ -61,13 +56,12 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     P = ODEProblem(χ,X[1],(T(0),T(periods)*z))
     EP = EnsembleProblem(P,prob_func=prob_fn)
 
-    sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),save_on=false,save_end=true)
+    sim = solve(EP,Tsit5(),EnsembleDistributed(),trajectories=prod(n),save_on=false,save_end=true)
     
-    for i = 1:prod(n)
-        plane[:,i] = sim.u[i].u[2]
+    for i = 1:length(sim.u)
+        plane[:,i] = sim.u[i].u[:]
     end
 
-    return plane
 end
 
 
