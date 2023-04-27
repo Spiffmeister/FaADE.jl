@@ -15,6 +15,7 @@ module Parallel
 
     export ParallelGrid
 
+    export construct_grid
     export generate_parallel_penalty
 
 end

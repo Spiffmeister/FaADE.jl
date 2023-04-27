@@ -64,7 +64,8 @@ function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
 
     for j = 1:grid.ny
         for i = 1:grid.nx
-            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(I(pargrid.Fplane[i,j]) + I(pargrid.Bplane[i,j])))
+            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*
+                (I(pargrid.Fplane[i,j][1],pargrid.Fplane[i,j][2]) + I(pargrid.Bplane[i,j][1],pargrid.Bplane[i,j][2])))
         end
     end
 end

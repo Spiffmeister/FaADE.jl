@@ -1,4 +1,8 @@
 
+struct ParGrid
+    x   :: AbstractArray
+    y   :: AbstractArray
+end
 
 """
     ParallelGrid
@@ -11,6 +15,7 @@ struct ParallelGrid{D}
     Bplane  :: AbstractArray
     Fplane  :: AbstractArray
 end
+
 
 
 """
@@ -53,7 +58,7 @@ Constructs the forward and backward planes for a single solution plane
 """
 function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1) where T
 
-    plane = fill(zeros(T,2),n)
+    # plane = fill(zeros(T,2),n)
 
     function prob_fn(prob,i,repeat)
         remake(prob,u0=X[i])
@@ -64,47 +69,53 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),save_on=false,save_end=true)
     
 
-    # plane = zeros(T,n)
-    if length(n) == 2
-        for i = 1:n[1]
-            for j = n[2]
-                plane[i,j] = sim.u[i].u[2]
-            end
-        end
+    plane = fill(zeros(T,2),prod(n))
+    for i = 1:prod(n)
+        plane[i] = sim.u[i].u[2]
     end
 
+#=
+    planex = zeros(T,prod(n))
+    planey = zeros(T,prod(n))
+    for i = 1:prod(n)
+        planex[i] = sim.u[i].u[2][1]
+        planex[i] = sim.u[i].u[2][2]
+    end
+    planex = reshape(planex,n[2],n[1])'
+    planey = reshape(planey,n[2],n[1])'
+=#
 
-    # for i = 1:prod(n)
-    #     plane[:,i] = sim.u[i].u[2]
-    # end
-
-
+    plane = reshape(plane,n[2],n[1])'
 
     return plane
 end
 
 
 function postprocess_plane!(X,xbound,ybound,xmode,ymode)
-    @views out_of_bounds!(X[1,:],xbound,xmode)
-    @views out_of_bounds!(X[2,:],ybound,ymode)
+    @views out_of_bounds!(X,xbound,xmode,1)
+    @views out_of_bounds!(X,ybound,ymode,2)
 end
 """
     out_of_bounds!(X,boundx,boundy)
 Move out of bounds points to the boundary
 """
-@views function out_of_bounds!(X,bound,mode)
+@views function out_of_bounds!(X,bound,mode,d)
     
     if mode == :stop
         for i in eachindex(X)
-            if X[i] ≤ bound[1]
-                X[i] = bound[1]
-            elseif X[i] ≥ bound[2]
-                X[i] = bound[2]
+            if X[i][d] ≤ bound[1]
+                X[i][d] = bound[1]
+            elseif X[i][d] ≥ bound[2]
+                X[i][d] = bound[2]
             end
         end
     elseif mode == :period
         for i in eachindex(X)
-            X[i] = rem2pi(X[i],RoundNearest)
+            X[i][d] = rem2pi(X[i][d],RoundNearest)
         end
     end
 end
+
+
+Base.show(io::IO, PG::ParallelGrid) = print(io, " generated parallel grid.")
+

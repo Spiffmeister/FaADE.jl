@@ -41,12 +41,14 @@ module SBP_operators
 
     using SBP_operators.solvers: solve, build_H
 
+    using SBP_operators.Parallel: construct_grid, generate_parallel_penalty
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, Boundary, PeriodicBoundary
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
+    export construct_grid, generate_parallel_penalty
 
     export Dₓ, Dₓₓ, Dₓₓ!
 
