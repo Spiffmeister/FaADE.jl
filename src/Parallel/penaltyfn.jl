@@ -1,7 +1,7 @@
 
 
 
-function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(planes::ParallelGrid{1},order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where T
     # interp= choose_interpmode(interpmode=interpmode)
     if typeof(interpfn) == Nothing
         error("No interpolation function specified.")
@@ -19,15 +19,15 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid1D,order::Int;
     end
 end
 
-function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:linear,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(pargrid::ParallelGrid{2},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpfn::Union{Nothing,Function}=nothing) where T
 
     # interp = choose_interpmode(interpmode=interpmode)
     if typeof(interpfn) == Nothing
-        error("No interpolation function specified.")
+        interp = LinearInterpolation
     end
 
-    H_x = SBP_operators.build_H(grid.ny,order)
-    H_y = SBP_operators.build_H(grid.nx,order)
+    H_x = build_H(order,grid.ny)
+    H_y = build_H(order,grid.nx)
 
     H_x = 1.0 ./H_x.^2
     H_y = 1.0 ./H_y.^2
@@ -37,41 +37,36 @@ function generate_parallel_penalty(planes::ParallelGrid,grid::Grid2D,order::Int;
 
     let H_x=H_x, H_y=H_y,
             grid=grid,
-            τ=τ, κ=κ
-
-        ParPen(u,u₀,Δt) = ParallelPenalty(interp,u,u₀,Δt,grid,τ,κ,H_x,H_y)
+            τ=τ, κ=κ,
+            pargrid=pargrid
+        ParPen(u,u₀,Δt) = ParallelPenalty2D!(interp,u,u₀,Δt,pargrid,grid,τ,κ,H_x,H_y)
+        return ParPen
     end
-    return ParPen
 
 end
 
 
-
-function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{T,1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
+"""
+"""
+function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
     I = interp(grid.grid,u₀)
     for i = 1:grid.n
         u[i] = 1.0/(1.0 - κ*τ/2.0 * Δt * H[i]) * 
             (u[i] - Δt*κ*τ/4.0 * H[i] * (I(planes.FowardPlane[i]) + I(planes.BackwardPlane[i])))
     end
 end
-
-function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+"""
+    ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+"""
+function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
 
     I = interp((grid.gridx,grid.gridy),u₀)
 
-    for j = 1:ny
-        for i = 1:nx
-            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(I(F_plane[i,j]) + I(B_plane([i,j]))))
+    for j = 1:grid.ny
+        for i = 1:grid.nx
+            u[i,j] = 1.0/(1.0 - κ/2.0 * Δt * (H_y[i] + H_x[j])) * (u[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(I(pargrid.Fplane[i,j]) + I(pargrid.Bplane[i,j])))
         end
     end
 end
 
-
-
-
-# function forward_map(interp,foward_points)
-# end
-
-# function backward_map(interp,backward_points)
-# end
 

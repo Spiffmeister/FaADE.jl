@@ -11,7 +11,10 @@ module Parallel
 
 
     include("PGrid.jl")
+    include("penaltyfn.jl")
 
     export ParallelGrid
+
+    export generate_parallel_penalty
 
 end

@@ -6,7 +6,7 @@ Stores the current, forward and backward planes for the parallel tracing.
 
 In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
 """
-struct ParallelGrid
+struct ParallelGrid{D}
     plane   :: AbstractArray
     Bplane  :: AbstractArray
     Fplane  :: AbstractArray
@@ -41,7 +41,7 @@ function construct_grid(χ::Function,grid::Grid2D,z::Vector;xmode=:stop,ymode=:p
     postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
     postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
     
-    Pgrid = ParallelGrid(hcat(xy...),BPlane,FPlane)
+    Pgrid = ParallelGrid{2}(reshape(xy,grid.nx,grid.ny),BPlane,FPlane)
 
     return Pgrid
 end
@@ -53,7 +53,7 @@ Constructs the forward and backward planes for a single solution plane
 """
 function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1) where T
 
-    plane = zeros(T,(2,prod(n)))
+    plane = fill(zeros(T,2),n)
 
     function prob_fn(prob,i,repeat)
         remake(prob,u0=X[i])
@@ -63,9 +63,22 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
 
     sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),save_on=false,save_end=true)
     
-    for i = 1:prod(n)
-        plane[:,i] = sim.u[i].u[2]
+
+    # plane = zeros(T,n)
+    if length(n) == 2
+        for i = 1:n[1]
+            for j = n[2]
+                plane[i,j] = sim.u[i].u[2]
+            end
+        end
     end
+
+
+    # for i = 1:prod(n)
+    #     plane[:,i] = sim.u[i].u[2]
+    # end
+
+
 
     return plane
 end
