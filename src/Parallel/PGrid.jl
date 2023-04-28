@@ -68,15 +68,14 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
 
     sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),save_on=false,save_end=true)
     
-
     plane = fill(zeros(T,2),prod(n))
     for i = 1:prod(n)
         plane[i] = sim.u[i].u[2]
     end
 
 #=
-    planex = zeros(T,prod(n))
-    planey = zeros(T,prod(n))
+    planex = zeros(T,n)
+    planey = zeros(T,n)
     for i = 1:prod(n)
         planex[i] = sim.u[i].u[2][1]
         planex[i] = sim.u[i].u[2][2]
