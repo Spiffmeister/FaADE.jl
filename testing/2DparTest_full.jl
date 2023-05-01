@@ -20,8 +20,8 @@ using plas_diff
 ###
 𝒟x = [0.0,1.0]
 𝒟y = [-π,π]
-nx = 6
-ny = 6
+nx = 21
+ny = 21
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
 kx(x,y) = 1.0e-8
@@ -29,7 +29,7 @@ ky(x,y) = 1.0e-8
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 1000.0
+t_f = 10.0
 
 u₀(x,y) = x
 
@@ -95,6 +95,7 @@ function penalty_fn(u,uₒ,Δt)
             if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]
                 w_f  = 0.0
             elseif 𝒟x[2] ≤ gdata.z_planes[1].x[i,j]
+                # println(i,j)
                 w_f = 1.0
             else
                 w_f = interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j])
@@ -129,16 +130,21 @@ PGrid = SBP_operators.construct_grid(dH,Dom,[-2π,2π])
 Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
 
 
+# using Profile
+t_f = 1.0
 
 # println("Benchmarking")
 # @benchmark solve($P,$Dom,$Δt,$t_f,:cgie,penalty_func=$penalty_fn)
-
-@time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
+# using BenchmarkTools
+# @time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
+# Profile.clear_malloc_data()
 @time soln1 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=penalty_fn)
 
-@time soln = solve(P,Dom,5.1Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
-@time soln2 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+# @time soln = solve(P,Dom,5.1Δt,t_f,:cgie,adaptive=true,Pgrid=PGrid)#,penalty_func=Pfn)
+# Profile.clear_malloc_data()
+@time soln2 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,Pgrid=PGrid)#,penalty_func=Pfn)
 
+plot(soln1.u[2][1,:]); plot!(soln2.u[2][1,:])
 #=
 println("Plotting")
 using Plots

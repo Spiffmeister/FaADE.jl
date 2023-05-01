@@ -247,7 +247,9 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         if CGBlock.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
             if penalty_function_enabled # Add parallel penalty
+                # println(DBlock.uₙ₊₁[1,10])
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+                # println(DBlock.uₙ₊₁[1,10])
             end
             # USED FOR DETERMINING EQUILIBRIUM
             DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)

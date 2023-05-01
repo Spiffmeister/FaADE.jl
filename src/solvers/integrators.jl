@@ -96,8 +96,8 @@ function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Floa
     end
     if (rnorm>rtol*unorm) & warnings
         CGB.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
-        @warn warnstr
+        # warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        # @warn warnstr
     end
 end
 
