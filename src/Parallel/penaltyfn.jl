@@ -19,12 +19,12 @@ function generate_parallel_penalty(planes::ParallelGrid{1},order::Int;κ::T=1.0,
     end
 end
 
-function generate_parallel_penalty(pargrid::ParallelGrid{2},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpfn::Union{Nothing,Function}=nothing) where T
 
     # interp = choose_interpmode(interpmode=interpmode)
-    if typeof(interpfn) == Nothing
-        interp = LinearInterpolation
-    end
+    # if typeof(interpfn) == Nothing
+    #     interp = LinearInterpolation
+    # end
 
     H_x = build_H(order,grid.ny)
     H_y = build_H(order,grid.nx)
@@ -35,11 +35,14 @@ function generate_parallel_penalty(pargrid::ParallelGrid{2},grid::Grid2D,order::
     # α = -2.0
     # τ = α/2.0 #TODO MIGHT BE A SQUARED HERE
 
+    itp(u) = linear_interpolation((grid.gridx,grid.gridy),u)
+
     let H_x=H_x, H_y=H_y,
-            grid=grid,
             τ=τ, κ=κ,
-            pargrid=pargrid
-        ParPen(u,u₀,Δt) = ParallelPenalty2D!(interp,u,u₀,Δt,pargrid,grid,τ,κ,H_x,H_y)
+            nx=grid.nx, ny=grid.ny,
+            interp = itp,
+            PGrid = pargrid
+        ParPen(u,u₀,Δt) = ParallelPenalty2D!(interp,u,u₀,Δt,PGrid,nx,ny,τ,κ,H_x,H_y)
         return ParPen
     end
 
@@ -56,22 +59,24 @@ function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
     end
 end
 """
-    ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+    ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
 """
-function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+@views function ParallelPenalty2D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
+        PGrid::ParallelGrid,
+        nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
 
-    I = LinearInterpolation((grid.gridx,grid.gridy),u₀)
+    I = interp(u₀)
 
-    for j = 1:grid.ny
-        for i = 1:grid.nx
+    @inbounds for j = 1:ny
+        for i = 1:nx
 
-            w_f = I(pargrid.Fplane[i,j][1],pargrid.Fplane[i,j][2])
-            w_b = I(pargrid.Bplane[i,j][1],pargrid.Bplane[i,j][2])
+            w = I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])
+            H = (H_y[i] + H_x[j])
+            u[i,j] = 1.0/(1.0 - κ * τ/2.0 * Δt * H) * ( u₀[i,j] -  Δt*κ*τ/4.0 * H * w)
 
-            u[i,j] = 1.0/(1.0 - κ*τ/2.0 * Δt * (H_y[i] + H_x[j])) * 
-                (u₀[i,j] - Δt*τ/4.0 * (H_y[i]+H_x[j])*(w_f + w_b))
         end
     end
+    u
 end
 
 

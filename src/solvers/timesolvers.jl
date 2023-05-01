@@ -46,7 +46,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
     BoundaryConditions = Prob.BoundaryConditions
 
     if typeof(Pgrid) <: ParallelGrid
-        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order,interpfn=interpfn)
+        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
     end
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
@@ -162,7 +162,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,interpfn::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing) where T
 
     target_state = 0.0
     if t_f == Inf
@@ -178,7 +178,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     soln = solution{T}(grid,0.0,Δt,Prob)
 
     if typeof(Pgrid) <: ParallelGrid
-        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order,interpfn=interpfn)
+        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
     end
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 

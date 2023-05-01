@@ -15,7 +15,7 @@ module solvers
     using SBP_operators.SATs: SAT, construct_SAT, 
     SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!
 
-    using SBP_operators.Parallel: ParallelGrid
+    using SBP_operators.Parallel: ParallelGrid, generate_parallel_penalty
     
 
     include("solution.jl")
