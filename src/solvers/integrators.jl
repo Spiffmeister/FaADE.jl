@@ -61,8 +61,8 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Float64;
-        atol::Float64=1.e-5,rtol::Float64=1.e-10,maxIT::Int=10,warnings=true)
+function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::T;
+        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where T
     
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
@@ -72,11 +72,10 @@ function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Floa
     # DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
-
     
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-    unorm = sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁))
+    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
     while (rnorm > rtol*unorm) & (i < maxIT)
         A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
@@ -96,8 +95,8 @@ function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::Floa
     end
     if (rnorm>rtol*unorm) & warnings
         CGB.converged = false
-        # warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
-        # @warn warnstr
+        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        @warn warnstr
     end
 end
 

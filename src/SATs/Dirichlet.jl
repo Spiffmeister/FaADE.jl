@@ -140,6 +140,9 @@ function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Left},DA
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
         S[1] -= τ(C[1])*C[1]*U[1]
     end
+    # println("BD ",BD)
+    # println("α ",α)
+    # println("C ",τ(c[1]))
     SAT
 end
 function SAT_Dirichlet_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},DATA::AbstractArray,c::AbstractArray{T},

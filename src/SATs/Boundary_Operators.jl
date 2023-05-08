@@ -58,14 +58,14 @@ end
 Determines the penatly parameters for the given boundary conditions.
 """
 function SATpenalties end
-@inline function SATpenalties(::BoundaryConditionType{:Dirichlet},Δx::Float64,order::Int64)
+@inline function SATpenalties(::BoundaryConditionType{:Dirichlet},Δx::T,order::Int64) where T
     # For reading in penalty parameters for Dirichlet SATs
     h = hval(order)
 
     α = 1.0/Δx # α/Δx -- #1/h accounted for in BoundaryDerivativeTranspose
 
     # τ₁(c) = 1.0/c
-    τ₀(c) = -(1.0 + 1.0/c)/(h*Δx)^2 # τ*H^{-1}H^{-1}
+    τ₀(c) = -(1.0 + 1.0/max(c,eps(T)))/(h*Δx)^2 # τ*H^{-1}H^{-1} #TODO FIX IF C=0
     return α, τ₀
 end
 @inline function SATpenalties(::BoundaryConditionType{:Neumann},Δx::Float64,order::Int64)
