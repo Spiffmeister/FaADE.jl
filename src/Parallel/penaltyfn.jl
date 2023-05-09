@@ -19,7 +19,7 @@ function generate_parallel_penalty(planes::ParallelGrid{1},order::Int;κ::T=1.0,
     end
 end
 
-function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,perp::T=1.0,interpfn::Union{Nothing,Function}=nothing) where T
 
     # interp = choose_interpmode(interpmode=interpmode)
     # if typeof(interpfn) == Nothing
@@ -29,8 +29,8 @@ function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order
     H_x = build_H(order,grid.ny)
     H_y = build_H(order,grid.nx)
 
-    H_x = 1.0 ./H_x.^2
-    H_y = 1.0 ./H_y.^2
+    H_x = 1.0 ./(H_x*grid.Δx)
+    H_y = 1.0 ./(H_y*grid.Δy)
 
     # α = -2.0
     # τ = α/2.0 #TODO MIGHT BE A SQUARED HERE
@@ -41,8 +41,9 @@ function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order
             τ=τ, κ=κ,
             nx=grid.nx, ny=grid.ny,
             D=grid,
-            PGrid = pargrid
-        ParPen(u,u₀,Δt) = ParallelPenalty2D!(u,u₀,Δt,PGrid,D,nx,ny,τ,κ,H_x,H_y)
+            PGrid = pargrid,
+            perp = perp
+        ParPen(u,u₀,Δt) = ParallelPenalty2D!(u,u₀,Δt,PGrid,D,nx,ny,τ,κ,H_x,H_y,perp)
         # ParPen(u,u₀,Δt) = ParallelPenalty2D!(interp,u,u₀,Δt,PGrid,D,nx,ny,τ,κ,H_x,H_y)
         return ParPen
     end
@@ -64,20 +65,26 @@ end
 """
 @views function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         PGrid::ParallelGrid,D::Grid2D,
-        nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+        nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
 
-    I = LinearInterpolation((D.gridx,D.gridy),u₀)
+    I = LinearInterpolation((D.gridx,D.gridy),u)
+
+    # τ = -(1.e-14 + 1.0/κ)
+    τ = -(perp/κ)
 
     for j = 1:ny
         for i = 1:nx
 
             # w = I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])
-            # H = (H_y[i] + H_x[j])
+            H = H_y[i]*H_x[j]
 
-            u[i,j] = 1.0/(1.0 - κ * τ/2.0 * Δt * (H_y[i] + H_x[j])) * 
-                ( u[i,j] -  Δt*κ*τ/4.0 * (H_y[i] + H_x[j]) * 
+            u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
+                ( u[i,j] -  κ*Δt*τ/4.0 * H * 
                     (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])) )
 
+            
+            # u[i,j] = u[i,j] + Δt * κ * τ/2.0 * H * (u[i,j] - 0.5*(I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])))
+            
 
 
             # if 0.0 ≥ PGrid.Fplane.x[i,j]
