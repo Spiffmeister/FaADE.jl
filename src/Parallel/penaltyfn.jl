@@ -63,14 +63,17 @@ end
 """
     ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
 """
-@views function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
+function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         PGrid::ParallelGrid,D::Grid2D,
         nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
 
     I = LinearInterpolation((D.gridx,D.gridy),u)
+    # I = LinearInterpolation((D.gridx,D.gridy),u₀)
 
     # τ = -(1.e-14 + 1.0/κ)
     τ = -(perp/κ)
+    # τ = -T(1)
+    # τ = -D.Δx
 
     for j = 1:ny
         for i = 1:nx
@@ -86,27 +89,6 @@ end
             # u[i,j] = u[i,j] + Δt * κ * τ/2.0 * H * (u[i,j] - 0.5*(I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])))
             
 
-
-            # if 0.0 ≥ PGrid.Fplane.x[i,j]
-            #     w_f  = 0.0
-            # elseif 1.0 ≤ PGrid.Fplane.x[i,j]
-            #     # println(i,j)
-            #     w_f = 1.0
-            # else
-            #     w_f = I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j])
-            # end
-
-            # if 0.0 ≥ PGrid.Bplane.x[i,j]
-            #     w_b  = 0.0
-            # elseif 1.0 ≤ PGrid.Bplane.x[i,j]
-            #     w_b = 1.0
-            # else
-            #     w_b = I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])
-            # end
-
-            # u[i,j] = 1.0/(1.0 - κ * τ/2.0 * Δt * (H_y[i] + H_x[j])) *
-            #     (u₀[i,j] - Δt*κ*τ/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
-        
 
 
         end
