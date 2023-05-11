@@ -65,7 +65,7 @@ function comp_MMS(Dx,npts,
         
         Δt = dt_scale*Dom.Δx^2
 
-        K = zeros(Float64,n) .+ k
+        K(x) = k
 
         P = MakeProb(K)
 
@@ -101,7 +101,7 @@ ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
 ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
-K = 1.0
+K = 1.0e-4
 F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
         -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
@@ -253,6 +253,10 @@ pO2 = plot(axis=:log,minorgrid=true)
 plot!(pO2,    (O2_DirichletMMS.npts),     (O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
 plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
+plot!(pO2,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+plot!(pO2,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:square)
+plot!(pO2,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
+
 
 plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$"), markershape=:circle
@@ -265,7 +269,11 @@ savefig(pO2,".//testing//MMS//MMSTests_order2.eps")
 savefig(pO2,".//testing//MMS//MMSTests_order2.png")
 
 
-pO4 = plot()
+pO4 = plot(axis=:log,minorgrid=true)
+plot!(pO4,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
+plot!(pO4,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
+plot!(pO4,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
+
 plot!(pO4,    log.(O4_DirichletMMS.npts),     log.(O4_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    log.(O4_NeumannMMS.npts),       log.(O4_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    log.(O4_PeriodicMMS.npts),      log.(O4_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)

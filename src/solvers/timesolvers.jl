@@ -162,7 +162,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,nf=1) where T
+function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing) where T
 
     target_state = 0.0
     if t_f == Inf
@@ -220,14 +220,14 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     DBlock.uₙ₊₁ .= DBlock.u
     CGBlock.b .= DBlock.u
 
-    tmpu = zeros(T,(grid.nx,grid.ny))
+    # tmpu = zeros(T,(grid.nx,grid.ny))
 
     # kfin = t_f/Δt
     
     copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-    # while t ≤ t_f
-    for k = 1:nf
-        t = k*Δt
+    while t ≤ t_f
+    # for k = 1:nf
+        # t = k*Δt
         # t += Δt
 
         if Prob.BoundaryConditions.Left.type != Periodic #Left/Right boundaries
@@ -253,8 +253,8 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
             # If CG converges OR adaptive time stepping is off
             if penalty_function_enabled # Add parallel penalty
                 # println(DBlock.uₙ₊₁[1,10])
-                tmpu .= DBlock.uₙ₊₁
-                penalty_func(DBlock.uₙ₊₁,tmpu,Δt)
+                # tmpu .= DBlock.uₙ₊₁
+                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
                 # println(DBlock.uₙ₊₁[1,10])
             end
             # USED FOR DETERMINING EQUILIBRIUM
