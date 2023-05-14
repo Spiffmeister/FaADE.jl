@@ -62,7 +62,7 @@ In-place conjugate gradient method.
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::T;
-        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where T
+        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=20,warnings=true) where T
     
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS

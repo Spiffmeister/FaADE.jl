@@ -68,7 +68,7 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     P = ODEProblem(χ,X[1],(T(0),T(periods)*z))
     EP = EnsembleProblem(P,prob_func=prob_fn)
 
-    sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,
+    sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-14,
         save_on=false,save_end=true)
     
     #=

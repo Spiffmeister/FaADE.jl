@@ -69,8 +69,9 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
 
     # I = LinearInterpolation((D.gridx,D.gridy),u)
     
-    I = scale(interpolate(u, BSpline(Quadratic(Reflect(OnCell())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
-    # I = scale(interpolate(u, BSpline(Linear())),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
+    I = scale(interpolate(u, BSpline(Linear())),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
+    # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
+    # I = scale(interpolate(u, BSpline(Cubic(Line(OnGrid())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
     # I = LinearInterpolation((D.gridx,D.gridy),u₀)
 
     # τ = -(1.e-14 + 1.0/κ)
