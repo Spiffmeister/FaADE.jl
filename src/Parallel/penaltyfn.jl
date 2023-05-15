@@ -72,13 +72,15 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
 
     # τ = -(1.e-14 + 1.0/κ)
     # τ = -(perp/κ)
-    τ = -sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
+    # τ = -sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
+    τ = -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
     # τ = -T(1)
     # τ = -D.Δx
 
     for j = 1:ny
         for i = 1:nx
-            H = H_y[i]*H_x[j]
+            # H = H_y[i]*H_x[j]
+            H = 1.0
 
             u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
                 ( u[i,j] -  κ*Δt*τ/4.0 * H * 
