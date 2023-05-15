@@ -69,26 +69,29 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
 
     # I = LinearInterpolation((D.gridx,D.gridy),u)
     
-    I = scale(interpolate(u, BSpline(Linear())),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
-    # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
+    # I = scale(interpolate(u, BSpline(Linear())),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
+    I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
     # I = scale(interpolate(u, BSpline(Cubic(Line(OnGrid())))),D.gridx[1]:D.Δx:D.gridx[end],D.gridy[1]:D.Δy:D.gridy[end])
     # I = LinearInterpolation((D.gridx,D.gridy),u₀)
 
     # τ = -(1.e-14 + 1.0/κ)
     # τ = -(perp/κ)
-    τ = -sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
+    τ = -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) )) * 1.0
     # τ = -T(1)
     # τ = -D.Δx
 
+    # w = zeros(D.nx,D.ny)
     for j = 1:ny
         for i = 1:nx
-            H = H_y[i]*H_x[j]
+            # H = H_y[i]*H_x[j]
+            H = 1.0
 
             u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
                 ( u[i,j] -  κ*Δt*τ/4.0 * H * 
                     (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])) )
 
-            
+            # w[i,j] = (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j]))
+
             # u[i,j] = u[i,j] + Δt * κ * τ/2.0 * H * (u[i,j] - 0.5*(I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])))
             
 
@@ -96,6 +99,7 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
 
         end
     end
+    # println(norm(u₀ - w/2.0))
 end
 
 

@@ -8,6 +8,7 @@ module Parallel
     using Interpolations
 
     using SBP_operators.Helpers
+    using LinearAlgebra
 
 
     include("PGrid.jl")
