@@ -68,24 +68,31 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
 
     I = LinearInterpolation((D.gridx,D.gridy),u)
+    # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid()))),),
+        # range(D.gridx[1],D.gridx[end],length=D.nx),range(D.gridy[1],D.gridy[end],length=D.ny))
     # I = LinearInterpolation((D.gridx,D.gridy),u₀)
 
     # τ = -(1.e-14 + 1.0/κ)
     # τ = -(perp/κ)
     # τ = -sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
-    τ = -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
+    τ = -sqrt((D.gridx[end]-D.gridx[1])*(D.gridy[end]-D.gridy[1])/(D.Δx*D.Δy))  
+    # -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
     # τ = -T(1)
     # τ = -D.Δx
 
     for j = 1:ny
         for i = 1:nx
             # H = H_y[i]*H_x[j]
-            H = 1.0
+            # H = 1.0
 
-            u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
-                ( u[i,j] -  κ*Δt*τ/4.0 * H * 
+            u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt) * 
+                ( u[i,j] -  κ*Δt*τ/4.0 * 
                     (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])) )
-
+            
+            # u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
+            #     ( u[i,j] -  κ*Δt*τ/4.0 * H * 
+            #         (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])) )
+    
             
             # u[i,j] = u[i,j] + Δt * κ * τ/2.0 * H * (u[i,j] - 0.5*(I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])))
             

@@ -162,11 +162,12 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 
 end
 #= 2D SOLVER =#
-function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing) where T
+function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;
+        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,warnings=false) where T
 
     target_state = 0.0
     if t_f == Inf
-        target_state = 1e-5
+        target_state = 1e-8
         println("Going for steady state at rel-error Δu=",target_state)
         @warn "MAX ITERATIONS NOT SET"
         @warn "MAX ITERATIONS NOT SET"
@@ -219,6 +220,11 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     Δt₀ = Δt
     DBlock.uₙ₊₁ .= DBlock.u
     CGBlock.b .= DBlock.u
+    if t_f != Inf
+        tprint₀ = tprint = t_f/10.0
+    else
+        tprint₀ = tprint = 50.0
+    end
 
     # tmpu = zeros(T,(grid.nx,grid.ny))
 
@@ -247,7 +253,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         if typeof(source) <: Function
             addSource!(source,CGBlock.b,grid,t,Δt)
         end
-        conj_grad!(CGRHS!,DBlock,CGBlock,Δt,warnings=false)
+        conj_grad!(CGRHS!,DBlock,CGBlock,Δt,warnings=warnings)
         
         if CGBlock.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
@@ -269,6 +275,10 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
                 Δt *= 1.05
             end
             t += Δt
+            if tprint < t
+                println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
+                tprint += tprint₀
+            end
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u

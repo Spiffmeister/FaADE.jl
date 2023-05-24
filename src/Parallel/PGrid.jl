@@ -70,6 +70,7 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
 
     sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,
         save_on=false,save_end=true)
+    # sim = solve(EP,McAte5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,save_on=false,save_end=true)
     
     #=
     plane = fill(zeros(T,2),prod(n))
@@ -114,8 +115,18 @@ Move out of bounds points to the boundary
             end
         end
     elseif mode == :period
-        for i in eachindex(X)
-            X[i] = rem2pi(X[i],RoundNearest)
+        if bound[end] ≤ 3π/2
+            for i in eachindex(X)
+                X[i] = rem2pi(X[i],RoundNearest)
+                if X[i] ≥ bound[end]
+                    X[i] = bound[end]
+                    # println(X[i])
+                end
+            end
+        # elseif bound == 2π
+        #     for i in eachindex(X)
+        #         X[i] = rem2pi(X[i],RoundDown)
+        #     end
         end
     end
 end
