@@ -3,7 +3,7 @@
     (RK::ExplicitBlock{T,N,4})
 RK4 integrator
 """
-function (RK::ExplicitBlock{T,N,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
+function (RK::ExplicitBlock{T,N,AT,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
     
     DBlock.uₙ₊₁ .= DBlock.u
 
@@ -18,7 +18,7 @@ end
     (ForwardEuler::ExplicitBlock{T,N,1})
 Forward Euler integrator
 """
-function (ForwardEuler::ExplicitBlock{T,N,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N}
+function (ForwardEuler::ExplicitBlock{T,N,AT,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
     
     DBlock.uₙ₊₁ .= DBlock.u
 
@@ -61,8 +61,15 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(RHS::Function,DBlock::DataBlock,CGB::ConjGradBlock,Δt::T;
-        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where T
+function conj_grad!(RHS::Function,DBlock::DataBlock{T,N,AT},CGB::ConjGradBlock{T,N,AT},Δt::T;
+        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where {T,N,AT}
+    
+    local rnorm::T
+    local unorm::T
+    local dₖAdₖ::T
+    local βₖ::T
+    local αₖ::T
+    
     
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS

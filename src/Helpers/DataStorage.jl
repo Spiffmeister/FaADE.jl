@@ -8,11 +8,11 @@
     DataBlock
 Passed around internally between functions. Only contains data required for current timestep.
 """
-mutable struct DataBlock{T,N} <: DataBlockType{T,N}
+mutable struct DataBlock{T,N,AT} <: DataBlockType{T,N,AT}
     grid        :: GridType
-    u           :: AbstractArray{T}
-    uₙ₊₁        :: AbstractArray{T}
-    K           :: Union{Vector,Vector{AbstractArray{T}}}
+    u           :: AT
+    uₙ₊₁        :: AT
+    K           :: Union{AT,Vector{AT}}
     boundary    :: BoundaryStorage
     t           :: T
     Δt          :: T
@@ -46,7 +46,7 @@ mutable struct DataBlock{T,N} <: DataBlockType{T,N}
             dim = 2
 
         end
-        new{T,dim}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
+        new{T,dim,typeof(u)}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
     end
 end
 
@@ -56,18 +56,18 @@ end
     BoundaryData1D
 Data structure for storage of SATs in 1 dimensional problems
 """
-mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
+mutable struct BoundaryData1D{T,AT<:Vector{T}} <: BoundaryStorage{T,1, AT}
     Type_Left   :: BoundaryConditionType
     Type_Right  :: BoundaryConditionType
 
-    SAT_Left    :: AbstractArray{T}
-    SAT_Right   :: AbstractArray{T}
+    SAT_Left    :: AT
+    SAT_Right   :: AT
 
-    u_Left      :: AbstractArray{T}
-    u_Right     :: AbstractArray{T}
+    u_Left      :: AT
+    u_Right     :: AT
 
-    RHS_Left    :: AbstractArray{T}
-    RHS_Right   :: AbstractArray{T}
+    RHS_Left    :: AT
+    RHS_Right   :: AT
 
     function BoundaryData1D{T}(BC::NamedTuple,order::Int) where {T}
 
@@ -86,7 +86,7 @@ mutable struct BoundaryData1D{T} <: BoundaryStorage{T,1}
             BCL = BCR = Periodic
         end
 
-        new{T}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,[0.0],[0.0])
+        new{T,Vector}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,[0.0],[0.0])
 
     end
 end
@@ -95,29 +95,29 @@ end
     BoundaryData2D
 Data structure for storage of SATs in 2 dimensional problems
 """
-struct BoundaryData2D{T} <: BoundaryStorage{T,2}
+struct BoundaryData2D{T,AT} <: BoundaryStorage{T,2, AT}
 
     Type_Left    :: BoundaryConditionType
     Type_Right   :: BoundaryConditionType
     Type_Up      :: BoundaryConditionType
     Type_Down    :: BoundaryConditionType
 
-    SAT_Left    :: AbstractArray{T} #Same as u_ but for SAT
-    SAT_Right   :: AbstractArray{T} #Same as u_ but for SAT
-    SAT_Up      :: AbstractArray{T} #Same as u_ but for SAT
-    SAT_Down    :: AbstractArray{T} #Same as u_ but for SAT
+    SAT_Left    :: AT #Same as u_ but for SAT
+    SAT_Right   :: AT #Same as u_ but for SAT
+    SAT_Up      :: AT #Same as u_ but for SAT
+    SAT_Down    :: AT #Same as u_ but for SAT
 
-    u_Left      :: AbstractArray{T} #Solution along boundary with size determined by derivative order
-    u_Right     :: AbstractArray{T} #Solution along boundary with size determined by derivative order
-    u_Up        :: AbstractArray{T} #Solution along boundary with size determined by derivative order
-    u_Down      :: AbstractArray{T} #Solution along boundary with size determined by derivative order
+    u_Left      :: AT #Solution along boundary with size determined by derivative order
+    u_Right     :: AT #Solution along boundary with size determined by derivative order
+    u_Up        :: AT #Solution along boundary with size determined by derivative order
+    u_Down      :: AT #Solution along boundary with size determined by derivative order
 
-    RHS_Left    :: AbstractArray{T}
-    RHS_Right   :: AbstractArray{T}
-    RHS_Up      :: AbstractArray{T}
-    RHS_Down    :: AbstractArray{T}
+    RHS_Left    :: AT
+    RHS_Right   :: AT
+    RHS_Up      :: AT
+    RHS_Down    :: AT
 
-    function BoundaryData2D{T}(BC::NamedTuple,grid::Grid2D,order::Int) where {T}
+    function BoundaryData2D{T}(BC::NamedTuple,grid::Grid2D,order::Int) where T
 
         nnodes = SATNodeOutput(order)
         ny = grid.ny
@@ -138,7 +138,7 @@ struct BoundaryData2D{T} <: BoundaryStorage{T,2}
         RHS_Up =      zeros(T,(nx,1)) #y 
         RHS_Down =    zeros(T,(nx,1)) #y
 
-        new{T}(BC.Left.type,BC.Right.type,BC.Up.type,BC.Down.type,
+        new{T,typeof(u_Left)}(BC.Left.type,BC.Right.type,BC.Up.type,BC.Down.type,
             SAT_Left,SAT_Right,SAT_Up,SAT_Down,
             u_Left,u_Right,u_Up,u_Down,
             RHS_Left,RHS_Right,RHS_Up,RHS_Down)

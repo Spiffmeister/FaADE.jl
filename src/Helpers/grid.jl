@@ -43,8 +43,8 @@ Returns:
 - Struct for 2D grid object containing grid points in ``x`` and ``y``, ``\\Delta x`` and ``\\Delta y``, and ``n_x`` and ``n_y``.
 """
 struct Grid2D{T} <: GridType{T,2}
-    gridx   :: AbstractArray{T}
-    gridy   :: AbstractArray{T}
+    gridx   :: Vector{T}
+    gridy   :: Vector{T}
     Δx      :: T
     Δy      :: T
     nx      :: Integer

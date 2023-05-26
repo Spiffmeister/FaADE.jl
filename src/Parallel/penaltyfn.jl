@@ -1,7 +1,7 @@
 
 
 
-function generate_parallel_penalty(planes::ParallelGrid{1},order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(planes::ParallelGrid{T,1,AT},order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where {T,AT}
     # interp= choose_interpmode(interpmode=interpmode)
     if typeof(interpfn) == Nothing
         error("No interpolation function specified.")
@@ -19,7 +19,7 @@ function generate_parallel_penalty(planes::ParallelGrid{1},order::Int;κ::T=1.0,
     end
 end
 
-function generate_parallel_penalty(pargrid::ParallelGrid{2,T},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,perp::T=1.0,interpfn::Union{Nothing,Function}=nothing) where T
+function generate_parallel_penalty(pargrid::ParallelGrid{T,2,AT},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,perp::T=1.0,interpfn::Union{Nothing,Function}=nothing) where {T,AT}
 
     # interp = choose_interpmode(interpmode=interpmode)
     # if typeof(interpfn) == Nothing

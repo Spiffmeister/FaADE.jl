@@ -4,16 +4,16 @@
 """
     ConjGradBlock
 """
-mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
-    b   :: AbstractArray{T,N} # b = uⁿ⁺¹ + F
-    rₖ  :: AbstractArray{T,N} # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
-    Adₖ :: AbstractArray{T,N} # Adₖ = dₖ - Δt*D(dₖ)
-    Drₖ :: AbstractArray{T,N} # Drₖ = rₖ - Δt*D(rₖ)
-    dₖ  :: AbstractArray{T,N} # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
+mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
+    b   :: AT # b = uⁿ⁺¹ + F
+    rₖ  :: AT # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
+    Adₖ :: AT # Adₖ = dₖ - Δt*D(dₖ)
+    Drₖ :: AT # Drₖ = rₖ - Δt*D(rₖ)
+    dₖ  :: AT # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
 
     converged   :: Bool
 
-    innerprod   :: innerH{T,N}
+    innerprod   :: innerH
 
     function ConjGradBlock{T}(grid::GridType,order::Int) where T
 
@@ -36,7 +36,7 @@ mutable struct ConjGradBlock{T,N} <: DataBlockType{T,N}
         innerprod = innerH(grid,order)
         
 
-        new{T,dims}(b, rₖ, Adₖ, Arₖ, dₖ, true, innerprod)
+        new{T,dims, typeof(b)}(b, rₖ, Adₖ, Arₖ, dₖ, true, innerprod)
     end
 end
 
@@ -48,11 +48,11 @@ end
 Data storage block for explicit integrators.
 O<:Integer is the order of the integrator
 """
-mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
-    k1  :: AbstractArray{T,N}
-    k2  :: AbstractArray{T,N}
-    k3  :: AbstractArray{T,N}
-    k4  :: AbstractArray{T,N}
+mutable struct ExplicitBlock{T,N,AT, O} <: DataBlockType{T,N, AT}
+    k1  :: AT
+    k2  :: AT
+    k3  :: AT
+    k4  :: AT
     Δt  :: T
 
     function ExplicitBlock{T}(grid::GridType,Δt::T,integrator::Symbol=:RK4) where T
@@ -75,7 +75,7 @@ mutable struct ExplicitBlock{T,N,O} <: DataBlockType{T,N}
             O = 1
         end
 
-        new{T,dims,O}(k1,k2,k3,k4,Δt)
+        new{T,dims,typeof(k1),O}(k1,k2,k3,k4,Δt)
     end
 end
 
