@@ -133,7 +133,7 @@ Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
 
 
 # using Profile
-t_f = 10.0
+t_f = 100.0
 
 # println("Benchmarking")
 # @benchmark solve($P,$Dom,$Δt,$t_f,:cgie,penalty_func=$penalty_fn)

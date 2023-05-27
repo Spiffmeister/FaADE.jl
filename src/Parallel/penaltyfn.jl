@@ -66,7 +66,8 @@ end
 function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         PGrid::ParallelGrid,D::Grid2D,
         nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
-
+    local wf :: T
+    local wb :: T
     I = LinearInterpolation((D.gridx,D.gridy),u)
     # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid()))),),
         # range(D.gridx[1],D.gridx[end],length=D.nx),range(D.gridy[1],D.gridy[end],length=D.ny))
@@ -79,15 +80,15 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
     # -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
     # τ = -T(1)
     # τ = -D.Δx
-
+    
     for j = 1:ny
         for i = 1:nx
             # H = H_y[i]*H_x[j]
             # H = 1.0
-
-            u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt) * 
-                ( u[i,j] -  κ*Δt*τ/4.0 * 
-                    (I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j]) + I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])) )
+            wf = I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j])
+            wb = I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])
+            u[i,j] = 1.0/(1.0 - κ* τ /2.0* Δt) * 
+                ( u[i,j] -  κ*Δt*τ/4.0 * (wf + wb) )
             
             # u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
             #     ( u[i,j] -  κ*Δt*τ/4.0 * H * 

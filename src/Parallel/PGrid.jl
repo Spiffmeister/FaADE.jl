@@ -1,5 +1,5 @@
 
-struct ParGrid{AT<:AbstractArray}
+struct ParGrid{T,AT<:AbstractArray{T}}
     x   :: AT
     y   :: AT
 end
@@ -11,9 +11,9 @@ Stores the current, forward and backward planes for the parallel tracing.
 In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
 """
 struct ParallelGrid{T,N,AT}
-    plane   :: AT
-    Bplane  :: ParGrid
-    Fplane  :: ParGrid
+    plane   :: AbstractArray{Vector{T}}
+    Bplane  :: ParGrid{T,AT}
+    Fplane  :: ParGrid{T,AT}
     # w_f     :: AT
     # w_b     :: AT
 end
@@ -49,7 +49,7 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
     postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
     postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
 
-    Pgrid = ParallelGrid{T,2,typeof(plane)}(plane,BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
+    Pgrid = ParallelGrid{T,2,typeof(BPlane.x)}(plane,BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
 
     return Pgrid
 end
@@ -93,7 +93,7 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
 
     # plane = reshape(plane,n[2],n[1])'
 
-    return ParGrid{typeof(planex)}(planex,planey)
+    return ParGrid{T,typeof(planex)}(planex,planey)
 end
 
 
