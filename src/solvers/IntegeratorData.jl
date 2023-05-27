@@ -13,7 +13,7 @@ mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
 
     converged   :: Bool
 
-    innerprod   :: innerH
+    innerprod   :: innerH{T,N,Vector{T}}
 
     function ConjGradBlock{T}(grid::GridType,order::Int) where T
 

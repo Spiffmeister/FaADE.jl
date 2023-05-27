@@ -47,3 +47,15 @@ Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
 
 
 
+#=
+
+=#
+BoundaryLeft = Boundary(Dirichlet,(y,t) -> 0.0,Left,1)
+BoundaryRight = Boundary(Dirichlet,(y,t) -> 1.0,Right,1)
+BoundaryUpDown = PeriodicBoundary(2)
+u₀(x,y) = x
+order = 2
+
+P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+
+typeof(P.BoundaryConditions)

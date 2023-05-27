@@ -68,7 +68,8 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
     local wf :: T
     local wb :: T
-    I = LinearInterpolation((D.gridx,D.gridy),u)
+    I = linear_interpolation((D.gridx,D.gridy),u)
+    # I = scale(interpolate(u,BSpline(Linear())),(D.gridx,D.gridy))
     # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid()))),),
         # range(D.gridx[1],D.gridx[end],length=D.nx),range(D.gridy[1],D.gridy[end],length=D.ny))
     # I = LinearInterpolation((D.gridx,D.gridy),u₀)

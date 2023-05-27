@@ -9,8 +9,8 @@ Solution data structure, contains the initial condition and the solution at time
 Fields:
  - `u`, `grid`, `Δt`, `t`, `problem`, `Δu`
 """
-mutable struct solution{T}
-    u       :: Vector{AbstractArray{T}}
+mutable struct solution{T,AT<:AbstractArray{T}}
+    u       :: Vector{AT}
     grid    :: GridType
     Δt      :: Union{T,Vector{T}}
     t       :: Vector{T}

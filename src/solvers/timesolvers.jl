@@ -200,9 +200,9 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
 
     Diff = generate_SecondDerivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray,u::AbstractArray,K::AbstractArray)
+    function CGRHS!(cache::AbstractArray{T},u::AbstractArray{T},K::AbstractArray{AT}) where {T,AT}
         Diff(cache,u,K[1],K[2])
-        if Prob.BoundaryConditions.Left.type != Periodic #Left/Right boundaries
+        if (Prob.BoundaryConditions.Left.type != Periodic) #Left/Right boundaries
             SAT_Left(cache,u,K[1],SolutionMode)
             SAT_Right(cache,u,K[1],SolutionMode)
         else
