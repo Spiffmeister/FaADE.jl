@@ -8,12 +8,12 @@
     DataBlock
 Passed around internally between functions. Only contains data required for current timestep.
 """
-mutable struct DataBlock{T,N,AT} <: DataBlockType{T,N,AT}
+mutable struct DataBlock{T,N,AT,KT<:Union{AT,Vector{AT}}} <: DataBlockType{T,N,AT}
     grid        :: GridType
     u           :: AT
     uₙ₊₁        :: AT
-    K           :: Union{AT,Vector{AT}}
-    boundary    :: BoundaryStorage
+    K           :: KT
+    boundary    :: BoundaryStorage{T,N,AT}
     t           :: T
     Δt          :: T
     Δu          :: T
@@ -46,7 +46,7 @@ mutable struct DataBlock{T,N,AT} <: DataBlockType{T,N,AT}
             dim = 2
 
         end
-        new{T,dim,typeof(u)}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
+        new{T,dim,typeof(u),typeof(DiffCoeff)}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
     end
 end
 
@@ -164,7 +164,7 @@ end
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
 """
 function copyUtoSAT! end
-function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::Int)
+function copyUtoSAT!(SAT::AT,u::AT,side::NodeType,order::Int) where AT
     nnodes = SATNodeOutput(order)
     if side == Left
         SAT .= u[1:nnodes,:]
@@ -176,10 +176,10 @@ function copyUtoSAT!(SAT::AbstractArray,u::AbstractArray,side::NodeType,order::I
         SAT .= u[:,end-nnodes+1:end]
     end
 end
-function copyUtoSAT!(Bound::BoundaryStorage,u::AbstractArray,order::Int)
+function copyUtoSAT!(Bound::BoundaryStorage{T,N,AT},u::AT,order::Int) where {T,N,AT}
     copyUtoSAT!(Bound.SAT_Left,u,Left,order)
     copyUtoSAT!(Bound.SAT_Right,u,Right,order)
-    if typeof(Bound) <: BoundaryStorage{T,2} where T
+    if typeof(Bound) <: BoundaryStorage{T,2,AT}
         copyUtoSAT!(Bound.SAT_Up,u,Up,order)
         copyUtoSAT!(Bound.SAT_Down,u,Down,order)
     end
@@ -190,7 +190,7 @@ end
 Moves data from the `SAT_` field  on the given side in `BoundaryStorage` to `u`. Or moves all data from `u` to `SAT_` fields.
 """
 function copySATtoU! end
-function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::Int)
+function copySATtoU!(u::AT,SAT::AT,side::NodeType,order::Int) where AT
     nnodes = SATNodeOutput(order)
     if side == Left
         u[1:nnodes,:] .= SAT
@@ -202,7 +202,7 @@ function copySATtoU!(u::AbstractArray,SAT::AbstractArray,side::NodeType,order::I
         u[:,end-nnodes+1:end] .= SAT
     end
 end
-function copySATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
+function copySATtoU!(u::AT,Bound::BoundaryStorage{T,N,AT},order::Int) where {T,N,AT}
     copySATtoU!(u,Bound.SAT_Left,Left,order)
     copySATtoU!(u,Bound.SAT_Right,Right,order)
     if typeof(Bound) <: BoundaryStorage{T,2} where T
@@ -258,13 +258,13 @@ end
 Sets the value of the boundary.
 """
 function setBoundary! end
-function setBoundary!(RHS::Function,Bound::AbstractArray{T},grid::AbstractArray{T},n::Int,t::T,Δt::T) where T
+function setBoundary!(RHS::F,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {F,AT,T}
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end
 end
-function setBoundary!(RHS::Function,Bound::AbstractArray{T},t::T,Δt::T) where T
-        Bound[1] = Δt*RHS(t)
+function setBoundary!(RHS::F,Bound::AT,t::T,Δt::T) where {F,AT,T}
+    Bound[1] = Δt*RHS(t)
 end
 
 """

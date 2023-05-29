@@ -3,7 +3,7 @@ using Printf
 using Plots
 using JLD2
 
-# using BenchmarkTools
+using BenchmarkTools
 using Profile
 using PProf
 using ProfileView
@@ -152,6 +152,7 @@ P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,Bou
 
 
 
+@benchmark solve($P,$Dom,$Δt,1000Δt,:cgie,adaptive=false,penalty_func=Pfn)
 
 
 

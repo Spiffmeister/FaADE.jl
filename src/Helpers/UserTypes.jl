@@ -26,14 +26,14 @@ Inputs:
 Returns:
 - Struct required for `SAT` construction.
 """
-struct Boundary <: BoundaryConditionData
-    type    :: BoundaryConditionType
-    RHS     :: Function
-    side    :: NodeType
-    axis    :: Int
+struct Boundary{BT<:BoundaryConditionType,BF<:Function,BN<:NodeType,BA<:Integer} <: BoundaryConditionData
+    type    :: BT
+    RHS     :: BF
+    side    :: BN
+    axis    :: BA
     function Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
         type ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
-        new(type,RHS,side,axis)
+        new{typeof(type),typeof(RHS),NodeType,typeof(axis)}(type,RHS,side,axis)
     end
 end
 """
@@ -54,7 +54,15 @@ struct PeriodicBoundary <: BoundaryConditionData
     end
 end
 
-
+struct BoundaryConditions{L<:BoundaryConditionData,R<:BoundaryConditionData,U<:BoundaryConditionData,D<:BoundaryConditionData}
+    Left    :: L
+    Right   :: R
+    Up      :: U
+    Down    :: D
+    function BoundaryConditions(BC::NamedTuple)
+        new{typeof(BC.Left),typeof(BC.Right),typeof(BC.Up),typeof(BC.Down)}(BC.Left,BC.Right,BC.Up,BC.Down)
+    end
+end
 
 
 """
@@ -97,10 +105,10 @@ Inputs:
 Returns
 - Struct of data required for `solver`
 """
-struct VariableCoefficientPDE2D <: PDEProblem
-    InitialCondition    :: Function
-    Kx                  :: Function
-    Ky                  :: Function
+struct VariableCoefficientPDE2D{FC,FX,FY} <: PDEProblem
+    InitialCondition    :: FC
+    Kx                  :: FX
+    Ky                  :: FY
     order               :: Int
     BoundaryConditions  :: NamedTuple
     function VariableCoefficientPDE2D(u₀,Kx::Function,Ky::Function,order::Int,BCs::BoundaryConditionData...)
@@ -109,7 +117,9 @@ struct VariableCoefficientPDE2D <: PDEProblem
         for BC in BCs
             Bounds = merge(Bounds,BC)
         end
-        new(u₀,Kx,Ky,order,Bounds)
+
+        # new(u₀,Kx,Ky,order,BoundaryConditions(Bounds))
+        new{typeof(u₀),typeof(Kx),typeof(Ky)}(u₀,Kx,Ky,order,Bounds)
     end
 end
 

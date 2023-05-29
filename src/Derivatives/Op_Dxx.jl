@@ -56,9 +56,9 @@ function Dₓₓ!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMat
     uₓₓ
 end
 ### 2D second derviative function
-function Dₓₓ!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},cx::AbstractMatrix{T},cy::AbstractMatrix{T},
+function Dₓₓ!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
         nx::Integer,ny::Integer,Δx::T,Δy::T,
-        order_x::Integer=2,order_y::Integer=order_x) where T
+        order_x::Integer=2,order_y::Integer=order_x) where {T,AT}
 
     # Half order
     halfx = Int64(order_x/2) #half way

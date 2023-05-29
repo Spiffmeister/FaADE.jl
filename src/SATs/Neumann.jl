@@ -10,23 +10,29 @@ where ``i\\in\\{0,N\\}``
 
 `NodeType` is either `Left` or `Right`
 """
-struct SAT_Neumann{T} <: SimultanousApproximationTerm
+struct SAT_Neumann{
+    TN<:NodeType,
+    TT<:Real,
+    VT<:Vector{TT},
+    F1<:Function} <: SimultanousApproximationTerm
+    
     type    :: BoundaryConditionType
-    side    :: NodeType
+    side    :: TN
     axis    :: Int
     order   :: Int
-    EDₓ     :: Vector{T}
-    RHS     :: Function
-    Δx      :: T
-    τ       :: T
+    EDₓ     :: VT
+    RHS     :: F1
+    Δx      :: TT
+    τ       :: TT
     ### CONSTRUCTOR ###
-    function SAT_Neumann(RHS::Function,Δx::T,side::NodeType,axis::Int,order::Int) where T
+    function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN,F1}
+
         check_boundary(side)
 
         ED = BoundaryDerivative(side,Δx,order)
         τ = SATpenalties(Neumann,Δx,order)
 
-        new{T}(Neumann,side,axis,order,ED,RHS,Δx,τ)
+        new{TN,TT,Vector{TT},F1}(Neumann,side,axis,order,ED,RHS,Δx,τ)
     end
 end
 

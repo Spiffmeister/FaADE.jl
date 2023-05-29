@@ -15,14 +15,14 @@ Inputs:
 Returns:
 - Struct for 1D grid object containing vector of grid points, ``\\Delta x`` and ``n``.
 """
-struct Grid1D{T} <: GridType{T,1}
+struct Grid1D{T,TI<:Integer} <: GridType{T,1}
     grid    :: Vector{T}
     Δx      :: T
-    n       :: Integer
+    n       :: TI
     function Grid1D(𝒟::Vector{T},n::Integer) where T
         Δx = (𝒟[2]-𝒟[1])/(n-1)
         x = collect(range(𝒟[1],𝒟[2],length=n))
-        new{T}(x,Δx,n)
+        new{T,typeof(n)}(x,Δx,n)
     end
 end
 
@@ -42,18 +42,18 @@ Inputs:
 Returns:
 - Struct for 2D grid object containing grid points in ``x`` and ``y``, ``\\Delta x`` and ``\\Delta y``, and ``n_x`` and ``n_y``.
 """
-struct Grid2D{T} <: GridType{T,2}
+struct Grid2D{T,TI<:Integer} <: GridType{T,2}
     gridx   :: Vector{T}
     gridy   :: Vector{T}
     Δx      :: T
     Δy      :: T
-    nx      :: Integer
-    ny      :: Integer
+    nx      :: TI
+    ny      :: TI
     function Grid2D(𝒟x::Vector{T},𝒟y::Vector{T},nx::Integer,ny::Integer) where T
         gx = Grid1D(𝒟x,nx)
         gy = Grid1D(𝒟y,ny)
     
-        new{T}(gx.grid,gy.grid, gx.Δx,gy.Δx, gx.n,gy.n)
+        new{T,typeof(nx)}(gx.grid,gy.grid, gx.Δx,gy.Δx, gx.n,gy.n)
     end
 end
 

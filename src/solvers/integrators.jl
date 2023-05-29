@@ -61,8 +61,8 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(RHS::Function,DBlock::DataBlock{T,N,AT},CGB::ConjGradBlock{T,N,AT},Δt::T;
-        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where {T,N,AT}
+function conj_grad!(RHS::F,DBlock::DataBlock{T,N,AT},CGB::ConjGradBlock{T,N,AT},Δt::T;
+        atol::T=1.e-5,rtol::T=1.e-10,maxIT::Int=10,warnings=true) where {T,F,N,AT}
     
     local rnorm::T
     local unorm::T
@@ -111,7 +111,7 @@ end
     A!
 Mutable ``u - ΔtD(u)``
 """
-function A!(PDE!::Function,tmp::AbstractArray{T},uⱼ::AbstractArray{T},Δt::T,k::AbstractArray) where T
+function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::T,k::KT) where {T,AT,KT}
     PDE!(tmp,uⱼ,k)
     tmp .= uⱼ .- Δt*tmp
 end

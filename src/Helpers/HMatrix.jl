@@ -13,7 +13,9 @@ Inputs:
 Returns:
 - Method-like struct for H-inner products
 """
-struct innerH{T,N, VT<:AbstractVector{T}}
+struct innerH{T<:Real,
+        N,
+        VT<:AbstractVector{T}}
     Hx  :: VT
     Hy  :: VT
     Δ   :: T

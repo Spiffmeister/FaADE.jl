@@ -163,11 +163,15 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 end
 #= 2D SOLVER =#
 function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;
-        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,warnings=false) where T
+        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,warnings=false,target=1e-8) where T
+
+    local btype1 :: BoundaryConditionType
+    local btype2 :: BoundaryConditionType
+    local penalty_function_enabled :: Bool
 
     target_state = 0.0
     if t_f == Inf
-        target_state = 1e-8
+        target_state = target
         println("Going for steady state at rel-error Δu=",target_state)
         @warn "MAX ITERATIONS NOT SET"
         @warn "MAX ITERATIONS NOT SET"
@@ -176,7 +180,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
 
     DBlock = DataBlock{T}(Prob,grid,Δt,Prob.Kx,Prob.Ky)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
-    soln = solution{T}(grid,0.0,Δt,Prob)
+    soln = solution{T}(grid,T(0),Δt,Prob)
 
     if typeof(Pgrid) <: ParallelGrid
         penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
@@ -186,33 +190,44 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     DBlock.u .= soln.u[1]
 
     if Prob.BoundaryConditions.Left.type != Periodic
-        _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
-        _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
+        _,SAT_Left!  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+        # SAT_Left!(SATBL,grid,Prob.order,solver)
+        _,SAT_Right! = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
     else
-        _,SAT_LR    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
+        _,SAT_LR!    = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
     end
     if Prob.BoundaryConditions.Up.type != Periodic
-        _,SAT_Up    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
-        _,SAT_Down  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
+        _,SAT_Up!    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
+        _,SAT_Down!  = SAT(Prob.BoundaryConditions.Down,grid,Prob.order,solver)
     else
-        _,SAT_UD    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
+        BSUD,SAT_UD!    = SAT(Prob.BoundaryConditions.Up,grid,Prob.order,solver)
     end
 
-    Diff = generate_SecondDerivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
+    Diff! = generate_SecondDerivative(grid.nx,grid.ny,grid.Δx,grid.Δy,Prob.order)
 
-    function CGRHS!(cache::AbstractArray{T},u::AbstractArray{T},K::AbstractArray{AT}) where {T,AT}
-        Diff(cache,u,K[1],K[2])
-        if (Prob.BoundaryConditions.Left.type != Periodic) #Left/Right boundaries
-            SAT_Left(cache,u,K[1],SolutionMode)
-            SAT_Right(cache,u,K[1],SolutionMode)
-        else
-            SAT_LR(cache,u,K[1]) #Periodic SAT
-        end
-        if Prob.BoundaryConditions.Up.type != Periodic #Up/Down boundaries
-            SAT_Up(cache,u,K[2],SolutionMode)
-            SAT_Down(cache,u,K[2],SolutionMode)
-        else
-            SAT_UD(cache,u,K[2]) #Periodic SAT
+    btype1 = Prob.BoundaryConditions.Left.type :: BoundaryConditionType
+    btype2 = Prob.BoundaryConditions.Up.type :: BoundaryConditionType
+
+
+    CGRHS! = let btype1 = Prob.BoundaryConditions.Left.type,
+            btype2 = Prob.BoundaryConditions.Up.type,
+            mode = SolutionMode
+        function CGRHS!(cache::AT,u::AT,K::KT) where {AT,KT}
+            Diff!(cache,u,K[1],K[2])
+            if (btype1 != Periodic) #Left/Right boundaries
+                SAT_Left!(cache,u,K[1],mode)
+                SAT_Right!(cache,u,K[1],mode)
+            else
+                SAT_LR!(cache,u,K[1]) #Periodic SAT
+            end
+            if btype2 != Periodic #Up/Down boundaries
+                SAT_Up!(cache,u,K[2],mode)
+                SAT_Down!(cache,u,K[2],mode)
+            else
+                SAT_UD!(cache,u,K[2]) #Periodic SAT
+                # BSUD(cache,u,K[2]) #Periodic SAT
+            end
+            cache
         end
     end
 
@@ -236,19 +251,19 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         # t = k*Δt
         # t += Δt
 
-        if Prob.BoundaryConditions.Left.type != Periodic #Left/Right boundaries
+        if btype1 != Periodic #Left/Right boundaries
             setBoundary!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
 
-            SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
-            SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
+            SAT_Left!(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
+            SAT_Right!(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
-        if Prob.BoundaryConditions.Up.type != Periodic #Up/Down boundaries
+        if btype2 != Periodic #Up/Down boundaries
             setBoundary!(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
             setBoundary!(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
 
-            SAT_Up(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
-            SAT_Down(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
+            SAT_Up!(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
+            SAT_Down!(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
         end
         if typeof(source) <: Function
             addSource!(source,CGBlock.b,grid,t,Δt)
@@ -275,10 +290,10 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
                 Δt *= 1.05
             end
             t += Δt
-            if tprint < t
-                println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
-                tprint += tprint₀
-            end
+            # if tprint < t
+            #     println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
+            #     tprint += tprint₀
+            # end
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u

@@ -25,7 +25,7 @@ mutable struct solution{T,AT<:AbstractArray{T}}
 
             u[1] = u₀
 
-            new(u,grid,Δt,collect(range(0.0,t,length=N)))
+            new{T,typeof(u)}(u,grid,Δt,collect(range(0.0,t,length=N)))
         else #If an adaptive time step is being used, preallocation is impossible
 
             if typeof(grid) <: Grid1D
@@ -40,7 +40,7 @@ mutable struct solution{T,AT<:AbstractArray{T}}
             end
 
 
-            new{T}([u],grid,[Δt],[t],prob,0.0)
+            new{T,typeof(u)}([u],grid,[Δt],[t],prob,0.0)
         end
 
     end
@@ -51,7 +51,7 @@ end
 
 
 
-function UpdateSolution!(soln::solution{T},u::AbstractArray{T},t::T,Δt::T) where T
+function UpdateSolution!(soln::solution{T,AT},u::AbstractArray{T},t::T,Δt::T) where {T,AT}
     push!(soln.u,u)
     push!(soln.t,t)
     push!(soln.Δt,Δt)

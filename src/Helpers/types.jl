@@ -54,5 +54,5 @@ const SolutionMode = SATMode{:SolutionMode}()
 
 abstract type DataBlockType{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
 abstract type BoundaryStorage{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
-abstract type GridType{dtype<:AbstractFloat,D} end
+abstract type GridType{dtype<:AbstractFloat,N} end
 abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
