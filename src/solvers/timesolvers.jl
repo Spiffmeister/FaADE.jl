@@ -290,10 +290,10 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
                 Δt *= 1.05
             end
             t += Δt
-            # if tprint < t
-            #     println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
-            #     tprint += tprint₀
-            # end
+            if tprint < t
+                println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
+                tprint += tprint₀
+            end
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u
