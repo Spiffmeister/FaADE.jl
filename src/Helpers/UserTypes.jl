@@ -35,6 +35,10 @@ struct Boundary{BT<:BoundaryConditionType,BF<:Function,BN<:NodeType,BA<:Integer}
         type ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
         new{typeof(type),typeof(RHS),NodeType,typeof(axis)}(type,RHS,side,axis)
     end
+    function Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType)
+        type ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
+        new{typeof{type},typeof{RHS},NodeType,typeof{axis}}(type,RHS,side,GetAxis(side))
+    end
 end
 """
     PeriodicBoundary(axis::Int)

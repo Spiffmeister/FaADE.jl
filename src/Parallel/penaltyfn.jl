@@ -88,8 +88,8 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
             # H = 1.0
             wf = I(PGrid.Fplane.x[i,j],PGrid.Fplane.y[i,j])
             wb = I(PGrid.Bplane.x[i,j],PGrid.Bplane.y[i,j])
-            u[i,j] = 1.0/(1.0 - κ* τ /2.0* Δt) * 
-                ( u[i,j] -  κ*Δt*τ/4.0 * (wf + wb) )
+            u[i,j] = 1.0/(1.0 - κ* τ * Δt) * 
+                ( u[i,j] -  κ*Δt*τ/2.0 * (wf + wb) )
             
             # u[i,j] = 1.0/(1.0 - κ* τ/2.0 * Δt * H) * 
             #     ( u[i,j] -  κ*Δt*τ/4.0 * H * 

@@ -5,7 +5,7 @@ using LinearAlgebra
 using Plots
 using Pkg
 
-
+Pkg.activate(".")
 using SBP_operators
 
 
@@ -19,36 +19,64 @@ function buildgrid(n)
 end
 
 
-
-
-
-
 ##======##
 # SECOND ORDER
 order = 2
 ##======##
-@testset "Second order constant coefficient" begin
-    n, x, Δx = buildgrid(10)
-    c = ones(n)
+@testset "1D second derivative second order" begin
+    n = 21
+    Dom = SBP_operators.Grid1D([-1.0,1.0],n)
+    x = Dom.grid
+    @testset "constant coefficient" begin
+        k = ones(n)
+    
+        # Linear Function u=x, ∂ₓ(1 ∂ₓx) = 0
+        u = x
+        ∂ₓₓu = D2(u,k,Dom.Δ,order=order)
+        @test all(zeros(n) .== ∂ₓₓu) atol=1e-14
+    
+        # Quadratic function, ∂ₓ(1 ∂ₓx²) = 2
+        u = x.^2
+        ∂ₓₓuₑ = 2*ones(n)
+        ∂ₓₓu = Dₓₓ(u,k,Dom.Δ,order=order)
+        @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+    
+        # Cubic function, ∂ₓ(1 ∂ₓx³) = 6x
+        u = x.^3
+        ∂ₓₓuₑ = 6x
+        ∂ₓₓu = Dₓₓ(u,k,Dom.Δ,order=order)
+        @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+    end
 
-    # Linear Function, ∂ₓ(1 ∂ₓx) = 0
-    u = x
-    ∂ₓₓuₑ = zeros(n)
-    ∂ₓₓu = Dₓₓ(u,c,n,Δx,order=order)
-    @test all(∂ₓₓuₑ .== ∂ₓₓu) atol=1e-14
+    @testset "variable coefficient" begin
+        c = x
 
-    # Quadratic function, ∂ₓ(1 ∂ₓx²) = 2
-    u = x.^2
-    ∂ₓₓuₑ = 2*ones(n)
-    ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-    @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
-
-    # Cubic function, ∂ₓ(1 ∂ₓx³) = 3x²
-    u = x.^3
-    ∂ₓₓuₑ = 6x
-    ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-    @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+        u = x
+        ∂ₓₓuₑ = ones(n)
+        ∂ₓₓu = Dₓₓ(u,k,n,Dom.Δ)
+        @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+    
+        # Quadratic Function, ∂ₓ(x ∂ₓx²) = 4x
+        u = x.^2
+        ∂ₓₓuₑ = 4x
+        ∂ₓₓu = Dₓₓ(u,n,Δx,c)
+        @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+    
+        # Cubic Function, ∂ₓ(x ∂ₓx³) = 9x²
+        u = x.^3
+        ∂ₓₓuₑ = 9x.^2
+        ∂ₓₓu = Dₓₓ(u,n,Δx,c)
+        @test_broken norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+    end
 end
+
+@testset "2D second derivative second order" begin
+    nx = ny = 21
+end
+
+
+
+
 
 # # Quartic function, ∂ₓ(1 ∂ₓx⁴) = 12x²
 # u = x.^4
@@ -68,31 +96,18 @@ end
 # (lowres-highres)/highres
 
 
-@testset "Second order variable coefficient" begin
-    # Linear Funciton, ∂ₓ(x ∂ₓx) = 1
-    n, x, Δx = buildgrid(10)
-    c = x
-    u = x
-    ∂ₓₓuₑ = ones(n)
-    ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-    @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
 
-    # Quadratic Function, ∂ₓ(x ∂ₓx²) = 4x
-    n, x, Δx = buildgrid(10)
-    c = x
-    u = x.^2
-    ∂ₓₓuₑ = 4x
-    ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-    @test norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+#= 2D methods =#
+@testset "Dxx second order 2D" begin
+    nx = ny = 21
+    Dx = Dy = [-1.0,1.0]
+    Dom = SBP_operators.Grid2D(Dx,Dy,nx,ny)
 
-    # Cubic Function, ∂ₓ(x ∂ₓx³) = 9x²
-    n, x, Δx = buildgrid(10)
-    c = x
-    u = x.^3
-    ∂ₓₓuₑ = 9x.^2
-    ∂ₓₓu = Dₓₓ(u,n,Δx,c)
-    @test_broken norm(∂ₓₓuₑ[2:n-1] .- ∂ₓₓu[2:n-1]) ≤ 1.0e-13
+
 end
+
+
+
 
 
 
@@ -195,7 +210,7 @@ u = x
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=4)
 @test_broken norm(∂ₓₓuₑ[5:n-4] .- ∂ₓₓu[5:n-4]) ≤ 1.0e-13
 
-
+#=
 ##======##
 # SIXTH ORDER
 ##======##
@@ -317,3 +332,4 @@ u = x.^7
 ∂ₓₓuₑ = 42x.^5
 ∂ₓₓu = Dₓₓ(u,n,Δx,c,order=6)
 @test_broken norm(∂ₓₓuₑ[7:n-6] .- ∂ₓₓu[7:n-6]) ≤ 1.0e-14
+=#

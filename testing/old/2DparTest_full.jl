@@ -7,9 +7,12 @@ using BenchmarkTools
 using Profile
 # using PProf
 
+cd("..")
 using Interpolations
-push!(LOAD_PATH,"../SBP_operators")
+push!(LOAD_PATH,"./plas_diff")
+push!(LOAD_PATH,"./SBP_operators")
 using SBP_operators
+using plas_diff
 
 
 
@@ -39,13 +42,82 @@ BoundaryUpDown = PeriodicBoundary(2)
 order = 2
 method = :cgie
 
-P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+
+println(method)
+println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
+
+P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
 
 
 # params = plas_diff.SampleFields.H_params([0.],[0.],[0.])
 χₘₙ = 2.1e-3 + 5.0e-3
-params = (ϵₘₙ = [χₘₙ/2., χₘₙ/3.],m=[2.0, 3.0],n=[1.0, 2.0])
+params = plas_diff.SampleFields.H_params([χₘₙ/2., χₘₙ/3.],[2.0, 3.0],[1.0, 2.0])
+
+function χ_h!(χ,x::Array{Float64},p,t)
+    # Hamiltons equations for the field-line Hamiltonian
+    # H = ψ²/2 - ∑ₘₙ ϵₘₙ(cos(mθ - nζ))
+    χ[1] = x[2] #p_1            qdot        θ
+    χ[2] = -sum(p.ϵₘₙ .*(sin.(p.m*x[1] - p.n*t) .* p.m)) #q_1        pdot        ψ
+end
+
+gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
+
+H_x = SBP_operators.build_H(order,ny)
+H_x = 1.0 ./H_x.^2
+
+H_y = SBP_operators.build_H(order,nx)
+H_y = 1.0 ./H_y.^2
+
+# Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
+
+κ_para = 1.0
+τ_para = -1.0
+
+
+# PGrid = SBP_operators.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
+
+
+
+
+### Parallel Penalty ###
+function penalty_fn(u,uₒ,Δt)
+    # umw = zeros(Float64,nx,ny)
+
+    interp = LinearInterpolation((Dom.gridx,Dom.gridy),uₒ)
+
+    for j = 1:ny
+        for i = 1:nx
+
+            # umw[i,j] = 2u[i,j] - (uₒ[gdata.z_planes[1].xproj[i,j],gdata.z_planes[1].yproj[i,j]] + uₒ[gdata.z_planes[2].xproj[i,j],gdata.z_planes[2].yproj[i,j]])
+
+
+            if 𝒟x[1] ≥ gdata.z_planes[1].x[i,j]
+                w_f  = 0.0
+            elseif 𝒟x[2] ≤ gdata.z_planes[1].x[i,j]
+                # println(i,j)
+                w_f = 1.0
+            else
+                w_f = interp(gdata.z_planes[1].x[i,j],gdata.z_planes[1].y[i,j])
+            end
+
+            if 𝒟x[1] ≥ gdata.z_planes[2].x[i,j]
+                w_b  = 0.0
+            elseif 𝒟x[2] ≤ gdata.z_planes[2].x[i,j]
+                w_b = 1.0
+            else
+                w_b = interp(gdata.z_planes[2].x[i,j],gdata.z_planes[2].y[i,j])
+            end
+
+            u[i,j] = 1.0/(1.0 - κ_para * τ_para/2.0 * Δt * (H_y[i] + H_x[j])) *
+                (uₒ[i,j] - Δt*κ_para*τ_para/4.0 *(H_y[i] + H_x[j])*(w_f + w_b))
+
+        end
+    end
+    # return u#, norm(umw)
+end
+
+
 function χ_h!(χ,x::Array{Float64},p,t)
     # Hamiltons equations for the field-line Hamiltonian
     # H = ψ²/2 - ∑ₘₙ ϵₘₙ(cos(mθ - nζ))
@@ -58,18 +130,27 @@ PGrid = SBP_operators.construct_grid(dH,Dom,[-2π,2π])
 Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
 
 
-println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
-
-
 # using Profile
+t_f = 100.0
 
-Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
-@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+# println("Benchmarking")
+# @benchmark solve($P,$Dom,$Δt,$t_f,:cgie,penalty_func=$penalty_fn)
+# using BenchmarkTools
+# @time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
+# Profile.clear_malloc_data()
 
-surface(soln.u[2])
+Pfn1 = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
+P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+@time soln1 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn1)
 
-contour(soln.u[2])
+# @time soln = solve(P,Dom,5.1Δt,t_f,:cgie,adaptive=true,Pgrid=PGrid)#,penalty_func=Pfn)
+# Profile.clear_malloc_data()
+@time soln2 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
 
+plot(soln1.u[2][1,:]); plot!(soln2.u[2][1,:])
+
+surface(soln1.u[2])
+surface(soln2.u[2])
 #=
 println("Plotting")
 using Plots
