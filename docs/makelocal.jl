@@ -8,7 +8,7 @@ using Documenter, Literate,
 
 LitPath1D = joinpath(@__DIR__,"..","tutorials","example1D.jl")
 LitPath2D = joinpath(@__DIR__,"..","tutorials","example2D.jl")
-LitPathBF = joinpath(@__DIR__,"..","tutorials","exampleBField.jl")
+LitPathBF = joinpath(@__DIR__,"..","tutorials","example3D.jl")
 DocSrc = joinpath(@__DIR__,"src")
 
 Literate.markdown(LitPath1D,DocSrc)
