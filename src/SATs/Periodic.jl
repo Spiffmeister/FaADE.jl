@@ -1,6 +1,8 @@
 
 """
     SAT_Periodic
+
+Storage of all objects needed for a Periodic SAT ``u(x_0) = u(x_N)`` and ``\\left.\\partial_x u\\right|_{x_0} = \\left.\\partial_x u\\right|_{x_N}``.
 """
 struct SAT_Periodic{
         TT<:Real,

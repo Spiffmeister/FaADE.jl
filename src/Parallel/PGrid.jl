@@ -1,4 +1,7 @@
-
+"""
+    ParGrid{T,AT<:AbstractArray{T}}
+Storing the x-y coordinates of a parallel grid
+"""
 struct ParGrid{T,AT<:AbstractArray{T}}
     x   :: AT
     y   :: AT

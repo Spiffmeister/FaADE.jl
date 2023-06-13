@@ -1,6 +1,11 @@
 
+"""
+    generate_parallel_penalty
+Generates a 2D or 3D parallel penalty function given a parallel grid mapping.
 
-
+Operator in the 1D case is found [here](@ref https://arxiv.org/abs/2303.15447). In the 2D case details can be found [here](@ref https://arxiv.org/abs/2306.00423).
+"""
+function generate_parallel_penalty end
 function generate_parallel_penalty(planes::ParallelGrid{T,1,AT},order::Int;κ::T=1.0,τ::T=-1.0,interpmode::Symbol=:cust,interpfn::Union{Nothing,Function}=nothing) where {T,AT}
     # interp= choose_interpmode(interpmode=interpmode)
     if typeof(interpfn) == Nothing
@@ -18,7 +23,6 @@ function generate_parallel_penalty(planes::ParallelGrid{T,1,AT},order::Int;κ::T
         ParPen(u,u₀,Δt) = ParallelPenalty1D!(interpfn,u,u₀,planes,Δt,grid,τ,κ,H)
     end
 end
-
 function generate_parallel_penalty(pargrid::ParallelGrid{T,2,AT},grid::Grid2D,order::Int;κ::T=1.0,τ::T=-1.0,perp::T=1.0,interpfn::Union{Nothing,Function}=nothing) where {T,AT}
 
     # interp = choose_interpmode(interpmode=interpmode)
@@ -52,6 +56,8 @@ end
 
 
 """
+    ParallelPenalty1D
+The default generated parallel penalty function for 2D (1D+parallel) problems
 """
 function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
     I = interp(grid.grid,u₀)
@@ -62,6 +68,7 @@ function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractA
 end
 """
     ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
+Default generated parallel penalty function for 3D (2D+parallel) problems
 """
 function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         PGrid::ParallelGrid,D::Grid2D,

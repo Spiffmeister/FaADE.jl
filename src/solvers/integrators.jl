@@ -32,10 +32,12 @@ end
 #= IMPLICIT METHODS =#
 """
     implicit_euler
+TODO: REMOVE
 """
 function implicit_euler end
 # Vector form
 function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Float64,Δt::Float64,k::Vector,t::Float64,x::Vector,boundary;maxIT::Int=100,α::Float64=1.5)
+    error("Do not use")
     uⱼ = uₒ
     for j = 1:maxIT
         uⱼ = uⱼ - α * Δt * (uⱼ - uₒ - Δt*RHS(uₙ,uⱼ,n,x,Δx,t,Δt,k,boundary))
@@ -45,6 +47,7 @@ function implicit_euler(uₙ::Vector,uₒ::Vector,RHS::Function,n::Int,Δx::Floa
 end
 # Matrix form
 function implicit_euler(uₙ::Matrix,uₒ::Matrix,RHS::Function,nx::Int,ny::Int,Δx::Float64,Δy::Float64,Δt::Float64,kx::Matrix,ky::Matrix,t::Float64,x::Vector,y::Vector,boundary_x,boundary_y;maxIT::Int=100,α::Float64=1.5)
+    error("Do not use")
     uⱼ = uₒ
     for j = 1:maxIT
         uⱼ = uⱼ - α * Δt * (uⱼ - uₒ - Δt*RHS(uₙ,uⱼ,nx,ny,x,y,Δx,Δy,t,Δt,kx,ky,boundary_x,boundary_y))

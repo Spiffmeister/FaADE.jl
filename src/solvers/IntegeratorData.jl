@@ -3,6 +3,7 @@
 
 """
     ConjGradBlock
+Data storage for the conjugate gradient method. See [`conj_grad!`](@ref)
 """
 mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
     b   :: AT # b = uⁿ⁺¹ + F
@@ -47,6 +48,10 @@ end
     ExplicitBlock{T,N,O}
 Data storage block for explicit integrators.
 O<:Integer is the order of the integrator
+
+Currently only Forward Euler and Runge-Kutta 4 are implemented for this solver.
+
+TODO: Improve construction
 """
 mutable struct ExplicitBlock{T,N,AT, O} <: DataBlockType{T,N, AT}
     k1  :: AT

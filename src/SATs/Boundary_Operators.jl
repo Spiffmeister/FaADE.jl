@@ -3,6 +3,7 @@
 
 Used to construct `EH⁻¹Dₓᵀ` where `E=E₀` or `Eₙ`.
 """
+function BoundaryDerivativeTranspose end
 function BoundaryDerivativeTranspose(::NodeType{:Left},order::Int,Δx::Float64)
     if order == 2
         return [-2.0,1.0]/Δx
@@ -56,6 +57,8 @@ end
     SATpenalties
 
 Determines the penatly parameters for the given boundary conditions.
+
+TODO: Remove inlineing
 """
 function SATpenalties end
 @inline function SATpenalties(::BoundaryConditionType{:Dirichlet},Δx::T,order::Int64) where T
@@ -107,6 +110,8 @@ end
     hval(order::Int64)
 
 Returns the value of ``h^{-1}`` for the penalties
+
+TODO: Remove inlineing
 """
 @inline function hval(order::Int64)
     if order == 2

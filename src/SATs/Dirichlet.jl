@@ -2,6 +2,7 @@
 
 """
     SAT_Dirichlet
+Storage of all objects needed for a Dirichlet SAT ``\\left. u\\right|_{x_i} = g(t)`` where ``i\\in\\{0,1\\}``.
 """
 struct SAT_Dirichlet{
         TN<:NodeType,

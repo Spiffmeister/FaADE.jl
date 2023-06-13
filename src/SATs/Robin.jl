@@ -4,6 +4,8 @@
 
 Simulatenous approximation term for Robin boundary conditions
 `NodeType` is either `Left` or `Right`
+
+TODO: Testing
 """
 struct SAT_Robin{T} <: SimultanousApproximationTerm
     type    :: BoundaryConditionType

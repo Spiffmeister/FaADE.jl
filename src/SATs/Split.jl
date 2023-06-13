@@ -3,6 +3,8 @@
 
 """
     SAT_Split
+
+TODO: Write functinos and struct for split domain SATs
 """
 struct SAT_Split{T} <: SimultanousApproximationTerm
 

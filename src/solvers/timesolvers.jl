@@ -25,7 +25,7 @@ Optional inputs:
 - `source::Union{Nothing,Function}=nothing` - Include a source term
 - `penalty_func::Union{Nothing,Function}=nothing` - Include a 3D penalty function - 2D PROBLEMS ONLY
 
-
+TODO: Heavy optimisation required
 """
 function solve end
 #= 1D SOLVER =#
