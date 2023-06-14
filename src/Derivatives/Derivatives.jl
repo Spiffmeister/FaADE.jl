@@ -5,7 +5,7 @@ Module containing first and second derivative variable coefficient SBP operators
 module Derivatives
 
     using Distributed
-    using SBP_operators.Helpers
+    using SPADE.Helpers
 
     include("DerivativeFirst.jl")
     include("DerivativeSecond.jl")
@@ -16,6 +16,6 @@ module Derivatives
     include("Diff.jl")
 
     export SecondDerivative
-    export Dₓ, Dₓ!, Dₓₓ, Dₓₓ!, generate_SecondDerivative
+    export D₁, D₁!, D₂, D₂!, generate_SecondDerivative
 
 end

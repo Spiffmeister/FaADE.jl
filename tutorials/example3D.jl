@@ -1,4 +1,4 @@
-# # Magnetic field example
+# # 3D Example
 #
 # For this example we will solve the head equation with a mangetic field aligned with the grid 
 #
@@ -8,7 +8,7 @@
 # In this case we expect the parallel operator to do nothing since ``\mathbf{P}_f=\mathbf{P}_b=I``
 #
 
-using SBP_operators
+using SPADE
 
 #
 # For this we'll solve the field aligned equation is
@@ -25,7 +25,7 @@ using SBP_operators
 # ```
 #
 # 
-# We first need to create a domain to solve the PDE using [`Grid2D`](@ref SBP_operators.Helpers.Grid2D)
+# We first need to create a domain to solve the PDE using [`Grid2D`](@ref SPADE.Helpers.Grid2D)
 #
 
 𝒟x = [0.0,1.0]
@@ -36,9 +36,9 @@ grid = Grid2D(𝒟x,𝒟y,nx,ny)
 # The initial condition is
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
-# The boundary conditions are defined by creating [`Boundary`](@ref SBP_operators.Helpers.Boundary) objects, which will then be fed to the PDE structure
-BoundaryLeft = Boundary(Dirichlet,t->0.0,Left)
-BoundaryRight = Boundary(Neumann,t->0.0,Right)
+# The boundary conditions are defined by creating [`Boundary`](@ref SPADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
+BoundaryLeft = Boundary(Dirichlet,(y,t)->0.0,Left)
+BoundaryRight = Boundary(Neumann,(y,t)->0.0,Right)
 BoundaryUpDown = PeriodicBoundary(2)
 
 # The `2` input to the periodic boundary ensures it is along the y-axis.
@@ -52,12 +52,12 @@ method = :cgie
 #
 # Set the diffusion in $x$ and $y$ directions to 1
 
-Kx(y) = 1.0
-Ky(x) = 1.0
+Kx(x,y) = 1.0
+Ky(x,y) = 1.0
 
 # NOTE: currently only conjugate gradient implicit Euler (`:cgie`) works as a solver
 #
-# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SBP_operators.Helpers.VariableCoefficientPDE2D),
+# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SPADE.Helpers.VariableCoefficientPDE2D),
 
 P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
@@ -68,15 +68,21 @@ function Bfield(X,x,p,t)
     X[1] = 0.0
 end
 
-# Assuming a ``2\pi`` periodicity then we can construct a parallel grid object with [`construct_grid`](@ref)
+# Assuming a ``2\pi`` periodicity then we can construct a parallel grid object with [`construct_grid`](@ref SPADE.Parallel.construct_grid)
 
-PGrid = construct_grid(Bfield,Dom,[-2π,2π])
+PGrid = construct_grid(Bfield,grid,[-2π,2π])
+
+# It is not strictly necessary (since you can simply provide the `PGrid` to the `solve` call), but we can construct the penalty function manually with
+
+Pfn = generate_parallel_penalty(PGrid,grid,order)
 
 # Lastly before solving we define our time step and simulation time,
 
 Δt = 0.01grid.Δx;
 t_f = 100Δt;
 
-# Finally we call the solver (currently not working with `Documenter.jl`)
+# Finally we call the solver
 # 
-# `soln = solve(P,grid,Δt,t_f,method,penalty_func=Ppar);`
+soln = solve(P,grid,Δt,t_f,method,penalty_func=Pfn)
+
+# To provide the parallel grid instead use `soln = solve(P,grid,Δt,t_f,method,Pgrid=PGrid)`

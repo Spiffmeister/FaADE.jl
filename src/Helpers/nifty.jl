@@ -50,7 +50,7 @@ Returns ``order/2``
 
 """
     BoundaryNodeInput
-Returns the required number of nodes needed to compute [`SBP_operators.Derivatives.SecondDerivative`](@ref) on the boundary.
+Returns the required number of nodes needed to compute [`SPADE.Derivatives.SecondDerivative`](@ref) on the boundary.
 ``order == 2, return 1``, ``order > 2, return 2order``
 """
 @inline BoundaryNodeInput(order::Int) = order == 2 ? 1 : 2order
@@ -58,7 +58,7 @@ Returns the required number of nodes needed to compute [`SBP_operators.Derivativ
 
 """
     BoundaryNodeOutput
-Returns the size of the array output by [`SBP_operators.Derivatives.SecondDerivative`](@ref) on the boundary.
+Returns the size of the array output by [`SPADE.Derivatives.SecondDerivative`](@ref) on the boundary.
 ``order == 2, return 1``, ``order > 2, return order+order/2``
 """
 @inline BoundaryNodeOutput(order::Int) = order == 2 ? 1 : order+halforder(order)

@@ -11,7 +11,7 @@ using JLD2
 using Distributed
 # addprocs(1)
 @everywhere push!(LOAD_PATH,".")
-@everywhere using SBP_operators
+@everywhere using SPADE
 using SharedArrays
 
 ###
@@ -39,7 +39,7 @@ u = SharedArray(zeros(nx,ny))
         u[i,j] = u₀(x[i],y[j])
     end
 end
-uₓₓ = Dₓₓ(u,nx,ny,Δx,Δy,kx,ky,order_x=4)
+uₓₓ = D₂(u,nx,ny,Δx,Δy,kx,ky,order_x=4)
 
 uxx = zeros(nx,ny)
 for i = 1:nx

@@ -1,32 +1,30 @@
 # Helpers
 
-```@docs
-SBP_operators.Helpers
-```
+The `Helpers` sub-package contains both user interface function and functions useful for many of the internals such as data structure objects. 
 
-## User interaction
+## User interaction (@id User_interaction)
 
 ```@docs
-SBP_operators.Helpers.Boundary
-SBP_operators.Helpers.PeriodicBoundary
-```
-
-```@docs
-SBP_operators.Helpers.VariableCoefficientPDE1D
-SBP_operators.Helpers.VariableCoefficientPDE2D
+SPADE.Helpers.Boundary
+SPADE.Helpers.PeriodicBoundary
 ```
 
 ```@docs
-SBP_operators.Helpers.Grid1D
-SBP_operators.Helpers.Grid2D
+SPADE.Helpers.VariableCoefficientPDE1D
+SPADE.Helpers.VariableCoefficientPDE2D
+```
+
+```@docs
+SPADE.Helpers.Grid1D
+SPADE.Helpers.Grid2D
 ```
 
 
 ## Types
 
 ```@docs
-SBP_operators.Helpers.NodeType
-SBP_operators.Helpers.BoundaryConditionType
+SPADE.Helpers.NodeType
+SPADE.Helpers.BoundaryConditionType
 ```
 
 
@@ -36,33 +34,33 @@ SBP_operators.Helpers.BoundaryConditionType
 
 These data blocks are used internally and are not interacted with by the user,
 ```@docs
-SBP_operators.Helpers.DataBlock
-SBP_operators.Helpers.BoundaryData1D
-SBP_operators.Helpers.BoundaryData2D
+SPADE.Helpers.DataBlock
+SPADE.Helpers.BoundaryData1D
+SPADE.Helpers.BoundaryData2D
 ```
 
 Moving data between blocks uses the following functions,
 ```@docs
-SBP_operators.Helpers.copyUtoSAT!
-SBP_operators.Helpers.copySATtoU!
-SBP_operators.Helpers.addSATtoU!
+SPADE.Helpers.copyUtoSAT!
+SPADE.Helpers.copySATtoU!
+SPADE.Helpers.addSATtoU!
 ```
 
 
 ## Nifty internal functions
 ```@docs
-SBP_operators.Helpers.check_order
-SBP_operators.Helpers.check_boundary
-SBP_operators.Helpers.halforder
-SBP_operators.Helpers.BoundaryNodeInput
-SBP_operators.Helpers.BoundaryNodeOutput
-SBP_operators.Helpers.SATNodeOutput
-SBP_operators.Helpers.SelectLoopDirection
+SPADE.Helpers.check_order
+SPADE.Helpers.check_boundary
+SPADE.Helpers.halforder
+SPADE.Helpers.BoundaryNodeInput
+SPADE.Helpers.BoundaryNodeOutput
+SPADE.Helpers.SATNodeOutput
+SPADE.Helpers.SelectLoopDirection
 ```
 
 ```@docs
-SBP_operators.Helpers.GetAxis
-SBP_operators.Helpers.GetDim
-SBP_operators.Helpers.GetMinΔ
+SPADE.Helpers.GetAxis
+SPADE.Helpers.GetDim
+SPADE.Helpers.GetMinΔ
 ```
 

@@ -3,7 +3,7 @@
 using Test
 using LinearAlgebra
 
-using Pkg; Pkg.activate("."); using SBP_operators
+using Pkg; Pkg.activate("."); using SPADE
 
 
 function buildgrid1d(n)
@@ -36,7 +36,7 @@ n, x, Δx = buildgrid1d(15)
 c = ones(n);
 u = x;
 ∂ₓₓuₑ = zeros(n); ∂ₓₓu = zeros(n);
-SBP_operators.Derivatives.Dₓₓ!(∂ₓₓu,u,c,n,Δx,4)
+SPADE.Derivatives.D₂!(∂ₓₓu,u,c,n,Δx,4)
 
 @test all(∂ₓₓuₑ .- ∂ₓₓu .≤ 1e-10)
 
@@ -51,7 +51,7 @@ u = x.^2;
 ∂ₓₓuₑ .= 2.0;
 
 ∂ₓₓu = zeros(n);
-SBP_operators.Derivatives.Dₓₓ!(∂ₓₓu,u,c,n,Δx,4)
+SPADE.Derivatives.D₂!(∂ₓₓu,u,c,n,Δx,4)
 
 @test all(∂ₓₓuₑ .- ∂ₓₓu .≤ 1e-10)
 
@@ -66,7 +66,7 @@ u = x.^3;
 ∂ₓₓuₑ = 6x
 
 ∂ₓₓu = zeros(n);
-SBP_operators.Derivatives.Dₓₓ!(∂ₓₓu,u,c,n,Δx,4)
+SPADE.Derivatives.D₂!(∂ₓₓu,u,c,n,Δx,4)
 
 @test all(∂ₓₓuₑ .- ∂ₓₓu .≤ 1e-10)
 
@@ -86,8 +86,8 @@ for i = 1:n, j = 1:n
     u[i,j] = u₀(x[i],y[j])
 end
 
-SBP_operators.Derivatives.Dₓₓ!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
-SBP_operators.Derivatives.Dₓₓ!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
+SPADE.Derivatives.D₂!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
+SPADE.Derivatives.D₂!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
 
 norm(∂∂ue .- ∂∂u2)
 norm(∂∂ue .- ∂∂u4)
@@ -112,8 +112,8 @@ for i = 1:n, j = 1:n
     u[i,j] = u₀(x[i],y[j])
 end
 
-SBP_operators.Derivatives.Dₓₓ!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
-SBP_operators.Derivatives.Dₓₓ!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
+SPADE.Derivatives.D₂!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
+SPADE.Derivatives.D₂!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
 
 norm(∂∂ue[2:end-1,:] .- ∂∂u2[2:end-1,:])
 norm(∂∂ue .- ∂∂u4)
@@ -136,8 +136,8 @@ for i = 1:n, j = 1:n
     ∂∂ue[i,j] = 6*x[i]
 end
 
-SBP_operators.Derivatives.Dₓₓ!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
-SBP_operators.Derivatives.Dₓₓ!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
+SPADE.Derivatives.D₂!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
+SPADE.Derivatives.D₂!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
 
 norm(∂∂ue[2:end-1,:] .- ∂∂u2[2:end-1,:])
 norm(∂∂ue .- ∂∂u4)
@@ -167,8 +167,8 @@ for i = 1:n, j = 1:n
     u[i] = u₀(x[i])
 end
 
-SBP_operators.Derivatives.Dₓₓ!(∂∂u2,u,c,n,Δx,2)
-SBP_operators.Derivatives.Dₓₓ!(∂∂u4,u,c,n,Δx,4)
+SPADE.Derivatives.D₂!(∂∂u2,u,c,n,Δx,2)
+SPADE.Derivatives.D₂!(∂∂u4,u,c,n,Δx,4)
 
 norm(∂∂ue .- ∂∂u2)
 norm(∂∂ue .- ∂∂u4)
@@ -198,8 +198,8 @@ for i = 1:n, j = 1:n
     u[i,j] = u₀(x[i],y[j])
 end
 
-SBP_operators.Derivatives.Dₓₓ!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
-SBP_operators.Derivatives.Dₓₓ!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
+SPADE.Derivatives.D₂!(∂∂u2,u,cx,cy,n,n,Δx,Δy,2,2)
+SPADE.Derivatives.D₂!(∂∂u4,u,cx,cy,n,n,Δx,Δy,4,4)
 
 
 norm(∂∂ue .- ∂∂u2)

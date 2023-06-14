@@ -5,41 +5,41 @@
 
 
 """
-    Dₓₓ
+    D₂
 
-- Dₓₓ(u,c,Δx; order=2)
-- Dₓₓ(u,Δx,Δy,cx,cy; order=2)
+- D₂(u,c,Δx; order=2)
+- D₂(u,Δx,Δy,cx,cy; order=2)
 
 1D and 2D second derivative operator.
 
-Also available as and internally uses in place operator [`Dₓₓ!`](@ref).
+Also available as and internally uses in place operator [`D₂!`](@ref).
 """
-function Dₓₓ end
+function D₂ end
 # 1D second derivative SBP operator
-function Dₓₓ(u::AbstractVector{T},c::AbstractVector{T},Δx::T;
+function D₂(u::AbstractVector{T},c::AbstractVector{T},Δx::T;
         order::Integer=2) where T
     uₓₓ = zeros(T,size(u))
-    Dₓₓ!(uₓₓ,u,c,size(u),Δx,order)
+    D₂!(uₓₓ,u,c,size(u),Δx,order)
     return uₓₓ
 end
 # 2D second derivative SBP operator
-function Dₓₓ(u::AbstractMatrix{T},Δx::T,Δy::T,cx::AbstractMatrix{T},cy::AbstractMatrix{T};
+function D₂(u::AbstractMatrix{T},Δx::T,Δy::T,cx::AbstractMatrix{T},cy::AbstractMatrix{T};
         order::Integer=2) where T
     uₓₓ = zeros(T,size(u))
-    Dₓₓ!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order,order)
+    D₂!(uₓₓ,u,nx,ny,Δx,Δy,cx,cy,order,order)
     return uₓₓ
 end
 
 
 """
-    Dₓₓ!
+    D₂!
 1D and 2D in place second derivative operator.
 
 Internally uses [`SecondDerivativeInternal`](@ref) and [`SecondDerivativeInternal`](@ref).
 """
-function Dₓₓ! end
+function D₂! end
 ### 1D second derviative function
-function Dₓₓ!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Integer) where T
+function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Integer) where T
     adj = BoundaryNodeInput(order)
     
     SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,order)
@@ -48,15 +48,15 @@ function Dₓₓ!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVec
     uₓₓ
 end
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
-function Dₓₓ!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMatrix{T},n::Integer,Δ::T,dim::Integer=1,order::Integer=2) where T
+function D₂!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMatrix{T},n::Integer,Δ::T,dim::Integer=1,order::Integer=2) where T
     loopdir = SelectLoopDirection(dim)    
     for (cache,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
-        Dₓₓ!(cache,U,C,n,Δ,order)
+        D₂!(cache,U,C,n,Δ,order)
     end
     uₓₓ
 end
 ### 2D second derviative function
-function Dₓₓ!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
+function D₂!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
         nx::Integer,ny::Integer,Δx::T,Δy::T,
         order_x::Integer=2,order_y::Integer=order_x) where {T,AT}
 
