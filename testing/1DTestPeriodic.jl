@@ -4,7 +4,7 @@ using Plots
 
 using BenchmarkTools
 push!(LOAD_PATH,".")
-using SPADE
+using SBP_operators
 
 
 
@@ -52,4 +52,4 @@ plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
 
 
 
-# @benchmark SPADE.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)
+# @benchmark SBP_operators.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)

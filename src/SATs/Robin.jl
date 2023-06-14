@@ -12,7 +12,7 @@ struct SAT_Robin{T} <: SimultanousApproximationTerm
     side    :: NodeType
     axis    :: Int
     order   :: Int
-    ED₁     :: Vector{T}
+    EDₓ     :: Vector{T}
     RHS     :: Function
     Δx      :: T
     τ       :: T
@@ -40,7 +40,7 @@ function SAT_Robin(::NodeType{:Left},u::Vector{Float64},Δx::Float64;
     SAT = zeros(Float64,order)
 
     if !forcing
-        SAT[1] = b*u[1] + a*BD₁(u,Left,Δx,order)
+        SAT[1] = b*u[1] + a*BDₓ(u,Left,Δx,order)
         return SAT
     else
         SAT[1] = -τ*u[1]
@@ -54,7 +54,7 @@ function SAT_Robin(::NodeType{:Right},u::Vector{Float64},Δx::Float64;
     SAT = zeros(Float64,order)
 
     if !forcing
-        SAT[end] = b*u[end] - a*BD₁(u,Right,Δx,order)
+        SAT[end] = b*u[end] - a*BDₓ(u,Right,Δx,order)
         return SAT
     else
         SAT[end] = τ*u[end]
@@ -71,7 +71,7 @@ function SAT_Robin(::NodeType{:Left},u::AbstractVector,Δx::Float64,RHS;
     τ = SATpenalties(Robin,a,Δx,order)
     SAT = zeros(Float64,order)
 
-    SAT[1] = τ * (b*u[1] + a*BD₁(u,Left,Δx,order) - RHS[1])
+    SAT[1] = τ * (b*u[1] + a*BDₓ(u,Left,Δx,order) - RHS[1])
     return SAT
 end
 function SAT_Robin(::NodeType{:Right},u::AbstractVector,Δx::Float64,RHS;
@@ -80,6 +80,6 @@ function SAT_Robin(::NodeType{:Right},u::AbstractVector,Δx::Float64,RHS;
     τ = SATpenalties(Robin,a,Δx,order)
     SAT = zeros(Float64,order)
 
-    SAT[end] = τ * (b*u[end] - a*BD₁(u,Right,Δx,order) + RHS[end])
+    SAT[end] = τ * (b*u[end] - a*BDₓ(u,Right,Δx,order) + RHS[end])
     return SAT
 end

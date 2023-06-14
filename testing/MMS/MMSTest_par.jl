@@ -8,7 +8,7 @@ addprocs(4)
 
 @everywhere using Pkg
 @everywhere Pkg.activate(".")
-@everywhere using SPADE
+@everywhere using SBP_operators
 
 
 
@@ -28,7 +28,7 @@ addprocs(4)
 
 
 # Generates the exact MMS solution
-@everywhere function generate_MMS(MMS::Function,grid::SPADE.Helpers.Grid2D,t::Float64)
+@everywhere function generate_MMS(MMS::Function,grid::SBP_operators.Helpers.Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx

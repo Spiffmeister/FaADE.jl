@@ -1,6 +1,6 @@
 
-push!(LOAD_PATH,"../SPADE")
-using SPADE
+push!(LOAD_PATH,"../SBP_operators")
+using SBP_operators
 
 
 𝒟x = [0.0,1.0]
@@ -9,7 +9,7 @@ nx = 21
 ny = 21
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-H = SPADE.Helpers.innerH(Dom,2)
+H = SBP_operators.Helpers.innerH(Dom,2)
 
 
 u = rand(Dom.nx,Dom.ny);
@@ -34,8 +34,8 @@ function χ_h!(χ,x::Array{Float64},p,t)
 end
 
 dH(X,x,p,t) = χ_h!(X,x,params,t)
-PGrid = SPADE.construct_grid(dH,Dom,[-2π,2π])
-Pfn = SPADE.generate_parallel_penalty(PGrid,Dom,2)
+PGrid = SBP_operators.construct_grid(dH,Dom,[-2π,2π])
+Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
 
 
 
@@ -66,17 +66,17 @@ typeof(P.BoundaryConditions)
 
 
 
-Diff! = SPADE.Derivatives.generate_SecondDerivative(Dom.nx,Dom.ny,Dom.Δx,Dom.Δy,2)
+Diff! = SBP_operators.Derivatives.generate_SecondDerivative(Dom.nx,Dom.ny,Dom.Δx,Dom.Δy,2)
 
-SAT_P = SPADE.SATs.SAT_Periodic(Dom.Δx,2,2)
-SAT_P_Fn! = SPADE.SATs.generate_Periodic(SAT_P,:cgie)
+SAT_P = SBP_operators.SATs.SAT_Periodic(Dom.Δx,2,2)
+SAT_P_Fn! = SBP_operators.SATs.generate_Periodic(SAT_P,:cgie)
 
 
-SAT_DL = SPADE.SATs.SAT_Dirichlet((x,y)->0.0,Dom.Δx,Left,1,2)
-SAT_DR = SPADE.SATs.SAT_Dirichlet((x,y)->0.0,Dom.Δx,Right,1,2)
+SAT_DL = SBP_operators.SATs.SAT_Dirichlet((x,y)->0.0,Dom.Δx,Left,1,2)
+SAT_DR = SBP_operators.SATs.SAT_Dirichlet((x,y)->0.0,Dom.Δx,Right,1,2)
 
-SAT_DL_Fn! = SPADE.SATs.generate_Dirichlet(SAT_DL,:cgie)
-SAT_DR_Fn! = SPADE.SATs.generate_Dirichlet(SAT_DR,:cgie)
+SAT_DL_Fn! = SBP_operators.SATs.generate_Dirichlet(SAT_DL,:cgie)
+SAT_DR_Fn! = SBP_operators.SATs.generate_Dirichlet(SAT_DR,:cgie)
 
 
 
@@ -94,7 +94,7 @@ SAT_P(u,v,c)
 # @code_warntype test_SAT_P_Fn!(u,v,c)
 
 
-mode = SPADE.Helpers.SolutionMode
+mode = SBP_operators.Helpers.SolutionMode
 
 
 CGRHS! = let btype1 = P.BoundaryConditions.Left.type,

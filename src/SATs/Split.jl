@@ -51,18 +51,18 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
 
 
     # Symmeteriser
-    D₁ᵀL₀u⁻ = boundary_D₁ᵀ(L₀u[1:order⁻],Δx⁻,order⁻)
-    D₁ᵀL₀u⁺ = boundary_D₁ᵀ(L₀u[order⁻+1:end],Δx⁺,order⁺)
+    DₓᵀL₀u⁻ = boundary_Dₓᵀ(L₀u[1:order⁻],Δx⁻,order⁻)
+    DₓᵀL₀u⁺ = boundary_Dₓᵀ(L₀u[order⁻+1:end],Δx⁺,order⁺)
 
-    SAT₁[1:order⁻] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * D₁ᵀL₀u⁻[order⁻+1:end]
-    SAT₁[order⁻+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * D₁ᵀL₀u⁺[1:order⁺]
+    SAT₁[1:order⁻] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * DₓᵀL₀u⁻[order⁻+1:end]
+    SAT₁[order⁻+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * DₓᵀL₀u⁺[1:order⁺]
 
     # Derivative condition
-    D₁u⁻ = boundary_D₁(u⁻,Δx⁻,order⁻)
-    D₁u⁺ = boundary_D₁(u⁺,Δx⁺,order⁺)
+    Dₓu⁻ = boundary_Dₓ(u⁻,Δx⁻,order⁻)
+    Dₓu⁺ = boundary_Dₓ(u⁺,Δx⁺,order⁺)
 
-    SAT₂[1:order⁻] = α₀/(h⁻ * Δx⁻) * c⁻[end] * D₁u⁻[order⁻+1:end]
-    SAT₂[order⁻+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * D₁u⁺[1:order⁺]
+    SAT₂[1:order⁻] = α₀/(h⁻ * Δx⁻) * c⁻[end] * Dₓu⁻[order⁻+1:end]
+    SAT₂[order⁻+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * Dₓu⁺[1:order⁺]
 
     SAT = SAT₀ + SAT₁ + SAT₂
 

@@ -4,49 +4,49 @@
 # Author: Dean Muir, Kenneth Duru
 
 """
-    D₁
+    Dₓ
 1D and 2D first derivative operator. 
     
-Also available as and internally uses in place operator [`D₁!`](@ref).
+Also available as and internally uses in place operator [`Dₓ!`](@ref).
 """
-function D₁() end
+function Dₓ() end
 # 1D First derivative
 """
-    D₁(u::AbstractVector{T},Δx::T;order::Integer=2)
+    Dₓfunction Dₓ(u::AbstractVector{T},Δx::T;order::Integer=2)
 1D implementation of ``D_x`` operator.
 """
-function D₁(u::AbstractVector{T},Δx::T;
+function Dₓ(u::AbstractVector{T},Δx::T;
     order::Integer=2) where T
     uₓ = zeros(T,length(u))
-    D₁!(uₓ,u,length(u),Δx,order)
+    Dₓ!(uₓ,u,length(u),Δx,order)
     return uₓ
 end
 # 2D First derivative
 """
-    D₁(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;order::Integer=2)
-2D implementation of ``D_x`` operator.
+    Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;order::Integer=2)
+2D implementation of ``D_x`` operator
 """
-function D₁(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;
+function Dₓ(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;
         order::Integer=2) where T
     uₓ = zeros(T,size(u))
-    D₁!(uₓ,u,nx,ny,Δx,Δy,order)
+    Dₓ!(uₓ,u,nx,ny,Δx,Δy,order)
     return uₓ
 end
 
 
 """
-    D₁!
+    Dₓ!
 1D and 2D in place first derivative operator.
 
 See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
 """
-function D₁!() end
+function Dₓ!() end
 # 1D
 """
-    D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
-1D [`D₁!`](@ref).
+    Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
+1D [`Dₓ!`](@ref).
 """
-function D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
+function Dₓ!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
         order::Integer) where T
     FirstDerivativeBoundary!(uₓ,u,Δx,n,Left,order)
     FirstDerivativeInternal!(uₓ,u,Δx,n,order)
@@ -54,23 +54,23 @@ function D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
 end
 # 1D for 2D
 """
-    function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
-1D implementation for 2D problems for [`D₁!`](@ref).
+    function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
+1D implementation for 2D problems for [`Dₓ!`](@ref).
 """
-function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,
+function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,
         order::Integer,dim::Integer) where T
     loopdir = SelectLoopDirection(dim)
     for (cache,U) in zip(loopdir(uₓ),loopdir(u))
-        D₁!(cache,U,n,Δ,order)
+        Dₓ!(cache,U,n,Δ,order)
     end
     uₓ
 end
 """
-    function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,order::Integer)
-2D [`D₁!`](@ref).
+    function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,order::Integer)
+2D [`Dₓ!`](@ref).
 """
 # 2D
-function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
+function Dₓ!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
         order::Integer) where T
     
     order == 2 ? ret = 1 : ret = order

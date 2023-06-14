@@ -8,7 +8,7 @@ using LinearAlgebra
 using Pkg
 
 Pkg.activate(".")
-using SPADE
+using SBP_operators
 
 
 function buildgrid(n)
@@ -30,7 +30,7 @@ end
         n, x, Δx = buildgrid(10)
         u = x
         ∂ₓuₑ = ones(n)
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
 
         @test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
 
@@ -38,7 +38,7 @@ end
         n, x, Δx = buildgrid(10)
         u = 2x
         ∂ₓuₑ = 2ones(n)
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
 
         @test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
     end
@@ -48,7 +48,7 @@ end
         n, x, Δx = buildgrid(10)
         u = x.^2
         ∂ₓuₑ = 2x
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
         
         @test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14  
     end
@@ -58,14 +58,14 @@ end
         n, x, Δx = buildgrid(10)
         u = x.^3
         ∂ₓuₑ = 3x.^2
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
 
         lowres = norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1])
 
         n, x, Δx = buildgrid(20)
         u = x.^3
         ∂ₓuₑ = 3x.^2
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
 
         highres = norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1])
 
@@ -91,7 +91,7 @@ end
         n, x, Δx = buildgrid(15)
         u = x
         ∂ₓuₑ = ones(n)
-        ∂ₓu = D₁(u,n,Δx,order=4)
+        ∂ₓu = Dₓ(u,n,Δx,order=4)
         @test norm(∂ₓuₑ[1:4] - ∂ₓu[1:4]) ≤ 1.0e-14      #Left boundary
         @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14  #Interior
         @test norm(∂ₓuₑ[n-3:n] - ∂ₓu[n-3:n]) ≤ 1.0e-14  #Right boundary
@@ -101,7 +101,7 @@ end
         n, x, Δx = buildgrid(10)
         u = 2x
         ∂ₓuₑ = 2ones(n)
-        ∂ₓu = D₁(u,n,Δx)
+        ∂ₓu = Dₓ(u,n,Δx)
         @test norm(∂ₓuₑ[2:n-1] .- ∂ₓu[2:n-1]) ≤ 1.0e-14
     end
 
@@ -110,7 +110,7 @@ end
         n, x, Δx = buildgrid(15)
         u = x.^2
         ∂ₓuₑ = 2x
-        ∂ₓu = D₁(u,n,Δx,order=4)
+        ∂ₓu = Dₓ(u,n,Δx,order=4)
         @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
     end
 
@@ -119,7 +119,7 @@ end
         n, x, Δx = buildgrid(15)
         u = x.^3
         ∂ₓuₑ = 3x.^2
-        ∂ₓu = D₁(u,n,Δx,order=4)
+        ∂ₓu = Dₓ(u,n,Δx,order=4)
         @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
     end
 
@@ -128,7 +128,7 @@ end
         n, x, Δx = buildgrid(20)
         u = x.^4
         ∂ₓuₑ = 4x.^3
-        ∂ₓu = D₁(u,n,Δx,order=4)
+        ∂ₓu = Dₓ(u,n,Δx,order=4)
 
         @test norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
     end
@@ -138,7 +138,7 @@ end
         n, x, Δx = buildgrid(15)
         u = x.^5
         ∂ₓuₑ = 5x.^4
-        ∂ₓu = D₁(u,n,Δx,order=4)
+        ∂ₓu = Dₓ(u,n,Δx,order=4)
 
         @test_broken norm(∂ₓuₑ[5:n-4] - ∂ₓu[5:n-4]) ≤ 1.0e-14
     end
@@ -157,7 +157,7 @@ end
 n, x, Δx = buildgrid(20)
 u = x
 ∂ₓuₑ = ones(n)
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:end-6]) ≤ 1.0e-14
 
@@ -165,7 +165,7 @@ u = x
 n, x, Δx = buildgrid(20)
 u = x.^2
 ∂ₓuₑ = 2x
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
@@ -173,7 +173,7 @@ u = x.^2
 n, x, Δx = buildgrid(20)
 u = x.^3
 ∂ₓuₑ = 3x.^2
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
@@ -181,7 +181,7 @@ u = x.^3
 n, x, Δx = buildgrid(20)
 u = x.^4
 ∂ₓuₑ = 4x.^3
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
@@ -189,7 +189,7 @@ u = x.^4
 n, x, Δx = buildgrid(20)
 u = x.^5
 ∂ₓuₑ = 5x.^4
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
@@ -197,7 +197,7 @@ u = x.^5
 n, x, Δx = buildgrid(20)
 u = x.^6
 ∂ₓuₑ = 6x.^5
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 
@@ -205,7 +205,7 @@ u = x.^6
 n, x, Δx = buildgrid(20)
 u = x.^7
 ∂ₓuₑ = 7x.^6
-∂ₓu = D₁(u,n,Δx,order=6)
+∂ₓu = Dₓ(u,n,Δx,order=6)
 
 @test_broken norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
 =#

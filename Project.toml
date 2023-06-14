@@ -1,5 +1,5 @@
-name = "SPADE"
-uuid = "d852f1c7-a219-46ba-a708-9ecc2d02d716"
+name = "SBP_operators"
+uuid = "2a38a53b-f4bb-477b-bf52-089ecd1fc230"
 authors = ["spiffmeister <robospiff@gmail.com>"]
 version = "0.1.0"
 

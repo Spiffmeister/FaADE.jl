@@ -9,7 +9,6 @@
 *.mem
 *.txt
 *.bak
-Manifest.toml
 !/docs/src/example*D.md
 *.jld2
 *.csv

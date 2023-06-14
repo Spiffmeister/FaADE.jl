@@ -13,15 +13,9 @@ abstract type PDEProblem end
 
 
 """
-    Boundary{BT<:BoundaryConditionType,BF<:Function,BN<:NodeType,BA<:Integer}
+    Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
 User defined boundary conditions for Dirichlet or Neumann.
 TODO: Robin boundaries
-
-Constructors:
-```julia
-Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
-Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType)
-```
 
 Inputs:
 - `Dirichlet` or `Neumann` (see [`BoundaryConditionType`](@ref)).
@@ -37,14 +31,14 @@ struct Boundary{BT<:BoundaryConditionType,BF<:Function,BN<:NodeType,BA<:Integer}
     RHS     :: BF
     side    :: BN
     axis    :: BA
-    function Boundary(BCtype::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
-        BCtype ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
-        new{typeof(BCtype),typeof(RHS),NodeType,typeof(axis)}(BCtype,RHS,side,axis)
+    function Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType,axis::Int)
+        type ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
+        new{typeof(type),typeof(RHS),NodeType,typeof(axis)}(type,RHS,side,axis)
     end
-end
-function Boundary(BCtype::BoundaryConditionType,RHS::Function,side::NodeType)
-    BCtype ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
-    Boundary(BCtype,RHS,side,GetAxis(side))
+    function Boundary(type::BoundaryConditionType,RHS::Function,side::NodeType)
+        type ∈ [Dirichlet,Neumann,Robin] ? nothing : error("Input 1 must be Dirichlet, Neumann or Robin")
+        new{typeof{type},typeof{RHS},NodeType,typeof{axis}}(type,RHS,side,GetAxis(side))
+    end
 end
 """
     PeriodicBoundary(axis::Int)
@@ -164,7 +158,6 @@ end
 
     
 
-# Base.show(io::IO, B::Boundary) = print(io, )
 
 
 

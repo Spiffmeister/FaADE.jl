@@ -56,7 +56,7 @@ end
     BoundaryData1D
 Data structure for storage of SATs in 1 dimensional problems
 """
-mutable struct BoundaryData1D{T,AT} <: BoundaryStorage{T,1, AT}
+mutable struct BoundaryData1D{T,AT<:Vector{T}} <: BoundaryStorage{T,1, AT}
     Type_Left   :: BoundaryConditionType
     Type_Right  :: BoundaryConditionType
 
@@ -86,7 +86,7 @@ mutable struct BoundaryData1D{T,AT} <: BoundaryStorage{T,1, AT}
             BCL = BCR = Periodic
         end
 
-        new{T,typeof(u_Left)}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,[0.0],[0.0])
+        new{T,Vector}(BCL,BCR,SAT_Left,SAT_Right,u_Left,u_Right,[0.0],[0.0])
 
     end
 end

@@ -20,7 +20,7 @@ struct SAT_Neumann{
     side    :: TN
     axis    :: Int
     order   :: Int
-    ED₁     :: VT
+    EDₓ     :: VT
     RHS     :: F1
     Δx      :: TT
     τ       :: TT
@@ -46,7 +46,7 @@ function generate_Neumann(SATN::SAT_Neumann,solver)
     loopdirection = SelectLoopDirection(SATN.axis)
 
     let τ = SATN.τ,
-        BD = SATN.ED₁,
+        BD = SATN.EDₓ,
         side = SATN.side,
         order = SATN.order
 

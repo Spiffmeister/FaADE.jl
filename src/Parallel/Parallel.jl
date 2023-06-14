@@ -8,7 +8,7 @@ module Parallel
     # using Interpolations: LinearInterpolation
     using Interpolations
 
-    using SPADE.Helpers
+    using SBP_operators.Helpers
 
 
     include("PGrid.jl")

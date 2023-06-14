@@ -1,7 +1,7 @@
 """
     BoundaryDerivativeTranspose
 
-Used to construct `EH⁻¹D₁ᵀ` where `E=E₀` or `Eₙ`.
+Used to construct `EH⁻¹Dₓᵀ` where `E=E₀` or `Eₙ`.
 """
 function BoundaryDerivativeTranspose end
 function BoundaryDerivativeTranspose(::NodeType{:Left},order::Int,Δx::Float64)
@@ -29,7 +29,7 @@ end
 """
     BoundaryDerivative
 
-Used to construct `E₀D₁` or `EₙD₁`.
+Used to construct `E₀Dₓ` or `EₙDₓ`.
 """
 function BoundaryDerivative end
 function BoundaryDerivative(::NodeType{:Left},Δx::Real,order::Int)

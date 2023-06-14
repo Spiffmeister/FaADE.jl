@@ -6,8 +6,8 @@
 
 
 cd("..")
-push!(LOAD_PATH,"./SPADE")
-using SPADE
+push!(LOAD_PATH,"./SBP_operators")
+using SBP_operators
 
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,1.0]
@@ -33,8 +33,8 @@ method = :cgie
 
 P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
-H_x = SPADE.build_H(ny,order)
-H_y = SPADE.build_H(nx,order)
+H_x = SBP_operators.build_H(ny,order)
+H_y = SBP_operators.build_H(nx,order)
 
 H_x = 1.0 ./H_x.^2
 H_y = 1.0 ./H_y.^2

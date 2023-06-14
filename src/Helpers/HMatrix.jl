@@ -59,7 +59,7 @@ end
 
 """
     build_H
-Build the H matrix in the SBP operator D₁ = H⁻¹Q
+Build the H matrix in the SBP operator Dₓ = H⁻¹Q
 """
 function build_H(order,n)
     H = ones(Float64,n)
