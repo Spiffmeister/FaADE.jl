@@ -1,26 +1,23 @@
 # Simultaneous Approximation Terms
 
-```@docs
-SBP_operators.SATs
-```
 
 Users can create a generic SBP operator with the function,
 ```@docs
-SBP_operators.SATs.SAT
+SPADE.SATs.SAT
 ```
-Note that this requires users to first create a boundary condition with [`BoundaryConditions`](@ref)
+Note that this requires users to first create a boundary condition with [boundary conditions](@ref User_interaction)
 
 ## Boundary operators
 
 The following are for boundary conditions
 ```@docs
-SBP_operators.SATs.SAT_Dirichlet
-SBP_operators.SATs.SAT_Neumann
+SPADE.SATs.SAT_Dirichlet
+SPADE.SATs.SAT_Neumann
 ```
 
 If periodic boundaries are applied
 ```@docs
-SBP_operators.SATs.SAT_Periodic
+SPADE.SATs.SAT_Periodic
 ```
 
 If a domain is split along some boundary then the following matches the values at the interface.
@@ -32,13 +29,13 @@ If a domain is split along some boundary then the following matches the values a
 
 The `D_x^T B` and `B D_x` operators are given by,
 ```@docs
-SBP_operators.SATs.BoundaryDerivativeTranspose
-SBP_operators.SATs.BoundaryDerivative
+SPADE.SATs.BoundaryDerivativeTranspose
+SPADE.SATs.BoundaryDerivative
 ```
 
 Penalties are constructed with the following,
 ```@docs
-SBP_operators.SATs.SATpenalties
-SBP_operators.SATs.hval
+SPADE.SATs.SATpenalties
+SPADE.SATs.hval
 ```
 

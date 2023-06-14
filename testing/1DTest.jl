@@ -7,7 +7,7 @@ using Profile
 using PProf
 
 push!(LOAD_PATH,".")
-using SBP_operators
+using SPADE
 
 
 

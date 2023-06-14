@@ -11,11 +11,11 @@ ny = 21
 
 
 
-Dom = SBP_operators.Grid1D(Dx,nx)
+Dom = SPADE.Grid1D(Dx,nx)
 
 
 
-Dom = SBP_operators.Grid2D(Dx,Dy,nx,ny)
+Dom = SPADE.Grid2D(Dx,Dy,nx,ny)
 
 
 
@@ -25,6 +25,6 @@ function IdMap(X,x,p,t)
     X[2] = 0.0
 end
 
-SBP_operators.construct_grid(IdMap,Dom,)
+SPADE.construct_grid(IdMap,Dom,)
 
 

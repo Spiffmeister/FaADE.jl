@@ -2,7 +2,7 @@
 # 
 # The 2D code works similarly to the 1D version, with a few different function calls.
 
-using SBP_operators
+using SPADE
 
 #
 # This example gives a 1D solution to a 2D problem.
@@ -21,7 +21,7 @@ using SBP_operators
 # ```
 #
 # 
-# We first need to create a domain to solve the PDE using [Grid2D](@ref SBP_operators.Helpers.Grid2D)
+# We first need to create a domain to solve the PDE using [`Grid2D`](@ref SPADE.Helpers.Grid2D)
 #
 
 𝒟x = [0.0,1.0]
@@ -32,9 +32,9 @@ grid = Grid2D(𝒟x,𝒟y,nx,ny)
 # The initial condition
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
-# The boundary conditions are defined by creating [Boundary](@ref SBP_operators.Helpers.Boundary) objects, which will then be fed to the PDE structure
-BoundaryLeft = Boundary(Dirichlet,t->0.0,Left)
-BoundaryRight = Boundary(Neumann,t->0.0,Right)
+# The boundary conditions are defined by creating [`Boundary`](@ref SPADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
+BoundaryLeft = Boundary(Dirichlet,(y,t)->0.0,Left)
+BoundaryRight = Boundary(Neumann,(y,t)->0.0,Right)
 BoundaryUpDown = PeriodicBoundary(2)
 
 # The `2` input to the periodic boundary ensures it is along the y-axis.
@@ -48,10 +48,10 @@ method = :cgie
 #
 # Set the diffusion in $x$ and $y$ directions to 1
 
-Kx(y) = 1.0
-Ky(x) = 1.0
+Kx(x,y) = 1.0
+Ky(x,y) = 1.0
 
-# Now we can create a PDE object to pass to the solver, in this case a [VariableCoefficientPDE2D](@ref SBP_operators.Helpers.VariableCoefficientPDE2D),
+# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SPADE.Helpers.VariableCoefficientPDE2D),
 
 P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
@@ -62,14 +62,12 @@ t_f = 100Δt;
 
 # Finally we call the solver (currently not working with `Documenter.jl`)
 # 
-# `soln = solve(P,grid,Δt,t_f,method);`
+soln = solve(P,grid,Δt,t_f,method)
 
 #
-# The solver ourputs a [solution](@ref SBP_operators.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
+# The solver ourputs a [`solution`](@ref SPADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 # the problem from the final state if we wanted to restart.
 # 
 # No visualisation routines are written at the moment but we imported the `Plots.jl` package earlier so we'll use that
 
-# `using Plots`
-# `plot(soln.grid.grid,soln.u[2])`
 

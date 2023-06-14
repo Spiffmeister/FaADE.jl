@@ -14,7 +14,7 @@ struct SAT_Dirichlet{
     side        :: TN
     axis        :: Int
     order       :: Int
-    EDₓᵀ        :: VT
+    ED₁ᵀ        :: VT
     RHS         :: F1
     Δx          :: TT
     α           :: TT
@@ -31,7 +31,7 @@ struct SAT_Dirichlet{
 
         loopaxis = SelectLoopDirection(axis)
 
-        # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H Dₓᵀ) H⁻¹ E (u-f)"
+        # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H D₁ᵀ) H⁻¹ E (u-f)"
 
         new{TN,TT,Vector{TT},F1,typeof(τ),typeof(loopaxis)}(
             Dirichlet,side,axis,order,ED,RHS,Δx,α,τ,loopaxis)
@@ -58,7 +58,7 @@ function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
 
     let α = SATD.α, 
         τ = SATD.τ,
-        BD = SATD.EDₓᵀ,
+        BD = SATD.ED₁ᵀ,
         side = SATD.side,
         order = SATD.order
 
@@ -116,7 +116,7 @@ function SAT_Dirichlet_implicit!(SAT::AT,::NodeType{:Left},u::AT,c::AT,
 
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         for i = 1:order
-            S[i] += -α*C[1]*BD[i]*U[1] #DₓᵀE₀
+            S[i] += -α*C[1]*BD[i]*U[1] #D₁ᵀE₀
         end
         S[1] += τ(C[1])*C[1]*U[1]
     end
@@ -127,7 +127,7 @@ function SAT_Dirichlet_implicit!(SAT::AT,::NodeType{:Right},u::AT,c::AT,
         order::Int,loopaxis::Function) where {T,AT}
     for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
         for i = 1:order
-            S[end-order+i] += α*C[end]*BD[i]*U[end] #DₓᵀEₙ
+            S[end-order+i] += α*C[end]*BD[i]*U[end] #D₁ᵀEₙ
         end
         # S[end-order+1:end] .+= α*C[end]*BD*U[end]
         S[end] += τ(C[end])*C[end]*U[end]
@@ -145,7 +145,7 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Left},DATA::AT,c::AT,
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
         for i = 1:order
             # S[i] += Δt * α*C[1]*BD[i]*RHS(t)
-            S[i] += α*C[1]*BD[i]*U[1] #DₓᵀE₀
+            S[i] += α*C[1]*BD[i]*U[1] #D₁ᵀE₀
         end
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
         S[1] -= τ(C[1])*C[1]*U[1]
@@ -159,8 +159,8 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
         α::T,τ::Function,BD::AbstractVector,order::Int,loopaxis::Function) where {T,AT}
     for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
         for i = 1:order
-            # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #DₓᵀEₙ
-            S[end-order+i] -= α*C[end]*BD[i]*U[end] #DₓᵀEₙ
+            # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #D₁ᵀEₙ
+            S[end-order+i] -= α*C[end]*BD[i]*U[end] #D₁ᵀEₙ
         end
         # S[end] -= Δt* τ*C[end]*RHS(t)
         S[end] -= τ(C[end])*C[end]*U[end]

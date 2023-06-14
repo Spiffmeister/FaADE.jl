@@ -11,8 +11,8 @@ using Cthulhu
 
 # cd("..")
 using Interpolations
-push!(LOAD_PATH,"../SBP_operators")
-using SBP_operators
+push!(LOAD_PATH,"../SPADE")
+using SPADE
 
 
 
@@ -63,10 +63,10 @@ end
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
 
-H_x = SBP_operators.build_H(order,ny)
+H_x = SPADE.build_H(order,ny)
 H_x = 1.0 ./H_x.^2
 
-H_y = SBP_operators.build_H(order,nx)
+H_y = SPADE.build_H(order,nx)
 H_y = 1.0 ./H_y.^2
 
 # Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
@@ -75,7 +75,7 @@ H_y = 1.0 ./H_y.^2
 τ_para = -1.0
 =#
 
-# PGrid = SBP_operators.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
+# PGrid = SPADE.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
 
 
 
@@ -128,8 +128,8 @@ function χ_h!(χ,x::Array{Float64},p,t)
 end
 
 dH(X,x,p,t) = χ_h!(X,x,params,t)
-PGrid = SBP_operators.construct_grid(dH,Dom,[-2π,2π])
-Pfn = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
+PGrid = SPADE.construct_grid(dH,Dom,[-2π,2π])
+Pfn = SPADE.generate_parallel_penalty(PGrid,Dom,2)
 
 
 # using Profile
@@ -141,7 +141,7 @@ t_f = 100.0
 # @time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
 # Profile.clear_malloc_data()
 
-Pfn1 = SBP_operators.generate_parallel_penalty(PGrid,Dom,2)
+Pfn1 = SPADE.generate_parallel_penalty(PGrid,Dom,2)
 P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 # soln1 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn1)
 

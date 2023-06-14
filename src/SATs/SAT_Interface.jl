@@ -14,7 +14,7 @@ abstract type SimultanousApproximationTerm end
 Creates a Dirichlet, Neumann or Periodic SAT function(s).
 
 Inputs: 
-- [`BoundaryConditionData`](@ref SBP_operators.Helpers.BoundaryConditionData)
+- [`BoundaryConditionData`](@ref)
 - [`GridType`](@ref)
 - Order of method
 - Solver type (see [`solvers`](@ref))

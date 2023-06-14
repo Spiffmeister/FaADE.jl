@@ -3,16 +3,16 @@
 
 
 ```@docs
-SBP_operators.solvers
+SPADE.solvers
 ```
 
 ```@docs
-SBP_operators.solvers.solve
+SPADE.solvers.solve
 ```
 
 
 ```@docs
-SBP_operators.solvers.solution
+SPADE.solvers.solution
 ```
 
 
@@ -20,7 +20,7 @@ SBP_operators.solvers.solution
 
 ### Implicit
 ```@docs
-SBP_operators.solvers.conj_grad!
+SPADE.solvers.conj_grad!
 ```
 
 
@@ -31,7 +31,7 @@ SBP_operators.solvers.conj_grad!
 ## Conjugate Gradient helpers
 
 ```@docs
-SBP_operators.solvers.build_H
-SBP_operators.solvers.A!
-SBP_operators.solvers.innerH
+SPADE.solvers.build_H
+SPADE.solvers.A!
+SPADE.solvers.innerH
 ```
