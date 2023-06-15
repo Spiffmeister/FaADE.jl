@@ -9,11 +9,15 @@
 
 """
     solve
+Solve the 1D or 2D PDE on the given grid.
 
-1. `solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;...)`
-2. `solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;...)`
+Calls:
+```julia
+solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;...)
+solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;...)
+```
 
-Solve the 1D or 2D PDE on the given grid required inputs:
+Inputs:
 - Prob: [`VariableCoefficientPDE1D`](@ref) or [`VariableCoefficientPDE2D`](@ref)
 - grid: [`Grid1D`](@ref) or [`Grid2D`](@ref)
 - `Δt` - the time step
@@ -23,7 +27,7 @@ Solve the 1D or 2D PDE on the given grid required inputs:
 Optional inputs:
 - `adaptive::Bool=false` `true` or `false` - Adaptive time stepping
 - `source::Union{Nothing,Function}=nothing` - Include a source term
-- `penalty_func::Union{Nothing,Function}=nothing` - Include a 3D penalty function - 2D PROBLEMS ONLY
+- `penalty_func::Union{Nothing,Function}=nothing` - penalty function for mapping points along field lines
 
 TODO: Heavy optimisation required
 """
