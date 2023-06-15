@@ -8,14 +8,14 @@ module solvers
 
     import LinearAlgebra: dot, norm
 
-    using SPADE.Helpers
+    using FaADE.Helpers
 
-    using SPADE.Derivatives: generate_SecondDerivative
+    using FaADE.Derivatives: generate_SecondDerivative
     
-    using SPADE.SATs: SAT, construct_SAT, 
+    using FaADE.SATs: SAT, construct_SAT, 
     SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!
 
-    using SPADE.Parallel: ParallelGrid, generate_parallel_penalty
+    using FaADE.Parallel: ParallelGrid, generate_parallel_penalty
     
 
     include("solution.jl")

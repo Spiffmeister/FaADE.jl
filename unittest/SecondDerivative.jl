@@ -6,7 +6,7 @@ using Plots
 using Pkg
 
 Pkg.activate(".")
-using SPADE
+using FaADE
 
 
 
@@ -25,7 +25,7 @@ order = 2
 ##======##
 @testset "1D second derivative second order" begin
     n = 21
-    Dom = SPADE.Grid1D([-1.0,1.0],n)
+    Dom = FaADE.Grid1D([-1.0,1.0],n)
     x = Dom.grid
     @testset "constant coefficient" begin
         k = ones(n)
@@ -101,7 +101,7 @@ end
 @testset "Dxx second order 2D" begin
     nx = ny = 21
     Dx = Dy = [-1.0,1.0]
-    Dom = SPADE.Grid2D(Dx,Dy,nx,ny)
+    Dom = FaADE.Grid2D(Dx,Dy,nx,ny)
 
 
 end

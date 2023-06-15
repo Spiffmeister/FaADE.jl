@@ -5,7 +5,7 @@ using LaTeXStrings
 
 using Pkg
 Pkg.activate(".")
-using SPADE
+using FaADE
 
 
 
@@ -20,7 +20,7 @@ using SPADE
 ###=== MMS ===###
 
 # Generates the exact MMS solution
-function generate_MMS(MMS::Function,grid::SPADE.Helpers.Grid1D,t::Float64)
+function generate_MMS(MMS::Function,grid::FaADE.Helpers.Grid1D,t::Float64)
     u_MMS = zeros(grid.n)
     for i = 1:grid.n
         u_MMS[i] = MMS(grid.grid[i],t)

@@ -10,8 +10,8 @@ using Profile
 cd("..")
 using Interpolations
 push!(LOAD_PATH,"./plas_diff")
-push!(LOAD_PATH,"./SPADE")
-using SPADE
+push!(LOAD_PATH,"./FaADE")
+using FaADE
 using plas_diff
 
 
@@ -63,10 +63,10 @@ end
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
 
-H_x = SPADE.build_H(order,ny)
+H_x = FaADE.build_H(order,ny)
 H_x = 1.0 ./H_x.^2
 
-H_y = SPADE.build_H(order,nx)
+H_y = FaADE.build_H(order,nx)
 H_y = 1.0 ./H_y.^2
 
 # Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
@@ -75,7 +75,7 @@ H_y = 1.0 ./H_y.^2
 τ_para = -1.0
 
 
-# PGrid = SPADE.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
+# PGrid = FaADE.Helpers.ParallelGrid(gdata.z_planes[1],gdata.z_planes[2],0.0)
 
 
 
@@ -126,8 +126,8 @@ function χ_h!(χ,x::Array{Float64},p,t)
 end
 
 dH(X,x,p,t) = χ_h!(X,x,params,t)
-PGrid = SPADE.construct_grid(dH,Dom,[-2π,2π])
-Pfn = SPADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
+PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
+Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
 
 
 # using Profile
@@ -139,7 +139,7 @@ t_f = 100.0
 # @time soln = solve(P,Dom,Δt,5.1Δt,:cgie,adaptive=true,penalty_func=penalty_fn)
 # Profile.clear_malloc_data()
 
-Pfn1 = SPADE.generate_parallel_penalty(PGrid,Dom,2)
+Pfn1 = FaADE.generate_parallel_penalty(PGrid,Dom,2)
 P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 @time soln1 = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn1)
 
@@ -173,12 +173,12 @@ plas_diff.plot_grid(gdata)
 
 #=
 p1 = scatter(pdata.θ,pdata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,xlims=𝒟y,ylabel="ψ",xlabel="θ",legend=false,dpi=600,fmt=:png)
-savefig(p1,"SPADE//figures//CTAC_Poincare")
+savefig(p1,"FaADE//figures//CTAC_Poincare")
 
 
 p2 = contour(soln.grid.gridy,soln.grid.gridx,soln.u[2],dpi=600,fmt=:png,linewidth=2)
 scatter!(pdata.θ,pdata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,ylabel="ψ",xlabel="θ",legend=false)
-savefig(p2,"SPADE//figures/CTAC_Contour")
+savefig(p2,"FaADE//figures/CTAC_Contour")
 
 
 
@@ -213,7 +213,7 @@ GLMakie.scatter!(ax3,zeros(2), [θ[pickapoint],gdata.z_planes[1].y[pickapoint]],
 GLMakie.lines!(ax3, π*sin.(t), -(π*cos.(t) .+ (-(θ[pickapoint]*(1.0.-t/2π) + gdata.z_planes[1].y[pickapoint]*t/2π) .- π)), collect(range(ψ[pickapoint],gdata.z_planes[1].x[pickapoint],length=100)) )
 
 
-GLMakie.save("SPADE//figures//AustMS_2022.png", p3, resolution=(1600,1200), transparency=true)
+GLMakie.save("FaADE//figures//AustMS_2022.png", p3, resolution=(1600,1200), transparency=true)
 
 
 

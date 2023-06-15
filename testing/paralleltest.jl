@@ -11,7 +11,7 @@ using JLD2
 using Distributed
 # addprocs(1)
 @everywhere push!(LOAD_PATH,".")
-@everywhere using SPADE
+@everywhere using FaADE
 using SharedArrays
 
 ###

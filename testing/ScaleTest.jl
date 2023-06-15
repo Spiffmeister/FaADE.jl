@@ -15,9 +15,9 @@ using Distributed
 # addprocs(1)
 @everywhere using Interpolations
 @everywhere push!(LOAD_PATH,"./plas_diff")
-@everywhere push!(LOAD_PATH,"./SPADE")
+@everywhere push!(LOAD_PATH,"./FaADE")
 # @everywhere push!(LOAD_PATH,".")
-@everywhere using SPADE
+@everywhere using FaADE
 @everywhere using plas_diff
 using SharedArrays
 
@@ -75,9 +75,9 @@ println("Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
-H_x = SPADE.build_H(ny,order_x)
+H_x = FaADE.build_H(ny,order_x)
 H_x = 1.0 ./H_x.^2
-H_y = SPADE.build_H(nx,order_y)
+H_y = FaADE.build_H(nx,order_y)
 H_y = 1.0 ./H_y.^2
 ### Parallel Penalty ###
 function penalty_fn(u,uₒ,Δt)
@@ -107,7 +107,7 @@ function penalty_fn(u,uₒ,Δt)
     end
     return uₚ, norm(umw)
 end
-SPADE.time_solver(rate,u₀,21,21,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,SPADE.Periodic,
+FaADE.time_solver(rate,u₀,21,21,Δx,Δy,x,y,2Δt,Δt,kx,ky,gx,gy,Dirichlet,FaADE.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
 
@@ -136,9 +136,9 @@ t_f = 50.0
 N = ceil(Int64,t_f/Δt)
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
-H_x = SPADE.build_H(ny,order_x)
+H_x = FaADE.build_H(ny,order_x)
 H_x = 1.0 ./H_x.^2
-H_y = SPADE.build_H(nx,order_y)
+H_y = FaADE.build_H(nx,order_y)
 H_y = 1.0 ./H_y.^2
 
 
@@ -174,9 +174,9 @@ end
 
 
 println("(nx,ny)=(",nx,",",ny,")    Δx=",Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
-@time SPADE.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SPADE.Periodic,
+@time FaADE.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,FaADE.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 
-@time SPADE.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,SPADE.Periodic,
+@time FaADE.time_solver(rate,u₀,nx,ny,Δx,Δy,x,y,t_f,Δt,kx,ky,gx,gy,Dirichlet,FaADE.Periodic,
     method=method,order_x=order,order_y=order,samplefactor=Inf,tol=1e-5,rtol=1e-10,penalty_fn=penalty_fn,adaptive=true)
 

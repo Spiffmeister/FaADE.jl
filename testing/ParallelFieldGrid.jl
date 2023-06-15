@@ -3,8 +3,8 @@ using LinearAlgebra
 cd("..")
 using Interpolations
 push!(LOAD_PATH,"./plas_diff")
-push!(LOAD_PATH,"./SPADE")
-using SPADE
+push!(LOAD_PATH,"./FaADE")
+using FaADE
 using plas_diff
 
 

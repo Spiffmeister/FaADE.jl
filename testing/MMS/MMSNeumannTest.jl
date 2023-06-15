@@ -7,7 +7,7 @@ using JLD2
 
 using Pkg
 Pkg.activate(".")
-using SPADE
+using FaADE
 
 
 
@@ -42,7 +42,7 @@ F(x,y,t) = -2π*sin(2π*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) +
 
 
 #=== Define a function to generate the MMS solution ===#
-function generate_MMS(MMS::Function,grid::SPADE.Helpers.Grid2D,t::Float64)
+function generate_MMS(MMS::Function,grid::FaADE.Helpers.Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx

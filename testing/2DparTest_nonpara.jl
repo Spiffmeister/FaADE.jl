@@ -8,7 +8,7 @@ using Profile
 
 using Pkg
 Pkg.activate(".")
-using SPADE
+using FaADE
 
 
 

@@ -5,7 +5,7 @@ Module containing first and second derivative variable coefficient SBP operators
 module Derivatives
 
     using Distributed
-    using SPADE.Helpers
+    using FaADE.Helpers
 
     include("DerivativeFirst.jl")
     include("DerivativeSecond.jl")

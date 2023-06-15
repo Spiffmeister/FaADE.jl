@@ -8,7 +8,7 @@ using LinearAlgebra
 using Pkg
 
 Pkg.activate(".")
-using SPADE
+using FaADE
 
 
 function buildgrid(n)

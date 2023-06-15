@@ -8,7 +8,7 @@ module SATs
 
     # import Base: +
     using LinearAlgebra: dot
-    using SPADE.Helpers
+    using FaADE.Helpers
     # using StaticArrays
 
 

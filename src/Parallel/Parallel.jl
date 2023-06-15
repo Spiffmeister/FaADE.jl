@@ -8,7 +8,7 @@ module Parallel
     # using Interpolations: LinearInterpolation
     using Interpolations
 
-    using SPADE.Helpers
+    using FaADE.Helpers
 
 
     include("PGrid.jl")

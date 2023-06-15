@@ -1,5 +1,5 @@
 """
-Module for `SPADE.jl` package - for computing finite differences by Summation by Parts 
+Module for `FaADE.jl` package - for computing finite differences by Summation by Parts 
     with Simulatenous Approximation Terms.
 
 # Submodules
@@ -10,7 +10,7 @@ Module for `SPADE.jl` package - for computing finite differences by Summation by
 - [`solvers`](@ref)
 
 """
-module SPADE
+module FaADE
 
     # Inbuild julia packages
     using Distributed
@@ -29,19 +29,19 @@ module SPADE
 
     # Include the files (add as completed)
     # Helpers export
-    using SPADE.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
-    using SPADE.Helpers: Left, Internal, Right, Up, Down
-    using SPADE.Helpers: Grid1D, Grid2D
-    using SPADE.Helpers: Boundary, PeriodicBoundary
-    using SPADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
+    using FaADE.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
+    using FaADE.Helpers: Left, Internal, Right, Up, Down
+    using FaADE.Helpers: Grid1D, Grid2D
+    using FaADE.Helpers: Boundary, PeriodicBoundary
+    using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using SPADE.Derivatives: D₁, D₂, D₂!
+    using FaADE.Derivatives: D₁, D₂, D₂!
     
-    using SPADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
+    using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
 
-    using SPADE.solvers: solve, build_H
+    using FaADE.solvers: solve, build_H
 
-    using SPADE.Parallel: construct_grid, generate_parallel_penalty
+    using FaADE.Parallel: construct_grid, generate_parallel_penalty
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface

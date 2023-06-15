@@ -3,7 +3,7 @@ Pkg.activate(".")
 # push!(LOAD_PATH,"./src/")
 
 using Documenter, Literate,
-    SPADE
+    FaADE
 
 LitPath1D = joinpath(@__DIR__,"..","tutorials","example1D.jl")
 LitPath2D = joinpath(@__DIR__,"..","tutorials","example2D.jl")
@@ -30,5 +30,5 @@ makedocs(sitename="SBP Operators Documentation",
         ]
     ],
     format=Documenter.HTML(prettyurls=false),
-    modules = [SPADE,SPADE.Derivatives,SPADE.Helpers,SPADE.SATs,SPADE.solvers]
+    modules = [FaADE,FaADE.Derivatives,FaADE.Helpers,FaADE.SATs,FaADE.solvers]
     )

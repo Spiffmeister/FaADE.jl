@@ -10,8 +10,8 @@ using Profile
 cd("..")
 using Interpolations
 push!(LOAD_PATH,"./plas_diff")
-push!(LOAD_PATH,"./SPADE")
-using SPADE
+push!(LOAD_PATH,"./FaADE")
+using FaADE
 using plas_diff
 
 
@@ -63,10 +63,10 @@ end
 
 gdata = plas_diff.construct_grid(𝒟x,𝒟y,nx,ny,χ_h!,params)
 
-H_x = SPADE.build_H(order,ny)
+H_x = FaADE.build_H(order,ny)
 H_x = 1.0 ./H_x.^2
 
-H_y = SPADE.build_H(order,nx)
+H_y = FaADE.build_H(order,nx)
 H_y = 1.0 ./H_y.^2
 
 # Hinv = diag(kron(I(nx),H_y) + kron(H_x,I(ny)))
