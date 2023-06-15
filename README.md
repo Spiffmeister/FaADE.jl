@@ -1,4 +1,6 @@
-# FaADE (need a better title)
+# FaADE.jl
+
+_Field aligned Anisotropic Diffusion Equation solver_
 
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://github.com/Spiffmeister/FaADE.jl/docs/src/)
 
