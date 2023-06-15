@@ -3,7 +3,7 @@
 
 Users can create a generic SBP operator with the function,
 ```@docs
-SPADE.SATs.SAT
+FaADE.SATs.SAT
 ```
 Note that this requires users to first create a boundary condition with [boundary conditions](@ref User_interaction)
 
@@ -11,13 +11,13 @@ Note that this requires users to first create a boundary condition with [boundar
 
 The following are for boundary conditions
 ```@docs
-SPADE.SATs.SAT_Dirichlet
-SPADE.SATs.SAT_Neumann
+FaADE.SATs.SAT_Dirichlet
+FaADE.SATs.SAT_Neumann
 ```
 
 If periodic boundaries are applied
 ```@docs
-SPADE.SATs.SAT_Periodic
+FaADE.SATs.SAT_Periodic
 ```
 
 If a domain is split along some boundary then the following matches the values at the interface.
@@ -29,13 +29,13 @@ If a domain is split along some boundary then the following matches the values a
 
 The `D_x^T B` and `B D_x` operators are given by,
 ```@docs
-SPADE.SATs.BoundaryDerivativeTranspose
-SPADE.SATs.BoundaryDerivative
+FaADE.SATs.BoundaryDerivativeTranspose
+FaADE.SATs.BoundaryDerivative
 ```
 
 Penalties are constructed with the following,
 ```@docs
-SPADE.SATs.SATpenalties
-SPADE.SATs.hval
+FaADE.SATs.SATpenalties
+FaADE.SATs.hval
 ```
 

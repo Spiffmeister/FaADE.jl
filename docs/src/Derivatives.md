@@ -8,12 +8,12 @@ Below are the first and second derivative summation by parts operators.
 The below operators are for first derivatives
 
 ```@docs
-SPADE.Derivatives.D₁
+FaADE.Derivatives.D₁
 ```
 
 ### As iterators
 ```@docs
-SPADE.Derivatives.D₁!
+FaADE.Derivatives.D₁!
 ```
 
 
@@ -21,7 +21,7 @@ SPADE.Derivatives.D₁!
 ## Second Derivative operators
 
 ```@docs
-SPADE.Derivatives.D₂
+FaADE.Derivatives.D₂
 ```
 
 ### As iterators
@@ -29,7 +29,7 @@ SPADE.Derivatives.D₂
 The following functions are also available as iterators
 
 ```@docs
-SPADE.Derivatives.D₂!
+FaADE.Derivatives.D₂!
 ```
 
 
@@ -41,14 +41,14 @@ SPADE.Derivatives.D₂!
 
 
 ```@docs
-SPADE.Derivatives.FirstDerivative
-SPADE.Derivatives.FirstDerivativeInternal
-SPADE.Derivatives.FirstDerivativeInternal!
-SPADE.Derivatives.FirstDerivativeBoundary!
-SPADE.Derivatives.FirstDerivativeBoundaryStencil!
+FaADE.Derivatives.FirstDerivative
+FaADE.Derivatives.FirstDerivativeInternal
+FaADE.Derivatives.FirstDerivativeInternal!
+FaADE.Derivatives.FirstDerivativeBoundary!
+FaADE.Derivatives.FirstDerivativeBoundaryStencil!
 
 ```
 
 ```@docs
-SPADE.Derivatives.SecondDerivative
+FaADE.Derivatives.SecondDerivative
 ```

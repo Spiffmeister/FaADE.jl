@@ -1,11 +1,11 @@
-# SPADE.jl
+# FaADE.jl
 
 _A Summation by Parts code for solving the field aligned Anisotropic Diffusion Equation._ 
 
 
 ## Features
 
-`SPADE.jl` is a code for solving the field aligned anisotropic diffusion equation
+`FaADE.jl` is a code for solving the field aligned anisotropic diffusion equation
 
 $$\frac{\partial u}{\partial t} = \nabla\cdot(k_\perp \nabla_\perp) u + \nabla\cdot(k_\parallel\nabla_\parallel)u,$$
 

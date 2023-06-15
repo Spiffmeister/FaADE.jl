@@ -12,7 +12,7 @@ For this example we will solve the head equation with a mangetic field aligned w
 In this case we expect the parallel operator to do nothing since ``\mathbf{P}_f=\mathbf{P}_b=I``
 
 ````@example example3D
-using SPADE
+using FaADE
 ````
 
 For this we'll solve the field aligned equation is
@@ -29,7 +29,7 @@ periodic in ``y``, and initial condition
 ```
 
 
-We first need to create a domain to solve the PDE using [`Grid2D`](@ref SPADE.Helpers.Grid2D)
+We first need to create a domain to solve the PDE using [`Grid2D`](@ref FaADE.Helpers.Grid2D)
 
 ````@example example3D
 𝒟x = [0.0,1.0]
@@ -44,7 +44,7 @@ The initial condition is
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 ````
 
-The boundary conditions are defined by creating [`Boundary`](@ref SPADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
+The boundary conditions are defined by creating [`Boundary`](@ref FaADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
 
 ````@example example3D
 BoundaryLeft = Boundary(Dirichlet,(y,t)->0.0,Left)
@@ -72,7 +72,7 @@ Ky(x,y) = 1.0
 
 NOTE: currently only conjugate gradient implicit Euler (`:cgie`) works as a solver
 
-Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SPADE.Helpers.VariableCoefficientPDE2D),
+Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref FaADE.Helpers.VariableCoefficientPDE2D),
 
 ````@example example3D
 P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
@@ -87,7 +87,7 @@ function Bfield(X,x,p,t)
 end
 ````
 
-Assuming a ``2\pi`` periodicity then we can construct a parallel grid object with [`construct_grid`](@ref SPADE.Parallel.construct_grid)
+Assuming a ``2\pi`` periodicity then we can construct a parallel grid object with [`construct_grid`](@ref FaADE.Parallel.construct_grid)
 
 ````@example example3D
 PGrid = construct_grid(Bfield,grid,[-2π,2π])

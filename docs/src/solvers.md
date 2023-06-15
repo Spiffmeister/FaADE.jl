@@ -3,12 +3,12 @@
 
 
 ```@docs
-SPADE.solvers.solve
+FaADE.solvers.solve
 ```
 
 
 ```@docs
-SPADE.solvers.solution
+FaADE.solvers.solution
 ```
 
 
@@ -16,7 +16,7 @@ SPADE.solvers.solution
 
 ### Implicit
 ```@docs
-SPADE.solvers.conj_grad!
+FaADE.solvers.conj_grad!
 ```
 
 
@@ -27,7 +27,7 @@ SPADE.solvers.conj_grad!
 ## Conjugate Gradient helpers
 
 ```@docs
-SPADE.solvers.build_H
-SPADE.solvers.A!
-SPADE.solvers.innerH
+FaADE.solvers.build_H
+FaADE.solvers.A!
+FaADE.solvers.innerH
 ```

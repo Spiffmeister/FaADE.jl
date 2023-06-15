@@ -5,26 +5,26 @@ The `Helpers` sub-package contains both user interface function and functions us
 ## User interaction (@id User_interaction)
 
 ```@docs
-SPADE.Helpers.Boundary
-SPADE.Helpers.PeriodicBoundary
+FaADE.Helpers.Boundary
+FaADE.Helpers.PeriodicBoundary
 ```
 
 ```@docs
-SPADE.Helpers.VariableCoefficientPDE1D
-SPADE.Helpers.VariableCoefficientPDE2D
+FaADE.Helpers.VariableCoefficientPDE1D
+FaADE.Helpers.VariableCoefficientPDE2D
 ```
 
 ```@docs
-SPADE.Helpers.Grid1D
-SPADE.Helpers.Grid2D
+FaADE.Helpers.Grid1D
+FaADE.Helpers.Grid2D
 ```
 
 
 ## Types
 
 ```@docs
-SPADE.Helpers.NodeType
-SPADE.Helpers.BoundaryConditionType
+FaADE.Helpers.NodeType
+FaADE.Helpers.BoundaryConditionType
 ```
 
 
@@ -34,33 +34,33 @@ SPADE.Helpers.BoundaryConditionType
 
 These data blocks are used internally and are not interacted with by the user,
 ```@docs
-SPADE.Helpers.DataBlock
-SPADE.Helpers.BoundaryData1D
-SPADE.Helpers.BoundaryData2D
+FaADE.Helpers.DataBlock
+FaADE.Helpers.BoundaryData1D
+FaADE.Helpers.BoundaryData2D
 ```
 
 Moving data between blocks uses the following functions,
 ```@docs
-SPADE.Helpers.copyUtoSAT!
-SPADE.Helpers.copySATtoU!
-SPADE.Helpers.addSATtoU!
+FaADE.Helpers.copyUtoSAT!
+FaADE.Helpers.copySATtoU!
+FaADE.Helpers.addSATtoU!
 ```
 
 
 ## Nifty internal functions
 ```@docs
-SPADE.Helpers.check_order
-SPADE.Helpers.check_boundary
-SPADE.Helpers.halforder
-SPADE.Helpers.BoundaryNodeInput
-SPADE.Helpers.BoundaryNodeOutput
-SPADE.Helpers.SATNodeOutput
-SPADE.Helpers.SelectLoopDirection
+FaADE.Helpers.check_order
+FaADE.Helpers.check_boundary
+FaADE.Helpers.halforder
+FaADE.Helpers.BoundaryNodeInput
+FaADE.Helpers.BoundaryNodeOutput
+FaADE.Helpers.SATNodeOutput
+FaADE.Helpers.SelectLoopDirection
 ```
 
 ```@docs
-SPADE.Helpers.GetAxis
-SPADE.Helpers.GetDim
-SPADE.Helpers.GetMinΔ
+FaADE.Helpers.GetAxis
+FaADE.Helpers.GetDim
+FaADE.Helpers.GetMinΔ
 ```
 

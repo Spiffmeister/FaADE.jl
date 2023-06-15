@@ -7,7 +7,7 @@ EditURL = "<unknown>/tutorials/example2D.jl"
 The 2D code works similarly to the 1D version, with a few different function calls.
 
 ````@example example2D
-using SPADE
+using FaADE
 ````
 
 This example gives a 1D solution to a 2D problem.
@@ -26,7 +26,7 @@ and initial condition
 ```
 
 
-We first need to create a domain to solve the PDE using [`Grid2D`](@ref SPADE.Helpers.Grid2D)
+We first need to create a domain to solve the PDE using [`Grid2D`](@ref FaADE.Helpers.Grid2D)
 
 ````@example example2D
 𝒟x = [0.0,1.0]
@@ -41,7 +41,7 @@ The initial condition
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 ````
 
-The boundary conditions are defined by creating [`Boundary`](@ref SPADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
+The boundary conditions are defined by creating [`Boundary`](@ref FaADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
 
 ````@example example2D
 BoundaryLeft = Boundary(Dirichlet,(y,t)->0.0,Left)
@@ -67,7 +67,7 @@ Kx(x,y) = 1.0
 Ky(x,y) = 1.0
 ````
 
-Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref SPADE.Helpers.VariableCoefficientPDE2D),
+Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref FaADE.Helpers.VariableCoefficientPDE2D),
 
 ````@example example2D
 P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
@@ -87,7 +87,7 @@ Finally we call the solver (currently not working with `Documenter.jl`)
 soln = solve(P,grid,Δt,t_f,method)
 ````
 
-The solver ourputs a [`solution`](@ref SPADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
+The solver ourputs a [`solution`](@ref FaADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 the problem from the final state if we wanted to restart.
 
 No visualisation routines are written at the moment but we imported the `Plots.jl` package earlier so we'll use that
