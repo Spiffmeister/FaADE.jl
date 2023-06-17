@@ -1,7 +1,6 @@
 push!(LOAD_PATH,"../src/")
 
-using Documenter, Literate,
-    FaADE
+using Documenter, Literate, FaADE
 
 LitPath1D = joinpath(@__DIR__,"..","tutorials","example1D.jl")
 LitPath2D = joinpath(@__DIR__,"..","tutorials","example2D.jl")
@@ -30,3 +29,8 @@ makedocs(sitename="SBP Operators Documentation",
     format=Documenter.HTML(prettyurls=false),
     modules = [FaADE,FaADE.Derivatives,FaADE.Helpers,FaADE.SATs,FaADE.solvers]
     )
+	
+
+deploydocs(
+    repo = "github.com/Spiffmeister/FaADE.jl.git"
+)
