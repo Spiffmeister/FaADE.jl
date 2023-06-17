@@ -2,7 +2,7 @@
 
 _Field aligned Anisotropic Diffusion Equation solver_
 
-[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://spiffmeister.github.io/FaADE.jl/dev/)
+[![Documentation](https://shields.io/badge/docs-dev-blue)](https://spiffmeister.github.io/FaADE.jl/dev/)
 
 
 ## Installation
