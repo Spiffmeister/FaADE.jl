@@ -50,6 +50,7 @@ const DataMode = SATMode{:DataMode}()
 const SolutionMode = SATMode{:SolutionMode}()
 
 
+struct DerivativeOrder{O} end
 
 
 abstract type DataBlockType{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end

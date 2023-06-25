@@ -35,7 +35,7 @@ module FaADE
     using FaADE.Helpers: Boundary, PeriodicBoundary
     using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using FaADE.Derivatives: D₁, D₂, D₂!
+    using FaADE.Derivatives: D₁, D₂!
     
     using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
 

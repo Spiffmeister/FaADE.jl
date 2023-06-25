@@ -82,11 +82,11 @@ function SAT_Periodic!(cache::AT,u::AT,c::AT,
             S[i]            += τ₁*K[1]*D₁ᵀE₀[i]*L₁u
             S[end-order+i]  += τ₁*K[end]*D₁ᵀEₙ[i]*L₁u
             #Neumann terms
-            # S[1]  += α₀ * (K[1]*E₀D₁[i]*U[i] - K[end]*EₙD₁[i]*U[end-order+i])
-            # S[end]+= α₀ * (K[1]*E₀D₁[i]*U[i] - K[end]*EₙD₁[i]*U[end-order+i])
+            S[1]  += α₀ * (K[1]*E₀D₁[i]*U[i] - K[end]*EₙD₁[i]*U[end-order+i])
+            S[end]+= α₀ * (K[1]*E₀D₁[i]*U[i] - K[end]*EₙD₁[i]*U[end-order+i])
         end
-        S[1]  += α₀ * (K[1]*dot(E₀D₁,U[1:order]) - K[end]*dot(EₙD₁,U[end-order+1:end]))
-        S[end]+= α₀ * (K[1]*dot(E₀D₁,U[1:order]) - K[end]*dot(EₙD₁,U[end-order+1:end]))
+        # S[1]  += α₀ * (K[1]*dot(E₀D₁,U[1:order]) - K[end]*dot(EₙD₁,U[end-order+1:end]))
+        # S[end]+= α₀ * (K[1]*dot(E₀D₁,U[1:order]) - K[end]*dot(EₙD₁,U[end-order+1:end]))
         # S[1:order]        .+= τ₁ * K[1] * BD₁ᵀ*L₁u
         # S[end-order+1:end].+= -τ₁ * K[end] * BD₁ᵀ*L₁u
         # # Neumann terms

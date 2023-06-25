@@ -18,6 +18,7 @@ module Helpers
     export NodeType, Left, Internal, Right, Up, Down
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     export SATMode, DataMode, SolutionMode
+    export DerivativeOrder
 
     # nifty import
     export check_order, check_boundary,

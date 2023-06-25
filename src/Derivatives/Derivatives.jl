@@ -16,6 +16,6 @@ module Derivatives
     include("Diff.jl")
 
     export SecondDerivative
-    export D₁, D₁!, D₂, D₂!, generate_SecondDerivative
+    export D₁, D₁!, D₂!, generate_SecondDerivative
 
 end

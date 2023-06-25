@@ -127,10 +127,10 @@ Move out of bounds points to the boundary
                     # println(X[i])
                 end
             end
-        # elseif bound == 2π
-        #     for i in eachindex(X)
-        #         X[i] = rem2pi(X[i],RoundDown)
-        #     end
+        elseif bound == 2π
+            for i in eachindex(X)
+                X[i] = rem2pi(X[i],RoundDown)
+            end
         end
     end
 end

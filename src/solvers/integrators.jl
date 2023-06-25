@@ -90,16 +90,17 @@ function conj_grad!(RHS::F,DBlock::DataBlock{T,N,AT},CGB::ConjGradBlock{T,N,AT},
         A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
         αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
-        DBlock.uₙ₊₁ .= DBlock.uₙ₊₁ .+ αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
-        CGB.rₖ .= CGB.rₖ .- CGB.b
+        @. CGB.rₖ = CGB.rₖ - CGB.b
 
         A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
         βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
-        CGB.dₖ .= -CGB.rₖ .+ βₖ*CGB.dₖ
+        @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+
         rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
         i += 1
     end
@@ -116,6 +117,6 @@ Mutable ``u - ΔtD(u)``
 """
 function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::T,k::KT) where {T,AT,KT}
     PDE!(tmp,uⱼ,k)
-    tmp .= uⱼ .- Δt*tmp
+    @. tmp = uⱼ - Δt*tmp
 end
 
