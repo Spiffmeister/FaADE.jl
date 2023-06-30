@@ -7,6 +7,8 @@ module Derivatives
     using Distributed
     using FaADE.Helpers
 
+    include("types.jl")
+
     include("DerivativeFirst.jl")
     include("DerivativeSecond.jl")
 
@@ -16,6 +18,7 @@ module Derivatives
     include("Diff.jl")
 
     export SecondDerivative
+    export DerivativeOrder
     export D₁, D₁!, D₂!, generate_SecondDerivative
 
 end

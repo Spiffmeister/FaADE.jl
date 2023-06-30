@@ -3,7 +3,6 @@
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
-
 """
     SecondDerivative
 Allocating functions for second derivative, useful when need to add value to a matrix.
@@ -24,125 +23,73 @@ function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,node:
     return uₓₓ
 end
 
+
+
+
+
+
+
+
+
 """
-    SecondDerivativeInternal
+    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType,::DerivativeOrder{2},i::Int,j::Int,α::T) 
+2D 2nd order pointwise
+"""
+@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType{:Internal,1},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
+    uₓₓ[i,j] = α*uₓₓ[i,j] + 
+        (0.5*(c[i,j] + c[i-1,j])*u[i-1,j] - 0.5*(c[i+1,j] + 2c[i,j] + c[i-1,j])*u[i,j] + 0.5*(c[i,j] + c[i+1,j])*u[i+1,j])/Δx^2
+end
+@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,
+        ::NodeType{:Internal,2},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
+    uₓₓ[i,j] = α*uₓₓ[i,j] + 
+        (0.5*(c[i,j] + c[i,j-1])*u[i,j-1] - 0.5*(c[i,j+1] + 2c[i,j] + c[i,j-1])*u[i,j] + 0.5*(c[i,j] + c[i,j+1])*u[i,j+1])/Δx^2
+end
+"""
+    SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::DerivativeOrder{4},i::Int,j::Int,α::T)
+4th order pointwise
+"""
+@inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,
+        ::DerivativeOrder{4},i::Int,j::Int,α::T) where T
+    uₓₓ[j] = α*uₓₓ[j] -
+        ( (-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
+        (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
+        (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
+        (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
+        (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2] )/Δx^2
+end
+
+
+
+
+
+#====== 1D VERSIONS ======#
+"""
+    SecondDerivativeInternal!
 Single node 1D second derivative function.
 
 See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
 """
-@inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
-    if order == 2
-        j = 2
-        uₓₓ = 0.5*(c[j] + c[j-1])*u[j-1] - 0.5*(c[j+1] + 2c[j] + c[j-1])*u[j] + 0.5*(c[j] + c[j+1])*u[j+1]
-        return uₓₓ/Δx^2
-    elseif order == 4
-        j = 3
-        uₓₓ = (-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
-        (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
-        (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
-        (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
-        (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2]
-        return -uₓₓ/Δx^2
-    elseif order == 6
-        j = 4
-        uₓₓ = (c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
-        (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
-        (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
-        (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
-        (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
-        (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
-        (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3]
-        return -uₓₓ/Δx^2
-    end
-
-end
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType{:Internal},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
-        uₓₓ[i,j] = α*uₓₓ[i,j] + 
-            (0.5*(c[i,j] + c[i,j-1])*u[i,j-1] - 0.5*(c[i,j+1] + 2c[i,j] + c[i,j-1])*u[i,j] + 0.5*(c[i,j] + c[i,j+1])*u[i,j+1])/Δx^2
-end
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType{:Internal},::DerivativeOrder{4},i::Int,j::Int,α::T) where T
-    uₓₓ[i,j] = α*uₓₓ[i,j] + 
-        (0.5*(c[i,j] + c[i-1,j])*u[i-1,j] - 0.5*(c[i+1,j] + 2c[i,j] + c[i-1,j])*u[i,j] + 0.5*(c[i,j] + c[i+1,j])*u[i+1,j])/Δx^2
-end
-
-
+function SecondDerivativeInternal! end
 """
-    SecondDerivativeInternal!
-1D and 2D in place functions for second derivative on internal nodes of a domain
+    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT)
+
+Second order 1D second derivative internal stencil
 """
-######### 1D FUNCTION
-@views @inline function SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},
-        u::AbstractVector{TT},cx::AbstractVector{TT},
-        Δx::TT,nx::Integer,order::Integer,α::TT) where TT
-    # α = T(0)
-    if order == 2
-        for i = 2:nx-1
-                @inbounds uₓₓ[i] = α*uₓₓ[i] +
-                    ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
-                    # (2u[i-1] - 4u[i] + 2u[i+1])/(2Δx^2)
-        end
-    elseif order == 4
-        for i = 7:nx-6
-            @inbounds    uₓₓ[i] = α*uₓₓ[i] + 
-                ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
-                (-cx[i-2]/0.6e1 - cx[i+1]/0.6e1 - cx[i-1]/0.2e1 - cx[i]/0.2e1)*u[i-1] +
-                (cx[i-2]/0.24e2 + 0.5e1/0.6e1*cx[i-1] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
-                (-cx[i-1]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
-                (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
-        end
-    end
-    uₓₓ
-end
-######### 2D FUNCTION
-@views @inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
-        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
-        Δx::T,Δy::T,nx::Integer,ny::Integer,order::Integer,α::T) where T
-    if order == 2
-        #= 2nd order =#
-        for j = 2:ny-1
-            for i = 2:nx-1
-                @inbounds uₓₓ[i,j] = α*uₓₓ[i] +
-                    ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
-                    ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
-            end
-        end
-    elseif order == 4
-        #= 4th order =#
-        for j = 7:ny-6
-            for i = 7:nx-6
-                @inbounds uₓₓ[i,j] = α*uₓₓ[i] + 
-                    (   (-cx[i,j-1]/0.6e1 + cx[i,j-2]/0.8e1 + cx[i,j]/0.8e1)*u[i,j-2] +
-                        (-cx[i,j-2]/0.6e1 - cx[i,j+1]/0.6e1 - cx[i,j-1]/0.2e1 - cx[i,j]/0.2e1)*u[i,j-1] +
-                        ( cx[i,j-2]/0.24e2 + 0.5e1/0.6e1*cx[i,j-1] + 0.5e1/0.6e1*cx[i,j+1] + cx[i,j+2]/0.24e2 + 0.3e1/0.4e1*cx[i,j])*u[i,j] +
-                        (-cx[i,j-1]/0.6e1 - cx[i,j+2]/0.6e1 - cx[i,j]/0.2e1 - cx[i,j+1]/0.2e1)*u[i,j+1] +
-                        (-cx[i,j+1]/0.6e1 + cx[i,j]/0.8e1 + cx[i,j+2]/0.8e1)*u[i,j+2]
-                        )/(-Δy^2) +    # y derivative
-                    (   (-cy[i-1,j]/0.6e1 + cy[i-2,j]/0.8e1 + cy[i,j]/0.8e1)*u[i-2,j] +
-                        (-cy[i-2,j]/0.6e1 - cy[i+1,j]/0.6e1 - cy[i-1,j]/0.2e1 - cy[i,j]/0.2e1)*u[i-1,j] +
-                        ( cy[i-2,j]/0.24e2 + 0.5e1/0.6e1*cy[i-1,j] + 0.5e1/0.6e1*cy[i+1,j] + cy[i+2,j]/0.24e2 + 0.3e1/0.4e1*cy[i,j])*u[i,j] +
-                        (-cy[i-1,j]/0.6e1 - cy[i+2,j]/0.6e1 - cy[i,j]/0.2e1 - cy[i+1,j]/0.2e1)*u[i+1,j] +
-                        (-cy[i+1,j]/0.6e1 + cy[i,j]/0.8e1 + cy[i+2,j]/0.8e1)*u[i+2,j]
-                        )/(-Δx^2)      # x derivative
-            end
-        end
-
-    end
-    uₓₓ
-end
-
-
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},
-    u::AbstractVector{TT},cx::AbstractVector{TT},
-    Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT) where TT
+@inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
+        Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT) where {TT,VT<:AbstractVector{TT}}
     for i = 2:nx-1
         @inbounds uₓₓ[i] = α*uₓₓ[i] +
             ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
     end
     uₓₓ
 end
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},
-    u::AbstractVector{TT},cx::AbstractVector{TT},
-    Δx::TT,nx::Integer,::DerivativeOrder{4},α::TT) where TT
+"""
+    function SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{4},α::TT)
+
+Fourth order 1D second derivative internal stencil
+"""
+@inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
+    Δx::TT,nx::Integer,::DerivativeOrder{4},α::TT) where {TT,VT<:AbstractVector{TT}}
     for i = 7:nx-6
         @inbounds    uₓₓ[i] = α*uₓₓ[i] + 
             ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
@@ -153,30 +100,89 @@ end
     end
     uₓₓ
 end
-#= 2D VERSIONS =#
+"""
+    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::DerivativeOrder{6},i::Int,j::Int,α::T)
+2D 6th order pointwise
+"""
+@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,nx::Integer,
+        ::DerivativeOrder{6},i::Int,j::Int,α::T) where T
+    for j = 10:nx-9
+        @inbounds uₓₓ[j] = α*uₓₓ[j] - 
+            ((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
+            (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
+            (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
+            (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
+            (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
+            (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
+            (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
+    end
+end
+
+
+
+#====== 2D VERSIONS ======#
+"""
+    function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T)
+
+Second order 2D second derivative internal 5 point stencil
+"""
 @inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
-    u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
-    Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T) where T
+        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
+        Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T) where T
     
     for j = 2:ny-1
         for i = 2:nx-1
-            @inbounds uₓₓ[i,j] = α*uₓₓ[i] +
+            @inbounds uₓₓ[i,j] = α*uₓₓ[i,j] +
                 ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
                 ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
         end
     end
     uₓₓ
 end
+"""
+function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T)
+
+Fourth order 2D second derivative internal 5 point stencil
+"""
+@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
+        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
+        Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{4},α::T) where T
+    
+    for j = 7:ny-6
+        for i = 7:nx-6
+            @inbounds uₓₓ[i,j] = α*uₓₓ[i,j] + 
+                (   (-cx[i,j-1]/0.6e1 + cx[i,j-2]/0.8e1 + cx[i,j]/0.8e1)*u[i,j-2] +
+                    (-cx[i,j-2]/0.6e1 - cx[i,j+1]/0.6e1 - cx[i,j-1]/0.2e1 - cx[i,j]/0.2e1)*u[i,j-1] +
+                    ( cx[i,j-2]/0.24e2 + 0.5e1/0.6e1*cx[i,j-1] + 0.5e1/0.6e1*cx[i,j+1] + cx[i,j+2]/0.24e2 + 0.3e1/0.4e1*cx[i,j])*u[i,j] +
+                    (-cx[i,j-1]/0.6e1 - cx[i,j+2]/0.6e1 - cx[i,j]/0.2e1 - cx[i,j+1]/0.2e1)*u[i,j+1] +
+                    (-cx[i,j+1]/0.6e1 + cx[i,j]/0.8e1 + cx[i,j+2]/0.8e1)*u[i,j+2]
+                    )/(-Δy^2) +    # y derivative
+                (   (-cy[i-1,j]/0.6e1 + cy[i-2,j]/0.8e1 + cy[i,j]/0.8e1)*u[i-2,j] +
+                    (-cy[i-2,j]/0.6e1 - cy[i+1,j]/0.6e1 - cy[i-1,j]/0.2e1 - cy[i,j]/0.2e1)*u[i-1,j] +
+                    ( cy[i-2,j]/0.24e2 + 0.5e1/0.6e1*cy[i-1,j] + 0.5e1/0.6e1*cy[i+1,j] + cy[i+2,j]/0.24e2 + 0.3e1/0.4e1*cy[i,j])*u[i,j] +
+                    (-cy[i-1,j]/0.6e1 - cy[i+2,j]/0.6e1 - cy[i,j]/0.2e1 - cy[i+1,j]/0.2e1)*u[i+1,j] +
+                    (-cy[i+1,j]/0.6e1 + cy[i,j]/0.8e1 + cy[i+2,j]/0.8e1)*u[i+2,j]
+                    )/(-Δx^2)      # x derivative
+        end
+    end
+    uₓₓ
+end
 
 
+
+#====== BOUNDARY OPERATORS ======#
+"""
+    SecondDerivativeBoundary!
+"""
+function SecondDerivativeBoundary! end
+#====== 2D VERSIONS ======#
 """
     SecondDerivativeBoundary!
 1D in place function for second derivative on boundary nodes
 """
-
 @inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
-    u::AbstractArray{TT},c::AbstractArray{TT},
-    Δx::TT,::NodeType{:Left},::DerivativeOrder{2},α::TT) where TT
+        u::AbstractArray{TT},c::AbstractArray{TT},
+        Δx::TT,::NodeType{:Left},::DerivativeOrder{2},α::TT) where TT
 
     uₓₓ[1] = α*uₓₓ[1]
 end
@@ -186,70 +192,67 @@ end
     
     uₓₓ[end] = α*uₓₓ[end]
 end
+#====== 2D VERSIONS ======#
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
-    u::AbstractArray{TT},c::AbstractArray{TT},
-    Δx::TT,::NodeType{:Left},::DerivativeOrder{4},α::TT) where TT
+        u::AbstractArray{TT},c::AbstractArray{TT},
+        Δx::TT,::NodeType{:Left},::DerivativeOrder{4},α::TT) where TT
 
     B₁Su = -1/Δx*c[1]*(-24/17*u[1] + 59/34*u[2] - 4/17*u[3] - 3/34*u[4])
 
-    # cache = 
-    # (0.12e2/0.17e2*c[1] + 0.59e2/0.192e3*c[2] + 0.27010400129e11/0.345067064608e12*c[3] + 0.69462376031e11/0.2070402387648e13*c[4])*u[1] +
-    # (-0.59e2/0.68e2*c[1] - 0.6025413881e10/0.21126554976e11*c[3] - 0.537416663e9/0.7042184992e10*c[4])*u[2] +
-    # (0.2e1/0.17e2*c[1] - 0.59e2/0.192e3*c[2] + 0.213318005e9/0.16049630912e11*c[4]+0.2083938599e10/0.8024815456e10*c[3])*u[3] +
-    # (0.3e1/0.68e2*c[1] - 0.1244724001e10/0.21126554976e11*c[3] + 0.752806667e9/0.21126554976e11*c[4])*u[4] +
-    # (0.49579087e8/0.10149031312e11*c[3] - 0.49579087e8/0.10149031312e11*c[4])*u[5] +
-    # (-c[4]/0.784e3 + c[3]/0.784e3)*u[6]
-    # cache /= Δx
-    # cache = 48/(17Δx)*(-cache+B₁Su)
-    # uₓₓ[1] = α*uₓₓ[1] + cache
-
-    # uₓₓ[1:6]    ./= Δx
-    # uₓₓ[1]      = 48/(17Δx)*(-uₓₓ[1]+B₁Su)
-    # uₓₓ[2]      = 48/(59Δx)*(-uₓₓ[2])
-    # uₓₓ[3]      = 48/(43Δx)*(-uₓₓ[3])
-    # uₓₓ[4]      = 48/(49Δx)*(-uₓₓ[4])
-    # uₓₓ[5:6]    .= -1/Δx*uₓₓ[5:6]
-
-
-    uₓₓ[1]  = 
+    # uₓₓ[1]  = 
+    cache = 
         (0.12e2/0.17e2*c[1] + 0.59e2/0.192e3*c[2] + 0.27010400129e11/0.345067064608e12*c[3] + 0.69462376031e11/0.2070402387648e13*c[4])*u[1] +
         (-0.59e2/0.68e2*c[1] - 0.6025413881e10/0.21126554976e11*c[3] - 0.537416663e9/0.7042184992e10*c[4])*u[2] +
         (0.2e1/0.17e2*c[1] - 0.59e2/0.192e3*c[2] + 0.213318005e9/0.16049630912e11*c[4]+0.2083938599e10/0.8024815456e10*c[3])*u[3] +
         (0.3e1/0.68e2*c[1] - 0.1244724001e10/0.21126554976e11*c[3] + 0.752806667e9/0.21126554976e11*c[4])*u[4] +
         (0.49579087e8/0.10149031312e11*c[3] - 0.49579087e8/0.10149031312e11*c[4])*u[5] +
         (-c[4]/0.784e3 + c[3]/0.784e3)*u[6]
+    uₓₓ[1] = α*uₓₓ[1] + 48/(17Δx)*(-cache/Δx + B₁Su)
 
-    uₓₓ[2]  = (-0.59e2/0.68e2*c[1] -0.6025413881e10/0.21126554976e11*c[3] -0.537416663e9/0.7042184992e10*c[4])*u[1] + 
+    # uₓₓ[2]  = 
+    cache =
+        (-0.59e2/0.68e2*c[1] -0.6025413881e10/0.21126554976e11*c[3] -0.537416663e9/0.7042184992e10*c[4])*u[1] + 
         (0.3481e4/0.3264e4*c[1] +0.9258282831623875e16/0.7669235228057664e16*c[3] +0.236024329996203e15/0.1278205871342944e16*c[4])*u[2] + 
         (-0.59e2/0.408e3*c[1] -0.29294615794607e14/0.29725717938208e14*c[3] -0.2944673881023e13/0.29725717938208e14*c[4])*u[3] + 
         (-0.59e2/0.1088e4*c[1] +0.260297319232891e15/0.2556411742685888e16*c[3] -0.60834186813841e14/0.1278205871342944e16*c[4])*u[4] + 
         (-0.1328188692663e13/0.37594290333616e14*c[3] +0.1328188692663e13/0.37594290333616e14*c[4])*u[5] + 
         (-0.8673e4/0.2904112e7*c[3] +0.8673e4/0.2904112e7*c[4])*u[6]
+    uₓₓ[2] = α*uₓₓ[2] - 48/(59Δx)*cache/Δx
 
-
-    uₓₓ[3]  = (0.2e1/0.17e2*c[1] - 0.59e2/0.192e3*c[2] + 0.213318005e9/0.16049630912e11*c[4] + 0.2083938599e10/0.8024815456e10*c[3])*u[1] +
+    # uₓₓ[3]  = 
+    cache =
+        (0.2e1/0.17e2*c[1] - 0.59e2/0.192e3*c[2] + 0.213318005e9/0.16049630912e11*c[4] + 0.2083938599e10/0.8024815456e10*c[3])*u[1] +
         (-0.59e2/0.408e3* c[1] - 0.29294615794607e14/0.29725717938208e14*c[3] - 0.2944673881023e13/0.29725717938208e14*c[4])*u[2] +
         (c[1]/0.51e2 + 0.59e2/0.192e3*c[2] + 0.13777050223300597e17/0.26218083221499456e17*c[4] + 0.564461e6/0.13384296e8*c[5] + 0.378288882302546512209e21/0.270764341349677687456e21*c[3])*u[3] +
         (c[1]/0.136e3 -0.125059e6/0.743572e6*c[5] - 0.4836340090442187227e19/0.5525802884687299744e19*c[3] - 0.17220493277981e14/0.89177153814624e14*c[4])*u[4] + 
         (-0.10532412077335e14/0.42840005263888e14*c[4]  + 0.1613976761032884305e19/0.7963657098519931984e19*c[3] + 0.564461e6/0.4461432e7*c[5])*u[5] +
         (-0.960119e6/0.1280713392e10*c[4] - 0.3391e4/0.6692148e7*c[5] + 0.33235054191e11/0.26452850508784e14*c[3])*u[6]
+    uₓₓ[3] = α*uₓₓ[3] - 48/(43Δx)*cache/Δx
 
-    uₓₓ[4]  = (0.3e1/0.68e2*c[1]-0.1244724001e10/0.21126554976e11*c[3]+0.752806667e9/0.21126554976e11*c[4])*u[1] +
+    # uₓₓ[4]  = 
+    cache =
+        (0.3e1/0.68e2*c[1]-0.1244724001e10/0.21126554976e11*c[3]+0.752806667e9/0.21126554976e11*c[4])*u[1] +
         (-0.59e2/0.1088e4*c[1]+0.260297319232891e15/0.2556411742685888e16*c[3]-0.60834186813841e14/0.1278205871342944e16*c[4])*u[2] +
         (c[1]/0.136e3-0.125059e6/0.743572e6*c[5]-0.4836340090442187227e19/0.5525802884687299744e19*c[3]-0.17220493277981e14/0.89177153814624e14*c[4])*u[3] +
         (0.3e1/0.1088e4*c[1]+0.507284006600757858213e21/0.475219048083107777984e21*c[3]+0.1869103e7/0.2230716e7*c[5]+c[6]/0.24e2+0.1950062198436997e16/0.3834617614028832e16*c[4])*u[4] +
         (-0.4959271814984644613e19/0.20965546238960637264e20*c[3]-c[ 6]/0.6e1-0.15998714909649e14/0.37594290333616e14*c[4]-0.375177e6/0.743572e6*c[5])*u[5] +
         (-0.368395e6/0.2230716e7*c[5]+0.752806667e9/0.539854092016e12*c[3]+0.1063649e7/0.8712336e7*c[4]+c[6]/0.8e1)*u[6]
+    uₓₓ[4] = α*uₓₓ[4] - 48/(49Δx)*cache/Δx
 
-    uₓₓ[5]  = (0.49579087e8/0.10149031312e11*c[3] - 0.49579087e8/0.10149031312e11*c[4])*u[1] +
+    # uₓₓ[5]  =
+    cache = 
+        (0.49579087e8/0.10149031312e11*c[3] - 0.49579087e8/0.10149031312e11*c[4])*u[1] +
         (-0.1328188692663e13/0.37594290333616e14*c[3] + 0.1328188692663e13/0.37594290333616e14*c[4])*u[2] +
         (-0.10532412077335e14/0.42840005263888e14*c[4] + 0.1613976761032884305e19/0.7963657098519931984e19*c[3] + 0.564461e6/0.4461432e7*c[5])*u[3] +
         (-0.4959271814984644613e19/0.20965546238960637264e20*c[3] - c[6]/0.6e1 - 0.15998714909649e14/0.37594290333616e14*c[4] - 0.375177e6/0.743572e6*c[5])*u[4] + 
         (0.8386761355510099813e19/0.128413970713633903242e21*c[3] + 0.2224717261773437e16/0.2763180339520776e16*c[4] + 0.5e1/0.6e1*c[6] + c[7]/0.24e2 + 0.280535e6/0.371786e6*c[5])*u[5] + 
         (-0.35039615e8/0.213452232e9*c[4] - c[7]/0.6e1 - 0.13091810925e11/0.13226425254392e14*c[3] - 0.1118749e7/0.2230716e7*c[5] - c[6]/0.2e1)*u[6] + 
         (-c[6]/0.6e1 + c[5]/0.8e1 + c[7]/0.8e1)*u[7]
+    uₓₓ[5] = α*uₓₓ[5] - cache/Δx^2
 
-    uₓₓ[6]  = (-c[4]/0.784e3+c[3]/0.784e3).*u[1] + 
+    # uₓₓ[6]  = 
+    cache =
+        (-c[4]/0.784e3+c[3]/0.784e3).*u[1] + 
         (-0.8673e4/0.2904112e7*c[3]+0.8673e4/0.2904112e7*c[4]).*u[2] + 
         (-0.960119e6/0.1280713392e10*c[4]-0.3391e4/0.6692148e7*c[5]+0.33235054191e11/0.26452850508784e14*c[3]).*u[3] + 
         (-0.368395e6/0.2230716e7*c[5]+0.752806667e9/0.539854092016e12*c[3]+0.1063649e7/0.8712336e7*c[4]+c[6]/0.8e1).*u[4] + 
@@ -257,9 +260,11 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         (0.3290636e7/0.80044587e8*c[4]+0.5580181e7/0.6692148e7*c[5]+0.5e1/0.6e1*c[7]+c[8]/0.24e2+0.660204843e9/0.13226425254392e14*c[3]+0.3e1/0.4e1*c[6]).*u[6] + 
         (-c[5]/0.6e1- c[8]/0.6e1-c[6]/0.2e1-c[7]/0.2e1).*u[7] + 
         (-c[7]/0.6e1 + c[6]/0.8e1 + c[8]/0.8e1).*u[8]
+    uₓₓ[6] = α*uₓₓ[6] - cache/Δx^2
     
+    #=
     for i = 1:6
-        uₓₓ[i]    = uₓₓ[i]*Δx    
+        uₓₓ[i]    = uₓₓ[i]/Δx
     end
     # uₓₓ[1:6]    ./= Δx
     uₓₓ[1]      = 48/(17Δx)*(-uₓₓ[1]+B₁Su)
@@ -269,6 +274,7 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     # uₓₓ[5:6]    .= -1/Δx*uₓₓ[5:6]
     uₓₓ[5]    = -1/Δx*uₓₓ[5]
     uₓₓ[6]    = -1/Δx*uₓₓ[6]
+    =#
 
     uₓₓ
 end
@@ -276,14 +282,15 @@ end
 
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     u::AbstractVector{TT},c::AbstractVector{TT},
-    Δx::TT,::NodeType{:Right},::DerivativeOrder{4},a::TT) where TT
+    Δx::TT,::NodeType{:Right},::DerivativeOrder{4},α::TT) where TT
     
     n = lastindex(u)
     m = lastindex(uₓₓ)
 
     BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n])
     
-    uₓₓ[m-5]    = 
+    # uₓₓ[m-5]    = 
+    cache =
         (c[n-7]/0.24e2 + 0.5e1/0.6e1*c[n-6] + 0.5580181e7/0.6692148e7*c[n-4] + 0.4887707739997e13/0.119037827289528e15*c[n-3] + 0.3e1/0.4e1*c[n-5] + 0.660204843e9/0.13226425254392e14*c[n-2] + 0.660204843e9/0.13226425254392e14*c[n-1])*u[n-5] +
         (-c[n-6]/0.6e1 - 0.1618585929605e13/0.9919818940794e13*c[n-3] - c[n-5]/0.2e1 - 0.1118749e7/0.2230716e7*c[n-4] - 0.13091810925e11/0.13226425254392e14*c[n-2] - 0.13091810925e11/0.13226425254392e14*c[n-1])*u[n-4] +
         (-0.368395e6/0.2230716e7*c[n-4] + c[n-5]/0.8e1 + 0.48866620889e11/0.404890569012e12*c[n-3] + 0.752806667e9/0.539854092016e12*c[n-2] + 0.752806667e9/0.539854092016e12*c[n-1])*u[n-3] +
@@ -292,45 +299,60 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         (-c[n-3]/0.392e3 + c[n-2]/0.784e3 + c[n-1]/0.784e3)*u[n] +
         (-c[n-7]/0.6e1 - c[n-4]/0.6e1 - c[n-6]/0.2e1 - c[n-5]/0.2e1)*u[n-6] +
         (-c[n-6]/0.6e1 + c[n-7]/0.8e1 + c[n-5]/0.8e1)*u[n-7]
+    uₓₓ[m-5] = α*uₓₓ[m-5] - cache/Δx^2
 
-    uₓₓ[m-4]    = (-c[n-6]/0.6e1 - 0.1618585929605e13/0.9919818940794e13*c[n-3] - c[n-5]/0.2e1 - 0.1118749e7/0.2230716e7*c[n-4] - 0.13091810925e11/0.13226425254392e14*c[n-2] - 0.13091810925e11/0.13226425254392e14*c[n-1])*u[n-5] + 
+    # uₓₓ[m-4]    = 
+    cache = 
+        (-c[n-6]/0.6e1 - 0.1618585929605e13/0.9919818940794e13*c[n-3] - c[n-5]/0.2e1 - 0.1118749e7/0.2230716e7*c[n-4] - 0.13091810925e11/0.13226425254392e14*c[n-2] - 0.13091810925e11/0.13226425254392e14*c[n-1])*u[n-5] + 
         (c[n-6]/0.24e2 + 0.5e1/0.6e1*c[n-5] + 0.3896014498639e13/0.4959909470397e13*c[n-3] + 0.8386761355510099813e19 / 0.128413970713633903242e21 * c[n-2] + 0.280535e6 / 0.371786e6 * c[n-4] + 0.3360696339136261875e19 / 0.171218627618178537656e21 * c[n-1])*u[n-4] +
         (-c[n-5] / 0.6e1 - 0.4959271814984644613e19 / 0.20965546238960637264e20 * c[n-2] - 0.375177e6 / 0.743572e6 * c[n-4] - 0.13425842714e11 / 0.33740880751e11 * c[n-3] - 0.193247108773400725e18 / 0.6988515412986879088e19 * c[n-1])*u[n-3] +
         (-0.365281640980e12 / 0.1653303156799e13 * c[n-3] + 0.564461e6 / 0.4461432e7 * c[n-4] + 0.1613976761032884305e19 / 0.7963657098519931984e19 * c[n-2] - 0.198407225513315475e18 / 0.7963657098519931984e19*c[n-1]).*u[n-2] + 
         (-0.1328188692663e13/0.37594290333616e14*c[n-2] + 0.2226377963775e13/ 0.37594290333616e14 * c[n-1] - 0.8673e4 / 0.363014e6 * c[n-3])*u[n-1] + 
         (c[n-3] / 0.49e2 + 0.49579087e8 / 0.10149031312e11 * c[n-2] - 0.256702175e9 / 0.10149031312e11 * c[n-1])*u[n] +
         (-c[n-5]/0.6e1+c[n-6]/0.8e1+c[n-4]/0.8e1)*u[n-6]
+    uₓₓ[m-4] = α*uₓₓ[m-4] - cache/Δx^2
     
-    uₓₓ[m-3]    = (-0.368395e6/0.2230716e7*c[n-4] + c[n-5]/0.8e1 + 0.48866620889e11/0.404890569012e12*c[n-3] + 0.752806667e9/0.539854092016e12*c[n-2] + 0.752806667e9/0.539854092016e12*c[n-1])*u[n-5] + 
+    # uₓₓ[m-3]    = 
+    cache =
+        (-0.368395e6/0.2230716e7*c[n-4] + c[n-5]/0.8e1 + 0.48866620889e11/0.404890569012e12*c[n-3] + 0.752806667e9/0.539854092016e12*c[n-2] + 0.752806667e9/0.539854092016e12*c[n-1])*u[n-5] + 
         (-c[n-5]/0.6e1 - 0.4959271814984644613e19/0.20965546238960637264e20*c[n-2] - 0.375177e6/0.743572e6*c[n-4] - 0.13425842714e11/0.33740880751e11*c[n-3] - 0.193247108773400725e18/0.6988515412986879088e19*c[n-1])*u[n-4] + 
         (c[n-5]/0.24e2 + 0.1869103e7/0.2230716e7*c[n-4] + 0.507284006600757858213e21/0.475219048083107777984e21*c[n-2] + 0.3e1/0.1088e4*c[n] + 0.31688435395e11/0.67481761502e11*c[n-3] + 0.27769176016102795561e20/0.712828572124661666976e21*c[n-1])*u[n-3] +
         (-0.125059e6/0.743572e6*c[n-4] + c[n]/0.136e3 - 0.23099342648e11/0.101222642253e12*c[n-3] - 0.4836340090442187227e19/0.5525802884687299744e19*c[n-2] + 0.193950157930938693e18/0.5525802884687299744e19*c[n-1])*u[n-2] + 
         (0.260297319232891e15/0.2556411742685888e16*c[n-2] - 0.59e2/0.1088e4*c[n] - 0.106641839640553e15/0.1278205871342944e16*c[n-1] + 0.26019e5/0.726028e6*c[n-3])*u[n-1] +
         (-0.1244724001e10/0.21126554976e11*c[n-2] + 0.3e1/0.68e2*c[n] + 0.752806667e9/0.21126554976e11*c[n-1])*u[n]
+    uₓₓ[m-3] = α*uₓₓ[m-3] - 48/(49Δx)*cache/Δx
     
-    uₓₓ[m-2]    = (-0.3391e4/0.6692148e7*c[n-4] - 0.238797444493e12/0.119037827289528e15*c[n-3] + 0.33235054191e11/0.26452850508784e14*c[n-2] + 0.33235054191e11/0.26452850508784e14*c[n-1])*u[n-5] +
+    # uₓₓ[m-2]    =
+    cache = 
+        (-0.3391e4/0.6692148e7*c[n-4] - 0.238797444493e12/0.119037827289528e15*c[n-3] + 0.33235054191e11/0.26452850508784e14*c[n-2] + 0.33235054191e11/0.26452850508784e14*c[n-1])*u[n-5] +
         (-0.365281640980e12/0.1653303156799e13*c[n-3] + 0.564461e6/0.4461432e7*c[n-4] + 0.1613976761032884305e19/0.7963657098519931984e19*c[n-2] - 0.198407225513315475e18/0.7963657098519931984e19*c[n-1])*u[n-4] +
         (-0.125059e6/0.743572e6*c[n-4] + c[n]/0.136e3 - 0.23099342648e11/0.101222642253e12*c[n-3] - 0.4836340090442187227e19/0.5525802884687299744e19*c[n-2] + 0.193950157930938693e18/0.5525802884687299744e19*c[n-1]).*u[n-3] +
         (0.564461e6/0.13384296e8*c[n-4] + 0.470299699916357e15/0.952302618316224e15*c[n-3] + 0.550597048646198778781e21/0.1624586048098066124736e22*c[n-1] + c[n]/0.51e2 + 0.378288882302546512209e21/0.270764341349677687456e21*c[n-2])*u[n-2] +
         (-0.59e2/0.408e3*c[n] - 0.29294615794607e14/0.29725717938208e14*c[n-2] - 0.2234477713167e13/0.29725717938208e14*c[n-1] - 0.8673e4/0.363014e6*c[n-3])*u[n-1] +
         (-0.59e2/0.3136e4*c[n-3] - 0.13249937023e11/0.48148892736e11*c[n-1] + 0.2e1/0.17e2*c[n] + 0.2083938599e10/0.8024815456e10*c[n-2])*u[n]
+    uₓₓ[m-2] = α*uₓₓ[m-2] - 48/(43Δx)*cache/Δx
     
-    uₓₓ[m-1]    = 
+    # uₓₓ[m-1]    = 
+    cache =
         (-0.8673e4/0.2904112e7*c[n-2] - 0.8673e4/0.2904112e7*c[n-1] + 0.8673e4/0.1452056e7*c[n-3])*u[n-5] +
         (-0.1328188692663e13/0.37594290333616e14*c[n-2] + 0.2226377963775e13/0.37594290333616e14*c[n-1] - 0.8673e4/0.363014e6*c[n-3])*u[n-4] +
         (0.260297319232891e15/0.2556411742685888e16*c[n-2] - 0.59e2/0.1088e4*c[n] - 0.106641839640553e15/0.1278205871342944e16*c[n-1] + 0.26019e5/0.726028e6*c[n-3])*u[n-3] +
         (-0.59e2/0.408e3*c[n] - 0.29294615794607e14/0.29725717938208e14*c[n-2] - 0.2234477713167e13/0.29725717938208e14*c[n-1] - 0.8673e4/0.363014e6*c[n-3])*u[n-2] +
         (0.9258282831623875e16/0.7669235228057664e16*c[n-2] + 0.3481e4/0.3264e4*c[n] + 0.228389721191751e15/0.1278205871342944e16*c[n-1] + 0.8673e4/0.1452056e7*c[n-3])*u[n-1] + 
         (-0.6025413881e10/0.21126554976e11*c[n-2] - 0.59e2/0.68e2*c[n] - 0.537416663e9/0.7042184992e10*c[n-1])*u[n]
+    uₓₓ[m-1] = α*uₓₓ[m-1] - 48/(59Δx)*cache/Δx
     
-    uₓₓ[m]      = 
+    # uₓₓ[m]      = 
+    cache =
         (-1/0.392e3*c[n-3] + 1/0.784e3*c[n-2] + 1/0.784e3*c[n-1])*u[n-5] +
         (1/0.49e2*c[n-3] + 0.49579087e8/0.10149031312e11*c[n-2] - 0.256702175e9/0.10149031312e11*c[n-1])*u[n-4] +
         (-0.1244724001e10/0.21126554976e11*c[n-2] + 0.3e1/0.68e2*c[n] + 0.752806667e9/0.21126554976e11*c[n-1])*u[n-3] +
         (-0.59e2/0.3136e4*c[n-3] - 0.13249937023e11/0.48148892736e11*c[n-1] + 0.2e1/0.17e2*c[n] + 0.2083938599e10/0.8024815456e10*c[n-2])*u[n-2] +
         (-0.6025413881e10/0.21126554976e11*c[n-2] - 0.59e2/0.68e2*c[n] - 0.537416663e9/0.7042184992e10*c[n-1])*u[n-1] +
         (0.3e1/0.3136e4*c[n-3] + 0.27010400129e11/0.345067064608e12*c[n-2] + 0.234566387291e12/0.690134129216e12*c[n-1] + 0.12e2/0.17e2*c[n])*u[n]
-        
+    uₓₓ[m] = α*uₓₓ[m] + 48/(17Δx)*(-cache/Δx + BₙSu)
+    
+    #=
     for i = 0:5
         uₓₓ[m-i] = uₓₓ[m-i]/Δx
     end
@@ -343,6 +365,7 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     uₓₓ[m-2]    = 48/(43Δx)*(-uₓₓ[m-2])
     uₓₓ[m-1]    = 48/(59Δx)*(-uₓₓ[m-1])
     uₓₓ[m]      = 48/(17Δx)*(-uₓₓ[m] + BₙSu)
+    =#
     
     uₓₓ
 end

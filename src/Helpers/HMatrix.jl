@@ -38,7 +38,7 @@ end
 1D or 2D H-inner product constructed from [`innerH`](@ref)
 """
 function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) where T
-    tmp = 0.0
+    local tmp = T(0)
     for i in eachindex(H.Hx)
         tmp += u[i] * H.Hx[i] * v[i] * H.Δ
     end
@@ -47,9 +47,9 @@ end
 function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) where T
     local tmp::T
     tmp = T(0)
-@inbounds    for j in eachindex(H.Hx)
+    for j in eachindex(H.Hx)
         for i in eachindex(H.Hy)
-            tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
+            @inbounds tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
         end
     end
     return tmp
