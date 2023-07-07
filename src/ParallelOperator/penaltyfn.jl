@@ -1,4 +1,35 @@
 
+#=
+struct FieldLineIntercept{F<:Union{Function,Nothing}}
+    Intercept :: F
+end
+
+
+struct ParallelData{TT<:Real,
+        DIM}
+    PGrid       :: ParallelGrid
+    κ           :: TT
+    Intercept   :: FieldLineIntercept
+    gridx       :: LinRange
+    gridy       :: LinRange
+    Δx          :: TT
+    Δy          :: TT
+
+    function ParallelData(PGrid::ParallelGrid,Grid::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
+
+        intercept_fieldlines = FieldLineIntercept(intercept)
+        # intercept_fieldlines = intercept
+
+        # K = DiffusionCoefficient(κ)
+
+        gridx = LinRange(Grid.gridx[1],Grid.gridx[end],Grid.nx)
+        gridy = LinRange(Grid.gridy[1],Grid.gridy[end],Grid.ny)
+
+        new{TT,2}(PGrid,κ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
+    end
+end
+=#
+
 """
     generate_parallel_penalty
 Generates a 2D or 3D parallel penalty function given a parallel grid mapping.
@@ -59,7 +90,7 @@ end
     ParallelPenalty1D
 The default generated parallel penalty function for 2D (1D+parallel) problems
 """
-function ParallelPenalty1D!(interp::Function,u::AbstractArray{T},u₀::AbstractArray{T},planes::ParallelGrid{1},Δt::T,grid::Grid1D,τ::T,κ::T,H::AbstractArray{T}) where T
+function ParallelPenalty1D!(interp::Function,u::AbstractArray{TT},u₀::AbstractArray{TT},planes::ParallelGrid{TT,1},Δt::TT,grid::Grid1D,τ::TT,κ::TT,H::AbstractArray{TT}) where TT
     I = interp(grid.grid,u₀)
     for i = 1:grid.n
         u[i] = 1.0/(1.0 - κ*τ/2.0 * Δt * H[i]) * 
@@ -70,11 +101,11 @@ end
     ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,pargrid::ParallelGrid{2},grid::Grid2D,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T}) where T
 Default generated parallel penalty function for 3D (2D+parallel) problems
 """
-function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
-        PGrid::ParallelGrid,D::Grid2D,
-        nx::Integer,ny::Integer,τ::T,κ::T,H_x::AbstractArray{T},H_y::AbstractArray{T},perp::T) where T
-    local wf :: T
-    local wb :: T
+function ParallelPenalty2D!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,
+        PGrid::ParallelGrid{TT,2},D::Grid2D,
+        nx::Integer,ny::Integer,τ::TT,κ::TT,H_x::AbstractArray{TT},H_y::AbstractArray{TT},perp::TT) where TT
+    local wf :: TT
+    local wb :: TT
     I = linear_interpolation((D.gridx,D.gridy),u)
     # I = scale(interpolate(u,BSpline(Linear())),(D.gridx,D.gridy))
     # I = scale(interpolate(u, BSpline(Quadratic(Line(OnGrid()))),),
@@ -111,5 +142,37 @@ function ParallelPenalty2D!(u::AbstractArray{T},u₀::AbstractArray{T},Δt::T,
         end
     end
 end
+
+
+
+"""
+    For multiblock
+"""
+# function ParallelData()
+# end
+function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,
+    P::ParallelData{TT,2}) where {TT}
+
+    local wf :: TT
+    local wb :: TT
+
+    I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
+
+    τ = -sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
+
+
+    for j = 1:P.gridy.len
+        for i = 1:P.gridx.len
+
+            wf = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
+            wb = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
+            u[i,j] = 1.0/(1.0 - P.κ * τ * Δt) * 
+                ( u[i,j] -  P.κ*Δt*τ/2.0 * (wf + wb) )
+            
+        end
+    end
+
+end
+
 
 

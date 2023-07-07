@@ -1,26 +1,32 @@
+
+#=
 """
-    ParGrid{T,AT<:AbstractArray{T}}
+    ParGrid{TT,AT<:AbstractArray{TT}}
 Storing the x-y coordinates of a parallel grid
 """
-struct ParGrid{T,AT<:AbstractArray{T}}
+struct ParGrid{TT,AT<:AbstractArray{TT}}
     x   :: AT
     y   :: AT
 end
 
 """
-    ParallelGrid
+    ParallelGrid{TT,DIM,AT,PA}
 Stores the current, forward and backward planes for the parallel tracing.
 
 In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
 """
-struct ParallelGrid{T,N,AT}
-    plane   :: AbstractArray{Vector{T}}
-    Bplane  :: ParGrid{T,AT}
-    Fplane  :: ParGrid{T,AT}
+struct ParallelGrid{TT<:Real,
+        DIM,
+        AT<:AbstractArray{TT},
+        PA<:AbstractArray{Vector{TT}}}
+
+    plane   :: PA
+    Bplane  :: ParGrid{TT,AT}
+    Fplane  :: ParGrid{TT,AT}
     # w_f     :: AT
     # w_b     :: AT
 end
-
+=#
 
 
 """
@@ -52,7 +58,7 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
     postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
     postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
 
-    Pgrid = ParallelGrid{T,2,typeof(BPlane.x)}(plane,BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
+    Pgrid = ParallelGrid{T,2,typeof(BPlane.x),typeof(plane)}(plane,BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
 
     return Pgrid
 end
