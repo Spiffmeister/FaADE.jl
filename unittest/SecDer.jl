@@ -16,15 +16,15 @@ end
 nx,x,Δx = buildgrid(100)
 ny,y,Δy = buildgrid(100)
 
-order = FaADE.Derivatives.DerivativeOrder{2}()
+order = 4
 # 1D
-u = x.^3
+u = x.^2
 uxx = zeros(nx)
 k = ones(nx)
 D₂!(uxx,u,k,nx,Δx,order,0.0)
 println(uxx)
 
-@benchmark D₂!($uxx,$u,$k,$nx,$Δx,$order,0.0)
+# @benchmark D₂!($uxx,$u,$k,$nx,$Δx,$order,0.0)
 
 # D₂!(uxx,u,k,nx,Δx,order,0.0)
 # Profile.clear_malloc_data()

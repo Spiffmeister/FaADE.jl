@@ -50,10 +50,21 @@ const DataMode = SATMode{:DataMode}()
 const SolutionMode = SATMode{:SolutionMode}()
 
 
-struct DerivativeOrder{O} end
+struct DerivativeOrder{InternalOrder,BoundarySize} end
 
 
 abstract type DataBlockType{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
 abstract type BoundaryStorage{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
-abstract type GridType{dtype<:AbstractFloat,N} end
+# abstract type GridType{dtype<:AbstractFloat,N} end
 abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
+
+
+
+struct SourceTerm{F<:Union{Function,Nothing}}
+    source :: F
+end
+struct DiffusionCoefficient{DC<:Union{Real,Function}}
+    coeff :: DC
+end
+
+

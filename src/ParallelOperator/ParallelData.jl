@@ -34,8 +34,7 @@ end
 
 
 struct ParallelData{TT<:Real,
-        DIM,
-        FLG}
+        DIM}
     PGrid       :: ParallelGrid{TT,DIM,Matrix{TT},Matrix{Vector{TT}}}
     κ           :: TT
     τ           :: TT
@@ -45,7 +44,7 @@ struct ParallelData{TT<:Real,
     Δx          :: TT
     Δy          :: TT
 
-    function ParallelData(PGrid::ParallelGrid,Grid::Grid2D{TT};κ=TT(1),intercept=nothing,fieldlinegeom=:confined) where {TT}
+    function ParallelData(PGrid::ParallelGrid,Grid::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
 
         intercept_fieldlines = FieldLineIntercept(intercept)
         # intercept_fieldlines = intercept
@@ -58,7 +57,7 @@ struct ParallelData{TT<:Real,
         gridx = LinRange(Grid.gridx[1],Grid.gridx[end],Grid.nx)
         gridy = LinRange(Grid.gridy[1],Grid.gridy[end],Grid.ny)
 
-        new{TT,2,Mode,fieldlinegeom}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
+        new{TT,2}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
     end
 end
 

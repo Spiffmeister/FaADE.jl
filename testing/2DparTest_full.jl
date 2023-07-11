@@ -8,7 +8,7 @@ using Profile
 # using PProf
 
 using Interpolations
-push!(LOAD_PATH,"..")
+# push!(LOAD_PATH,"..")
 using FaADE
 
 
@@ -26,7 +26,7 @@ ky(x,y) = 1.0
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 10.0
+t_f = 100Δt
 
 u₀(x,y) = x
 
@@ -55,7 +55,8 @@ end
 
 dH(X,x,p,t) = χ_h!(X,x,params,t)
 PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
-Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
+# Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
+PData = FaADE.ParallelData(PGrid,Dom)
 
 
 println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
@@ -65,6 +66,7 @@ println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final
 
 Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
 @time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+# @time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,Pgrid=PData)
 
 surface(soln.u[2])
 

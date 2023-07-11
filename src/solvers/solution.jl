@@ -9,15 +9,18 @@ Solution data structure, contains the initial condition and the solution at time
 Fields:
  - `u`, `grid`, `Δt`, `t`, `problem`, `Δu`
 """
-mutable struct solution{T,AT<:AbstractArray{T}}
+mutable struct solution{TT,
+        AT<:AbstractArray{TT},
+        GT<:GridType,
+        PT<:PDEProblem}
     u       :: Vector{AT}
-    grid    :: GridType
-    Δt      :: Union{T,Vector{T}}
-    t       :: Vector{T}
-    problem :: PDEProblem
-    Δu      :: T
+    grid    :: GT
+    Δt      :: Union{TT,Vector{TT}}
+    t       :: Vector{TT}
+    problem :: PT
+    Δu      :: TT
     
-    function solution{T}(grid::GridType,t::T,Δt::T,prob::PDEProblem;preallocate=false) where T
+    function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
         if preallocate
             N = ceil(Int64,t/Δt)
             n = length(x)
@@ -25,13 +28,13 @@ mutable struct solution{T,AT<:AbstractArray{T}}
 
             u[1] = u₀
 
-            new{T,typeof(u)}(u,grid,Δt,collect(range(0.0,t,length=N)))
+            new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
         else #If an adaptive time step is being used, preallocation is impossible
 
             if typeof(grid) <: Grid1D
                 u = prob.InitialCondition.(grid.grid)
             elseif typeof(grid) <: Grid2D
-                u = zeros(T,(grid.nx,grid.ny))
+                u = zeros(TT,(grid.nx,grid.ny))
                 for j = 1:grid.ny
                     for i = 1:grid.nx
                         u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
@@ -40,7 +43,7 @@ mutable struct solution{T,AT<:AbstractArray{T}}
             end
 
 
-            new{T,typeof(u)}([u],grid,[Δt],[t],prob,0.0)
+            new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
         end
 
     end

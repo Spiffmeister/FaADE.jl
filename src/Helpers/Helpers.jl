@@ -18,7 +18,7 @@ module Helpers
     export NodeType, Left, Internal, Right, Up, Down
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     export SATMode, DataMode, SolutionMode
-    export DerivativeOrder
+    export SourceTerm, DiffusionCoefficient
 
     # nifty import
     export check_order, check_boundary,
@@ -26,7 +26,8 @@ module Helpers
         SelectLoopDirection
     
     # grid import
-    export GridType, Grid1D, Grid2D
+    export GridType, LocalGridType
+    export Grid1D, Grid2D, GridMultiBlock
 
     # Export UserTypes
     export BoundaryConditionData, Boundary, PeriodicBoundary,

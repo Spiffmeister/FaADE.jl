@@ -122,6 +122,13 @@ end
 @code_warntype CGRHS!(u,v,c)
 
 
+DO = FaADE.Derivatives.DerivativeOrder{2}()
+u = rand(Dom.nx);
+v = rand(Dom.nx);
+c = rand(Dom.nx);
+@code_warntype D₂!(u,v,c,Dom.nx,Dom.Δx,DO,0.0)
+
+
 
 
 

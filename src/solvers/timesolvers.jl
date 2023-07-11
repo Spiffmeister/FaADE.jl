@@ -48,6 +48,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
     BoundaryConditions = Prob.BoundaryConditions
+    # order = DerivativeOrder{P.order}()
 
     if typeof(Pgrid) <: ParallelGrid
         penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
@@ -167,7 +168,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 end
 #= 2D SOLVER =#
 function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;
-        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid}=nothing,source::Union{Nothing,Function}=nothing,warnings=false,target=1e-8) where T
+        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid,ParallelData}=nothing,source::Union{Nothing,Function}=nothing,warnings=false,target=1e-8) where T
 
     local btype1 :: BoundaryConditionType
     local btype2 :: BoundaryConditionType
@@ -276,7 +277,9 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         
         if CGBlock.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
-            if penalty_function_enabled # Add parallel penalty
+            if typeof(Pgrid) <: ParallelData
+                applyParallelPenalty!(DBlock.uₙ₊₁,DBlock.u,Δt,Pgrid)
+            elseif penalty_function_enabled
                 # println(DBlock.uₙ₊₁[1,10])
                 # tmpu .= DBlock.uₙ₊₁
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
@@ -294,10 +297,10 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
                 Δt *= 1.05
             end
             t += Δt
-            if tprint < t
-                println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
-                tprint += tprint₀
-            end
+            # if tprint < t
+            #     println("t=",t," out of t_f=",t_f,"     Δu=",DBlock.Δu)
+            #     tprint += tprint₀
+            # end
         else
             # If adaptive time stepping is turned on and CG fails
             DBlock.uₙ₊₁ .= DBlock.u
@@ -318,3 +321,67 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
 end
 
 
+#=
+struct SolverData{method,adaptive,penalty} end
+
+function solve(P::newPDEProblem,Δt::TT,t_f::TT;
+        solver::Symbol=:cgie,adaptive::Bool=false,penalty_func::Nothing=nothing)
+
+    SD = SolverData{solver,adaptive,nothing}
+
+    DBlock = DataBlock{TT}(P,Δt)
+
+    solve!(DBlock,P,Δt,t_f,SD)
+
+end
+
+
+function solve(DB::DataBlock,P::newPDEProblem,Δt::TT,t_f::TT,SolverData{:cgie,Any,Any})
+
+    t = Δt
+    Δt₀ = Δt
+
+    CGBlock = ConjGradBlock(grid,P.order)
+
+
+    while t < t_f
+
+
+        # addSource!(DBlock,P.source,P.Grid,t,Δt)
+
+        # applySAT(CGBlock,P)
+
+        conj_grad!(DBlock,CGBlock,P.order,P.grid,t,Δt)
+
+
+        if CGBlock.converged | !adaptive #If CG converges
+
+            # parallel_penalty()
+
+            DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
+            if (DBlock.Δu ≤ target_state) & (t_f == Inf)
+                t_f = t
+            end
+
+            DBlock.u .= DBlock.uₙ₊₁
+            CGBlock.b .= CGBlock.uₙ₊₁
+
+            if adaptive & (Δt<300Δt₀)
+                Δt *= 1.05
+            end
+            t += Δt
+
+        else # If CG fails, reset and retry step
+            DBlock.uₙ₊₁ .= DBlock.u
+            Δt /= TT(2)
+            CGBlock.converged = true
+            if Δt < Δt₀
+                error("CG failed to converge, arporting at t=",t," with Δt=",Δt)
+            end
+        end
+
+    end
+
+
+end
+=#

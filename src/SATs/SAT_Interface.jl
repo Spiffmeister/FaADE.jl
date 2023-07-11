@@ -7,6 +7,28 @@ Abstract type for SAT data structures
 """
 abstract type SimultanousApproximationTerm end
 
+struct SATBoundaries{NBound,
+        SATL<:SimultanousApproximationTerm,
+        SATR<:Union{SimultanousApproximationTerm,Nothing},
+        SATU<:Union{SimultanousApproximationTerm,Nothing},
+        SATD<:Union{SimultanousApproximationTerm,Nothing}}
+    Boundary1    :: SATL
+    Boundary2    :: SATR
+    Boundary3    :: SATU
+    Boundary4    :: SATD
+
+    function SATBoundaries(BCs...)
+        if length(BCs) == 1
+            new{length(BCs),typeof(BCs),Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
+        elseif length(BCs) == 2
+            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),Nothing,Nothing}(BCs[1][1],BCs[2][1],nothing,nothing)
+        elseif length(BCs) == 3
+            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),Nothing}(BCs[1][1],BCs[2][1],BCs[3][1],nothing)
+        else
+            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),typeof(BCs[4][1])}(BCs[1][1],BCs[2][1],BCs[3][1],BCs[4][1])
+        end
+    end
+end
 
 
 """
@@ -65,13 +87,18 @@ function construct_SAT(Term::SimultanousApproximationTerm,solver)
 end
 
 
+#=
+function applySAT(Block,Prob)
+    Prob.BoundaryConditions.SATL
+    Prob.BoundaryConditions.SATR
+    Prob.BoundaryConditions.SATU
+    Prob.BoundaryConditions.SATD
+end
 
 
 
-
-
-
-
+Base.eachindex(SB::SATBoundaries{L}) where L = L
+=#
 
 
 

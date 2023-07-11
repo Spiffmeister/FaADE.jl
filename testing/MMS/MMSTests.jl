@@ -3,8 +3,8 @@ using LinearAlgebra
 using Plots
 using LaTeXStrings
 
-using Pkg
-Pkg.activate(".")
+# using Pkg
+# Pkg.activate(".")
 using FaADE
 
 
@@ -19,7 +19,9 @@ using FaADE
 ###=== MMS ===###
 
 
-
+TestDirichlet   = true
+TestNeumann     = false
+TestPeriodic    = false
 
 
 # Generates the exact MMS solution
@@ -106,7 +108,7 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51]#,61,71,81,91,101]
 
 
 # Solution
@@ -120,7 +122,7 @@ ũ₀(x,y;
     ωy=1.0,cy=0.0) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy)
 
 
-K = 1.0e-12
+K = 1.0
 F(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0,
@@ -132,150 +134,206 @@ F(x,y,t;
 println("=== K=",K," ===")
 
 # Dirichlet
-println("=====")
-println("Dirichlet")
-cx=1.0
-cy=0.0
-ωx=9.0
-ωy=7.5
+if TestDirichlet
+    println("=====")
+    println("Dirichlet")
+    cx=1.0
+    cy=0.0
+    ωx=9.0
+    ωy=7.5
 
-println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-BxLũ(y,t)           = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t)           = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-ByRũ(x,t;Ly=1.0)    = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t)           = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t)           = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0)    = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
-order = 2
-println("order=",order)
-O2_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    ByLũ,Dirichlet,ByRũ,Dirichlet,
-    FD,analytic,IC,order,
-    kx=K,ky=K)
+    order = 2
+    println("order=",order)
+    O2_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
+        ByLũ,Dirichlet,ByRũ,Dirichlet,
+        FD,analytic,IC,order,
+        kx=K,ky=K)
 
-order = 4
-println("order=",order)
-O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    ByLũ,Dirichlet,ByRũ,Dirichlet,
-    FD,analytic,IC,order,
-    kx=K,ky=K)
+    order = 4
+    println("order=",order)
+    O4_DirichletMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
+        ByLũ,Dirichlet,ByRũ,Dirichlet,
+        FD,analytic,IC,order,
+        kx=K,ky=K)
 
-println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
-println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
+    println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
+    println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-println("=====")
+    pD = plot(axis=:log,minorgrid=true)
+    plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+    
+    savefig(pD,"2DMMSDirichlet.png")
+
+
+    println("=====")
+end
 
 
 
 # Neumann
-println("=====")
-println("Neumann")
+if TestNeumann
+    println("=====")
+    println("Neumann")
 
-cx=1.0
-cy=0.0
-ωx=9.0
-ωy=7.5
+    cx=1.0
+    cy=0.0
+    ωx=9.0
+    ωy=7.5
 
-println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-BxLũ(y,t) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
-order = 2
-println("order=",order)
-O2_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Neumann,BxRũ,Neumann,
-    ByLũ,Neumann,ByRũ,Neumann,
-    FD,analytic,IC,order,
-    kx=K, ky=K)
+    order = 2
+    println("order=",order)
+    O2_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Neumann,BxRũ,Neumann,
+        ByLũ,Neumann,ByRũ,Neumann,
+        FD,analytic,IC,order,
+        kx=K, ky=K)
 
-order = 4
-println("order=",order)
-O4_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Neumann,BxRũ,Neumann,
-    ByLũ,Neumann,ByRũ,Neumann,
-    FD,analytic,IC,order,
-    kx=K, ky=K)
+    order = 4
+    println("order=",order)
+    O4_NeumannMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Neumann,BxRũ,Neumann,
+        ByLũ,Neumann,ByRũ,Neumann,
+        FD,analytic,IC,order,
+        kx=K, ky=K)
 
-println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
-println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
+    println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
+    println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-println("=====")
+    pN = plot(axis=:log,minorgrid=true)
+    plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
 
+    # savefig(pN,"2DMMSNeumann.png")
+
+    println("=====")
+end
 
 
 # Periodic
-println("=====")
-println("Dirichlet/Periodic")
+if TestPeriodic
+    println("=====")
+    println("Dirichlet/Periodic")
 
-cx=1.0
-cy=0.0
-ωx=7.0
-ωy=6.0
+    cx=1.0
+    cy=0.0
+    ωx=7.0
+    ωy=6.0
 
-println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-BxLũ(y,t)           = cos(2π*t) * sin(cx)               * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx)    * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    BxLũ(y,t)           = cos(2π*t) * sin(cx)               * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx)    * sin(2π*y*ωy + cy) #Boundary condition x=Lx
 
-order = 2
-O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    nothing,Periodic,nothing,Periodic,
-    FD,analytic,IC,order,
-    kx=K, ky=K)
+    order = 2
+    O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
+        nothing,Periodic,nothing,Periodic,
+        FD,analytic,IC,order,
+        kx=K, ky=K)
 
-order = 4
-O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    nothing,Periodic,nothing,Periodic,
-    FD,analytic,IC,order,
-    kx=K, ky=K)
+    order = 4
+    O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
+        nothing,Periodic,nothing,Periodic,
+        FD,analytic,IC,order,
+        kx=K, ky=K)
 
-println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
-println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
+    println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
+    println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-println("=====")
+    pP = plot(axis=:log,minorgrid=true)
+    plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+
+    # savefig(pP,"2DMMSPeriodic.png")
+
+    println("=====")
+end
 
 
+if TestDirichlet == TestNeumann == TestPeriodic
+    O2Conv = (n=npts,
+        conv_D = O2_DirichletMMS.conv_rate,
+        conv_N = O2_NeumannMMS.conv_rate,
+        conv_P = O2_PeriodicMMS.conv_rate,
+        relerr_D = O2_DirichletMMS.relerr,
+        relerr_N = O2_NeumannMMS.relerr,
+        relerr_P = O2_PeriodicMMS.relerr
+        )
+
+    O4Conv = (n=npts,
+        conv_D = O4_DirichletMMS.conv_rate,
+        conv_N = O4_NeumannMMS.conv_rate,
+        conv_P = O4_PeriodicMMS.conv_rate,
+        relerr_D = O4_DirichletMMS.relerr,
+        relerr_N = O4_NeumannMMS.relerr,
+        relerr_P = O4_PeriodicMMS.relerr
+        )
+
+    using JLD2
+    jldsave("testing/MMS/FullMMS.jld2";O2Conv,O4Conv)
 
 
-O2Conv = (n=npts,
-    conv_D = O2_DirichletMMS.conv_rate,
-    conv_N = O2_NeumannMMS.conv_rate,
-    conv_P = O2_PeriodicMMS.conv_rate,
-    relerr_D = O2_DirichletMMS.relerr,
-    relerr_N = O2_NeumannMMS.relerr,
-    relerr_P = O2_PeriodicMMS.relerr
-    )
+    using DelimitedFiles
 
-O4Conv = (n=npts,
-    conv_D = O4_DirichletMMS.conv_rate,
-    conv_N = O4_NeumannMMS.conv_rate,
-    conv_P = O4_PeriodicMMS.conv_rate,
-    relerr_D = O4_DirichletMMS.relerr,
-    relerr_N = O4_NeumannMMS.relerr,
-    relerr_P = O4_PeriodicMMS.relerr
-    )
+    nameappend=string("K=",K)
 
-using JLD2
-jldsave("testing/MMS/FullMMS.jld2";O2Conv,O4Conv)
+    open(string("testing/MMS/MMS_Tests_O2",nameappend,".csv"),"w") do io
+        writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
+    end
+    open(string("testing/MMS/MMS_Rates_O2",nameappend,".csv"),"w") do io
+        writedlm(io,[O2_DirichletMMS.conv_rate O2_NeumannMMS.conv_rate O2_PeriodicMMS.conv_rate])
+    end
+
+    open(string("testing/MMS/MMS_Tests_O4",nameappend,".csv"),"w") do io
+        writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
+    end
+    open(string("testing/MMS/MMS_Rates_O4",nameappend,".csv"),"w") do io
+        writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
+    end
+end
+
 
 
 
@@ -334,26 +392,5 @@ surface(O4_DirichletMMS.grids[end].gridx,O4_DirichletMMS.grids[end].gridy,O4_Dir
 surface(O2_DirichletMMS.grids[end].gridx,O2_DirichletMMS.grids[end].gridy,O2_DirichletMMS.comp_soln[end].u[2] .- O2_DirichletMMS.MMS_soln[end],xlabel="x",ylabel="y")
 
 =#
-
-
-
-
-using DelimitedFiles
-
-nameappend=string("K=",K)
-
-open(string("testing/MMS/MMS_Tests_O2",nameappend,".csv"),"w") do io
-    writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
-end
-open(string("testing/MMS/MMS_Rates_O2",nameappend,".csv"),"w") do io
-    writedlm(io,[O2_DirichletMMS.conv_rate O2_NeumannMMS.conv_rate O2_PeriodicMMS.conv_rate])
-end
-
-open(string("testing/MMS/MMS_Tests_O4",nameappend,".csv"),"w") do io
-    writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
-end
-open(string("testing/MMS/MMS_Rates_O4",nameappend,".csv"),"w") do io
-    writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
-end
 
 

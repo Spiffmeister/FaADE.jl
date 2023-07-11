@@ -81,3 +81,54 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
 end
 
 
+
+struct SAT_Interface{
+        TT<:Real,
+        TV<:Vector{TT},
+        F1<:Function} <: SimultanousApproximationTerm
+
+    axis    :: Int
+    order   :: Int
+    D₁ᵀE₀   :: TV
+    D₁ᵀEₙ   :: TV
+    D₁E₀    :: TV
+    D₁Eₙ    :: TV
+    τ₀  :: TT
+    α₀  :: TT
+    τ₀  :: TT
+    loopaxis :: F1
+
+    function SAT_Split(Δx::TT,axis::Int,order::Int) where TT
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
+        E₀D₁ = BoundaryDerivative(Left,Δx,order)
+        EₙD₁ = BoundaryDerivative(Right,Δx,order)
+
+        α₀, τ₁, τ₀ = SATpenalties(Interface,Δx,order)
+
+        loopaxis = SelectLoopDirection(axis)
+    end
+
+end
+
+
+function SAT_Interface!(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
+        order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
+
+    for (S⁻,S⁺,U⁻,U⁺,K⁻,K⁺) in zip(loopaxis(cache),)
+
+        
+        S⁻[end] = S⁻[end]   + τ₀/(h⁻ * Δx⁻) * U⁻[end] #SAT₀
+        S⁺[1]   = S⁺[1]     + τ₀/(h⁺ * Δx⁺) * U⁺[1] #SAT₀
+        
+        for i = 1:order⁻
+            S⁻[i] = S⁻[i] + τ₁/(h⁻ * Δx⁻) * K⁻[end] * D₁ᵀE₀[i] * U⁻[end-order⁻+i]
+            S⁻[i] = S⁻[i] + α₀/(h⁻ * Δx⁻) * K⁻[end] * D₁E₀[i] * U⁻[end-order⁻+i]
+
+            S⁺[i] = S⁺[i] + τ₁/(h⁺ * Δx⁺) * K⁺[1] * D₁ᵀE₀[i] * U⁺[i]
+            S⁺[i] = S⁺[i] + α₀/(h⁺ * Δx⁺) * K⁺[1] * D₁E₀[i] * U⁺[i]
+        end
+
+    end
+
+end

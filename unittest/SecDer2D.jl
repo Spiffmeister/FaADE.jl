@@ -28,7 +28,7 @@ uxx = zeros(Float64,(nx,ny))
 D₂!(uxx,u,k,k,nx,ny,Δx,Δx,2,2)
 println(uxx[:,1])
 
-@benchmark D₂!($uxx,$u,$k,$k,$nx,$ny,$Δx,$Δy,2,2)
+# @benchmark D₂!($uxx,$u,$k,$k,$nx,$ny,$Δx,$Δy,2,2)
 
 
 

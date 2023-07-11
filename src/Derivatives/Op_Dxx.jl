@@ -31,15 +31,14 @@ Internally uses [`SecondDerivativeInternal`](@ref) and [`SecondDerivativeInterna
 """
 function D₂! end
 ### 1D second derviative function
-function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Integer,α::T) where T
-    
-    SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,DerivativeOrder{order}(),α)
-    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Left,DerivativeOrder{order}(),α)
-    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Right,DerivativeOrder{order}(),α)
+function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::DerivativeOrder,α::T) where T
+    SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,order,α)
+    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Left,order,α)
+    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Right,order,α)
     uₓₓ
 end
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
-function D₂!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMatrix{T},n::Integer,Δ::T,order::Integer,α::T,dim::Integer) where T
+function D₂!(uₓₓ::AbstractMatrix{T},u::AbstractMatrix{T},c::AbstractMatrix{T},n::Integer,Δ::T,order::DerivativeOrder,α::T,dim::Integer) where T
     loopdir = SelectLoopDirection(dim)    
     for (cache,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
         D₂!(cache,U,C,n,Δ,order,α)
@@ -50,11 +49,12 @@ end
 function D₂!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
         nx::Integer,ny::Integer,Δx::T,Δy::T,
         # order_x::DerivativeOrder,order_y::DerivativeOrder) where {T,AT}
-        order_x::Integer=2,order_y::Integer=order_x) where {T,AT}
+        order_x::DerivativeOrder,order_y::DerivativeOrder) where {T,AT}
         
         # DerivativeOperator{2,2,0,0}
 
-
+    # DOx = DerivativeOrder{order_x}()
+    # DOy = DerivativeOrder{order_y}()
     
     for (A,B,C) in zip(eachcol(uₓₓ),eachcol(u),eachcol(cx))
         D₂!(A,B,C,nx,Δx,order_x,0.0)

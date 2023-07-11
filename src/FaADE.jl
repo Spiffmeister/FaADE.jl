@@ -23,7 +23,8 @@ module FaADE
     include("Helpers/Helpers.jl")
     include("Derivatives/Derivatives.jl")
     include("SATs/SATs.jl")
-    include("Parallel/Parallel.jl")
+    include("ParallelOperator/ParallelOperator.jl")
+    include("Inputs/Inputs.jl")
     include("solvers/solvers.jl")
 
 
@@ -41,7 +42,7 @@ module FaADE
 
     using FaADE.solvers: solve, build_H
 
-    using FaADE.Parallel: construct_grid, generate_parallel_penalty
+    using FaADE.ParallelOperator: construct_grid, generate_parallel_penalty, ParallelData
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
@@ -60,5 +61,8 @@ module FaADE
         SAT_Periodic
         #SAT_Robin, 
         #Split_domain
+
+    using FaADE.Inputs: newProblem1D, newProblem2D
+    export newProblem1D, newProblem2D
 
 end # module

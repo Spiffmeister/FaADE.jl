@@ -9,7 +9,7 @@ abstract type BoundaryConditionData end
     PDEProblem
 Abstract type for the problem struct
 """
-abstract type PDEProblem end
+abstract type PDEProblem{DIMS} end
 
 
 """
@@ -88,7 +88,7 @@ Inputs:
 Returns
 - Struct of data required for `solver`
 """
-struct VariableCoefficientPDE1D <: PDEProblem
+struct VariableCoefficientPDE1D <: PDEProblem{1}
     InitialCondition    :: Function
     K                   :: Function
     order               :: Int
@@ -115,11 +115,12 @@ Inputs:
 Returns
 - Struct of data required for `solver`
 """
-struct VariableCoefficientPDE2D{FC,FX,FY} <: PDEProblem
+struct VariableCoefficientPDE2D{FC,FX,FY} <: PDEProblem{2}
     InitialCondition    :: FC
     Kx                  :: FX
     Ky                  :: FY
     order               :: Int
+    # DO               :: DerivativeOrder
     BoundaryConditions  :: NamedTuple
     function VariableCoefficientPDE2D(u₀,Kx::Function,Ky::Function,order::Int,BCs::BoundaryConditionData...)
 
