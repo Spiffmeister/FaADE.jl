@@ -57,7 +57,7 @@ struct newProblem2D{DIMS,
     BoundaryConditions  :: SATB
     Parallel            :: PART
     
-    function newProblem2D(order::DerivativeOperator,u₀,Kx,Ky,G::GridType{TT,DIMS},BCs,S,Par) where {TT,KT<:Real,DIMS}
+    function newProblem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIMS},BCs,S,Par) where {TT,KT<:Real,DIMS}
 
         source = SourceTerm{typeof(S)}(S)
         DO = DerivativeOrder{order}()
@@ -66,7 +66,7 @@ struct newProblem2D{DIMS,
 
 
         # new(u₀,Kx,Ky,order,BoundaryConditions(Bounds))
-        new{DIMS,TT}(u₀,DCx,DCy,source,DO,G,BCs)
+        new{DIMS,TT,typeof(G),typeof(DCx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,DCx,DCy,source,DO,G,BCs)
     end
 end
 
