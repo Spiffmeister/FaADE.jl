@@ -10,8 +10,15 @@ abstract type MetricType{MType} end
 
 
 struct CartesianMetric <: MetricType{:cartesian} end
-struct CurvilinearMetric{TT} <: MetricType{:curvilinear}
-    x   :: TT
+struct CurvilinearMetric{
+        F1<:Function,
+        F2<:Function,
+        F3<:Function,
+        F4<:Function} <: MetricType{:curvilinear}
+    dxdr    ::  Function
+    dxdq    ::  Function
+    dydr    ::  Function
+    dydq    ::  Function
 end
 
 """
@@ -92,19 +99,38 @@ FaADE.Helpers.GridMultiBlock
 """
 struct GridMultiBlock{TT  <: Real,
         DIM,
+        ST,
         MET,
-        TG } <: GridType{TT,DIM,MET}
+        TG,
+        TJ } <: GridType{TT,DIM,MET}
     
     Grids           :: TG
+    Joint           :: TJ
 
-    function GridMultiBlock(grids::AbstractArray{Grid1D{TT,MET}}) where {TT,MET}
+    function GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
 
         # new{TT, ndims(grids[1]), MET, typeof(TG)}(grids)
-        new{TT, ndims(grids[1]), MET, typeof(grids)}(grids)
+        J = [(i,i+1,Right) for i in 1:length(grids)]
+
+        new{TT, 1, :structured, MET, typeof(grids), typeof(J)}(grids,J)
     end
 end
+"""
+    GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
+Assumes the grid layout is stitched together in `x`, starting at the lower bound in `x`
+"""
+function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
+    J = [(i,i+1,Right) for i in 1:length(grids)]
+    new{TT,2,:structured,MET,typeof(grids),typeof(J)}(grids,J)
+end
+"""
+    GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}},J::Vector{Tuple{Int,Int,NodeType}}) where {TT,MET}
 
-
+`J` is a vector of tuples which tells the code what the layout of the local grid blocks in `grids`
+"""
+function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}},J::Vector{Tuple{Int,Int,NodeType}}) where {TT,MET}
+    new{TT,2,:unstructured,MET,typeof(grids),typeof(J)}(grids,J)
+end
 
 """
     GetMinΔ
@@ -116,6 +142,7 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 
 
 Base.ndims(G::GridType{TT,DIM,MET}) where {TT,DIM,MET} = DIM
+
 # Base.typeof(M::MetricType{MType}) where MType = MType
 
 
