@@ -1,5 +1,13 @@
+#=
+"""
+    SATMode
 
-
+Used when the conjugate gradient solver is being used so the solver knows which part of the SAT to call, since ``F`` in ``Ab=F`` contains all data (the right hand side of ``u(0)=f(t)``, but not the solution ``u``). 
+"""
+struct SATMode{T} end
+const DataMode = SATMode{:DataMode}()
+const SolutionMode = SATMode{:SolutionMode}()
+=#
 
 """
     SimultanousApproximationTerm
@@ -21,7 +29,7 @@ struct SATBoundaries{NBound,
         if length(BCs) == 1
             new{length(BCs),typeof(BCs),Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
         elseif length(BCs) == 2
-            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),Nothing,Nothing}(BCs[1][1],BCs[2][1],nothing,nothing)
+            new{length(BCs),typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
         elseif length(BCs) == 3
             new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),Nothing}(BCs[1][1],BCs[2][1],BCs[3][1],nothing)
         else
@@ -87,18 +95,15 @@ function construct_SAT(Term::SimultanousApproximationTerm,solver)
 end
 
 
-#=
-function applySAT(Block,Prob)
-    Prob.BoundaryConditions.SATL
-    Prob.BoundaryConditions.SATR
-    Prob.BoundaryConditions.SATU
-    Prob.BoundaryConditions.SATD
+
+function applySATs(Block,Prob,mode)
+
 end
 
 
 
-Base.eachindex(SB::SATBoundaries{L}) where L = L
-=#
+# Base.eachindex(SB::SATBoundaries{L}) where L = L
+
 
 
 
