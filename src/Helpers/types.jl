@@ -68,3 +68,6 @@ struct DiffusionCoefficient{DC<:Union{Real,Function}}
 end
 
 
+Base.show(io::IO,S::SourceTerm{TT}) where TT = S.source
+Base.show(io::IO,DC::DiffusionCoefficient{TT}) where TT = DC.coeff
+

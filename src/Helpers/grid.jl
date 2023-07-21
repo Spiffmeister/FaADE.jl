@@ -8,7 +8,6 @@ abstract type MetricType{MType} end
 
 
 
-
 struct CartesianMetric <: MetricType{:cartesian} end
 struct CurvilinearMetric{
         F1<:Function,
@@ -20,6 +19,10 @@ struct CurvilinearMetric{
     dydr    ::  Function
     dydq    ::  Function
 end
+
+Base.show(M::CartesianMetric) = print("Cartesian Metric")
+Base.show(M::CurvilinearMetric) = print("Curvilinear Metric")
+
 
 """
     Grid1D
@@ -102,34 +105,46 @@ struct GridMultiBlock{TT  <: Real,
         ST,
         MET,
         TG,
-        TJ } <: GridType{TT,DIM,MET}
+        TJ,
+        IT <: AbstractArray{Int}} <: GridType{TT,DIM,MET}
     
     Grids           :: TG
     Joint           :: TJ
+    inds            :: IT
+    # Domain          :: Vector{TT}
+    # lengths         :: Vector{Integer}
 
-    function GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
+    function GridMultiBlock(grids::Vector{Grid1D{TT,MET}},joints) where {TT,MET}
 
         # new{TT, ndims(grids[1]), MET, typeof(TG)}(grids)
-        J = [(i,i+1,Right) for i in 1:length(grids)]
+        # J = [(i,i+1,Right) for i in 1:length(grids)]
+        # Dom = [0.0,1.0,0.0,2π]
 
-        new{TT, 1, :structured, MET, typeof(grids), typeof(J)}(grids,J)
+        inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
+
+        new{TT, 1, :structured, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
+    end
+
+    function GridMultiBlock(grids::Vector{Grid2D{TT,MET}},joints) where {TT,MET}
+        new{TT,2,:structured,MET,typeof(grids),typeof(joints),Vector{Int64}}(grids,joints,[1])
     end
 end
 """
-    GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
-Assumes the grid layout is stitched together in `x`, starting at the lower bound in `x`
+    GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
+Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
 """
-function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
+function GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
     J = [(i,i+1,Right) for i in 1:length(grids)]
-    new{TT,2,:structured,MET,typeof(grids),typeof(J)}(grids,J)
+    GridMultiBlock(grids,J)
 end
 """
     GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}},J::Vector{Tuple{Int,Int,NodeType}}) where {TT,MET}
 
-`J` is a vector of tuples which tells the code what the layout of the local grid blocks in `grids`
+Assumes blocks are stacked in `x`
 """
-function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}},J::Vector{Tuple{Int,Int,NodeType}}) where {TT,MET}
-    new{TT,2,:unstructured,MET,typeof(grids),typeof(J)}(grids,J)
+function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
+    J = [(i,i+1,Right) for i in 1:length(grids)]
+    GridMultiBlock(grids,J)
 end
 
 """
@@ -141,8 +156,35 @@ GetMinΔ(grid::Grid1D) = grid.Δx
 GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 
 
+
+
+
+
 Base.ndims(G::GridType{TT,DIM,MET}) where {TT,DIM,MET} = DIM
+
+function Base.getindex(G::GridMultiBlock{TT,1},i::Integer) where TT
+    ii = findfirst(x->x ≥ i, G.inds)
+    ii == 1 ? iii = i : iii = i - G.inds[ii-1]
+    return G.Grids[ii].grid[iii]
+end
+function Base.getindex(G::GridMultiBlock{TT,2},i::Integer,j::Integer) where TT
+    ii = findfirst(x->x ≥ i, G.inds[1,:])
+    ii == 1 ? iii = i : iii = i - G.inds[1,ii-1]
+    
+    jj = findfirst(x->x ≥ j, G.inds)
+    jj == 1 ? jjj = j : jjj = j - G.inds[jj-1]
+    return G.Grids[ii,jj].grid[iii,jjj]
+end
+
+Base.length(G::GridMultiBlock{TT,1}) where {TT} = G.inds[end]
+Base.size(G::GridMultiBlock{TT,1}) where {TT} = (G.inds[end],)
+Base.size(G::GridMultiBlock{TT,2}) where {TT} = (G.inds[end,1],G.inds[end,2])
+
+
+Base.eachindex(G::GridMultiBlock{TT,1}) where {TT} = Base.OneTo(length(G))
+
 
 # Base.typeof(M::MetricType{MType}) where MType = MType
 
+# Base.getindex(G::GridMultiBlock{},i)
 
