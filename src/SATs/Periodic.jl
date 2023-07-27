@@ -7,7 +7,7 @@ Storage of all objects needed for a Periodic SAT ``u(x_0) = u(x_N)`` and ``\\lef
 struct SAT_Periodic{
         TT<:Real,
         VT<:Vector{TT},
-        F1<:Function,F2<:Function} <: SimultanousApproximationTerm
+        F1<:Function,F2<:Function} <: SimultanousApproximationTerm{:Periodic}
     
     type        :: BoundaryConditionType
     axis        :: Int

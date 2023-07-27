@@ -7,7 +7,7 @@ Simulatenous approximation term for Robin boundary conditions
 
 TODO: Testing
 """
-struct SAT_Robin{T} <: SimultanousApproximationTerm
+struct SAT_Robin{T} <: SimultanousApproximationTerm{:Robin}
     type    :: BoundaryConditionType
     side    :: NodeType
     axis    :: Int

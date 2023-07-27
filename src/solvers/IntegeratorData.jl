@@ -16,7 +16,7 @@ mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
 
     innerprod   :: innerH{T,N,Vector{T}}
 
-    function ConjGradBlock{T}(grid::GridType,order::Int) where T
+    function ConjGradBlock{T}(grid::GridType,order::Union{Int,DerivativeOrder}) where T
 
         if typeof(grid) <: Grid1D
             Δ = grid.Δx

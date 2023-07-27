@@ -102,31 +102,27 @@ FaADE.Helpers.GridMultiBlock
 """
 struct GridMultiBlock{TT  <: Real,
         DIM,
-        ST,
+        NG,
         MET,
         TG,
         TJ,
         IT <: AbstractArray{Int}} <: GridType{TT,DIM,MET}
     
-    Grids           :: TG
-    Joint           :: TJ
-    inds            :: IT
-    # Domain          :: Vector{TT}
-    # lengths         :: Vector{Integer}
+    Grids   :: TG
+    Joint   :: TJ
+    inds    :: IT
 
     function GridMultiBlock(grids::Vector{Grid1D{TT,MET}},joints) where {TT,MET}
 
-        # new{TT, ndims(grids[1]), MET, typeof(TG)}(grids)
-        # J = [(i,i+1,Right) for i in 1:length(grids)]
-        # Dom = [0.0,1.0,0.0,2π]
-
         inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
 
-        new{TT, 1, :structured, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
+        new{TT, 1, length(grids), MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
     end
-
     function GridMultiBlock(grids::Vector{Grid2D{TT,MET}},joints) where {TT,MET}
-        new{TT,2,:structured,MET,typeof(grids),typeof(joints),Vector{Int64}}(grids,joints,[1])
+        
+        inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+
+        new{TT,2, length(grids),MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,[1])
     end
 end
 """
@@ -160,7 +156,6 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 
 
 
-Base.ndims(G::GridType{TT,DIM,MET}) where {TT,DIM,MET} = DIM
 
 function Base.getindex(G::GridMultiBlock{TT,1},i::Integer) where TT
     ii = findfirst(x->x ≥ i, G.inds)
@@ -176,10 +171,21 @@ function Base.getindex(G::GridMultiBlock{TT,2},i::Integer,j::Integer) where TT
     return G.Grids[ii,jj].grid[iii,jjj]
 end
 
-Base.length(G::GridMultiBlock{TT,1}) where {TT} = G.inds[end]
-Base.size(G::GridMultiBlock{TT,1}) where {TT} = (G.inds[end],)
-Base.size(G::GridMultiBlock{TT,2}) where {TT} = (G.inds[end,1],G.inds[end,2])
 
+
+"""
+    size(G::GridType)
+"""
+Base.size(G::Grid1D) = (G.n,)
+Base.size(G::Grid2D) = (G.nx,G.ny)
+Base.size(G::GridMultiBlock{TT,1}) where {TT} = (G.inds[end]-length(G.inds)+1,)
+Base.size(G::GridMultiBlock{TT,2}) where {TT} = (G.inds[end,1],G.inds[end,2])
+"""
+    length(G::GridType)
+"""
+Base.length(G::GridType) = prod(size(G))
+
+Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 
 Base.eachindex(G::GridMultiBlock{TT,1}) where {TT} = Base.OneTo(length(G))
 

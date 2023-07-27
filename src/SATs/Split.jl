@@ -85,7 +85,7 @@ end
 struct SAT_Interface{
         TT<:Real,
         TV<:Vector{TT},
-        F1<:Function} <: SimultanousApproximationTerm
+        F1<:Function} <: SimultanousApproximationTerm{:Interface}
 
     axis    :: Int
     order   :: Int

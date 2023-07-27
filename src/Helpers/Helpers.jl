@@ -23,7 +23,7 @@ module Helpers
     # nifty import
     export check_order, check_boundary,
         halforder, BoundaryNodeInput, BoundaryNodeOutput,
-        SelectLoopDirection
+        SelectLoopDirection, SATNodeOutput
     
     # grid import
     export GridType, LocalGridType

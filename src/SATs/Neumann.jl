@@ -14,7 +14,7 @@ struct SAT_Neumann{
     TN<:NodeType,
     TT<:Real,
     VT<:Vector{TT},
-    F1<:Function} <: SimultanousApproximationTerm
+    F1<:Function} <: SimultanousApproximationTerm{:Neumann}
     
     type    :: BoundaryConditionType
     side    :: TN

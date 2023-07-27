@@ -8,7 +8,7 @@ struct SAT_Dirichlet{
         TN<:NodeType,
         TT<:Real,
         VT<:Vector{TT},
-        F1<:Function, F2<:Function, F3<:Function} <: SimultanousApproximationTerm
+        F1<:Function, F2<:Function, F3<:Function} <: SimultanousApproximationTerm{:Dirichlet}
 
     type        :: BoundaryConditionType
     side        :: TN

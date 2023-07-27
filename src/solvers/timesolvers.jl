@@ -321,21 +321,118 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
 end
 
 
-#=
-struct SolverData{method,adaptive,penalty} end
+"""
+    SolverData{method,adaptive}
+"""
+struct SolverData{method} 
+    adaptive :: Bool
+end
 
-function solve(P::newPDEProblem,Δt::TT,t_f::TT;
-        solver::Symbol=:cgie,adaptive::Bool=false,penalty_func::Nothing=nothing)
+function solve(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,COORD},Δt::TT,t_f::TT;
+        solver::Symbol=:cgie,adaptive::Bool=false) where {TT,DIM,COORD}
 
-    SD = SolverData{solver,adaptive,nothing}
+    SD = SolverData{solver}(adaptive)
 
-    DBlock = DataBlock{TT}(P,Δt)
-
-    solve!(DBlock,P,Δt,t_f,SD)
+    if solver == :cgie
+        cgsolve(P,G,Δt,t_f,SD)
+    end
 
 end
 
+function cgsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) where {TT}
 
+    # target_state = 0.0
+    # if t_f == Inf
+    #     target_state = 1e-5
+    #     println("Going for steady state at rel-error Δu=",target_state)
+    #     @warn "MAX ITERATIONS NOT SET"
+    #     @warn "MAX ITERATIONS NOT SET"
+    #     @warn "MAX ITERATIONS NOT SET"
+    # end
+
+    penalty_function_enabled = false
+    if typeof(P.Parallel) <: Nothing
+        penalty_function_enabled = true
+    end
+
+    DBlock = newDataBlock(P,G,Δt,0.0)
+    CGBlock = ConjGradBlock{TT}(G,GetOrder(P.order))
+    soln = solution{TT}(G,0.0,Δt,P)
+    # order = DerivativeOrder{P.order}()
+
+    DBlock.Data.u .= soln.u[1]
+    
+    Diff = generate_SecondDerivative(G.n,G.Δx,P.order)
+    
+    function CGRHS!(cache::AbstractArray{TT},u::AbstractArray{TT},k::AbstractArray{TT}) where TT
+        Diff(cache,u,k)
+    end
+    
+    
+    t = Δt
+    Δt₀ = Δt
+    DBlock.Data.uₙ₊₁ .= DBlock.Data.u
+    CGBlock.b .= DBlock.Data.u
+    
+    while t < t_f
+
+        copyUtoSAT!(DBlock,P.order)
+
+        setBoundaries(DBlock,P.BoundaryConditions,G,t,Δt)
+
+        applySATs(P.BoundaryConditions,DBlock)
+
+        addSource!(P.source,DBlock,G,t,Δt)
+
+        conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
+
+        if CGBlock.converged | !adaptive #If CG converges
+
+            if penalty_function_enabled
+                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+            end
+
+            # USED FOR DETERMINING EQUILIBRIUM
+            DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
+            if (DBlock.Δu ≤ target_state) & (t_f == Inf)
+                t_f = t
+            end
+
+            DBlock.u .= DBlock.uₙ₊₁
+            CGBlock.b .= DBlock.uₙ₊₁
+            # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
+            if adaptive & (Δt<300Δt₀)
+                Δt *= 1.05
+            end
+            t += Δt
+
+            
+
+        else #If CG fails, reset and retry step
+            DBlock.uₙ₊₁ .= DBlock.u
+            Δt /= 2.0
+            CGBlock.converged = true
+            if Δt < Δt₀/10.0
+                error("CG could not converge, aborting at t=",t," with Δt=",Δt)
+            end
+        end
+        # if sample < t
+        #     sample += sample
+        #     UpdateSolution!(soln,DBlock.u,t,Δt)
+        # end 
+    end
+
+    push!(soln.u,DBlock.u)
+    push!(soln.t,t)
+    push!(soln.Δt,Δt)
+
+    return soln
+
+end
+
+# function cgsolve(P::newPDEProblem,G::GridType)
+
+#=
 function solve(DB::DataBlock,P::newPDEProblem,Δt::TT,t_f::TT,SolverData{:cgie,Any,Any})
 
     t = Δt

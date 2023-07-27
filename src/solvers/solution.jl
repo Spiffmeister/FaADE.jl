@@ -12,7 +12,7 @@ Fields:
 mutable struct solution{TT,
         AT<:AbstractArray{TT},
         GT<:GridType,
-        PT<:PDEProblem}
+        PT<:Union{PDEProblem,newPDEProblem}}
     u       :: Vector{AT}
     grid    :: GT
     Δt      :: Union{TT,Vector{TT}}
@@ -47,28 +47,55 @@ mutable struct solution{TT,
         end
 
     end
+    function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::newPDEProblem;preallocate=false) where TT
+        if preallocate
+            N = ceil(Int64,t/Δt)
+            n = length(x)
+            u = [zeros(Float64,n) for _ in 1:N]
+
+            u[1] = u₀
+
+            new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
+        else #If an adaptive time step is being used, preallocation is impossible
+
+            if typeof(grid) <: Grid1D
+                u = prob.InitialCondition.(grid.grid)
+            elseif typeof(grid) <: Grid2D
+                u = zeros(TT,(grid.nx,grid.ny))
+                for j = 1:grid.ny
+                    for i = 1:grid.nx
+                        u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
+                    end
+                end
+            end
+
+
+            new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+        end
+
+    end
 end
 
 
-setInitialCondition(IC,G::Grid1D)
+function setInitialCondition end
 setInitialCondition(IC,G::Grid1D) = IC.(G.grid)
-# setInitialCondition(IC,G::GridMultiBlock{TT,1}) where TT = [IC(G[i]) for i in 1:length(G)]
+function setInitialCondition(IC,G::GridMultiBlock{TT,1}) where TT
+    u = [zeros(TT,length(G.Grids[i])) for i in eachindex(G.Grids)]
+    for j in eachindex(G.Grids)
+        for i in eachindex(G.Grids[j].grid)
+            u[i,j] = IC(G.Grids[j].grid[i])
+        end
+    end
+end
 function setInitialCondition(IC,G::Grid2D{TT}) where TT
-    u = zeros(TT,(grid.nx,grid.ny))
-    for j = 1:grid.ny
-        for i = 1:grid.nx
-            u[i,j] = IC(grid.gridx[i],grid.gridy[j])
+    u = [zeros(TT,(G.Grids[i].grid.nx,G.Grids[i].grid.ny)) for i in eachindex(G.Grids)]
+    for j = 1:G.inds[2,end]
+        for i = 1:G.inds[1,end]
+            u[i,j] = IC(G[i,j],G[i,j])
         end
     end
     return u
 end
-function setInitialCondition(IC,G::GridMultiBlock{TT,1}) where {TT,1}
-    u = zeros(TT,length(G))
-    for i in eachindex(G)
-        u[i] = IC(G[i])
-    end
-end
-
 
 
 
