@@ -150,9 +150,6 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Left},DATA::AT,c::AT,
         # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
         S[1] -= τ(C[1])*C[1]*U[1]
     end
-    # println("BD ",BD)
-    # println("α ",α)
-    # println("C ",τ(c[1]))
     SAT
 end
 function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
@@ -171,13 +168,24 @@ end
 
 
 
-
-
-
-
-
-
-
+function (SD::SAT_Dirichlet{TN,TT})(cache::AT,c::AT,rhs::AT,::SATMode{:DataMode}) where {TN,TT,AT}
+    TN == Left ? β = TT(1) : β = TT(-1)
+    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(rhs))
+        for i = 1:SD.order #nodes SD.nodes
+            S[i] += -β*SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #u[Left]
+        end
+        S[1] += SD.τ(C[1])*C[1]*U[1]
+    end
+end
+function (SD::SAT_Dirichlet{TN,TT})(cache::AT,c::AT,rhs::AT,::SATMode{:SolutionMode}) where {TN,TT,AT}
+    TN == Left ? β = TT(1) : β = TT(-1)
+    for (S,U,C) in zip(SD.loopaxis(cache),SD.loopaxis(rhs),SD.loopaxis(c))
+        for i = 1:SD.order
+            S[i] += β*SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #D₁ᵀE₀
+        end
+        S[1] -= SD.τ(C[1])*C[1]*U[1]
+    end
+end
 
 
 

@@ -21,7 +21,7 @@ module SATs
     # include("Robin.jl")
     include("Periodic.jl")
     # include("Split.jl")
-
+    include("Helpers.jl")
 
     export SAT_Dirichlet, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
     export SAT_Neumann
@@ -33,5 +33,6 @@ module SATs
     export SimultanousApproximationTerm
     export construct_SAT
     export SATBoundaries
+    export applySAT!
     
 end

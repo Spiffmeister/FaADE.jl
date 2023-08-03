@@ -3,38 +3,21 @@
 struct Derivative{OrderX,OrderY,MixedOrderX,MixedOrderY} end
 
 
-struct RHS
-    Diff    :: Derivative
-    SATL    :: Union{SimultaneousApproximationTerm,nothing}
-    SATR    :: Union{SimultaneousApproximationTerm,nothing}
-    SATU    :: Union{SimultaneousApproximationTerm,nothing}
-    SATD    :: Union{SimultaneousApproximationTerm,nothing}
-
-    function RHS
-    end
-end
-
-
-
 
 """
     CGRHS!
 
 """
 function CGRHS! end
-
-function CGRHS!(::Derivative{2,2,0,0},RHS)
-    D₂!(cache,u,Kx,Ky,nx,ny,Δx,Δy,orderx,ordery)
-
-    ApplySAT(cache,u,Kx,RHS.SATL)
-    ApplySAT(cache,u,Kx,RHS.SATR)
-    ApplySAT(cache,u,Ky,RHS.SATU)
-    ApplySAT(cache,u,Ky,RHS.SATD)
+function CGRHS!(cache::AT,CG::ConjGradBlock{TT,1,AT},D::newDataBlock) where {TT,AT}
+    D₂!(cache,D.Data.u,D.Data.K,G.nx,G.ny,G.Δx,G.Δy,D.order,D.order)
+    commBoundaries(DBlock,G,t,Δt)
+    applySATs(CG,D,SolutionMode)
 end
-
-
-
-function CGRHS!(::Derivative{2,2,1,1})
+function CGRHS!(cache::AT,CG::ConjGradBlock{TT,2,AT},D::newDataBlock) where {TT,AT}
+    D₂!(cache,D.Data.u,D.Data.K,G.nx,G.ny,G.Δx,G.Δy,D.order,D.order)
+    commBoundaries(DBlock,G,t,Δt)
+    applySATs(CG,D,SolutionMode)
 end
 
 

@@ -1,22 +1,37 @@
 
+abstract type IntegratorDataMultiBlock{dtype,DIM,atype} <: DataBlockType{dtype,DIM,atype} end
+
+abstract type IntegratorDataBlock{dtype,DIM,atype} <: DataBlockType{dtype,DIM,atype} end
+
+mutable struct ConjGradScalarBlock{TT}
+    rnorm       :: TT
+    unorm       :: TT
+    dₖAdₖ       :: TT
+    βₖ          :: TT
+    αₖ          :: TT
+    converged   :: Bool
+    function ConjGradScalarBlock{TT}()
+        new{TT}(TT(0),TT(0),TT(0),TT(0),TT(0),true)
+    end
+end
 
 
 """
     ConjGradBlock
 Data storage for the conjugate gradient method. See [`conj_grad!`](@ref)
 """
-mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
+struct ConjGradBlock{TT,DIM, AT} <: IntegratorDataBlock{TT,DIM,AT}
     b   :: AT # b = uⁿ⁺¹ + F
     rₖ  :: AT # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
     Adₖ :: AT # Adₖ = dₖ - Δt*D(dₖ)
     Drₖ :: AT # Drₖ = rₖ - Δt*D(rₖ)
     dₖ  :: AT # dₖ = -rₖ, -rₖ .+ βₖ*dₖ
 
-    converged   :: Bool
+    scalar :: ConjGradScalarBlock
 
     innerprod   :: innerH{T,N,Vector{T}}
 
-    function ConjGradBlock{T}(grid::GridType,order::Union{Int,DerivativeOrder}) where T
+    function ConjGradBlock{TT}(grid::GridType{TT,DIM},order::Union{Int,DerivativeOrder}) where {TT,DIM}
 
         if typeof(grid) <: Grid1D
             Δ = grid.Δx
@@ -26,22 +41,23 @@ mutable struct ConjGradBlock{T,N, AT} <: DataBlockType{T,N,AT}
             n = (grid.nx,grid.ny)
         end
 
-        b   = zeros(T,n)
-        rₖ  = zeros(T,n)
-        Adₖ = zeros(T,n)
-        Arₖ = zeros(T,n)
-        dₖ  = zeros(T,n)
-
-        dims = length(n)
+        b   = zeros(TT,n)
+        rₖ  = zeros(TT,n)
+        Adₖ = zeros(TT,n)
+        Arₖ = zeros(TT,n)
+        dₖ  = zeros(TT,n)
 
         innerprod = innerH(grid,order)
-        
 
-        new{T,dims, typeof(b)}(b, rₖ, Adₖ, Arₖ, dₖ, true, innerprod)
+        scalars = ConjGradScalarBlock{TT}()
+
+        new{T,DIM, typeof(b)}(b, rₖ, Adₖ, Arₖ, dₖ, true, innerprod, scalars)
     end
 end
 
-
+struct ConjGradMultiBlock{TT,DIM,AT}
+    Block :: Vector{ConjGradBlock}
+end
 
 
 """

@@ -13,7 +13,7 @@ module solvers
     using FaADE.Derivatives: generate_SecondDerivative, DerivativeOrder, GetOrder
     
     using FaADE.SATs: SAT, construct_SAT, 
-    SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!, SATBoundaries
+    SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!, SATBoundaries, SimultanousApproximationTerm, applySAT!
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!
 

@@ -376,11 +376,9 @@ function cgsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) 
     
     while t < t_f
 
-        copyUtoSAT!(DBlock,P.order)
+        setBoundaries(DBlock,G,t,Δt)
 
-        setBoundaries(DBlock,P.BoundaryConditions,G,t,Δt)
-
-        applySATs(P.BoundaryConditions,DBlock)
+        applySATs(CGBlock,DBlock,DataMode)
 
         addSource!(P.source,DBlock,G,t,Δt)
 

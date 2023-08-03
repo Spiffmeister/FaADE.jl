@@ -64,7 +64,7 @@ struct SourceTerm{F<:Union{Function,Nothing}}
     source :: F
 end
 struct DiffusionCoefficient{DC<:Union{Real,Function}}
-    coeff :: DC
+    coeff  :: DC
 end
 
 

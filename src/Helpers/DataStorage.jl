@@ -1,5 +1,8 @@
 
 
+abstract type LocalDataBlockType{dtype,DIM,atype} <: DataBlockType{dtype,DIM,atype} end
+
+
 # abstract type Solution{T<:AbstractFloat} end
 
 
@@ -8,7 +11,7 @@
     DataBlock
 Passed around internally between functions. Only contains data required for current timestep.
 """
-mutable struct DataBlock{T,N,AT,KT<:Union{AT,Vector{AT}}} <: DataBlockType{T,N,AT}
+mutable struct DataBlock{T,N,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockType{T,N,AT}
     grid        :: GridType
     u           :: AT
     uₙ₊₁        :: AT
@@ -49,6 +52,7 @@ mutable struct DataBlock{T,N,AT,KT<:Union{AT,Vector{AT}}} <: DataBlockType{T,N,A
         new{T,dim,typeof(u),typeof(DiffCoeff)}(grid,u,uₙ₊₁,DiffCoeff,BStor,0,Δt,0.0)
     end
 end
+
 
 
 #========== BOUNDARY DATA ==========#
@@ -158,7 +162,7 @@ end
 
 
 
-
+#=
 """
     copyUtoSAT!
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
@@ -237,35 +241,41 @@ function addSATtoU!(u::AbstractArray,Bound::BoundaryStorage,order::Int)
     end
 end
 
+
+
 """
     addSource!
 Add the source term `F(x,y,t)` to the array `u`.
 """
 function addSource! end
-function addSource!(F::Function,u::AbstractArray{T},grid::Grid2D{T},t::T,Δt::T) where T
+function addSource!(S::Nothing,u::AbstractArray{TT},grid::LocalGridType,t::TT,Δt::TT) where TT end
+function addSource!(F::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
+    u .+= Δt*F.(grid.grid,t)
+end
+function addSource!(F::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
     for j in 1:grid.ny
         for i in 1:grid.nx
             u[i,j] += Δt*F(grid.gridx[i],grid.gridy[j],t)
         end
     end
 end
-function addSource!(F::Function,u::AbstractArray{T},grid::Grid1D{T},t::T,Δt::T) where T
-    u .+= Δt*F.(grid.grid,t)
-end
+
 
 """
     setBoundary!
 Sets the value of the boundary.
 """
 function setBoundary! end
+function setBoundary!(RHS::F,Bound::AT,t::T,Δt::T) where {F,AT,T}
+    Bound[1] = Δt*RHS(t)
+end
 function setBoundary!(RHS::F,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {F,AT,T}
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end
 end
-function setBoundary!(RHS::F,Bound::AT,t::T,Δt::T) where {F,AT,T}
-    Bound[1] = Δt*RHS(t)
-end
+
+
 
 """
     setCoefficient!
@@ -284,3 +294,15 @@ function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid2D)
         end
     end
 end
+function setCoefficient!(DC::DiffusionCoefficient{F},κ::AbstractArray,grid::Grid2D) where {F<:Function}
+    setCoefficient!(DC.coeff,κ,grid)
+end
+function setCoefficient!(DC::DiffusionCoefficient{TT},κ::AbstractArray{TT},grid::GridType) where {TT}
+    κ .= DC.coeff
+end
+
+# function setCoefficient!(P::newPDEProblem,D::LocalDataBlockType,grid::GridType)
+#     setCoefficient!(P.Kx,D.Kx,grid)
+#     setCoefficient!(P.Ky,D.Ky,grid)
+# end
+=#

@@ -13,27 +13,27 @@ const SolutionMode = SATMode{:SolutionMode}()
     SimultanousApproximationTerm
 Abstract type for SAT data structures
 """
-abstract type SimultanousApproximationTerm end
+abstract type SimultanousApproximationTerm{Type} end
 
-struct SATBoundaries{NBound,
-        SATL<:SimultanousApproximationTerm,
+struct SATBoundaries{SATL<:SimultanousApproximationTerm,
         SATR<:Union{SimultanousApproximationTerm,Nothing},
         SATU<:Union{SimultanousApproximationTerm,Nothing},
         SATD<:Union{SimultanousApproximationTerm,Nothing}}
-    Boundary1    :: SATL
-    Boundary2    :: SATR
-    Boundary3    :: SATU
-    Boundary4    :: SATD
+    BoundaryLeft    :: SATL
+    BoundaryRight   :: SATR
+    BoundaryUp      :: SATU
+    BoundaryDown    :: SATD
+
 
     function SATBoundaries(BCs...)
         if length(BCs) == 1
-            new{length(BCs),typeof(BCs),Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
+            new{Nothing,Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
         elseif length(BCs) == 2
-            new{length(BCs),typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
+            new{typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
         elseif length(BCs) == 3
-            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),Nothing}(BCs[1][1],BCs[2][1],BCs[3][1],nothing)
+            new{typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),Nothing}(BCs[1][1],BCs[2][1],BCs[3][1],nothing)
         else
-            new{length(BCs),typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),typeof(BCs[4][1])}(BCs[1][1],BCs[2][1],BCs[3][1],BCs[4][1])
+            new{typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),typeof(BCs[4][1])}(BCs[1][1],BCs[2][1],BCs[3][1],BCs[4][1])
         end
     end
 end
@@ -96,13 +96,7 @@ end
 
 
 
-function applySATs(Block,Prob,mode)
 
-end
-
-
-
-# Base.eachindex(SB::SATBoundaries{L}) where L = L
 
 
 
