@@ -11,12 +11,12 @@ abstract type LocalDataBlockType{dtype,DIM,atype} <: DataBlockType{dtype,DIM,aty
     DataBlock
 Passed around internally between functions. Only contains data required for current timestep.
 """
-mutable struct DataBlock{T,N,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockType{T,N,AT}
+mutable struct DataBlock{T,DIM,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockType{T,DIM,AT}
     grid        :: GridType
     u           :: AT
     uₙ₊₁        :: AT
     K           :: KT
-    boundary    :: BoundaryStorage{T,N,AT}
+    boundary    :: BoundaryStorage{T,DIM,AT}
     t           :: T
     Δt          :: T
     Δu          :: T
@@ -148,15 +148,6 @@ struct BoundaryData2D{T,AT} <: BoundaryStorage{T,2, AT}
             RHS_Left,RHS_Right,RHS_Up,RHS_Down)
 
     end
-end
-
-
-
-
-function BuildStorage(Prob,grid,Δt)
-    DB = DataBlock{Float64}(Prob.BoundaryConditions,grid,Δt,Prob.order,Prob.K)
-    CG = ConjGradBlock{Float64}(grid.n)
-    return DB,CG
 end
 
 

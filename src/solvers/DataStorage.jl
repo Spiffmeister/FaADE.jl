@@ -47,12 +47,12 @@ end
     LocalDataBlock
 """
 mutable struct LocalDataBlock{TT<:Real,
-        DIMS,
+        DIM,
         AT  <: AbstractArray{TT},
         KT  <: Union{Vector{TT},Vector{Matrix{TT}}},
-        BT  <: BoundaryStorage{TT,DIMS,AT},
-        DT  <: DerivativeInfo
-        } <: newLocalDataBlockType{TT,DIMS}
+        BT  <: BoundaryStorage{TT,DIM,AT},
+        DT  <: DerivativeOperator
+        } <: newLocalDataBlockType{TT,DIM}
     u           :: AT
     uₙ₊₁        :: AT
     K           :: KT
@@ -60,34 +60,34 @@ mutable struct LocalDataBlock{TT<:Real,
     Derivative  :: DT
     Δu          :: TT
 
-    function LocalDataBlock(P::newPDEProblem{TT,DIMS},G::LocalGridType) where {TT,DIMS}
+    function LocalDataBlock(P::newPDEProblem{TT,DIM},G::LocalGridType) where {TT,DIM}
 
         u   = zeros(TT,size(G))
         uₙ₊₁ = zeros(TT,size(G))
 
-        if DIMS == 1
+        if DIM == 1
             BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions.BoundaryLeft,P.BoundaryConditions.BoundaryRight)
             DiffCoeff = zeros(TT,size(G))
             setCoefficient!(P.K,DiffCoeff,G)
-            D = DerivativeInfo(P.order,G.n,0,G.Δx,TT(0))
-        elseif DIMS == 2
+            D = DerivativeOperator{TT,1,true,false,false}(P.order,G.n,0,G.Δx,TT(0))
+        elseif DIM == 2
             BStor = newBoundaryData2D(G,P.order)
             DiffCoeff = [zeros(TT,size(G)),zeros(TT,size(G))]
             setCoefficient!(P.Kx,DiffCoeff[1],G)
             setCoefficient!(P.Ky,DiffCoeff[2],G)
-            D = DerivativeInfo(P.order,G.nx,G.ny,G.Δx,G.Δy)
+            D = DerivativeOperator{TT,2,true,false,false}(P.order,G.nx,G.ny,G.Δx,G.Δy)
         end
 
-        new{TT,DIMS,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,BStor,D,0.0)
+        new{TT,DIM,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,BStor,D,0.0)
     end
-    function LocalDataBlock(P::newPDEProblem{TT,DIMS},G::GridMultiBlock{TT,DIMS,NG},ig::Integer) where {TT,DIMS,NG}
+    function LocalDataBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM,NG},ig::Integer) where {TT,DIM,NG}
         # (My index, neighbours index, Boundary)
 
         u   = zeros(TT,size(G.Grids[ig]))
         uₙ₊₁ = zeros(TT,size(G.Grids[ig]))
 
         
-        if DIMS == 1
+        if DIM == 1
             D = DerivativeInfo(P.order,G.nx,0,G.Δx,TT(0))
             if ig != 1
                 BCL = SAT_Split()
@@ -100,9 +100,9 @@ mutable struct LocalDataBlock{TT<:Real,
                 BCR = P.Boundaries.BoundaryRight
             end
             BStor = newBoundaryData1D(G,P.order,BCL,BCR)
-        elseif DIMS == 2
+        elseif DIM == 2
         end
-        new{TT,DIMS,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,Bstor,D,0.0)
+        new{TT,DIM,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,Bstor,D,0.0)
     end
 
 end

@@ -18,7 +18,7 @@ module Derivatives
     include("Diff.jl")
 
     export SecondDerivative
-    export DerivativeOrder, GetOrder
+    export DerivativeOrder, GetOrder, DerivativeOperator
     export D₁, D₁!, D₂, D₂!, generate_SecondDerivative
 
 end

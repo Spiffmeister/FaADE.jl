@@ -10,7 +10,7 @@ mutable struct ConjGradScalarBlock{TT}
     βₖ          :: TT
     αₖ          :: TT
     converged   :: Bool
-    function ConjGradScalarBlock{TT}()
+    function ConjGradScalarBlock{TT}() where TT
         new{TT}(TT(0),TT(0),TT(0),TT(0),TT(0),true)
     end
 end
@@ -20,7 +20,7 @@ end
     ConjGradBlock
 Data storage for the conjugate gradient method. See [`conj_grad!`](@ref)
 """
-struct ConjGradBlock{TT,DIM, AT} <: IntegratorDataBlock{TT,DIM,AT}
+struct ConjGradBlock{TT,DIM,AT} <: IntegratorDataBlock{TT,DIM,AT}
     b   :: AT # b = uⁿ⁺¹ + F
     rₖ  :: AT # (uⁿ⁺¹ - Δt*uₓₓⁿ⁺¹) - b
     Adₖ :: AT # Adₖ = dₖ - Δt*D(dₖ)
@@ -29,7 +29,7 @@ struct ConjGradBlock{TT,DIM, AT} <: IntegratorDataBlock{TT,DIM,AT}
 
     scalar :: ConjGradScalarBlock
 
-    innerprod   :: innerH{T,N,Vector{T}}
+    innerprod   :: innerH{TT,DIM,Vector{TT}}
 
     function ConjGradBlock{TT}(grid::GridType{TT,DIM},order::Union{Int,DerivativeOrder}) where {TT,DIM}
 
@@ -51,14 +51,23 @@ struct ConjGradBlock{TT,DIM, AT} <: IntegratorDataBlock{TT,DIM,AT}
 
         scalars = ConjGradScalarBlock{TT}()
 
-        new{T,DIM, typeof(b)}(b, rₖ, Adₖ, Arₖ, dₖ, true, innerprod, scalars)
+        new{TT,DIM, typeof(b)}(b, rₖ, Adₖ, Arₖ, dₖ, scalars, innerprod)
     end
 end
 
-struct ConjGradMultiBlock{TT,DIM,AT}
+struct ConjGradMultiBlock{TT,DIM,NBLOCK,AT} <: IntegratorDataBlock{TT,DIM,AT}
     Block :: Vector{ConjGradBlock}
+    function ConjGradMultiBlock(G::GridMultiBlock{TT,DIM},DO::DerivativeOrder) where {TT,DIM}
+        CGB = [ConjGradBlock{TT}(grid,GetOrder(DO)) for grid in G.Grids]
+        new{TT,DIM,length(CBG),AT}(CGB)
+    end
+    function ConjGradMultiBlock(G::LocalGridType{TT,DIM},DO::DerivativeOrder) where {TT,DIM}
+        CGB = [ConjGradBlock{TT}(G,GetOrder(DO))]
+        new{TT,DIM,1,typeof(CGB[1].b)}(CGB)
+    end
 end
 
+Base.getindex(CG::ConjGradMultiBlock,i::Integer) = CG.Block[i]
 
 """
     ExplicitBlock{T,N,O}

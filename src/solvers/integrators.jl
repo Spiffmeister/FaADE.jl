@@ -64,7 +64,7 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock{TT,DIM},Δt::TT) where {TT,DIM,NBLOCK}
+function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT) where {TT,DIM,NBLOCK,AT}
     conj_grad!(RHS,DBlock.Data,CGB,Δt)
 end
 function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
@@ -113,8 +113,53 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         @warn warnstr
     end
 end
-function multiblock_conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,F,DIM,AT}
+function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
+        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+
+    local rnorm::TT
+    local unorm::TT
+    local dₖAdₖ::TT
+    local βₖ::TT
+    local αₖ::TT
+
+    # x₀ = uₙ #Initial guess
+    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
+    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
+    A!(RHS,CGB.rₖ,DBlock.u,Δt,DBlock.K)
+    CGB.rₖ .= CGB.rₖ .- CGB.b
+    # DBlock.uₙ₊₁ .= DBlock.u
+
+    CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
+
+    i = 0
+    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+    while (rnorm > rtol*unorm) & (i < maxIT)
+        A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
+        CGB.scalar.dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
+        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
+        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+
+        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
+        A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
+        @. CGB.rₖ = CGB.scalar.rₖ - CGB.b
+
+        A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
+
+        βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
+        @. CGB.dₖ = CGB.βₖ*CGB.dₖ - CGB.rₖ
+
+        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        i += 1
+    end
+    if (rnorm>rtol*unorm) & warnings
+        CGB.converged = false
+        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        @warn warnstr
+    end
+end
+function conj_grad!(DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT;
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,NBLOCK,AT}
 
     local rnorm::TT
     local unorm::TT
@@ -167,4 +212,19 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     PDE!(tmp,uⱼ,k)
     @. tmp = uⱼ - Δt*tmp
 end
+function A!(DB::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock,cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
+    # Compute the derivatives
+    Diff!()
+    # Communicate the boundaries
+    # Apply needed SATs
+    for i in 1:NBLOCK
+        setproperty!(CGB[i],cache, getproperty(DB,source) - DB.SC.Δt*getproperty(CGB[i],cache))
+    end
+end
 
+
+function diff()
+    Diff
+    CommBoundary
+    applySATs
+end

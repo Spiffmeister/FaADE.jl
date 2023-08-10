@@ -334,12 +334,12 @@ function solve(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,COORD},Δt::TT,t
     SD = SolverData{solver}(adaptive)
 
     if solver == :cgie
-        cgsolve(P,G,Δt,t_f,SD)
+        implicitsolve(P,G,Δt,t_f,SD)
     end
 
 end
 
-function cgsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) where {TT}
+function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -357,6 +357,7 @@ function cgsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) 
 
     DBlock = newDataBlock(P,G,Δt,0.0)
     CGBlock = ConjGradBlock{TT}(G,GetOrder(P.order))
+    # CGBlock = ConjGradMultiBlock(G,P.order)
     soln = solution{TT}(G,0.0,Δt,P)
     # order = DerivativeOrder{P.order}()
 
