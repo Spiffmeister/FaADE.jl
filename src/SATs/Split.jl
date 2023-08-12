@@ -6,11 +6,7 @@
 
 TODO: Write functinos and struct for split domain SATs
 """
-struct SAT_Split{T} <: SimultanousApproximationTerm
-
-    function SAT_Split(Δx,axis,order) where T
-    end
-end
+struct SAT_Split <: SimultanousApproximationTerm{:Interface} end
 
 
 
@@ -83,10 +79,12 @@ end
 
 
 struct SAT_Interface{
+        TN<:NodeType,
         TT<:Real,
         TV<:Vector{TT},
         F1<:Function} <: SimultanousApproximationTerm{:Interface}
 
+    side    :: TN
     axis    :: Int
     order   :: Int
     D₁ᵀE₀   :: TV
