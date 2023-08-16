@@ -92,29 +92,29 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     while (rnorm > rtol*unorm) & (i < maxIT)
         A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
         CGB.scalar.dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
-        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
+        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/CGB.scalar.dₖAdₖ
         @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
-        @. CGB.rₖ = CGB.scalar.rₖ - CGB.b
+        @. CGB.rₖ = CGB.rₖ - CGB.b
 
         A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
 
-        βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
-        @. CGB.dₖ = CGB.βₖ*CGB.dₖ - CGB.rₖ
+        CGB.scalar.βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/CGB.scalar.dₖAdₖ
+        @. CGB.dₖ = CGB.scalar.βₖ*CGB.dₖ - CGB.rₖ
 
         rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
-        CGB.converged = false
+        CGB.scalar.converged = false
         warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
 function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT,NBLOCK}
 
     local rnorm::TT
     local unorm::TT
@@ -212,19 +212,32 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     PDE!(tmp,uⱼ,k)
     @. tmp = uⱼ - Δt*tmp
 end
-function A!(DB::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock,cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
+function A!(D::newDataBlock{TT,DIM,NBLOCK},BlockWrite::ConjGradBlock,BlockRead::Union{newDataBlockType,DataBlockType},cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
     # Compute the derivatives
-    Diff!()
+    for i in 1:NBLOCK
+        C = getproperty(BlockWrite,cache) #ALWAYS FROM CGB
+        U = getproperty(BlockRead,source) #!PROBLEM!
+        DB[i].Derivative(C,U,D.Data[i].K)
+    end
     # Communicate the boundaries
+    for i in 1:NBLOCK
+        # CommBoundary()
+    end
     # Apply needed SATs
+    for i in 1:NBLOCK
+        # applySAT()
+    end
     for i in 1:NBLOCK
         setproperty!(CGB[i],cache, getproperty(DB,source) - DB.SC.Δt*getproperty(CGB[i],cache))
     end
 end
 
+map
 
-function diff()
-    Diff
-    CommBoundary
-    applySATs
+function Diff!()
+    for (C,U) in zip(cache,)
+        B.Derivative(C,U,K)
+    end
 end
+
+

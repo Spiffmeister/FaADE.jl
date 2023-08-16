@@ -23,8 +23,7 @@ mutable struct DataBlock{T,DIM,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockTyp
     function DataBlock{T}(
             PDE::PDEProblem,
             grid::GridType{T,D},
-            Δt::T,
-            K::Function...) where {T,D}
+            Δt::T) where {T,D}
     
         # If grid is 1D or 2D construct the right DataBlock
         if typeof(grid) <: Grid1D
@@ -33,7 +32,7 @@ mutable struct DataBlock{T,DIM,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockTyp
             BStor = BoundaryData1D{T}(PDE.BoundaryConditions,PDE.order)
 
             DiffCoeff = zeros(T,grid.n)
-            setCoefficient!(PDE.K,DiffCoeff,grid)
+            DiffCoeff = PDE.K.(grid.grid)
 
             dim = 1
             

@@ -11,13 +11,19 @@ abstract type MetricType{MType} end
 struct CartesianMetric <: MetricType{:cartesian} end
 struct CurvilinearMetric{
         F1<:Function,
-        F2<:Function,
-        F3<:Function,
-        F4<:Function} <: MetricType{:curvilinear}
+        F2<:Union{Nothing,Function},
+        F3<:Union{Nothing,Function},
+        F4<:Union{Nothing,Function}} <: MetricType{:curvilinear}
     dxdr    ::  Function
     dxdq    ::  Function
     dydr    ::  Function
     dydq    ::  Function
+    function CurvilinearMetric(dxdr)
+        new{typeof(dxdr),Nothing,Nothing,Nothing}(dxdr)
+    end
+    function CurvilinearMetric(dxdr,dxdq,dydr,dydq)
+        new{typeof(dxdr),typeof(dxdq),typeof(dydr),typeof(dydq)}(dxdr,dxdq,dydr,dydq)
+    end
 end
 
 Base.show(M::CartesianMetric) = print("Cartesian Metric")

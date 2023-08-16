@@ -48,7 +48,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,0.0,Δt,Prob)
     BoundaryConditions = Prob.BoundaryConditions
-    # order = DerivativeOrder{P.order}()
+    order = DerivativeOrder{Prob.order}()
 
     if typeof(Pgrid) <: ParallelGrid
         penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
@@ -66,7 +66,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
         _,SAT_Left  = SAT(Prob.BoundaryConditions.Left,grid,Prob.order,solver)
         _,SAT_Right = SAT(Prob.BoundaryConditions.Right,grid,Prob.order,solver)
     end
-    Diff = generate_SecondDerivative(grid.n,grid.Δx,Prob.order)
+    Diff = generate_SecondDerivative(grid.n,grid.Δx,order)
     
     if solver == :cgie
         # Replace cache with the derivative of v + SATs
@@ -102,7 +102,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
     
     
     while t < t_f
-
+    # nt = 1000; for i = 1:nt
         
         
         if solver == :cgie
@@ -119,7 +119,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 
             conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
 
-            if CGBlock.converged | !adaptive #If CG converges
+            if CGBlock.scalar.converged | !adaptive #If CG converges
 
                 if penalty_function_enabled
                     penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
