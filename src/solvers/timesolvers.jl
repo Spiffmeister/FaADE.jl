@@ -183,7 +183,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         @warn "MAX ITERATIONS NOT SET"
     end
 
-    DBlock = DataBlock{T}(Prob,grid,Δt,Prob.Kx,Prob.Ky)
+    DBlock = DataBlock{T}(Prob,grid,Δt)
     CGBlock = ConjGradBlock{T}(grid,Prob.order)
     soln = solution{T}(grid,T(0),Δt,Prob)
 
@@ -275,7 +275,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         end
         conj_grad!(CGRHS!,DBlock,CGBlock,Δt,warnings=warnings)
         
-        if CGBlock.converged | !adaptive
+        if CGBlock.scalar.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
             if typeof(Pgrid) <: ParallelData
                 applyParallelPenalty!(DBlock.uₙ₊₁,DBlock.u,Δt,Pgrid)

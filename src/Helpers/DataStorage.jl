@@ -41,9 +41,16 @@ mutable struct DataBlock{T,DIM,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockTyp
             uₙ₊₁ = zeros(T,(grid.nx,grid.ny))
             BStor = BoundaryData2D{T}(PDE.BoundaryConditions,grid,PDE.order)
 
-            DiffCoeff = [zeros(T,(grid.nx,grid.ny)),zeros(T,(grid.nx,grid.ny))]
-            setCoefficient!(PDE.Kx,DiffCoeff[1],grid)
-            setCoefficient!(PDE.Ky,DiffCoeff[2],grid)
+            DiffCoeff = [zeros(T,size(grid)),zeros(T,size(grid))]
+            
+            for j = 1:grid.ny
+                for i = 1:grid.nx
+                    DiffCoeff[1][i,j] = PDE.Kx(grid.gridx[i],grid.gridy[j])
+                    DiffCoeff[2][i,j] = PDE.Ky(grid.gridx[i],grid.gridy[j])
+                end
+            end
+            # setCoefficient!(PDE.Kx,DiffCoeff[1],grid)
+            # setCoefficient!(PDE.Ky,DiffCoeff[2],grid)
 
             dim = 2
 
