@@ -7,28 +7,44 @@ abstract type LocalGridType{dtype,DIM,COORD} <: GridType{dtype,DIM,COORD} end
 abstract type MetricType{MType} end
 
 
-
 struct CartesianMetric <: MetricType{:cartesian} end
 struct CurvilinearMetric{
-        F1<:Function,
-        F2<:Union{Nothing,Function},
-        F3<:Union{Nothing,Function},
-        F4<:Union{Nothing,Function}} <: MetricType{:curvilinear}
-    dxdr    ::  Function
-    dxdq    ::  Function
-    dydr    ::  Function
-    dydq    ::  Function
-    function CurvilinearMetric(dxdr)
-        new{typeof(dxdr),Nothing,Nothing,Nothing}(dxdr)
+        TT  <:TT,
+        AT  <:AbstractArray{TT},
+        Fxr <:Function,
+        Fxq <:Union{Nothing,Function},
+        Fyr <:Union{Nothing,Function},
+        Fyq <:Union{Nothing,Function}} <: MetricType{:curvilinear}
+    X       :: AT
+    x       :: Fx
+    dxdr    :: Fxr
+    dxdq    :: Fxq
+    y       :: Fy
+    dydr    :: Fyr
+    dydq    :: Fyq
+    function CurvilinearMetric(G::GridType{TT,1},x::Function,dxdr::Function) where TT
+        cgrid = x.(G)
+        new{TT,typeof(x),typeof(dxdr),Nothing,Nothing,Nothing}(cgrid,x,dxdr)
     end
-    function CurvilinearMetric(dxdr,dxdq,dydr,dydq)
-        new{typeof(dxdr),typeof(dxdq),typeof(dydr),typeof(dydq)}(dxdr,dxdq,dydr,dydq)
+    function CurvilinearMetric(G::LocalGridType{TT},dxdr,dxdq,dydr,dydq)
+        new{TT,typeof(dxdr),typeof(dxdq),typeof(dydr),typeof(dydq)}(dxdr,dxdq,dydr,dydq)
     end
 end
 
 Base.show(M::CartesianMetric) = print("Cartesian Metric")
 Base.show(M::CurvilinearMetric) = print("Curvilinear Metric")
 
+# struct CartesianGrid1D{TT<:Real} <: LocalGridType{TT,1,CartesianMetric}
+#     X   :: Vector{TT}
+#     Δx  :: TT
+#     n   :: Integer
+# end
+# struct CartesianGridND{TT<:Real,DIM} <: LocalGridType{TT,DIM,CartesianMetric}
+#     X   :: Vector{Cartesian1DGrid{TT}}
+# end
+# struct CurvilinearGrid{TT<:Real,DIM,AT<:AbstractArray{TT}}
+    # X :: AT
+# end
 
 """
     Grid1D
@@ -42,11 +58,11 @@ Inputs:
 Returns:
 - Struct for 1D grid object containing vector of grid points, ``\\Delta x`` and ``n``.
 """
-struct Grid1D{TT,MET} <: LocalGridType{TT,1,MET}
+struct Grid1D{TT<:Real,MET<:MetricType} <: LocalGridType{TT,1,MET}
     grid    :: Vector{TT}
     Δx      :: TT
     n       :: Integer
-    M       :: MET
+    Metric  :: MET
     function Grid1D(𝒟::Vector{TT},n::Integer,MType) where TT
         Δx = (𝒟[2]-𝒟[1])/(n-1)
         x = collect(range(𝒟[1],𝒟[2],length=n))
@@ -196,7 +212,13 @@ Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 Base.eachindex(G::GridMultiBlock{TT,1}) where {TT} = Base.OneTo(length(G))
 
 
+
 # Base.typeof(M::MetricType{MType}) where MType = MType
 
 # Base.getindex(G::GridMultiBlock{},i)
+Base.getindex(G::Grid1D{TT,CartesianMetric},i::Integer) where TT = G.grid[i]
+Base.getindex(G::Grid1D{TT,MET},i::Integer) where {TT,MET<:MetricType{:curvilinear}} = G.Metric.x(G.grid[i])
 
+Base.getindex(G::Grid2D{TT,CartesianMetric},i::Integer,j::Integer) where TT = (G.gridx[i],G.gridy[j])
+
+Base.lastindex(G::Grid1D{TT,MET}) where {TT,MET} = G.n

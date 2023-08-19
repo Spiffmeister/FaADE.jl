@@ -54,6 +54,9 @@ function addSource! end
 function addSource!(S::SourceTerm{TT},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
     u .+= Δt*F.(grid.grid,t)
 end
+function addSource!(F::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
+    u .+= Δt*F.(grid.grid,t)
+end
 function addSource!(F::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
     for j in 1:grid.ny
         for i in 1:grid.nx

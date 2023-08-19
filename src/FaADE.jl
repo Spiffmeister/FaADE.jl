@@ -32,7 +32,7 @@ module FaADE
     # Helpers export
     using FaADE.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
     using FaADE.Helpers: Left, Internal, Right, Up, Down
-    using FaADE.Helpers: Grid1D, Grid2D
+    using FaADE.Helpers: Grid1D, Grid2D, CartesianMetric, CurvilinearMetric
     using FaADE.Helpers: Boundary, PeriodicBoundary
     using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
@@ -47,7 +47,7 @@ module FaADE
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
-    export Grid1D, Grid2D, Boundary, PeriodicBoundary
+    export Grid1D, Grid2D, Boundary, PeriodicBoundary, CartesianMetric, CurvilinearMetric
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
     export construct_grid, generate_parallel_penalty
 

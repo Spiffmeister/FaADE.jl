@@ -166,11 +166,9 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
 end
 
 
-
-
 function (SD::SAT_Dirichlet{TN,TT})(cache::AT,c::AT,rhs::AT,::SATMode{:DataMode}) where {TN,TT,AT}
     TN == Left ? β = TT(1) : β = TT(-1)
-    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(rhs))
+    for (S,C,U) in zip(eachslice(cache,dims=SD.axis),eachslice(c,dims=SD.axis),eachslice(rhs,dims=SD.axis))
         for i = 1:SD.order #nodes SD.nodes
             S[i] += -β*SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #u[Left]
         end

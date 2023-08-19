@@ -21,12 +21,12 @@ end
     newDataBlock
 Data structure for multiblock problems
 """
-mutable struct newDataBlock{TT<:Real,
+struct newDataBlock{TT<:Real,
     DIM,
     NBLOCK,
-    DT <: Union{newLocalDataBlockType,Vector{newLocalDataBlockType}},
+    TDBLOCK <: Union{newLocalDataBlockType,Vector{newLocalDataBlockType}},
         } <: newDataBlockType{TT,DIM}
-    Data    :: DT
+    Data    :: TDBLOCK
     SC      :: StepConfig{TT}
 
     function newDataBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,MET},Δt::TT,t::TT) where {TT,DIM,MET}
@@ -111,9 +111,9 @@ end
     newBoundaryData
 """
 struct newBoundaryData{TT,SAT<:SimultanousApproximationTerm,AT}
-    BC  :: SAT
-    u   :: AT
-    RHS :: AT
+    BC      :: SAT
+    u       :: AT
+    RHS     :: AT
     function newBoundaryData(G::Grid1D{TT},order::DerivativeOrder{O},BC) where {TT,O}
         nnodes = SATNodeOutput(O)
         u = zeros(TT,nnodes)
@@ -255,20 +255,25 @@ Sets the diffusion coefficient
 function setCoefficient! end
 function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid1D)
     for i = 1:grid.n
-        κ[i] = K(grid.grid[i])
+        κ[i] = K(grid[i])
     end
 end
 function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid2D)
     for i = 1:grid.nx
         for j = 1:grid.ny
-            κ[i,j] = K(grid.gridx[i],grid.gridy[j])
+            κ[i,j] = K(grid[i,j]...)
         end
     end
 end
-function setCoefficient!(DC::DiffusionCoefficient{F},κ::AbstractArray,grid::Grid2D) where {F<:Function}
+# function setCoefficient!(K::Function,κ::AbstractArray,grid::GridType)
+#     for i in eachindex(grid)
+#         κ[i] = K(grid[i]...)
+#     end
+# end
+function setCoefficient!(DC::DiffusionCoefficient{F},κ::AbstractArray,grid::LocalGridType) where {F<:Function}
     setCoefficient!(DC.coeff,κ,grid)
 end
-function setCoefficient!(DC::DiffusionCoefficient{TT},κ::AbstractArray{TT},grid::GridType) where {TT}
+function setCoefficient!(DC::DiffusionCoefficient{TT},κ::AbstractArray{TT},grid::LocalGridType) where {TT<:Real}
     κ .= DC.coeff
 end
 
@@ -281,11 +286,27 @@ function applySATs(CG,D::newDataBlock{TT,1},mode::SATMode) where {TT}
     applySAT!(D.Data.boundary.Right, CG.b, D.Data.boundary.RHS_Right, D.Data.K, mode)
 end
 
-
+#== INTER-BLOCK COMMUNICATION ==#
 """
     CommBoundary(dest,source,Joint,inds)
 Given a `Joint` between grid regions, send the data between blocks
 """
+function CommBoundaries(DB::DataBlock{TT,DIM,NBLOCK}) where {TT,DIM,NBLOCK}
+    # Iterate over blocks
+    # Foreach boundary
+    # If boundary Periodic or Split
+    #   Communicate boundary data
+    # else
+    #   do nothing
+    # end
+    for i in 1:NBLOCK
+        for joint in DB[i].boundary.joints
+                CommBoundary(D,DB[i].boundary)
+        end
+    end
+end
+function CommBoundary(B::BoundaryStorage,DB{TT,DIM,NBLOCK})
+end
 function CommBoundary(dest::AT,source::AT,inds::Tuple) where {AT}
     dest .= source[inds]
 end

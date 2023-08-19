@@ -28,6 +28,7 @@ module Helpers
     # grid import
     export GridType, LocalGridType
     export Grid1D, Grid2D, GridMultiBlock
+    export CartesianMetric, CurvilinearMetric
 
     # Export UserTypes
     export BoundaryConditionData, Boundary, PeriodicBoundary,

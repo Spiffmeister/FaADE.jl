@@ -212,12 +212,18 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     PDE!(tmp,uⱼ,k)
     @. tmp = uⱼ - Δt*tmp
 end
-function A!(D::newDataBlock{TT,DIM,NBLOCK},BlockWrite::ConjGradBlock,BlockRead::Union{newDataBlockType,DataBlockType},cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
+function A!(DB::newDataBlock{TT,DIM,1},tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
+    DB.Derivative(tmp,uⱼ,k)
+    # CommBoundaries(DB)
+    # applySAT()
+    @. tmp = uⱼ - Δt*tmp
+end
+function A!(DB::newDataBlock{TT,DIM,NBLOCK},BlockWrite::ConjGradBlock,BlockRead::Union{newDataBlockType,DataBlockType},cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
     # Compute the derivatives
     for i in 1:NBLOCK
         C = getproperty(BlockWrite,cache) #ALWAYS FROM CGB
         U = getproperty(BlockRead,source) #!PROBLEM!
-        DB[i].Derivative(C,U,D.Data[i].K)
+        DB[i].Derivative(C,U,D.DB[i].K)
     end
     # Communicate the boundaries
     for i in 1:NBLOCK
