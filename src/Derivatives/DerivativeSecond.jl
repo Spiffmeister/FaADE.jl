@@ -75,11 +75,16 @@ function SecondDerivativeInternal! end
 
 Second order 1D second derivative internal stencil
 """
+@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::DerivativeOrder{2},i::Int,α::T) where T
+    @inbounds uₓₓ[i] = α*uₓₓ[i] + 
+        (0.5*(c[i] + c[i-1])*u[i-1] - 0.5*(c[i+1] + 2c[i] + c[i-1])*u[i] + 0.5*(c[i] + c[i+1])*u[i+1])/Δx^2
+end
 @inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
-        Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT) where {TT,VT<:AbstractVector{TT}}
+        Δx::TT,nx::Integer,order::DerivativeOrder,α::TT) where {TT,VT<:AbstractVector{TT}}
     for i = 2:nx-1
-        @inbounds uₓₓ[i] = α*uₓₓ[i] +
-            ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
+        SecondDerivativeInternal!(uₓₓ,u,cx,Δx,order,i,α)
+        # @inbounds uₓₓ[i] = α*uₓₓ[i] +
+        #     ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
     end
     uₓₓ
 end

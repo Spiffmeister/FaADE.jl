@@ -20,9 +20,9 @@ module solvers
     using FaADE.Inputs: newPDEProblem, newProblem1D, newProblem2D
     
     include("DataStorage.jl")
+    include("IntegeratorData.jl")
     include("SettingValues.jl")
     include("solution.jl")
-    include("IntegeratorData.jl")
     include("integrators.jl")
     include("timesolvers.jl")
 

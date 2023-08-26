@@ -355,35 +355,37 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
         penalty_function_enabled = true
     end
 
-    DBlock = newDataBlock(P,G,Δt,0.0)
-    CGBlock = ConjGradBlock{TT}(G,GetOrder(P.order))
+    DBlock = DataMultiBlock(P,G,Δt,0.0)
+    CGBlock = ConjGradMultiBlock(G,P.order)
+    # DB = MultiDataBlock(P,G)
     # CGBlock = ConjGradMultiBlock(G,P.order)
     soln = solution{TT}(G,0.0,Δt,P)
     # order = DerivativeOrder{P.order}()
 
-    DBlock.Data.u .= soln.u[1]
-    
-    Diff = generate_SecondDerivative(G.n,G.Δx,P.order)
-    
-    function CGRHS!(cache::AbstractArray{TT},u::AbstractArray{TT},k::AbstractArray{TT}) where TT
-        Diff(cache,u,k)
-    end
-    
+    DBlock[1].u .= soln.u[1]
     
     t = Δt
     Δt₀ = Δt
-    DBlock.Data.uₙ₊₁ .= DBlock.Data.u
-    CGBlock.b .= DBlock.Data.u
+
+    for i in eachblock(DBlock)
+        DBlock[i].uₙ₊₁ .= DBlock[i].u
+    end
+    for i in eachblock(DBlock)
+        CGBlock[1].b .= DBlock[1].u
+    end
     
     while t < t_f
 
-        setBoundaries(DBlock,G,t,Δt)
+        setBoundaries(DBlock[1],G,t,Δt)
 
-        applySATs(CGBlock,DBlock,DataMode)
+        for i in eachblock(DBlock)
+            applySATs(CGBlock[i].b,DBlock[i],DataMode)
+        end
+        for i in eachblock(DBlock)
+            addSource!(P.source,DBlock,G,t,Δt)
+        end
 
-        addSource!(P.source,DBlock,G,t,Δt)
-
-        conj_grad!(CGRHS!,DBlock,CGBlock,Δt)
+        conj_grad!(DBlock,CGBlock)
 
         if CGBlock.converged | !adaptive #If CG converges
 
@@ -428,56 +430,3 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
     return soln
 
 end
-
-# function cgsolve(P::newPDEProblem,G::GridType)
-
-#=
-function solve(DB::DataBlock,P::newPDEProblem,Δt::TT,t_f::TT,SolverData{:cgie,Any,Any})
-
-    t = Δt
-    Δt₀ = Δt
-
-    CGBlock = ConjGradBlock(grid,P.order)
-
-
-    while t < t_f
-
-
-        # addSource!(DBlock,P.source,P.Grid,t,Δt)
-
-        # applySAT(CGBlock,P)
-
-        conj_grad!(DBlock,CGBlock,P.order,P.grid,t,Δt)
-
-
-        if CGBlock.converged | !adaptive #If CG converges
-
-            # parallel_penalty()
-
-            DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
-            if (DBlock.Δu ≤ target_state) & (t_f == Inf)
-                t_f = t
-            end
-
-            DBlock.u .= DBlock.uₙ₊₁
-            CGBlock.b .= CGBlock.uₙ₊₁
-
-            if adaptive & (Δt<300Δt₀)
-                Δt *= 1.05
-            end
-            t += Δt
-
-        else # If CG fails, reset and retry step
-            DBlock.uₙ₊₁ .= DBlock.u
-            Δt /= TT(2)
-            CGBlock.converged = true
-            if Δt < Δt₀
-                error("CG failed to converge, arporting at t=",t," with Δt=",Δt)
-            end
-        end
-
-    end
-
-
-end
-=#

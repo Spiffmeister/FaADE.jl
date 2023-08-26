@@ -15,7 +15,7 @@ function setBoundary!(RHS::F,Bound::AT,t::T,Δt::T) where {F,AT,T}
 end
 
 
-function setBoundaries(B::SATBoundaries,G::GridType,D::newDataBlockType,t::TT,Δt::TT) where TT
+function setBoundaries(B::SATBoundaries,G::GridType,D::DataMultiBlockType,t::TT,Δt::TT) where TT
     # setBoundary!(B.Boundary1,)
 end
 =#
@@ -64,12 +64,12 @@ function addSource!(F::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
         end
     end
 end
-function addSource!(S::SourceTerm{F},D::newDataBlock,G::GridType,t::TT,Δt::TT) where {TT,F<:Function}
+function addSource!(S::SourceTerm{F},D::DataMultiBlock,G::GridType,t::TT,Δt::TT) where {TT,F<:Function}
     for (LDB,LG) in zip(D.DataBlock,G.Grid)
         addSource(S.F,D.DataBlock,G.Grid,t,Δt)
     end
 end
-function addSource!(S::SourceTerm{Nothing},D::newDataBlock,grid::GridType,t::TT,Δt::TT) where TT end
+function addSource!(S::SourceTerm{Nothing},D::DataMultiBlock,grid::GridType,t::TT,Δt::TT) where TT end
 
 
 
@@ -99,6 +99,40 @@ function copyUtoSAT!(Bound::BoundaryStorage{T,N,AT},u::AT,order::Int) where {T,N
         copyUtoSAT!(Bound.SAT_Down,u,Down,order)
     end
 end
-function copyUtoSAT!(D::newDataBlock{TT,DIM,DT},order::DerivativeOrder) where {TT,DIM,DT<:newLocalDataBlockType}
+function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::DerivativeOrder) where {TT,DIM,DT<:newLocalDataBlockType}
     copyUtoSAT!(D.Data.boundary,D.Data.u,GetOrder(order))
 end
+
+
+
+@inline function muladd!(write::newDataBlockType{TT},read::newDataBlockType,
+        dest::Symbol,source::Symbol;α=TT(1),β=TT(1)) where TT
+
+    for I in eachblock(write)
+        W = getproperty(write[I],dest)
+        A = getproperty(read[I],source)
+
+        @. W = α*W - β*A
+    end
+end
+@inline function setValue(write::newDataBlockType{TT},read::newDataBlockType,
+        dest::Symbol,source::Symbol,α=TT(1)) where TT
+
+    for I in eachblock(write)
+        W = getproperty(write[I],dest)
+        A = getproperty(read[I],source)
+
+        @. W = α*A
+    end
+end
+
+
+function innerprod(A::newDataBlockType{TT},B,a::Symbol,b::Symbol,CGB::ConjGradMultiBlock) where TT
+    local r::TT
+    r = TT(0)
+    for I in eachblock(A)
+        r += A.innerprod(getproperty(A[I],a),getproperty(B[I],b))
+    end
+    return r
+end
+

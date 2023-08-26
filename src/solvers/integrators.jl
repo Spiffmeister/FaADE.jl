@@ -64,11 +64,12 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT) where {TT,DIM,NBLOCK,AT}
-    conj_grad!(RHS,DBlock.Data,CGB,Δt)
-end
+# function conj_grad!(DBlock::DataMultiBlock{TT,DIM,NBLOCK},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT) where {TT,DIM,NBLOCK,AT}
+#     conj_grad!(RHS,DBlock.Data,CGB,Δt)
+# end
+
 function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,F,DIM,AT}
+        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
     
     local rnorm::TT
     local unorm::TT
@@ -86,96 +87,6 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
     
-    i = 0
-    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
-    while (rnorm > rtol*unorm) & (i < maxIT)
-        A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
-        CGB.scalar.dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
-        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/CGB.scalar.dₖAdₖ
-        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
-
-        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
-        @. CGB.rₖ = CGB.rₖ - CGB.b
-
-        A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
-
-        CGB.scalar.βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/CGB.scalar.dₖAdₖ
-        @. CGB.dₖ = CGB.scalar.βₖ*CGB.dₖ - CGB.rₖ
-
-        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-        i += 1
-    end
-    if (rnorm>rtol*unorm) & warnings
-        CGB.scalar.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
-        @warn warnstr
-    end
-end
-function conj_grad!(RHS,DBlock::newDataBlock{TT,DIM,NBLOCK},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT,NBLOCK}
-
-    local rnorm::TT
-    local unorm::TT
-    local dₖAdₖ::TT
-    local βₖ::TT
-    local αₖ::TT
-
-    # x₀ = uₙ #Initial guess
-    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
-    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(RHS,CGB.rₖ,DBlock.u,Δt,DBlock.K)
-    CGB.rₖ .= CGB.rₖ .- CGB.b
-    # DBlock.uₙ₊₁ .= DBlock.u
-
-    CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
-
-    i = 0
-    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
-    while (rnorm > rtol*unorm) & (i < maxIT)
-        A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
-        CGB.scalar.dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
-        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
-        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
-
-        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
-        @. CGB.rₖ = CGB.scalar.rₖ - CGB.b
-
-        A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
-
-        βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
-        @. CGB.dₖ = CGB.βₖ*CGB.dₖ - CGB.rₖ
-
-        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-        i += 1
-    end
-    if (rnorm>rtol*unorm) & warnings
-        CGB.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
-        @warn warnstr
-    end
-end
-function conj_grad!(DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT;
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,NBLOCK,AT}
-
-    local rnorm::TT
-    local unorm::TT
-    local dₖAdₖ::TT
-    local βₖ::TT
-    local αₖ::TT
-
-    # x₀ = uₙ #Initial guess
-    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
-    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(RHS,CGB.rₖ,DBlock.u,Δt,DBlock.K)
-    CGB.rₖ .= CGB.rₖ .- CGB.b
-    # DBlock.uₙ₊₁ .= DBlock.u
-
-    CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
-
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
     unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
@@ -198,7 +109,104 @@ function conj_grad!(DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradMultiBlock{TT,DIM,
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
-        CGB.converged = false
+        CGB.scalar.converged = false
+        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        @warn warnstr
+    end
+end
+function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT};
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+
+    local rnorm::TT
+    local unorm::TT
+    local dₖAdₖ::TT
+    local βₖ::TT
+    local αₖ::TT
+
+    # x₀ = uₙ #Initial guess
+    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
+    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
+    A!(CGB.rₖ,DBlock.u,DBlock)
+    @. CGB.rₖ = CGB.rₖ - CGB.b
+
+    @. CGB.dₖ = -CGB.rₖ # dₖ = -rₖ
+
+    i = 0
+    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+    while (rnorm > rtol*unorm) & (i < maxIT)
+        A!(CGB.cache,CGB.dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
+        dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.cache)
+        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/CGB.scalar.dₖAdₖ
+        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+
+        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
+        A!(CGB.rₖ,DBlock.uₙ₊₁,DBlock)
+        @. CGB.rₖ = CGB.rₖ - CGB.b
+
+        A!(CGB.cache,CGB.rₖ,DBlock) # Drₖ = rₖ - Δt*D(rₖ)
+
+        βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
+        @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+
+        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        i += 1
+    end
+    if (rnorm>rtol*unorm) & warnings
+        CGB.scalar.converged = false
+        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        @warn warnstr
+    end
+end
+function conj_grad!(DBlock::DataMultiBlock{TT,DIM},CGB::ConjGradMultiBlock{TT,DIM};
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+
+    local rnorm::TT
+    local unorm::TT
+    local dₖAdₖ::TT
+    local βₖ::TT
+    local αₖ::TT
+
+    # x₀ = uₙ #Initial guess
+    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
+    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
+    # A!(CGB.rₖ,DBlock.u,DBlock)
+    A!(CGB,DBlock,:u,DBlock)
+    # @. CGB.rₖ = CGB.rₖ - CGB.b
+    muladd!(CGB,CGB,:rₖ,:b,β=TT(-1))
+
+    # @. CGB.dₖ = -CGB.rₖ # dₖ = -rₖ
+    setValue(CGB,CGB,:dₖ,:rₖ,TT(-1))
+
+    i = 0
+    # rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+    rnorm = sqrt(innerprod(CGB,CGB,:rₖ,:rₖ,CGB))
+    # unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+    unorm = max(sqrt(innerprod(CGB,CGB,:rₖ,:rₖ,CGB)),1e-14)
+    while (rnorm > rtol*unorm) & (i < maxIT)
+        # Comm dₖ boundaries
+        A!(CGB,CGB,:dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
+        dₖAdₖ = innerprod(CGB,CGB,:dₖ,:cache,CGB)
+        αₖ = -innerprod(CGB,CGB,:rₖ,:dₖ,CGB)/dₖAdₖ
+        # @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+        muladd!(DBlock,CGB,:uₙ₊₁,:dₖ,β=αₖ)
+
+        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
+        # Comm uₙ₊₁ boundaries
+        A!(CGB,DBlock,:uₙ₊₁,DBlock)
+        @. CGB.rₖ = CGB.cache - CGB.b
+
+        # Comm rₖ boundaries
+        A!(CGB,CGB,:rₖ,DBlock) # Drₖ = rₖ - Δt*D(rₖ)
+        βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
+
+        @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+
+        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        i += 1
+    end
+    if (rnorm>rtol*unorm) & warnings
+        CGB.SC.converged = false
         warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
@@ -212,37 +220,28 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     PDE!(tmp,uⱼ,k)
     @. tmp = uⱼ - Δt*tmp
 end
-function A!(DB::newDataBlock{TT,DIM,1},tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
-    DB.Derivative(tmp,uⱼ,k)
-    # CommBoundaries(DB)
-    # applySAT()
-    @. tmp = uⱼ - Δt*tmp
-end
-function A!(DB::newDataBlock{TT,DIM,NBLOCK},BlockWrite::ConjGradBlock,BlockRead::Union{newDataBlockType,DataBlockType},cache::Symbol,source::Symbol) where {TT,DIM,NBLOCK}
+
+function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT}) where {AT,TT}
     # Compute the derivatives
-    for i in 1:NBLOCK
-        C = getproperty(BlockWrite,cache) #ALWAYS FROM CGB
-        U = getproperty(BlockRead,source) #!PROBLEM!
-        DB[i].Derivative(C,U,D.DB[i].K)
-    end
+    DB.Derivative(Write,Read,DB.K)
     # Communicate the boundaries
-    for i in 1:NBLOCK
-        # CommBoundary()
-    end
     # Apply needed SATs
-    for i in 1:NBLOCK
-        # applySAT()
-    end
-    for i in 1:NBLOCK
-        setproperty!(CGB[i],cache, getproperty(DB,source) - DB.SC.Δt*getproperty(CGB[i],cache))
-    end
+    applySATs(write,buffer)
+    # u = r - Δt Du
+    @. Write = Read - DB.SC.Δt*Write
 end
 
-map
 
-function Diff!()
-    for (C,U) in zip(cache,)
-        B.Derivative(C,U,K)
+function A!(Write::ConjGradMultiBlock,Read::newDataBlockType,source::Symbol,DB::DataMultiBlock)
+    # Compute the derivatives
+    for i in eachblock(DB)
+        U = getproperty(Read[i],source) #!PROBLEM!
+        # Compute the derivatives
+        DB[i].Derivative(Write[i].cache,U,DB[i].K)
+
+        # applySATs(Write[i].cache,Write[i].buffer) #Apply the SATs
+        # v = u - Δt Du
+        @. Write[i].cache = U - DB[i].SC.Δt*Write[i].cache
     end
 end
 
