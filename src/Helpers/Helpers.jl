@@ -39,7 +39,7 @@ module Helpers
         DataBlock,
         BoundaryData1D, BoundaryData2D, 
         copyUtoSAT!, copySATtoU!, addSATtoU!,
-        addSource!, setBoundary!
+        addSource!, BoundaryConditions
     
     export build_H, innerH
     

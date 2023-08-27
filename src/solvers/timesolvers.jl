@@ -107,8 +107,8 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
         
         if solver == :cgie
             if Prob.BoundaryConditions[1].type != Periodic
-                setBoundary!(BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,t,Δt)
-                setBoundary!(BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,t,Δt)
+                BoundaryConditions(BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,t,Δt)
+                BoundaryConditions(BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,t,Δt)
     
                 SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K, DataMode)
                 SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K, DataMode)
@@ -257,15 +257,15 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         # t += Δt
 
         if btype1 != Periodic #Left/Right boundaries
-            setBoundary!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
-            setBoundary!(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
+            BoundaryConditions(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
+            BoundaryConditions(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
 
             SAT_Left!(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
             SAT_Right!(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if btype2 != Periodic #Up/Down boundaries
-            setBoundary!(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
-            setBoundary!(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
+            BoundaryConditions(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
+            BoundaryConditions(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
 
             SAT_Up!(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
             SAT_Down!(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
@@ -339,7 +339,7 @@ function solve(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,COORD},Δt::TT,t
 
 end
 
-function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:cgie}) where {TT}
+function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -349,10 +349,11 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
     #     @warn "MAX ITERATIONS NOT SET"
     #     @warn "MAX ITERATIONS NOT SET"
     # end
+    target_state = TT(1)
 
-    penalty_function_enabled = false
+    penalty_function_enabled = true
     if typeof(P.Parallel) <: Nothing
-        penalty_function_enabled = true
+        penalty_function_enabled = false
     end
 
     DBlock = DataMultiBlock(P,G,Δt,0.0)
@@ -366,43 +367,44 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
     
     t = Δt
     Δt₀ = Δt
-
-    for i in eachblock(DBlock)
-        DBlock[i].uₙ₊₁ .= DBlock[i].u
-    end
-    for i in eachblock(DBlock)
-        CGBlock[1].b .= DBlock[1].u
-    end
-    
+    # for i in eachblock(DBlock)
+    #     DBlock[i].uₙ₊₁ .= DBlock[i].u
+    # end
+    # for i in eachblock(DBlock)
+    #     CGBlock[i].b .= DBlock[i].u
+    # end
+    copyto!(:uₙ₊₁,  :u, DBlock)
+    copyto!(:b,     :u, DBlock)
+    println(DBlock[1].b[1,1])
     while t < t_f
 
-        setBoundaries(DBlock[1],G,t,Δt)
+        BoundaryConditions(DBlock,G)
 
-        for i in eachblock(DBlock)
-            applySATs(CGBlock[i].b,DBlock[i],DataMode)
-        end
-        for i in eachblock(DBlock)
-            addSource!(P.source,DBlock,G,t,Δt)
-        end
+        applySATs(:b,DBlock,DataMode)
+        
+        addSource!(P.source,:b,DBlock,G)
 
-        conj_grad!(DBlock,CGBlock)
+        conj_grad!(DBlock,Δt)
 
-        if CGBlock.converged | !adaptive #If CG converges
-
+        if CGBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if penalty_function_enabled
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
             end
 
             # USED FOR DETERMINING EQUILIBRIUM
-            DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
-            if (DBlock.Δu ≤ target_state) & (t_f == Inf)
+            DBlock.SC.Δu = TT(0)
+            for i in eachblock(DBlock)
+                DBlock.SC.Δu += norm(DBlock[i].u .- DBlock[i].uₙ₊₁)/norm(DBlock[i].u)
+            end
+            # DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
+            if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t
             end
 
-            DBlock.u .= DBlock.uₙ₊₁
-            CGBlock.b .= DBlock.uₙ₊₁
+            copyto!(:u,:uₙ₊₁,DBlock)
+            copyto!(:b,:uₙ₊₁,DBlock)
             # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
-            if adaptive & (Δt<300Δt₀)
+            if solverconfig.adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
             end
             t += Δt
@@ -410,11 +412,12 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
             
 
         else #If CG fails, reset and retry step
-            DBlock.uₙ₊₁ .= DBlock.u
-            Δt /= 2.0
-            CGBlock.converged = true
-            if Δt < Δt₀/10.0
-                error("CG could not converge, aborting at t=",t," with Δt=",Δt)
+            # DBlock.uₙ₊₁ .= DBlock.u
+            setValue(DBlock,DBlock,:uₙ₊₁,:u)
+            DBlock.SC.Δt /= 2.0
+            CGBlock.SC.converged = true
+            if DBlock.SC.Δt < Δt₀/10.0
+                error("CG could not converge, aborting at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt)
             end
         end
         # if sample < t
@@ -423,7 +426,7 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,::SolverData{:c
         # end 
     end
 
-    push!(soln.u,DBlock.u)
+    push!(soln.u,DBlock[1].u)
     push!(soln.t,t)
     push!(soln.Δt,Δt)
 

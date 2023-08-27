@@ -158,8 +158,8 @@ function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,
         @warn warnstr
     end
 end
-function conj_grad!(DBlock::DataMultiBlock{TT,DIM},CGB::ConjGradMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -171,43 +171,44 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM},CGB::ConjGradMultiBlock{TT,DI
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
     # A!(CGB.rₖ,DBlock.u,DBlock)
-    A!(CGB,DBlock,:u,DBlock)
-    # @. CGB.rₖ = CGB.rₖ - CGB.b
-    muladd!(CGB,CGB,:rₖ,:b,β=TT(-1))
+    A!(:u,DBlock,Δt)
+    muladd!(:rₖ,:b,DBlock,β=TT(-1)) #rₖ = rₖ - b
 
-    # @. CGB.dₖ = -CGB.rₖ # dₖ = -rₖ
-    setValue(CGB,CGB,:dₖ,:rₖ,TT(-1))
+    setValue(:dₖ,:rₖ,DBlock,TT(-1)) #dₖ = -rₖ
 
     i = 0
-    # rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-    rnorm = sqrt(innerprod(CGB,CGB,:rₖ,:rₖ,CGB))
-    # unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
-    unorm = max(sqrt(innerprod(CGB,CGB,:rₖ,:rₖ,CGB)),1e-14)
+    rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
+    unorm = max(sqrt(innerprod(:rₖ,:rₖ,DBlock)),1e-14) #√(rₖ,rₖ)ₕ
     while (rnorm > rtol*unorm) & (i < maxIT)
         # Comm dₖ boundaries
-        A!(CGB,CGB,:dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
-        dₖAdₖ = innerprod(CGB,CGB,:dₖ,:cache,CGB)
-        αₖ = -innerprod(CGB,CGB,:rₖ,:dₖ,CGB)/dₖAdₖ
-        # @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
-        muladd!(DBlock,CGB,:uₙ₊₁,:dₖ,β=αₖ)
+        A!(:dₖ,DBlock,Δt) # Adₖ = dₖ - Δt*D(dₖ)
+        dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #dₖAdₖ = (dₖ,Ddₖ)
+        αₖ = -innerprod(:rₖ,:dₖ,DBlock)/dₖAdₖ #αₖ = -√(rₖ,dₖ)/dₖAdₖ
+        muladd!(:uₙ₊₁,:dₖ,DBlock,β=αₖ) #uₙ₊₁ = uₙ + αₖdₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         # Comm uₙ₊₁ boundaries
-        A!(CGB,DBlock,:uₙ₊₁,DBlock)
-        @. CGB.rₖ = CGB.cache - CGB.b
+        A!(:uₙ₊₁,DBlock,Δt)
+        # @. CGB.rₖ = CGB.cache - CGB.b
+        setValue(:rₖ,:cache,DBlock)
+        muladd!(:rₖ,:b,DBlock)
 
         # Comm rₖ boundaries
-        A!(CGB,CGB,:rₖ,DBlock) # Drₖ = rₖ - Δt*D(rₖ)
-        βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
+        A!(:rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
+        # βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
+        βₖ = innerprod(:rₖ,:cache,DBlock)/dₖAdₖ
 
-        @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+        # @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+        muladd!(:dₖ,:rₖ,DBlock,α=βₖ,β=TT(-1))
 
-        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        # rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock))
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
+        println("hi")
         CGB.SC.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        warnstr = string("CG did not converge with Δt=",DBlock.SC.Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
@@ -226,22 +227,21 @@ function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT}) where {AT,TT}
     DB.Derivative(Write,Read,DB.K)
     # Communicate the boundaries
     # Apply needed SATs
-    applySATs(write,buffer)
+    # applySATs(write,buffer)
     # u = r - Δt Du
     @. Write = Read - DB.SC.Δt*Write
 end
 
-
-function A!(Write::ConjGradMultiBlock,Read::newDataBlockType,source::Symbol,DB::DataMultiBlock)
+function A!(source::Symbol,DB::DataMultiBlock,Δt::TT) where TT
     # Compute the derivatives
     for i in eachblock(DB)
-        U = getproperty(Read[i],source) #!PROBLEM!
+        # cache = u - Δt Du
+        U = getproperty(DB[i],source)
         # Compute the derivatives
-        DB[i].Derivative(Write[i].cache,U,DB[i].K)
+        DB[i].Derivative(DB[i].cache,U,DB[i].K)
 
         # applySATs(Write[i].cache,Write[i].buffer) #Apply the SATs
-        # v = u - Δt Du
-        @. Write[i].cache = U - DB[i].SC.Δt*Write[i].cache
+        @. DB[i].cache = U - Δt*DB[i].cache
     end
 end
 

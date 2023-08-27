@@ -99,7 +99,6 @@ FaADE.Helpers.GridMultiBlock
 """
 struct GridMultiBlock{TT  <: Real,
         DIM,
-        NG,
         MET,
         TG,
         TJ,
@@ -113,13 +112,13 @@ struct GridMultiBlock{TT  <: Real,
 
         inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
 
-        new{TT, 1, length(grids), MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
+        new{TT, 1, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
     end
     function GridMultiBlock(grids::Vector{Grid2D{TT,MET}},joints) where {TT,MET}
         
         inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
 
-        new{TT,2, length(grids),MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,[1])
+        new{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,[1])
     end
 end
 """
