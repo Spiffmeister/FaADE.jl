@@ -27,35 +27,62 @@ function addSource!(S::SourceTerm{Nothing},dest::Symbol,D::DataMultiBlock,G::Gri
     BoundaryConditions
 Sets the value of the boundary.
 """
-function BoundaryConditions! end
-function BoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
+function setBoundaryConditions! end
+function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
     Bound[1] = Δt*RHS(t)
 end
-function BoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
+function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end
 end
-function BoundaryConditions(D::newLocalDataBlockType,G::Grid1D,t::TT,Δt::TT) where TT
-    BoundaryConditions!(D.boundary.Left.RHS,    D.boundary.RHS_Left, t,Δt)
-    BoundaryConditions!(D.boundary.Right.RHS,   D.boundary.RHS_Right,t,Δt)
+function setBoundaryConditions!(D::newLocalDataBlockType,G::Grid1D,t::TT,Δt::TT) where TT
+    setBoundaryConditions!(D.boundary.Left.RHS,    D.boundary.RHS_Left, t,Δt)
+    setBoundaryConditions!(D.boundary.Right.RHS,   D.boundary.RHS_Right,t,Δt)
 end
-function BoundaryConditions(D::newLocalDataBlockType,G::Grid2D,t::TT,Δt::TT) where TT
-    BoundaryConditions!(B.BoundaryLeft.RHS, D.Data.RHS_Left,G.nx,G.gridx,t,Δt)
-    BoundaryConditions!(B.BoundaryRight.RHS,D.Data.RHS_Right,G.nx,G.gridx,t,Δt)
-    BoundaryConditions!(B.BoundaryUp.RHS,   D.Data.RHS_Up,  G.ny,G.gridy,t,Δt)
-    BoundaryConditions!(B.BoundaryDown.RHS, D.Data.RHS_Down,G.ny,G.gridy,t,Δt)
+function setBoundaryConditions!(D::newLocalDataBlockType,G::Grid2D,t::TT,Δt::TT) where TT
+    setBoundaryConditions!(B.BoundaryLeft.RHS, D.Data.RHS_Left,G.nx,G.gridx,t,Δt)
+    setBoundaryConditions!(B.BoundaryRight.RHS,D.Data.RHS_Right,G.nx,G.gridx,t,Δt)
+    setBoundaryConditions!(B.BoundaryUp.RHS,   D.Data.RHS_Up,  G.ny,G.gridy,t,Δt)
+    setBoundaryConditions!(B.BoundaryDown.RHS, D.Data.RHS_Down,G.ny,G.gridy,t,Δt)
 end
-function BoundaryConditions(D::DataMultiBlock,G::GridType)
+function setBoundaryConditions!(D::DataMultiBlock,G::GridType)
     for I in eachblock(D)
-        BoundaryConditions(D[I],   G,  D.SC.t, D.SC.Δt)
+        setBoundaryConditions!(D[I],   G,  D.SC.t, D.SC.Δt)
     end
 end
 
+
 """
-    fillBuffers()
+    fillBuffers
 """
-function fillBuffers()
+function fillBuffers end
+function fillBuffers(source::Symbol,DB::newLocalDataBlock)
+    S = getproperty(DB,source)
+    copyto!(DB.boundary.RHS_Left, getproperty(DB,source))
+    copyto!(DB.boundary.RHS_Right, getproperty(DB,source))
+end
+
+function fillBuffers(source,DB::newLocalDataBlock)
+    for J in eachjoint(DB)
+        SB = getproperty(source,DB)
+
+    end
+end
+
+function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
+    for I in eachblock(DB)
+        BB = DB[I].boundary
+        
+        copyto!(BB.u_Left,BB.LeftIndex,getproperty(DB[BB.JointLeft],source),BB.LeftIndex)
+        copyto!(BB.u_Right,BB.LeftIndex,getproperty(DB[BB.JointRight],source),BB.RightIndex)
+
+        if DIM == 2
+            copyto!(BB.u_Up,1,getproperty(DB[BB.JointUp],source),BB.UpIndex)
+            copyto!(BB.u_Down,1,getproperty(DB[BB.JointDown],source),BB.DownIndex)
+        end
+
+    end
 end
 
 
@@ -63,6 +90,10 @@ end
 """
     applySATs
 """
+function applySAT!(Boundary::Nothing,Block,Prob,mode) end
+function applySAT!(SAT::SimultanousApproximationTerm,cache::AT,u::AT,k::AT,mode::SATMode) where AT
+    SAT(cache,k,u,mode)
+end
 function applySATs(dest::Array{TT},D::LocalDataBlock{TT,DIM,NBLOCK},mode::SATMode) where {TT,DIM,NBLOCK}
     applySAT!(D.boundary.Left,   dest, D.boundary.RHS_Left,    D.K, mode)
     applySAT!(D.boundary.Right,  dest, D.boundary.RHS_Right,   D.K, mode)
@@ -104,6 +135,37 @@ end
 
 
 """
+    setDiffusionCoefficient!
+Sets the diffusion coefficient
+"""
+function setDiffusionCoefficient! end
+function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid1D)
+    for i = 1:grid.n
+        K[i] = κ(grid[i])
+    end
+end
+function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
+    for i = 1:grid.nx
+        for j = 1:grid.ny
+            K[i,j] = κ(grid[i,j]...)
+        end
+    end
+end
+function setDiffusionCoefficient!(κ::TT,K::AbstractArray{TT},grid::GridType) where {TT<:Real}
+    K .= κ
+end
+function setDiffusionCoefficient!(D::newLocalDataBlock,grid::GridType)
+    setDiffusionCoefficient!(D.κ,D.K,grid)
+end
+function setDiffusionCoefficient!(D::DataMultiBlock,grid::GridType)
+    for I in eachblock(D)
+        setDiffusionCoefficient!(D[I],grid)
+    end
+end
+
+
+
+"""
     copyUtoSAT!
 Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
 """
@@ -131,6 +193,7 @@ end
 function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::DerivativeOrder) where {TT,DIM,DT<:newLocalDataBlockType}
     copyUtoSAT!(D.Data.boundary,D.Data.u,GetOrder(order))
 end
+
 
 
 """

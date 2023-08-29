@@ -8,7 +8,7 @@ abstract type newPDEProblem{dtype,DIMS} end
 
 struct newProblem1D{TT      <: Real,
     DIMS,
-    DCT     <: DiffusionCoefficient,
+    DCT,
     ST      <: SourceTerm,
     DO      <: DerivativeOrder,
     SATB    <: SATBoundaries,
@@ -23,14 +23,11 @@ struct newProblem1D{TT      <: Real,
 
     function newProblem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs,S,Par) where {TT,DIMS}
 
-        
-        
-        DiffCo = DiffusionCoefficient(K)
         source = SourceTerm{typeof(S)}(S)
         DiffOrd = DerivativeOrder{order}()
 
         # new{DIMS,TT}(u₀)
-        new{TT,DIMS,typeof(DiffCo),typeof(source),typeof(DiffOrd),typeof(BCs),typeof(Par)}(u₀,DiffCo,source,DiffOrd,BCs,Par)
+        new{TT,DIMS,typeof(K),typeof(source),typeof(DiffOrd),typeof(BCs),typeof(Par)}(u₀,K,source,DiffOrd,BCs,Par)
     end
 end
 newProblem1D(order,u₀,K,G,BCs) = newProblem1D(order,u₀,K,G,BCs,nothing,nothing)
@@ -39,7 +36,7 @@ newProblem1D(order,u₀,K,G,BCs) = newProblem1D(order,u₀,K,G,BCs,nothing,nothi
 
 struct newProblem2D{TT      <: Real,
         DIM,
-        DCT     <: DiffusionCoefficient,
+        DCT,
         ST      <: SourceTerm,
         DO      <: DerivativeOrder,
         SATB    <: SATBoundaries,
@@ -57,12 +54,9 @@ struct newProblem2D{TT      <: Real,
 
         source = SourceTerm{typeof(S)}(S)
         DO = DerivativeOrder{order}()
-        DCx = DiffusionCoefficient(Kx)
-        DCy = DiffusionCoefficient(Ky)
-
 
         # new(u₀,Kx,Ky,order,BoundaryConditions(Bounds))
-        new{TT,2,typeof(DCx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,DCx,DCy,source,DO,BCs)
+        new{TT,2,typeof(Kx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,DO,BCs)
     end
 end
 

@@ -33,6 +33,6 @@ module SATs
     export SimultanousApproximationTerm
     export construct_SAT
     export SATBoundaries
-    export applySAT!
+    # export applySAT!
     
 end

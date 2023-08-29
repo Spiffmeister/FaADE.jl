@@ -107,8 +107,8 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
         
         if solver == :cgie
             if Prob.BoundaryConditions[1].type != Periodic
-                BoundaryConditions(BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,t,Δt)
-                BoundaryConditions(BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,t,Δt)
+                setBoundaryConditions!(BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,t,Δt)
+                setBoundaryConditions!(BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,t,Δt)
     
                 SAT_Left(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K, DataMode)
                 SAT_Right(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K, DataMode)
@@ -257,15 +257,15 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         # t += Δt
 
         if btype1 != Periodic #Left/Right boundaries
-            BoundaryConditions(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
-            BoundaryConditions(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
+            setBoundaryConditions!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
+            setBoundaryConditions!(Prob.BoundaryConditions.Right.RHS,DBlock.boundary.RHS_Right,grid.gridy,grid.ny,t,Δt)
 
             SAT_Left!(CGBlock.b, DBlock.boundary.RHS_Left, DBlock.K[1],DataMode)
             SAT_Right!(CGBlock.b, DBlock.boundary.RHS_Right, DBlock.K[1],DataMode)
         end
         if btype2 != Periodic #Up/Down boundaries
-            BoundaryConditions(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
-            BoundaryConditions(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
+            setBoundaryConditions!(Prob.BoundaryConditions.Up.RHS,DBlock.boundary.RHS_Up,grid.gridx,grid.nx,t,Δt)
+            setBoundaryConditions!(Prob.BoundaryConditions.Down.RHS,DBlock.boundary.RHS_Down,grid.gridx,grid.nx,t,Δt)
 
             SAT_Up!(CGBlock.b, DBlock.boundary.RHS_Up, DBlock.K[2],DataMode)
             SAT_Down!(CGBlock.b, DBlock.boundary.RHS_Down, DBlock.K[2],DataMode)
@@ -377,9 +377,10 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
     copyto!(:b,     :u, DBlock)
     println(DBlock[1].b[1,1])
     while t < t_f
-
-        BoundaryConditions(DBlock,G)
-
+        
+        setBoundaryConditions!(DBlock,G)
+        setDiffusionCoefficient!(DBlock,G)
+        
         applySATs(:b,DBlock,DataMode)
         
         addSource!(P.source,:b,DBlock,G)

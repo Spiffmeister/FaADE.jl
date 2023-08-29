@@ -2,20 +2,7 @@
 abstract type newDataBlockType{dtype,DIM} end
 abstract type newLocalDataBlockType{dtype,DIM} <: newDataBlockType{dtype,DIM} end
 
-#=
-"""
-    BlockRelations
-Object for communication handling between blocks
-"""
-struct BlockRelations{TJ<:Union{Nothing,Tuple}}
-    joints
 
-    function BlockRelations(G::GridMultiBlock{TT,1}) where TT
-
-        new{Tuple}(G.Joint)
-    end
-end
-=#
 
 """
     StepConfig{TT}
@@ -25,14 +12,16 @@ mutable struct StepConfig{TT}
     t   :: TT
     Δt  :: TT
     Δu  :: TT
+    converged :: Bool
 end
 
 
-mutable struct DiffCoeff
-    K   :: Union{Function,Real}
-    KA  :: Array
+mutable struct DiffCoeff{KT<:Union{Function,Real},AT<:Array{Real}}
+    K   :: KT
+    KA  :: AT
 end
-
+Base.getindex(DC::DiffCoeff,i::Integer) = DC.KA[i]
+Base.getindex(DC::DiffCoeff,i::Integer,j::Integer) = DC.KA[i,j]
 
 #========== NEW  DATA ==============#
 
@@ -51,6 +40,12 @@ struct newBoundaryData1D{TT,
     Left        :: SATL
     Right       :: SATR
 
+    JointLeft   :: Int64
+    JointRight  :: Int64
+
+    LeftIndex   :: CartesianIndices
+    RightIndex  :: CartesianIndices
+
     u_Left      :: AT
     u_Right     :: AT
 
@@ -64,7 +59,16 @@ struct newBoundaryData1D{TT,
         u_Left      = zeros(TT,nnodes)
         u_Right     = zeros(TT,nnodes)
 
-        new{TT,typeof(BCL),typeof(BCR),typeof(u_Left)}(BCL,BCR,u_Left,u_Right,[0.0],[0.0])
+        # if typeof(BCL) <: SimultanousApproximationTerm{:Interface}
+        # else
+        # end
+        # if typeof(BCR) <: SimultanousApproximationTerm{:Interface}
+        # else
+        # end
+        LeftIndex   = CartesianIndices(1:GetOrder(order))
+        RightIndex  = CartesianIndices(lastindex(G)-O+1:lastindex(G))
+
+        new{TT,typeof(BCL),typeof(BCR),typeof(u_Left)}(BCL,BCR,1,1,LeftIndex,RightIndex,u_Left,u_Right,[0.0],[0.0])
     end
 end
 
@@ -152,7 +156,7 @@ function LocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
     setCoefficient!(P.K,DiffCoeff,G)
     D = DerivativeOperator{TT,1,true,false,false}(P.order,G.n,0,G.Δx,TT(0))
 
-    SC = StepConfig{TT}(TT(0),TT(0),TT(0))
+    SC = StepConfig{TT}(TT(0),TT(0),TT(0),true)
 
     LocalDataBlock{TT,1,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,BStor,D,SC)
 end
@@ -177,13 +181,16 @@ end
 mutable struct newLocalDataBlock{TT<:Real,
         DIM,
         AT  <: AbstractArray{TT},
-        KT  <: Union{Vector{TT},Vector{Matrix{TT}}},
+        KT,
         BT  <: BoundaryStorage{TT,DIM,AT},
         DT  <: DerivativeOperator,
         } <: newLocalDataBlockType{TT,DIM}
     u           :: AT
     uₙ₊₁        :: AT
-    K           :: KT
+    K           :: AT
+
+    κ          :: KT
+
     boundary    :: BT
     Derivative  :: DT
 
@@ -198,22 +205,22 @@ mutable struct newLocalDataBlock{TT<:Real,
     function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
 
         u       = zeros(TT,size(G))
-        uₙ₊₁    = similar(u)
-        cache   = similar(u)
-        rₖ      = similar(u)
-        dₖ      = similar(u)
-        b       = similar(u)
+        uₙ₊₁    = zeros(TT,size(G))
+        K       = zeros(TT,size(G))
+        cache   = zeros(TT,size(G))
+        rₖ      = zeros(TT,size(G))
+        dₖ      = zeros(TT,size(G))
+        b       = zeros(TT,size(G))
 
         BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions.BoundaryLeft,P.BoundaryConditions.BoundaryRight)
-        DiffCoeff   = zeros(TT,size(G))
 
         IP = innerH(G,GetOrder(P.order))
         
         D = DerivativeOperator{TT,1,true,false,false}(P.order,G.n,0,G.Δx,TT(0))
 
-        SC = StepConfig{TT}(TT(0),TT(0),TT(0))
+        SC = StepConfig{TT}(TT(0),TT(0),TT(0),true)
 
-        new{TT,1,typeof(u),typeof(DiffCoeff),typeof(BStor),typeof(D)}(u,uₙ₊₁,DiffCoeff,BStor,D,IP,cache,rₖ,dₖ,b,SC)
+        new{TT,1,typeof(u),typeof(P.K),typeof(BStor),typeof(D)}(u,uₙ₊₁,K,P.K,BStor,D,IP,cache,rₖ,dₖ,b,SC)
     end
 end
 
@@ -234,11 +241,12 @@ struct DataMultiBlock{TT<:Real,
 
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,MET},Δt::TT,t::TT) where {TT,DIM,MET}
         DTA = [newLocalDataBlock(P,G)]
-        new{TT,DIM,typeof(DTA)}(DTA,StepConfig{TT}(t,Δt,TT(0)),nothing,length(DTA))
+        SC = StepConfig{TT}(t,Δt,TT(0),true)
+        new{TT,DIM,typeof(DTA)}(DTA,SC,nothing,length(DTA))
     end
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM,MET},Δt::TT,t::TT) where {TT,DIM,MET}
         DTA = (LocalDataBlock(P,Grid,Δt) for Grid in G.Grids)
-        new{TT,DIM,typeof(DTA)}(DTA,t,Δt,nothing,0.0)
+        new{TT,DIM,typeof(DTA)}(DTA,StepConfig{TT}(t,Δt,TT(0),true),nothing,0.0)
     end
 end
 
@@ -248,46 +256,13 @@ Base.getindex(DB::DataMultiBlock,i::Integer) = DB.Block[i]
 Base.length(DB::DataMultiBlock) = DB.nblock
 @inline eachblock(DB::DataMultiBlock) = Base.OneTo(length(DB))
 
+Base.ndims(DB::DataMultiBlock{TT,DIM,TDBLOCK}) where {TT,DIM,TDBLOCK} = DIM
+
+# Base.getindex(BB::newBoundaryData1D,i::Integer) = BB.
+@inline eachjoint(BB::newBoundaryData1D) = Base.OneTo(2)
 
 
 
-
-
-
-# function fetchBoudnary! end
-# function fetchBoudnary!(D1,D2) where {F,AT,T}
-# end
-
-
-
-"""
-    setCoefficient!
-Sets the diffusion coefficient
-"""
-function setCoefficient! end
-function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid1D)
-    for i = 1:grid.n
-        κ[i] = K(grid[i])
-    end
-end
-function setCoefficient!(K::Function,κ::AbstractArray,grid::Grid2D)
-    for i = 1:grid.nx
-        for j = 1:grid.ny
-            κ[i,j] = K(grid[i,j]...)
-        end
-    end
-end
-# function setCoefficient!(K::Function,κ::AbstractArray,grid::GridType)
-#     for i in eachindex(grid)
-#         κ[i] = K(grid[i]...)
-#     end
-# end
-function setCoefficient!(DC::DiffusionCoefficient{F},κ::AbstractArray,grid::LocalGridType) where {F<:Function}
-    setCoefficient!(DC.coeff,κ,grid)
-end
-function setCoefficient!(DC::DiffusionCoefficient{TT},κ::AbstractArray{TT},grid::LocalGridType) where {TT<:Real}
-    κ .= DC.coeff
-end
 
 
 #== INTER-BLOCK COMMUNICATION ==#

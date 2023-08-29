@@ -63,11 +63,7 @@ abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
 struct SourceTerm{F<:Union{Function,Nothing}}
     source :: F
 end
-struct DiffusionCoefficient{DC<:Union{Real,Function}}
-    coeff  :: DC
-end
 
 
 Base.show(io::IO,S::SourceTerm{TT}) where TT = S.source
-Base.show(io::IO,DC::DiffusionCoefficient{TT}) where TT = DC.coeff
 
