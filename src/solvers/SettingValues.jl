@@ -73,9 +73,10 @@ end
 function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(DB)
         BB = DB[I].boundary
-        
-        copyto!(BB.u_Left,BB.LeftIndex,getproperty(DB[BB.JointLeft],source),BB.LeftIndex)
-        copyto!(BB.u_Right,BB.LeftIndex,getproperty(DB[BB.JointRight],source),BB.RightIndex)
+        cache =  getproperty(DB[BB.JointLeft],source)
+        copyto!(BB.u_Left,BB.LeftIndex,cache,BB.LeftIndex)
+        cache =  getproperty(DB[BB.JointRight],source)
+        copyto!(BB.u_Right,BB.LeftIndex,cache,BB.RightIndex)
 
         if DIM == 2
             copyto!(BB.u_Up,1,getproperty(DB[BB.JointUp],source),BB.UpIndex)
@@ -94,37 +95,25 @@ function applySAT!(Boundary::Nothing,Block,Prob,mode) end
 function applySAT!(SAT::SimultanousApproximationTerm,cache::AT,u::AT,k::AT,mode::SATMode) where AT
     SAT(cache,k,u,mode)
 end
-function applySATs(dest::Array{TT},D::LocalDataBlock{TT,DIM,NBLOCK},mode::SATMode) where {TT,DIM,NBLOCK}
-    applySAT!(D.boundary.Left,   dest, D.boundary.RHS_Left,    D.K, mode)
-    applySAT!(D.boundary.Right,  dest, D.boundary.RHS_Right,   D.K, mode)
-    if DIM == 2
-        applySAT!(D.boundary.Up,     dest, D.boundary.RHS_Left,    D.K, mode)
-        applySAT!(D.boundary.Down,   dest, D.boundary.RHS_Right,   D.K, mode)
-    end
-end
-function applySATs(CG,D::DataMultiBlock{TT,DIM,NBLOCK},dest::Symbol,mode::SATMode) where {TT,DIM,NBLOCK}
-    for i = 1:NBLOCK
-        tmp = getproperty(CG,dest)
-        applySATs(CG,DB[i],mode)
-
-        # applySAT!(D[i].boundary.Left,   CG[i].b, D[i].boundary.RHS_Left,    D[i].K, mode)
-        # applySAT!(D[i].boundary.Right,  CG[i].b, D[i].boundary.RHS_Right,   D[i].K, mode)
-        # if DIM == 2
-        #     applySAT!(D[i].boundary.Up,     CG[i].b, D[i].boundary.RHS_Left,    D[i].K, mode)
-        #     applySAT!(D[i].boundary.Down,   CG[i].b, D[i].boundary.RHS_Right,   D[i].K, mode)
-        # end
-    end
-end
-
-function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,1},mode::SATMode) where {TT}
+function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,1},mode::SATMode{:DataMode}) where {TT}
     applySAT!(D.boundary.Left,   dest, D.boundary.RHS_Left,    D.K, mode)
     applySAT!(D.boundary.Right,  dest, D.boundary.RHS_Right,   D.K, mode)
 end
-function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,2},mode::SATMode) where {TT}
+function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,2},mode::SATMode{:DataMode}) where {TT}
     applySAT!(D.boundary.Left,   dest, D.boundary.RHS_Left,    D.K[1], mode)
     applySAT!(D.boundary.Right,  dest, D.boundary.RHS_Right,   D.K[1], mode)
     applySAT!(D.boundary.Up,     dest, D.boundary.RHS_Left,    D.K[2], mode)
     applySAT!(D.boundary.Down,   dest, D.boundary.RHS_Right,   D.K[2], mode)
+end
+function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,1},mode::SATMode{:SolutionMode}) where {TT}
+    applySAT!(D.boundary.Left,   dest, D.boundary.u_Left,    D.K, mode)
+    applySAT!(D.boundary.Right,  dest, D.boundary.u_Right,   D.K, mode)
+end
+function applySATs(dest::Array{TT},D::newLocalDataBlock{TT,2},mode::SATMode{:SolutionMode}) where {TT}
+    applySAT!(D.boundary.Left,   dest, D.boundary.u_Left,   D.K[1], mode)
+    applySAT!(D.boundary.Right,  dest, D.boundary.u_Right,  D.K[1], mode)
+    applySAT!(D.boundary.Up,     dest, D.boundary.u_Up,     D.K[2], mode)
+    applySAT!(D.boundary.Down,   dest, D.boundary.u_Down,   D.K[2], mode)
 end
 function applySATs(dest::Symbol,D::DataMultiBlock,mode::SATMode)
     for I in eachblock(D)
@@ -200,36 +189,46 @@ end
     muladd!
 multiply-add for multiblock problems
 """
+@inline function muladd!(dest::Array{TT},source::Array{TT},α::TT,β::TT) where {TT}
+    @. dest = α*dest + β*source
+end
 @inline function muladd!(dest::Symbol,source::Symbol,D::DataMultiBlock{TT};α=TT(1),β=TT(1)) where TT
 
     for I in eachblock(D)
         W = getproperty(D[I],dest)
         A = getproperty(D[I],source)
-
-        @. W = α*W + β*A
+        muladd!(W,A,α,β)
+        # @. W = α*W + β*A
     end
 end
 """
     setValue
 """
+@inline function setValue(dest::AT,source::AT,α::TT) where {AT,TT}
+    @. dest = α*source
+end
 @inline function setValue(dest::Symbol,source::Symbol,D::newDataBlockType{TT},α=TT(1)) where TT
-
+    
     for I in eachblock(D)
         W = getproperty(D[I],dest)
         R = getproperty(D[I],source)
 
-        @. W = α*R
+        setValue(W,R,α)
     end
 end
 
 """
     innerprod
 """
-function innerprod(u::Symbol,v::Symbol,D::DataMultiBlock{TT}) where TT
+innerprod(u::Array{TT},v::Array{TT},IP::innerH) where TT = IP(u,v)
+function innerprod(u::Symbol,v::Symbol,D::DataMultiBlock{TT,DIM}) where {TT,DIM}
     local r::TT
     r = TT(0)
     for I in eachblock(D)
-        r += D[I].innerprod(getproperty(D[I],u),getproperty(D[I],v))
+        # r += D[I].innerprod(getproperty(D[I],u),getproperty(D[I],v))
+        U = getproperty(D[I],u)
+        V = getproperty(D[I],v)
+        r += innerprod(U,V,D[I].innerprod)
     end
     return r
 end

@@ -64,12 +64,8 @@ In-place conjugate gradient method.
 
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
-# function conj_grad!(DBlock::DataMultiBlock{TT,DIM,NBLOCK},CGB::ConjGradMultiBlock{TT,DIM,NBLOCK,AT},Δt::TT) where {TT,DIM,NBLOCK,AT}
-#     conj_grad!(RHS,DBlock.Data,CGB,Δt)
-# end
-
 function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+        atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
     
     local rnorm::TT
     local unorm::TT
@@ -86,6 +82,7 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     # DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
+
     
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
@@ -95,13 +92,13 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
         αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
         @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
-
+        
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         A!(RHS,CGB.rₖ,DBlock.uₙ₊₁,Δt,DBlock.K)
         @. CGB.rₖ = CGB.rₖ - CGB.b
-
+        
         A!(RHS,CGB.Drₖ,CGB.rₖ,Δt,DBlock.K) # Drₖ = rₖ - Δt*D(rₖ)
-
+        
         βₖ = CGB.innerprod(CGB.rₖ,CGB.Drₖ)/dₖAdₖ
         @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
 
@@ -114,8 +111,8 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         @warn warnstr
     end
 end
-function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT};
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},Δt::TT;
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
 
     local rnorm::TT
     local unorm::TT
@@ -126,30 +123,30 @@ function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(CGB.rₖ,DBlock.u,DBlock)
-    @. CGB.rₖ = CGB.rₖ - CGB.b
+    A!(DBlock.rₖ,DBlock.u,DBlock,Δt)
+    @. DBlock.rₖ = DBlock.rₖ - DBlock.b
 
-    @. CGB.dₖ = -CGB.rₖ # dₖ = -rₖ
+    @. DBlock.dₖ = -DBlock.rₖ # dₖ = -rₖ
 
     i = 0
-    rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
-    unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+    rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
+    unorm = max(sqrt(DBlock.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
     while (rnorm > rtol*unorm) & (i < maxIT)
-        A!(CGB.cache,CGB.dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
-        dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.cache)
-        αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/CGB.scalar.dₖAdₖ
-        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+        A!(DBlock.cache,DBlock.dₖ,DBlock,Δt) # Adₖ = dₖ - Δt*D(dₖ)
+        dₖAdₖ = CGB.innerprod(DBlock.dₖ,DBlock.cache)
+        αₖ = -DBlock.innerprod(DBlock.rₖ,DBlock.dₖ)/dₖAdₖ
+        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*DBlock.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(CGB.rₖ,DBlock.uₙ₊₁,DBlock)
-        @. CGB.rₖ = CGB.rₖ - CGB.b
+        A!(DBlock.rₖ,DBlock.uₙ₊₁,DBlock,Δt)
+        @. DBlock.rₖ = DBlock.rₖ - DBlock.b
 
-        A!(CGB.cache,CGB.rₖ,DBlock) # Drₖ = rₖ - Δt*D(rₖ)
+        A!(DBlock.cache,DBlock.rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
 
-        βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
-        @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
+        βₖ = DBlock.innerprod(DBlock.rₖ,DBlock.cache)/dₖAdₖ
+        @. DBlock.dₖ = βₖ*DBlock.dₖ - DBlock.rₖ
 
-        rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
+        rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
@@ -159,7 +156,7 @@ function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,
     end
 end
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=true) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -172,8 +169,9 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
     # A!(CGB.rₖ,DBlock.u,DBlock)
     A!(:u,DBlock,Δt)
+    setValue(:rₖ,:cache,DBlock)
     muladd!(:rₖ,:b,DBlock,β=TT(-1)) #rₖ = rₖ - b
-
+    
     setValue(:dₖ,:rₖ,DBlock,TT(-1)) #dₖ = -rₖ
 
     i = 0
@@ -185,17 +183,16 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #dₖAdₖ = (dₖ,Ddₖ)
         αₖ = -innerprod(:rₖ,:dₖ,DBlock)/dₖAdₖ #αₖ = -√(rₖ,dₖ)/dₖAdₖ
         muladd!(:uₙ₊₁,:dₖ,DBlock,β=αₖ) #uₙ₊₁ = uₙ + αₖdₖ
-
+        
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         # Comm uₙ₊₁ boundaries
         A!(:uₙ₊₁,DBlock,Δt)
         # @. CGB.rₖ = CGB.cache - CGB.b
-        setValue(:rₖ,:cache,DBlock)
-        muladd!(:rₖ,:b,DBlock)
+        setValue(:rₖ,:cache,DBlock) # rₖ = cache
+        muladd!(:rₖ,:b,DBlock,β=TT(-1))  # rₖ = rₖ - b
 
         # Comm rₖ boundaries
         A!(:rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
-        # βₖ = CGB.innerprod(CGB.rₖ,CGB.cache)/dₖAdₖ
         βₖ = innerprod(:rₖ,:cache,DBlock)/dₖAdₖ
 
         # @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
@@ -206,9 +203,8 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
         i += 1
     end
     if (rnorm>rtol*unorm) & warnings
-        println("hi")
-        CGB.SC.converged = false
-        warnstr = string("CG did not converge with Δt=",DBlock.SC.Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        DBlock.SC.converged = false
+        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
@@ -222,7 +218,7 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     @. tmp = uⱼ - Δt*tmp
 end
 
-function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT}) where {AT,TT}
+function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT},Δt::TT) where {AT,TT}
     # Compute the derivatives
     DB.Derivative(Write,Read,DB.K)
     # Communicate the boundaries
@@ -233,15 +229,15 @@ function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT}) where {AT,TT}
 end
 
 function A!(source::Symbol,DB::DataMultiBlock,Δt::TT) where TT
-    # Compute the derivatives
+    fillBuffers(source,DB)
     for i in eachblock(DB)
         # cache = u - Δt Du
         U = getproperty(DB[i],source)
         # Compute the derivatives
         DB[i].Derivative(DB[i].cache,U,DB[i].K)
-
-        # applySATs(Write[i].cache,Write[i].buffer) #Apply the SATs
-        @. DB[i].cache = U - Δt*DB[i].cache
+        applySATs(DB[i].cache,DB[i],SolutionMode) #Apply the SATs
+        muladd!(DB[i].cache,U,-Δt,TT(1))
+        # @. DB[i].cache = U - Δt*DB[i].cache
     end
 end
 

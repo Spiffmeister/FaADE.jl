@@ -165,25 +165,39 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
     SAT
 end
 
-
-function (SD::SAT_Dirichlet{TN,TT})(cache::AT,c::AT,rhs::AT,::SATMode{:DataMode}) where {TN,TT,AT}
-    TN == Left ? β = TT(1) : β = TT(-1)
-    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(rhs))
-        for i = 1:SD.order #nodes SD.nodes
-            S[i] += -β*SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #u[Left]
+function (SD::SAT_Dirichlet{NodeType{:Left,DIM},TT})(cache::AT,c::AT,rhs::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    for (S,U,C) in zip(SD.loopaxis(cache),SD.loopaxis(rhs),SD.loopaxis(c))
+        for i = 1:SD.order
+            S[i] += -SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #D₁ᵀE₀
         end
         S[1] += SD.τ(C[1])*C[1]*U[1]
     end
 end
-function (SD::SAT_Dirichlet{TN,TT})(cache::AT,c::AT,rhs::AT,::SATMode{:SolutionMode}) where {TN,TT,AT}
-    TN == Left ? β = TT(1) : β = TT(-1)
+function (SD::SAT_Dirichlet{NodeType{:Right,DIM},TT})(cache::AT,c::AT,rhs::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
     for (S,U,C) in zip(SD.loopaxis(cache),SD.loopaxis(rhs),SD.loopaxis(c))
         for i = 1:SD.order
-            S[i] += β*SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #D₁ᵀE₀
+            S[end-SD.order+i] += SD.α*C[end]*SD.ED₁ᵀ[i]*U[end] #D₁ᵀE₀
         end
-        S[1] -= SD.τ(C[1])*C[1]*U[1]
+        S[end] += SD.τ(C[end])*C[end]*U[end]
     end
 end
+function (SD::SAT_Dirichlet{NodeType{:Left,DIM},TT})(cache::AT,c::AT,rhs::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
+    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(rhs))
+        for i = 1:SD.order #nodes SD.nodes
+            S[i] += SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #u[Left]
+        end
+        S[1] += -SD.τ(C[1])*C[1]*U[1]
+    end
+end
+function (SD::SAT_Dirichlet{NodeType{:Right,DIM},TT})(cache::AT,c::AT,rhs::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
+    for (S,U,C) in zip(SD.loopaxis(cache),SD.loopaxis(rhs),SD.loopaxis(c))
+        for i = 1:SD.order
+            S[end-SD.order+i] += -SD.α*C[end]*SD.ED₁ᵀ[i]*U[end] #D₁ᵀE₀
+        end
+        S[end] += -SD.τ(C[end])*C[end]*U[end]
+    end
+end
+
 
 
 

@@ -39,7 +39,7 @@ end
 
 
 
-function (DO::DerivativeOperator{TT,1,true,MIX,ADVECT})(cache::VT,u::VT,K::KT) where {TT,VT,KT,MIX,ADVECT}
+function (DO::DerivativeOperator{TT,1,ORD,true,false,false})(cache::VT,u::VT,K::KT) where {TT,ORD,VT,KT}
     D₂!(cache,u,K,DO.nx,DO.Δx,DO.order,TT(0))
     cache
 end

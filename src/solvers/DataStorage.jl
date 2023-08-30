@@ -15,14 +15,6 @@ mutable struct StepConfig{TT}
     converged :: Bool
 end
 
-
-mutable struct DiffCoeff{KT<:Union{Function,Real},AT<:Array{Real}}
-    K   :: KT
-    KA  :: AT
-end
-Base.getindex(DC::DiffCoeff,i::Integer) = DC.KA[i]
-Base.getindex(DC::DiffCoeff,i::Integer,j::Integer) = DC.KA[i,j]
-
 #========== NEW  DATA ==============#
 
 
@@ -65,8 +57,8 @@ struct newBoundaryData1D{TT,
         # if typeof(BCR) <: SimultanousApproximationTerm{:Interface}
         # else
         # end
-        LeftIndex   = CartesianIndices(1:GetOrder(order))
-        RightIndex  = CartesianIndices(lastindex(G)-O+1:lastindex(G))
+        LeftIndex   = CartesianIndices((1:GetOrder(order),))
+        RightIndex  = CartesianIndices((lastindex(G)-O+1:lastindex(G),))
 
         new{TT,typeof(BCL),typeof(BCR),typeof(u_Left)}(BCL,BCR,1,1,LeftIndex,RightIndex,u_Left,u_Right,[0.0],[0.0])
     end
@@ -216,7 +208,7 @@ mutable struct newLocalDataBlock{TT<:Real,
 
         IP = innerH(G,GetOrder(P.order))
         
-        D = DerivativeOperator{TT,1,true,false,false}(P.order,G.n,0,G.Δx,TT(0))
+        D = DerivativeOperator{TT,1,typeof(P.order),true,false,false}(P.order,G.n,0,G.Δx,TT(0))
 
         SC = StepConfig{TT}(TT(0),TT(0),TT(0),true)
 

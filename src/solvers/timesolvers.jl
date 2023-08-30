@@ -367,15 +367,10 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
     
     t = Δt
     Δt₀ = Δt
-    # for i in eachblock(DBlock)
-    #     DBlock[i].uₙ₊₁ .= DBlock[i].u
-    # end
-    # for i in eachblock(DBlock)
-    #     CGBlock[i].b .= DBlock[i].u
-    # end
+
     copyto!(:uₙ₊₁,  :u, DBlock)
     copyto!(:b,     :u, DBlock)
-    println(DBlock[1].b[1,1])
+
     while t < t_f
         
         setBoundaryConditions!(DBlock,G)
@@ -404,7 +399,6 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
 
             copyto!(:u,:uₙ₊₁,DBlock)
             copyto!(:b,:uₙ₊₁,DBlock)
-            # copyUtoSAT!(DBlock.boundary,DBlock.u,Prob.order)
             if solverconfig.adaptive & (Δt<300Δt₀)
                 Δt *= 1.05
             end
@@ -418,7 +412,7 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
             DBlock.SC.Δt /= 2.0
             CGBlock.SC.converged = true
             if DBlock.SC.Δt < Δt₀/10.0
-                error("CG could not converge, aborting at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt)
+                error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
         end
         # if sample < t
