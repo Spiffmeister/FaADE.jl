@@ -137,3 +137,41 @@ function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u::
         S[end] -= -τ*U[end]
     end
 end
+
+
+"""
+Explicit Neumann SATs ----- NEEDS TESTING
+"""
+function (SN::SAT_Neumann{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,t::TT) where {TT,DIM,AT}
+    for (S,C,U) in zip(SN.loopaxis(cache),SN.loopaxis(c),SN.loopaxis(u))
+        S[1] += SN.τ*(C[1]*dot(SN.ED₁,U[1:SN.order]) - SN.RHS(t))
+    end
+end
+function (SN::SAT_Neumann{NodeType{:Right,DIM},TT})(cache::AT,u::AT,c::AT,t::TT) where {TT,DIM,AT}
+    for (S,C,U) in zip(SN.loopaxis(cache),SN.loopaxis(c),SN.loopaxis(u))
+        S[end] += -SN.τ*(C[end]*dot(SN.ED₁,U[end-SN.order+1:end]) - SN.RHS(t))
+    end
+end
+"""
+Implicit Neumann SATs ----- NEEDS TESTING
+"""
+function (SN::SAT_Neumann{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    for (S,C,U) in zip(SN.loopaxis(cache),SN.loopaxis(c),SN.loopaxis(u))
+        S[1] += SN.τ * C[1] * dot(SN.ED₁,U[1:order])
+    end
+end
+function (SN::SAT_Neumann{NodeType{:Right,DIM},TT})(cache::AT,u::AT,c::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    for (S,C,U) in zip(SN.loopaxis(cache),SN.loopaxis(c),SN.loopaxis(u))
+        S[end] += -SN.τ * C[end] * dot(SN.ED₁,U[end-SN.order+1:end])
+    end
+end
+function (SN::SAT_Neumann{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
+    for (S,U) in zip(SN.loopaxis(cache),SN.loopaxis(u))
+        S[1] += -SN.τ*U[1]
+    end
+end
+function (SN::SAT_Neumann{NodeType{:Right,DIM},TT})(cache::AT,u::AT,c::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
+    for (S,U) in zip(SN.loopaxis(cache),SN.loopaxis(u))
+        S[end] += SN.τ*U[end]
+    end
+end

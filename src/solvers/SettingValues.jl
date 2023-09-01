@@ -74,9 +74,9 @@ function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(DB)
         BB = DB[I].boundary
         cache =  getproperty(DB[BB.JointLeft],source)
-        copyto!(BB.u_Left,BB.LeftIndex,cache,BB.LeftIndex)
+        copyto!(BB.u_Left,BB.LRStorageIndex,cache,BB.LeftIndexFrom)
         cache =  getproperty(DB[BB.JointRight],source)
-        copyto!(BB.u_Right,BB.LeftIndex,cache,BB.RightIndex)
+        copyto!(BB.u_Right,BB.LRStorageIndex,cache,BB.RightIndexFrom)
 
         if DIM == 2
             copyto!(BB.u_Up,1,getproperty(DB[BB.JointUp],source),BB.UpIndex)

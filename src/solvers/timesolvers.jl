@@ -357,11 +357,7 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
     end
 
     DBlock = DataMultiBlock(P,G,Δt,0.0)
-    CGBlock = ConjGradMultiBlock(G,P.order)
-    # DB = MultiDataBlock(P,G)
-    # CGBlock = ConjGradMultiBlock(G,P.order)
     soln = solution{TT}(G,0.0,Δt,P)
-    # order = DerivativeOrder{P.order}()
 
     DBlock[1].u .= soln.u[1]
     
@@ -382,7 +378,7 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
 
         conj_grad!(DBlock,Δt)
 
-        if CGBlock.SC.converged | !solverconfig.adaptive #If CG converges
+        if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if penalty_function_enabled
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
             end
@@ -410,7 +406,7 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
             # DBlock.uₙ₊₁ .= DBlock.u
             setValue(DBlock,DBlock,:uₙ₊₁,:u)
             DBlock.SC.Δt /= 2.0
-            CGBlock.SC.converged = true
+            DBlock.SC.converged = true
             if DBlock.SC.Δt < Δt₀/10.0
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end

@@ -165,6 +165,26 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
     SAT
 end
 
+
+
+"""
+Explicit Dirichlet SATs ----- NEEDS TESTING
+"""
+function (SD::SAT_Dirichlet{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,t::TT) where {TT,DIM,AT}
+    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(u))
+        @. S[1:SN.order] += SN.α*C[1]*(SD.ED₁ᵀ*U[1] - SD.ED₁ᵀ*SN.RHS(t))
+        S[1] += SN.τ(C[1])*(U[1] - SN.RHS(t))
+    end
+end
+function (SD::SAT_Dirichlet{NodeType{:Right,DIM},TT})(cache::AT,u::AT,c::AT,t::TT) where {TT,DIM,AT}
+    for (S,C,U) in zip(SD.loopaxis(cache),SD.loopaxis(c),SD.loopaxis(u))
+        @. S[end-SN.order+1:end] += SN.α*C[end]*(SD.ED₁ᵀ*U[end] - SD.ED₁ᵀ*SN.RHS(t))
+        S[end] += SN.τ(C[end])*(U[end] - SN.RHS(t))
+    end
+end
+"""
+Implicit Dirichlet SATs
+"""
 function (SD::SAT_Dirichlet{NodeType{:Left,DIM},TT})(cache::AT,c::AT,rhs::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
     for (S,U,C) in zip(SD.loopaxis(cache),SD.loopaxis(rhs),SD.loopaxis(c))
         for i = 1:SD.order

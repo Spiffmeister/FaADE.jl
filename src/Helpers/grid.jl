@@ -108,7 +108,7 @@ struct GridMultiBlock{TT  <: Real,
     Joint   :: TJ
     inds    :: IT
 
-    function GridMultiBlock(grids::Vector{Grid1D{TT,MET}},joints) where {TT,MET}
+    function GridMultiBlock(grids::Vector{Grid1D{TT,DT,MET}},joints) where {TT,DT,MET}
 
         inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
 
@@ -125,8 +125,8 @@ end
     GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
 Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
 """
-function GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
-    J = [(i,i+1,Right) for i in 1:length(grids)]
+function GridMultiBlock(grids::Vector{Grid1D{TT,DT,MET}}) where {TT,DT,MET}
+    J = [(i,i+1,Right) for i in 1:length(grids)-1]
     GridMultiBlock(grids,J)
 end
 """
@@ -186,6 +186,7 @@ Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 
 Base.eachindex(G::GridMultiBlock{TT,1}) where {TT} = Base.OneTo(length(G))
 
+eachgrid(G::GridMultiBlock) = Base.OneTo(length(G.Grids))
 
 
 # Base.typeof(M::MetricType{MType}) where MType = MType

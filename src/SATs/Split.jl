@@ -96,7 +96,7 @@ struct SAT_Interface{
     τ₀  :: TT
     loopaxis :: F1
 
-    function SAT_Split(Δx::TT,axis::Int,order::Int) where TT
+    function SAT_Split(Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN}
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
         D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
         E₀D₁ = BoundaryDerivative(Left,Δx,order)
@@ -105,6 +105,9 @@ struct SAT_Interface{
         α₀, τ₁, τ₀ = SATpenalties(Interface,Δx,order)
 
         loopaxis = SelectLoopDirection(axis)
+
+        new{TN,TT,Vector{TT},typeof(loopaxis)}(side,axis,order,
+            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,α₀,τ₁,loopaxis)
     end
 
 end
@@ -113,7 +116,7 @@ end
 function SAT_Interface!(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
         order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
 
-    for (S⁻,S⁺,U⁻,U⁺,K⁻,K⁺) in zip(loopaxis(cache),)
+    for (S⁻,S⁺,U⁻,U⁺,K⁻,K⁺) in zip(loopaxis(u),)
 
         
         S⁻[end] = S⁻[end]   + τ₀/(h⁻ * Δx⁻) * U⁻[end] #SAT₀
@@ -129,4 +132,25 @@ function SAT_Interface!(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Floa
 
     end
 
+end
+
+
+
+function (SI::SAT_Interface{NodeType{:Left,DIM},TT})(cache::AT,c::AT,rhs::AT) where {TT,DIM,AT}
+    # rhs = u⁻ - u⁺
+    for (S⁺,U⁻,K⁺) in zip(SI.loopaxis(cache),SI.loopaxis(rhs),SI.loopaxis(c))
+        for i = 1:SI.order
+            # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
+            S⁺[i] += K⁺[1] * (SI.τ₁*SI.D₁ᵀE₀[i] + SI.α₀*SI.D₁E₀[i]) * (U⁻[i] - S⁺[i])
+        end
+        S⁺[1] += -τ₀ * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
+    end
+end
+function (SI::SAT_Interface{NodeType{:Right,DIM},TT})(cache::AT,c::AT,rhs::AT) where {TT,DIM,AT}
+    for (S⁻,U⁺,K⁻) in zip(SI.loopaxis(cache),SI.loopaxis(rhs),SI.loopaxis(c))
+        for i = 1:SI.order
+            S⁻[i] += SI.τ₁ * K⁻[end] * (SI.D₁ᵀE₀[i] + SI.D₁E₀[i]) * U⁻[end-SI.order+i]
+        end
+        S⁻[end] += SI.τ₀ * U⁻[end]
+    end
 end
