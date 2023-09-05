@@ -91,9 +91,9 @@ struct SAT_Interface{
     D₁ᵀEₙ   :: TV
     D₁E₀    :: TV
     D₁Eₙ    :: TV
-    τ₀  :: TT
-    α₀  :: TT
-    τ₀  :: TT
+    τ₀      :: TT
+    α₀      :: TT
+    τ₁      :: TT
     loopaxis :: F1
 
     function SAT_Split(Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN}

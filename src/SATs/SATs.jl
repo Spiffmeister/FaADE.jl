@@ -20,14 +20,14 @@ module SATs
     include("Neumann.jl")
     # include("Robin.jl")
     include("Periodic.jl")
-    # include("Split.jl")
+    include("Split.jl")
     include("Helpers.jl")
 
     export SAT_Dirichlet, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
     export SAT_Neumann
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
-    # export Split_domain
+    export SAT_Interface
 
 
     export SimultanousApproximationTerm
