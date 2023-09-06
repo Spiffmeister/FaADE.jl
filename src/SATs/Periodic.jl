@@ -98,7 +98,7 @@ end
 
 
 
-function (SP::SAT_Periodic{NodeType{:Internal,DIM},TT})(cache::AT,u::AT,c::AT) where {TT,DIM,AT}
+function (SP::SAT_Periodic{NodeType{:Internal,DIM},TT})(cache::AT,c::AT,u::AT) where {TT,DIM,AT}
     # Non-split domain
     for (S,U,K) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c))
         # Dirichlet terms
@@ -116,7 +116,7 @@ function (SP::SAT_Periodic{NodeType{:Internal,DIM},TT})(cache::AT,u::AT,c::AT) w
     end
 end
 
-function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,buffer::AT) where {TT,DIM,AT}
+function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT) where {TT,DIM,AT<:AbstractArray{TT}}
     # Left for split domain
     for (S,U,K,U⁻) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c),SP.loopaxis(buffer))
         # Dirichlet terms
@@ -126,40 +126,40 @@ function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,u::AT,c::AT,buffer
         for i = 1:SP.order
             S[i] += SP.τ₁*K[1]*SP.D₁ᵀE₀[i]*L₁u
         end
-        S[1] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U[1:SP.order]) - K[end]*dot(SP.EₙD₁,U⁻[end-SP.order+1:end]))
+        S[1] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U[1:SP.order]) - U⁻[end-1])
     end
 end
-function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(cache::AT,u::AT,c::AT,buffer::AT) where {TT,DIM,AT}
+function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT) where {TT,DIM,AT<:AbstractArray{TT}}
     # Right for split domain
     for (S,U,K,U⁺) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c),SP.loopaxis(buffer))
         # Dirichlet terms
         S[end] += SP.τ₀(K) * (U[end] - U⁺[1])
         # Symmeteriser
-        L₁u = (U⁺[1] - U[end]) :: T
+        L₁u = (U⁺[1] - U[end]) :: TT
         for i = 1:SP.order
             S[end-SP.order+i] += SP.τ₁*K[end]*SP.D₁ᵀEₙ[i]*L₁u
         end
-        S[end] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U⁺[1:SP.order]) - K[end]*dot(SP.EₙD₁,U[end-SP.order+1:end]))
+        S[end] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U⁺[1:SP.order]) - U⁺[2])
     end
 end
 
-function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(buffer::AT,u::AT,c::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
-    # Left to buffer for split domain
+function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(buffer::AT,c::AT,u::AT,::SATMode{:DataMode}) where {TT,DIM,AT<:AbstractArray{TT}}
+    # Left to buffer for split domain - stores info from right boundary
     for (S,U⁻,K⁻) in zip(SP.loopaxis(buffer),SP.loopaxis(u),SP.loopaxis(c))
-        S[1] = U⁻[end]
-        S[2] = TT(0)
+        S[end] = U⁻[end]
+        S[end-1] = TT(0)
         for i = 1:SP.order
-            S[2] += K⁻[end]*SP.EₙD₁*U⁻[end-SP.order+i]
+            S[end-1] += K⁻[end]*SP.EₙD₁*U⁻[end-SP.order+i]
         end
     end
 end
-function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(buffer::AT,u::AT,c::AT,::SATMode{:DataMode}) where {TT,DIM,AT}
-    # Right to buffer for split domain
+function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(buffer::AT,c::AT,u::AT,::SATMode{:DataMode}) where {TT,DIM,AT<:AbstractArray{TT}}
+    # Right to buffer for split domain - stores info from left boundary
     for (S,U⁺,K⁺) in zip(SP.loopaxis(buffer),SP.loopaxis(u),SP.loopaxis(c))
-        S[end] = U⁺[1]
-        S[end-1] = TT(0)
+        S[1] = U⁺[1]
+        S[2] = TT(0)
         for i = 1:SP.order
-            S[end-1] += K⁺[1]*SP.E₀D₁*U⁺[i]
+            S[2] += K⁺[1]*SP.E₀D₁*U⁺[i]
         end
     end
 end

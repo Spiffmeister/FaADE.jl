@@ -37,14 +37,14 @@ end
     (H::InnerH)
 1D or 2D H-inner product constructed from [`innerH`](@ref)
 """
-function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) where T
+function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) :: T where T
     local tmp = T(0)
     for i in eachindex(H.Hx)
         tmp += u[i] * H.Hx[i] * v[i] * H.Δ
     end
     return tmp
 end
-function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) where T
+function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) :: T where T
     local tmp::T
     tmp = T(0)
     for j in eachindex(H.Hx)

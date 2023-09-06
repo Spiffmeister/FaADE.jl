@@ -111,7 +111,7 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         @warn warnstr
     end
 end
-function conj_grad!(DBlock::LocalDataBlock{TT,DIM,AT},Δt::TT;
+function conj_grad!(DBlock::newLocalDataBlock{TT,DIM,AT},Δt::TT;
     atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
 
     local rnorm::TT
@@ -218,26 +218,31 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     @. tmp = uⱼ - Δt*tmp
 end
 
-function A!(Write::AT,Read::AT,DB::LocalDataBlock{TT},Δt::TT) where {AT,TT}
+@inline function A!(write::Symbol,read::Symbol,D::newLocalDataBlock{TT},Δt::TT) where {AT,TT}
     # Compute the derivatives
-    DB.Derivative(Write,Read,DB.K)
+    W = getproperty(D,:cache)
+    R = getproperty(D,write)
+    D.Derivative(W,R,D.K)
     # Communicate the boundaries
     # Apply needed SATs
-    # applySATs(write,buffer)
+    applySATs(W,R,D,SolutionMode)
     # u = r - Δt Du
-    @. Write = Read - DB.SC.Δt*Write
+    @. W = R - Δt*W
 end
 
-function A!(source::Symbol,DB::DataMultiBlock,Δt::TT) where TT
+function A!(source::Symbol,DB::DataMultiBlock{TT,DIM},Δt::TT) where {TT,DIM}
     fillBuffers(source,DB)
     for i in eachblock(DB)
         # cache = u - Δt Du
-        U = getproperty(DB[i],source)
+        C = getproperty(DB[i],:cache) :: AbstractArray{TT,DIM}
+        U = getproperty(DB[i],source) :: AbstractArray{TT,DIM}
         # Compute the derivatives
-        DB[i].Derivative(DB[i].cache,U,DB[i].K)
-        applySATs(DB[i].cache,DB[i],SolutionMode) #Apply the SATs
-        muladd!(DB[i].cache,U,-Δt,TT(1))
+        DB[i].Derivative(C,U,DB[i].K)
+        applySATs(C,U,DB[i],SolutionMode) #Apply the SATs
+        muladd!(C,U,-Δt,TT(1))
         # @. DB[i].cache = U - Δt*DB[i].cache
+
+        # A!(DB[i].cache,U,DB[i],Δt)
     end
 end
 

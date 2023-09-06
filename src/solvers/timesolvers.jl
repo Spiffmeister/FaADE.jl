@@ -368,8 +368,12 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
     copyto!(:b,     :u, DBlock)
 
     while t < t_f
+        for I in eachblock(DBlock)
+            DBlock[I].SC.t = t
+            DBlock[I].SC.Δt = Δt
+        end
         
-        setBoundaryConditions!(DBlock,G)
+        setBoundaryConditions!(DBlock)
         setDiffusionCoefficient!(DBlock,G)
         
         applySATs(:b,DBlock,DataMode)

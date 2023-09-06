@@ -127,6 +127,7 @@ Multiblock grid for 1D grids, assumes the grids are stacked one after the other 
 """
 function GridMultiBlock(grids::Vector{Grid1D{TT,DT,MET}}) where {TT,DT,MET}
     J = [(i,i+1,Right) for i in 1:length(grids)-1]
+    # J = [(1,2,Right)], [(i,i-1,Left),]
     GridMultiBlock(grids,J)
 end
 """
@@ -192,8 +193,10 @@ eachgrid(G::GridMultiBlock) = Base.OneTo(length(G.Grids))
 # Base.typeof(M::MetricType{MType}) where MType = MType
 
 # Base.getindex(G::GridMultiBlock{},i)
-Base.getindex(G::Grid1D,i::Integer) = G.grid[i]
+Base.getindex(G::Grid1D,i...) = G.grid[i...]
+Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i],G.gridy[j])
 
-Base.getindex(G::Grid2D{TT,CartesianMetric},i::Integer,j::Integer) where TT = (G.gridx[i],G.gridy[j])
 
-Base.lastindex(G::Grid1D{TT,MET}) where {TT,MET} = G.n
+
+Base.lastindex(G::Grid1D) = G.n
+Base.lastindex(G::Grid2D) = size(G)
