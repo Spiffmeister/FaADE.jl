@@ -82,7 +82,8 @@ struct SAT_Interface{
         TN<:NodeType,
         TT<:Real,
         TV<:Vector{TT},
-        F1<:Function} <: SimultanousApproximationTerm{:Interface}
+        F1<:Function,
+        F2<:Function} <: SimultanousApproximationTerm{:Interface}
 
     side    :: TN
     axis    :: Int
@@ -91,66 +92,51 @@ struct SAT_Interface{
     D₁ᵀEₙ   :: TV
     D₁E₀    :: TV
     D₁Eₙ    :: TV
-    τ₀      :: TT
+    τ₀      :: F1
     α₀      :: TT
     τ₁      :: TT
-    loopaxis :: F1
+    loopaxis :: F2
 
-    function SAT_Split(Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN}
-        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
-        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
-        E₀D₁ = BoundaryDerivative(Left,Δx,order)
-        EₙD₁ = BoundaryDerivative(Right,Δx,order)
+    function SAT_Interface(Δxₗ::TT,Δxᵣ,side::TN,axis::Int,order::Int) where {TT,TN}
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
+        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ)
+        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
+        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
 
-        α₀, τ₁, τ₀ = SATpenalties(Interface,Δx,order)
+        α₀, τ₁, τ₀ = SATpenalties(Interface,Δxₗ,Δxᵣ,order,order)
 
         loopaxis = SelectLoopDirection(axis)
 
-        new{TN,TT,Vector{TT},typeof(loopaxis)}(side,axis,order,
+        new{TN,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
             D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,α₀,τ₁,loopaxis)
     end
 
 end
 
 
-function SAT_Interface!(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
-        order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
-
-    for (S⁻,S⁺,U⁻,U⁺,K⁻,K⁺) in zip(loopaxis(u),)
-
-        
-        S⁻[end] = S⁻[end]   + τ₀/(h⁻ * Δx⁻) * U⁻[end] #SAT₀
-        S⁺[1]   = S⁺[1]     + τ₀/(h⁺ * Δx⁺) * U⁺[1] #SAT₀
-        
-        for i = 1:order⁻
-            S⁻[i] = S⁻[i] + τ₁/(h⁻ * Δx⁻) * K⁻[end] * D₁ᵀE₀[i] * U⁻[end-order⁻+i]
-            S⁻[i] = S⁻[i] + α₀/(h⁻ * Δx⁻) * K⁻[end] * D₁E₀[i] * U⁻[end-order⁻+i]
-
-            S⁺[i] = S⁺[i] + τ₁/(h⁺ * Δx⁺) * K⁺[1] * D₁ᵀE₀[i] * U⁺[i]
-            S⁺[i] = S⁺[i] + α₀/(h⁺ * Δx⁺) * K⁺[1] * D₁E₀[i] * U⁺[i]
-        end
-
-    end
-
-end
 
 
-
-function (SI::SAT_Interface{NodeType{:Left,DIM},TT})(cache::AT,c::AT,rhs::AT) where {TT,DIM,AT}
+function (SI::SAT_Interface{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
     # rhs = u⁻ - u⁺
-    for (S⁺,U⁻,K⁺) in zip(SI.loopaxis(cache),SI.loopaxis(rhs),SI.loopaxis(c))
+    # println("Left ",u," ",buffer)
+    for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(cache),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁻[end] - U⁺[1])
         for i = 1:SI.order
             # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
-            S⁺[i] += K⁺[1] * (SI.τ₁*SI.D₁ᵀE₀[i] + SI.α₀*SI.D₁E₀[i]) * (U⁻[i] - S⁺[i])
+            S⁺[i] += SI.τ₁*K⁺[1]*SI.D₁ᵀE₀[i]*(U⁻[end] - U⁺[1])
+            S⁺[1] += SI.α₀ * K⁺[1] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
         end
-        S⁺[1] += -τ₀ * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
+        # S⁺[1] += -τ₀(K⁺[1]) * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
     end
 end
-function (SI::SAT_Interface{NodeType{:Right,DIM},TT})(cache::AT,c::AT,rhs::AT) where {TT,DIM,AT}
-    for (S⁻,U⁺,K⁻) in zip(SI.loopaxis(cache),SI.loopaxis(rhs),SI.loopaxis(c))
+function (SI::SAT_Interface{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    # println("Right ",u," ",buffer)
+    for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(cache),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
         for i = 1:SI.order
-            S⁻[i] += SI.τ₁ * K⁻[end] * (SI.D₁ᵀE₀[i] + SI.D₁E₀[i]) * U⁻[end-SI.order+i]
+            S⁻[end-SI.order+i] += SI.τ₁ * K⁻[end] * SI.D₁ᵀE₀[i] * (U⁻[end] - U⁺[1])
+            S⁻[end] += SI.α₀ * K⁻[end] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
         end
-        S⁻[end] += SI.τ₀ * U⁻[end]
+        # S⁻[end] += SI.τ₀ * U⁻[end]
     end
 end

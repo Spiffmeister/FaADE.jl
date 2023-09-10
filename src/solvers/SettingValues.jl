@@ -37,7 +37,6 @@ function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t
         Bound[i] = Δt*RHS(grid[i],t)
     end
 end
-
 """
     BoundaryConditions
 Sets the value of the boundary.
@@ -62,10 +61,15 @@ function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) where TT en
 """
 Calling boundaries for data blocks
 """
-function setBoundaryConditions!(D::newLocalDataBlockType{TT}) where TT
-    for B in D.boundary
-        setBoundaryCondition!(B,   D.SC.Δt, D.SC.t)
+function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
+    # for B in D.boundary
+    setBoundaryCondition!(D.boundary.BC_Left,   D.SC.Δt, D.SC.t)
+    setBoundaryCondition!(D.boundary.BC_Right,  D.SC.Δt, D.SC.t)
+    if DIM == 2
+        setBoundaryCondition!(D.boundary.BC_Up,     D.SC.Δt, D.SC.t)
+        setBoundaryCondition!(D.boundary.BC_Down,   D.SC.Δt, D.SC.t)
     end
+    # end
 end
 """
 Calling boundaries from multiblocks
@@ -84,24 +88,33 @@ function fillBuffers end
 function fillBuffers(B::newBoundaryData,args...) end
 function fillBuffers(source::Symbol,DB::newLocalDataBlock)
     S = getproperty(DB,source)
-    copyto!(DB.boundary.RHS_Left, getproperty(DB,source))
-    copyto!(DB.boundary.RHS_Right, getproperty(DB,source))
+    copyto!(DB.boundary.RHS_Left,   S)
+    copyto!(DB.boundary.RHS_Right,  S)
 end
 function fillBuffer!(source,B::newBoundaryData,args...) end
 function fillBuffer!(source::AT,B::newInterfaceBoundaryData,K::AT) where AT
-    B.BufferIn = source
+    B.BufferIn .= source
 end
 function fillBuffer(source::Symbol,B::newBoundaryData,DB::DataMultiBlock) end
 function fillBuffer(source::Symbol,B::newInterfaceBoundaryData,DB::DataMultiBlock)
     cache = getproperty(DB[B.Joint],source)
-    copyto!(B.BufferIn,cache)
+    # println(B.I)
+    # println("----------")
+    copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
 end
+
 function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(DB)
-        for B in DB[I].boundary
-            fillBuffer(source,B,DB)
-        end
+        # println(I)
+        BC = DB[I].boundary.BC_Left
+        # S = getproperty(DB[BC.Joint],source)
+        fillBuffer(source,BC,DB)
+
+        BC = DB[I].boundary.BC_Right
+        # S = getproperty(DB[BC.Joint],source)
+        fillBuffer(source,BC,DB)
     end
+    # println("buffer ",DB[1].boundary.BC_Right.BufferIn)
 end
 
 
@@ -136,18 +149,12 @@ end
 """
 function applySATs end
 function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    # for B in D.boundary
-        applySAT!(D.boundary.BC_Left,    dest, D.K, mode)
-        applySAT!(D.boundary.BC_Right,    dest, D.K, mode)
-        # applySAT!(D.B.BC_Up,    dest, D.K, mode)
-        # applySAT!(D.B.BC_Down,    dest, D.K, mode)
-    # end
+        applySAT!(D.boundary.BC_Left,   dest, D.K, mode)
+        applySAT!(D.boundary.BC_Right,  dest, D.K, mode)
 end
 function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    # for B in D.boundary
-    applySAT!(D.boundary.BC_Left,   dest, source, D.K, mode)
-    applySAT!(D.boundary.BC_Right,  dest, source, D.K, mode)
-    # end
+    applySAT!(D.boundary.BC_Left,   dest, D.K, source, mode)
+    applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
 end
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.B.BC_Left,   dest, D.K[1], mode)
@@ -233,15 +240,15 @@ end
     muladd!
 multiply-add for multiblock problems
 """
-@inline function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT}
+function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT<:AbstractArray{TT}}
     @. dest = α*dest + β*source
 end
-@inline function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α::TT,β::TT) where {TT}
+function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α::TT,β::TT) where {TT}
     W = getproperty(D,dest)
     R = getproperty(D,source)
     muladd!(W,R,α,β)
 end
-@inline function muladd!(dest::Symbol,source::Symbol,D::DataMultiBlock{TT};α=TT(1),β=TT(1)) where TT
+function muladd!(dest::Symbol,source::Symbol,D::DataMultiBlock{TT};α=TT(1),β=TT(1)) where TT
     for I in eachblock(D)
         muladd!(dest,source,D[I],α,β)
     end
@@ -249,16 +256,17 @@ end
 """
     setValue
 """
-@inline function setValue(dest::AT,source::AT,α::TT) where {AT,TT}
+@inline function setValue(dest::AT,source::AT,α::TT) where {TT<:Real,AT<:AbstractArray{TT}}
     @. dest = α*source
 end
-@inline function setValue(dest::Symbol,source::Symbol,D::newDataBlockType{TT},α=TT(1)) where TT
-    
+function setValue(dest::Symbol,source::Symbol,D::newLocalDataBlock{TT},α::TT) where TT
+    W = getproperty(D,dest)
+    R = getproperty(D,source)
+    setValue(W,R,α)
+end
+function setValue(dest::Symbol,source::Symbol,D::DataMultiBlock{TT},α=TT(1)) where TT
     for I in eachblock(D)
-        W = getproperty(D[I],dest)
-        R = getproperty(D[I],source)
-
-        setValue(W,R,α)
+        setValue(dest,source,D[I],α)
     end
 end
 

@@ -10,7 +10,7 @@ Fields:
  - `u`, `grid`, `Δt`, `t`, `problem`, `Δu`
 """
 mutable struct solution{TT,
-        AT<:AbstractArray{TT},
+        AT,
         GT<:GridType,
         PT<:Union{PDEProblem,newPDEProblem}}
     u       :: Vector{AT}
@@ -67,6 +67,8 @@ mutable struct solution{TT,
                         u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
                     end
                 end
+            elseif typeof(grid) <: GridMultiBlock{TT,1}
+                u = [prob.InitialCondition(grid.Grids[I].grid) for I in eachgrid(grid)]
             end
 
 

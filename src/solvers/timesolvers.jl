@@ -328,8 +328,8 @@ struct SolverData{method}
     adaptive :: Bool
 end
 
-function solve(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,COORD},Δt::TT,t_f::TT;
-        solver::Symbol=:cgie,adaptive::Bool=false) where {TT,DIM,COORD}
+function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
+        solver::Symbol=:cgie,adaptive::Bool=false) where {TT,DIM}
 
     SD = SolverData{solver}(adaptive)
 
@@ -339,7 +339,7 @@ function solve(P::newPDEProblem{TT,DIM},G::LocalGridType{TT,DIM,COORD},Δt::TT,t
 
 end
 
-function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
+function implicitsolve(P::newProblem1D,G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -359,7 +359,13 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
     DBlock = DataMultiBlock(P,G,Δt,0.0)
     soln = solution{TT}(G,0.0,Δt,P)
 
-    DBlock[1].u .= soln.u[1]
+    if typeof(G) <: LocalGridType
+        DBlock[1].u .= soln.u[1]
+    elseif typeof(G) <: GridMultiBlock
+        for I in eachblock(DBlock)
+            DBlock[I].u .= soln.u[1][I]
+        end
+    end
     
     t = Δt
     Δt₀ = Δt
@@ -421,7 +427,12 @@ function implicitsolve(P::newProblem1D,G::Grid1D,Δt::TT,t_f::TT,solverconfig::S
         # end 
     end
 
-    push!(soln.u,DBlock[1].u)
+    if typeof(G) <: LocalGridType
+        push!(soln.u,DBlock[1].u)
+    else
+        outu = [DBlock[I].u for I in eachblock(DBlock)]
+        push!(soln.u,outu)
+    end
     push!(soln.t,t)
     push!(soln.Δt,Δt)
 

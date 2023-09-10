@@ -37,6 +37,19 @@ struct SAT_Periodic{
         new{typeof(Internal),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
             Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
     end
+    function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
+        E₀D₁ = BoundaryDerivative(Left,Δx,order)
+        EₙD₁ = BoundaryDerivative(Right,Δx,order)
+
+        α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
+
+        loopaxis = SelectLoopDirection(axis)
+
+        new{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+            side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
+    end
 end
 
 
@@ -116,7 +129,7 @@ function (SP::SAT_Periodic{NodeType{:Internal,DIM},TT})(cache::AT,c::AT,u::AT) w
     end
 end
 
-function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT) where {TT,DIM,AT<:AbstractArray{TT}}
+function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT<:AbstractArray{TT}}
     # Left for split domain
     for (S,U,K,U⁻) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c),SP.loopaxis(buffer))
         # Dirichlet terms
@@ -126,10 +139,11 @@ function (SP::SAT_Periodic{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer
         for i = 1:SP.order
             S[i] += SP.τ₁*K[1]*SP.D₁ᵀE₀[i]*L₁u
         end
-        S[1] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U[1:SP.order]) - U⁻[end-1])
+        # S[1] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U[1:SP.order]) - K[1]*U⁻[end-1]) ## TODO: Implement buffer version
+        S[1] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U[1:SP.order]) - K[1]*dot(SP.EₙD₁,U⁻[end-SP.order+1:end]))
     end
 end
-function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT) where {TT,DIM,AT<:AbstractArray{TT}}
+function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT<:AbstractArray{TT}}
     # Right for split domain
     for (S,U,K,U⁺) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c),SP.loopaxis(buffer))
         # Dirichlet terms
@@ -139,7 +153,8 @@ function (SP::SAT_Periodic{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffe
         for i = 1:SP.order
             S[end-SP.order+i] += SP.τ₁*K[end]*SP.D₁ᵀEₙ[i]*L₁u
         end
-        S[end] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U⁺[1:SP.order]) - U⁺[2])
+        # S[end] += SP.α₀ * (K[1]*dot(SP.E₀D₁,U⁺[1:SP.order]) - U⁺[2])
+        S[end] += SP.α₀ * K[1]*(dot(SP.E₀D₁,U⁺[1:SP.order]) - dot(SP.EₙD₁,U[end-SP.order+1:end]))
     end
 end
 

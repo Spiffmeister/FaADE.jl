@@ -82,7 +82,6 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     # DBlock.uₙ₊₁ .= DBlock.u
 
     CGB.dₖ .= -CGB.rₖ # dₖ = -rₖ
-
     
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
@@ -168,31 +167,31 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
     # A!(CGB.rₖ,DBlock.u,DBlock)
-    A!(:u,DBlock,Δt)
+    A!(:u,DBlock)
     setValue(:rₖ,:cache,DBlock)
     muladd!(:rₖ,:b,DBlock,β=TT(-1)) #rₖ = rₖ - b
-    
+
     setValue(:dₖ,:rₖ,DBlock,TT(-1)) #dₖ = -rₖ
 
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     unorm = max(sqrt(innerprod(:rₖ,:rₖ,DBlock)),1e-14) #√(rₖ,rₖ)ₕ
+    # println("un+1 ",DBlock[1].uₙ₊₁)
     while (rnorm > rtol*unorm) & (i < maxIT)
         # Comm dₖ boundaries
-        A!(:dₖ,DBlock,Δt) # Adₖ = dₖ - Δt*D(dₖ)
+        A!(:dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #dₖAdₖ = (dₖ,Ddₖ)
         αₖ = -innerprod(:rₖ,:dₖ,DBlock)/dₖAdₖ #αₖ = -√(rₖ,dₖ)/dₖAdₖ
         muladd!(:uₙ₊₁,:dₖ,DBlock,β=αₖ) #uₙ₊₁ = uₙ + αₖdₖ
-        
         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
         # Comm uₙ₊₁ boundaries
-        A!(:uₙ₊₁,DBlock,Δt)
+        A!(:uₙ₊₁,DBlock)
         # @. CGB.rₖ = CGB.cache - CGB.b
         setValue(:rₖ,:cache,DBlock) # rₖ = cache
         muladd!(:rₖ,:b,DBlock,β=TT(-1))  # rₖ = rₖ - b
 
         # Comm rₖ boundaries
-        A!(:rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
+        A!(:rₖ,DBlock) # Drₖ = rₖ - Δt*D(rₖ)
         βₖ = innerprod(:rₖ,:cache,DBlock)/dₖAdₖ
 
         # @. CGB.dₖ = βₖ*CGB.dₖ - CGB.rₖ
@@ -230,7 +229,7 @@ end
     @. W = R - Δt*W
 end
 
-function A!(source::Symbol,DB::DataMultiBlock{TT,DIM},Δt::TT) where {TT,DIM}
+function A!(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     fillBuffers(source,DB)
     for i in eachblock(DB)
         # cache = u - Δt Du
@@ -239,7 +238,7 @@ function A!(source::Symbol,DB::DataMultiBlock{TT,DIM},Δt::TT) where {TT,DIM}
         # Compute the derivatives
         DB[i].Derivative(C,U,DB[i].K)
         applySATs(C,U,DB[i],SolutionMode) #Apply the SATs
-        muladd!(C,U,-Δt,TT(1))
+        muladd!(C,U,-DB[i].SC.Δt,TT(1))
         # @. DB[i].cache = U - Δt*DB[i].cache
 
         # A!(DB[i].cache,U,DB[i],Δt)

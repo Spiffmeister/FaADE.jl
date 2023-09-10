@@ -53,13 +53,19 @@ struct newInterfaceBoundaryData{
     BufferIn    :: AT
     Joint       :: Int64
     DIM         :: Int64
+    I           :: CartesianIndices
 
-    function newInterfaceBoundaryData{TT}(G::Grid1D,BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newInterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::DerivativeOrder{O}) where {TT,O}
 
         BufferIn    = zeros(TT,O)
         BufferOut   = zeros(TT,O)
+        if BC.side == Right
+            I = CartesianIndices((1:O,))
+        elseif BC.side == Left
+            I = CartesianIndices((length(G2)-O+1:length(G2),))
+        end
 
-        new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,J,1)
+        new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
     end
 end
 struct newBoundaryConditions{DIM,
@@ -74,10 +80,38 @@ struct newBoundaryConditions{DIM,
     BC_Down     :: BCDT
 
     function newBoundaryConditions(P::newPDEProblem{TT,1},G::LocalGridType) where TT
-        BCL = newBoundaryData{TT}(G,P.BoundaryConditions.BoundaryLeft,0,P.order)
-        BCR = newBoundaryData{TT}(G,P.BoundaryConditions.BoundaryRight,0,P.order)
+        BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
+        BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
         BCU = nothing
         BCD = nothing
+
+        new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,nothing,nothing)
+    end
+    function newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64) where TT
+
+        J = G.Joint[I]
+        if length(J) == 1
+            if J[1][2] == Left
+                BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[I].Δx,J[1][2],1,GetOrder(P.order))
+
+                BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
+                BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,J[1][1],P.order)
+            elseif J[1][2] == Right
+                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J[1][1]].Δx,J[1][2],1,GetOrder(P.order))
+                
+                BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J[1][1],P.order)
+                BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCRt,J[1][1],P.order)
+            end
+        else
+            BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[I].Δx,J[1][2],1,GetOrder(P.order))
+            BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J[2][1]].Δx,J[2][2],1,GetOrder(P.order))
+
+            BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
+            BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2][1]],BCRt,J[2][1],P.order)
+        end
+
+        # BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
+        # BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
 
         new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,nothing,nothing)
     end
@@ -90,6 +124,11 @@ Base.getindex(B::newBoundaryConditions,N::NodeType{:Left})  = B.BC_Left
 Base.getindex(B::newBoundaryConditions,N::NodeType{:Right}) = B.BC_Right
 Base.getindex(B::newBoundaryConditions,N::NodeType{:Up})    = B.BC_Up
 Base.getindex(B::newBoundaryConditions,N::NodeType{:Down})  = B.BC_Down
+
+_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Periodic},J,order) where TT  = newInterfaceBoundaryData{TT}(G1,G2,BC,J,order)
+_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},J,order) where TT = newInterfaceBoundaryData{TT}(G1,G2,BC,J,order)
+_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},J,order) where TT = newBoundaryData{TT}(G,BC,J,order)
+_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},J,order) where TT   = newBoundaryData{TT}(G,BC,J,order)
 
 #========== BOUNDARY DATA ==========#
 """
@@ -129,53 +168,6 @@ struct newBoundaryData1D{TT,
         RightIndex  = CartesianIndices((lastindex(G)-O+1:lastindex(G),))
 
         new{TT,typeof(BCL),typeof(BCR),typeof(LeftIndex),typeof(u_Left)}(BCL,BCR,1,1,LeftIndex,RightIndex,LeftIndex,u_Left,u_Right,[0.0],[0.0])
-    end
-    function newBoundaryData1D(G::GridMultiBlock{TT,DIM},order::DerivativeOrder{O},SATB,i::Int64) where {TT,DIM,O}
-
-        nnodes = SATNodeOutput(O)
-
-        u_Left = zeros(TT,nnodes)
-        u_Right = zeros(TT,nnodes)
-
-        LeftIndex = CartesianIndices((1:O,))
-        RightIndex = CartesianIndices((lastindex(G[i])-O+1:lastindex(G[i]),))
-
-        J = filter(t -> (t[1] == i || t[2] == i), G.Joint)
-
-        # Decide which indicies need to be written to
-        J = filter(t -> t[1] == i, G.Joint)
-        println(J)
-        if isempty(J)
-            JL = i
-            IL = LeftIndex
-        else
-            J = J[1]
-            JL = J[2]
-            if J[3] == Left
-                IL = RightIndex
-            elseif J[3] == Right
-                IL = LeftIndex
-            end
-            # SATL = SATB.BoundaryLeft
-        end
-        J = filter(t -> t[2] == i, G.Joint)
-        if isempty(J)
-            JR = i
-            IR = RightIndex
-        else
-            J = J[1]
-            JR = J[1]
-            if J[3] == Left
-                IR = RightIndex
-            elseif J[3] == Right
-                IR = LeftIndex
-            end
-            # SATR = SATB.BoundaryRight
-        end
-        SATL = SATB.BoundaryLeft
-        SATR = SATB.BoundaryRight
-
-        new{TT,typeof(SATL),typeof(SATR),typeof(LeftIndex),typeof(u_Left)}(SATL,SATR,JL,JR,IL,IR,LeftIndex,u_Left,u_Right,[0.0],[0.0])
     end
 end
 
@@ -264,10 +256,10 @@ mutable struct newLocalDataBlock{TT<:Real,
         KT,
         GT <: GridType,
         BT,#  <: BoundaryStorage{TT,DIM,AT},
-        BCLT <: BoundaryStorage,
-        BCRT <: BoundaryStorage,
-        BCUT <: Union{BoundaryStorage,Nothing},
-        BCDT <: Union{BoundaryStorage,Nothing},
+        # BCLT <: Union{BoundaryStorage,Nothing},
+        # BCRT <: Union{BoundaryStorage,Nothing},
+        # BCUT <: Union{BoundaryStorage,Nothing},
+        # BCDT <: Union{BoundaryStorage,Nothing},
         DT  <: DerivativeOperator,
         } <: newLocalDataBlockType{TT,DIM}
     u           :: AT
@@ -279,14 +271,14 @@ mutable struct newLocalDataBlock{TT<:Real,
     grid        :: GT
     
     boundary    :: BT
-    BC_Left     :: BCLT
-    BC_Right    :: BCRT
-    BC_Up       :: BCUT
-    BC_Down     :: BCDT
+    # BC_Left     :: BCLT
+    # BC_Right    :: BCRT
+    # BC_Up       :: BCUT
+    # BC_Down     :: BCDT
 
     Derivative  :: DT
 
-
+    # Parallel    :: Parallel
 
     innerprod :: innerH{TT,DIM,Vector{TT}}
     cache     :: AT
@@ -302,16 +294,15 @@ mutable struct newLocalDataBlock{TT<:Real,
 
         if typeof(P.K) <: Real
             K .= P.K
+        elseif typeof(P.K) <: Function
+            for i in eachindex(G)
+                K[i] .= P.K(G[i])
+            end
         end
 
         # BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions.BoundaryLeft,P.BoundaryConditions.BoundaryRight)
-        
-        Bstor = newBoundaryConditions(P,G)
+        BStor = newBoundaryConditions(P,G)
 
-        BCL = newBoundaryData{TT}(G,P.BoundaryConditions.BoundaryLeft,0,P.order)
-        BCR = newBoundaryData{TT}(G,P.BoundaryConditions.BoundaryRight,0,P.order)
-        BCU = nothing
-        BCD = nothing
 
         IP = innerH(G,GetOrder(P.order))
         
@@ -321,22 +312,31 @@ mutable struct newLocalDataBlock{TT<:Real,
 
 
         # new{TT,1,typeof(u),typeof(P.K),typeof(BStor),typeof(D)}(u,uₙ₊₁,K,P.K,BStor,D,IP,cache,rₖ,dₖ,b,SC)
-        new{TT,1,typeof(u),typeof(P.K),typeof(G),typeof(Bstor),typeof(BCL),typeof(BCR),Nothing,Nothing,typeof(D)}(u,uₙ₊₁,K,P.K,G,Bstor,BCL,BCR,BCU,BCD,D,IP,cache,rₖ,dₖ,b,SC)
+        new{TT,1,typeof(u),typeof(P.K),typeof(G),typeof(BStor),typeof(D)}(u,uₙ₊₁,K,P.K,G,BStor,D,IP,cache,rₖ,dₖ,b,SC)
     end
-    # function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
-    #     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G.Grids[I])
+    function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
+        u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G.Grids[I])
 
-    #     BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions,I)
+        if typeof(P.K) <: Real
+            K .= P.K
+        elseif typeof(P.K) <: Function
+            for i in eachindex(G)
+                K[i] .= P.K(G[i])
+            end
+        end
 
-    #     IP = innerH(G.Grids[I],GetOrder(P.order))
+        # BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions,I)
+        BStor = newBoundaryConditions(P,G,I)
 
-    #     D = DerivativeOperator{TT,1,typeof(P.order),true,false,false}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
 
-    #     SC = StepConfig{TT}()
+        IP = innerH(G.Grids[I],GetOrder(P.order))
 
-    #     new{TT,1,typeof(u),typeof(P.K),typeof(BStor),typeof(D)}(u,uₙ₊₁,K, P.K, BStor, D, IP, cache,rₖ,dₖ,b,SC)
+        D = DerivativeOperator{TT,1,typeof(P.order),true,false,false}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
 
-    # end
+        SC = StepConfig{TT}()
+
+        new{TT,1,typeof(u),typeof(P.K),typeof(G),typeof(BStor),typeof(D)}(u,uₙ₊₁,K, P.K, G, BStor, D, IP, cache,rₖ,dₖ,b,SC)
+    end
 end
 @inline function Base.getproperty(D::newLocalDataBlock,s::Symbol)
     return getfield(D,s)
@@ -361,9 +361,13 @@ struct DataMultiBlock{TT<:Real,
         new{TT,DIM,typeof(DTA)}(DTA,SC,length(DTA))
     end
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT) where {TT,DIM}
-        DTA = [newLocalDataBlock(P,G,I) for I in eachgrid(G)]
+        # DTA = [newLocalDataBlock(P,G,I)]
+        DTA = []
+        for I in eachgrid(G)
+            push!(DTA, newLocalDataBlock(P,G,I))
+        end
         SC = StepConfig{TT}(t,Δt)
-        new{TT,DIM,typeof(DTA)}(DTA,SC,nothing,length(DTA))
+        new{TT,DIM,typeof(DTA)}(DTA,SC,length(DTA))
     end
     # function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM,MET},Δt::TT,t::TT) where {TT,DIM,MET}
     #     DTA = [newLocalDataBlock(P,Grid,Δt) for Grid in G.Grids]
