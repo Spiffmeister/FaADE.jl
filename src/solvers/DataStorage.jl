@@ -21,6 +21,10 @@ end
 
 #========== NEW  DATA ==============#
 
+"""
+    newBoundaryData
+Container for Dirichlet, Neumann and Robin boundary conditions.
+"""
 struct newBoundaryData{
         TT<:Real,
         DIM,
@@ -42,6 +46,10 @@ struct newBoundaryData{
         new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
     end
 end
+"""
+    newInterfaceBoundaryData
+Container for Periodic and Interface boundary conditions.
+"""
 struct newInterfaceBoundaryData{
         TT<:Real,
         DIM,
@@ -68,6 +76,10 @@ struct newInterfaceBoundaryData{
         new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
     end
 end
+"""
+    newBoundaryConditions
+Container for all boundary conditions
+"""
 struct newBoundaryConditions{DIM,
         BCLT,
         BCRT,
@@ -79,15 +91,25 @@ struct newBoundaryConditions{DIM,
     BC_Up       :: BCUT
     BC_Down     :: BCDT
 
+    """
+        newBoundaryConditions(P::newPDEProblem{TT,1},G::LocalGridType)
+    """
     function newBoundaryConditions(P::newPDEProblem{TT,1},G::LocalGridType) where TT
         BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
         BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
-        BCU = nothing
-        BCD = nothing
-
-        new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,nothing,nothing)
+        if DIM == 1
+            BCU = nothing
+            BCD = nothing
+        elseif DIM ==2
+            BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryUp,1,P.order)
+            BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryDown,1,P.order)
+        end
+        new{1,typeof(BCL),typeof(BCR),typeof(BCU),typeof(BCD)}(BCL,BCR,BCU,BCD)
     end
-    function newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64) where TT
+    """
+        newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64)
+    """
+    function newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64) where {TT}
 
         J = G.Joint[I]
         if length(J) == 1
@@ -110,12 +132,44 @@ struct newBoundaryConditions{DIM,
             BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2][1]],BCRt,J[2][1],P.order)
         end
 
-        # BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
-        # BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
+        BCU = nothing
+        BCD = nothing
 
-        new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,nothing,nothing)
+        new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,BCU,BCD)
+    end
+    function newBoundaryConditions(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Int64) where {TT}
+        J = G.Joint[I]
+
+        faces = [Left,Right,Up,Down]
+        Pfaces = [:BoundaryLeft,:BoundaryRight,:BoundaryUp,:BoundaryDown]
+
+        BCS = []
+        
+        if length(G.Joint[I]) != 4
+            error("Insufficient information to set up block boundary conditions")
+        end
+
+        # Loop over joints
+        for i in 1:length(G.Joint[I])
+        # for J in G.Joint[I]
+            J = G.Joint[I][i]
+            if J[1] == I
+                BCt = getfield(P.BoundaryConditions,Pfaces[i])
+                BC = _newBoundaryCondition(G[I],BC,J[1],P.order)
+                push!(BCS,BC)
+            else
+                BCt = SAT_Interface(G.Grids[J[1]].Δx,G.Grids[I].Δx,J[2],GetAxis(J[2]),GetOrder(P.order))
+                BC = _newBoundaryCondition(G[I],G.Grids[J[1]],BCt,J[1],P.order)
+                push!(BCS,BC)
+            end
+        end
+        new{2,typeof(BCS[1]),typeof(BCS[2]),typeof(BCS[3]),typeof(BCS[4])}(BCS[1],BCS[2],BCS[3],BCS[4])
     end
 end
+function _makebounds(B)
+    
+end
+
 function Base.iterate(B::newBoundaryConditions{DIM,BCLT,BCRT,BCUT,BCDT},state=0) where {DIM,BCLT,BCRT,BCUT,BCDT}
     state >= 2DIM && return
     return Base.getfield(B,state+1), state+1
@@ -255,11 +309,7 @@ mutable struct newLocalDataBlock{TT<:Real,
         AT  <: AbstractArray{TT},
         KT,
         GT <: GridType,
-        BT,#  <: BoundaryStorage{TT,DIM,AT},
-        # BCLT <: Union{BoundaryStorage,Nothing},
-        # BCRT <: Union{BoundaryStorage,Nothing},
-        # BCUT <: Union{BoundaryStorage,Nothing},
-        # BCDT <: Union{BoundaryStorage,Nothing},
+        BT,
         DT  <: DerivativeOperator,
         } <: newLocalDataBlockType{TT,DIM}
     u           :: AT
@@ -271,10 +321,6 @@ mutable struct newLocalDataBlock{TT<:Real,
     grid        :: GT
     
     boundary    :: BT
-    # BC_Left     :: BCLT
-    # BC_Right    :: BCRT
-    # BC_Up       :: BCUT
-    # BC_Down     :: BCDT
 
     Derivative  :: DT
 
@@ -300,9 +346,7 @@ mutable struct newLocalDataBlock{TT<:Real,
             end
         end
 
-        # BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions.BoundaryLeft,P.BoundaryConditions.BoundaryRight)
         BStor = newBoundaryConditions(P,G)
-
 
         IP = innerH(G,GetOrder(P.order))
         
@@ -310,8 +354,6 @@ mutable struct newLocalDataBlock{TT<:Real,
 
         SC = StepConfig{TT}()
 
-
-        # new{TT,1,typeof(u),typeof(P.K),typeof(BStor),typeof(D)}(u,uₙ₊₁,K,P.K,BStor,D,IP,cache,rₖ,dₖ,b,SC)
         new{TT,1,typeof(u),typeof(P.K),typeof(G),typeof(BStor),typeof(D)}(u,uₙ₊₁,K,P.K,G,BStor,D,IP,cache,rₖ,dₖ,b,SC)
     end
     function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
@@ -325,9 +367,7 @@ mutable struct newLocalDataBlock{TT<:Real,
             end
         end
 
-        # BStor = newBoundaryData1D(G,P.order,P.BoundaryConditions,I)
         BStor = newBoundaryConditions(P,G,I)
-
 
         IP = innerH(G.Grids[I],GetOrder(P.order))
 
@@ -385,7 +425,6 @@ Base.length(DB::DataMultiBlock) = DB.nblock
 
 Base.ndims(DB::DataMultiBlock{TT,DIM}) where {TT,DIM} = DIM
 
-# Base.getindex(BB::newBoundaryData1D,i::Integer) = BB.
 @inline eachjoint(BB::newBoundaryData1D) = Base.OneTo(2)
 
 
