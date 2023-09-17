@@ -56,10 +56,10 @@ struct newProblem2D{TT      <: Real,
         DO = DerivativeOrder{order}()
 
         # new(u₀,Kx,Ky,order,BoundaryConditions(Bounds))
-        new{TT,2,typeof(Kx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,DO,BCs)
+        new{TT,2,typeof(Kx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,DO,BCs,Par)
     end
 end
-
+newProblem2D(order,u₀,Kx,Ky,G,BCs) = newProblem2D(order,u₀,Kx,Ky,G,BCs,nothing,nothing)
 
 
 

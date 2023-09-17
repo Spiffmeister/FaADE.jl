@@ -19,64 +19,88 @@ mutable struct solution{TT,
     t       :: Vector{TT}
     problem :: PT
     Δu      :: TT
-    
-    function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
-        if preallocate
-            N = ceil(Int64,t/Δt)
-            n = length(x)
-            u = [zeros(Float64,n) for _ in 1:N]
-
-            u[1] = u₀
-
-            new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
-        else #If an adaptive time step is being used, preallocation is impossible
-
-            if typeof(grid) <: Grid1D
-                u = prob.InitialCondition.(grid.grid)
-            elseif typeof(grid) <: Grid2D
-                u = zeros(TT,(grid.nx,grid.ny))
-                for j = 1:grid.ny
-                    for i = 1:grid.nx
-                        u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
-                    end
-                end
-            end
-
-
-            new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
-        end
-
-    end
-    function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::newPDEProblem;preallocate=false) where TT
-        if preallocate
-            N = ceil(Int64,t/Δt)
-            n = length(x)
-            u = [zeros(Float64,n) for _ in 1:N]
-
-            u[1] = u₀
-
-            new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
-        else #If an adaptive time step is being used, preallocation is impossible
-
-            if typeof(grid) <: Grid1D
-                u = prob.InitialCondition.(grid.grid)
-            elseif typeof(grid) <: Grid2D
-                u = zeros(TT,(grid.nx,grid.ny))
-                for j = 1:grid.ny
-                    for i = 1:grid.nx
-                        u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
-                    end
-                end
-            elseif typeof(grid) <: GridMultiBlock{TT,1}
-                u = [prob.InitialCondition(grid.Grids[I].grid) for I in eachgrid(grid)]
-            end
-
-
-            new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
-        end
-
-    end
 end
+"""
+    solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
+"""
+function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
+    if preallocate
+        N = ceil(Int64,t/Δt)
+        n = length(x)
+        u = [zeros(Float64,n) for _ in 1:N]
+
+        u[1] = u₀
+
+        new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
+    else #If an adaptive time step is being used, preallocation is impossible
+
+        if typeof(grid) <: Grid1D
+            u = prob.InitialCondition.(grid.grid)
+        elseif typeof(grid) <: Grid2D
+            u = zeros(TT,(grid.nx,grid.ny))
+            for j = 1:grid.ny
+                for i = 1:grid.nx
+                    u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
+                end
+            end
+        end
+
+
+        new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+    end
+
+end
+"""
+    solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
+"""
+function solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
+
+    if typeof(grid) <: Grid1D
+        u = prob.InitialCondition.(grid.grid)
+    elseif typeof(grid) <: Grid2D
+        u = zeros(TT,(grid.nx,grid.ny))
+        for j = 1:grid.ny
+            for i = 1:grid.nx
+                u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
+            end
+        end
+    end
+
+
+    new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+end
+"""
+    solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT
+1 dimensional multiblock problems
+"""
+function solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT
+    u = [prob.InitialCondition(G.Grids[I].grid) for I in eachgrid(G)]
+    
+    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0)
+end
+"""
+    solution(G::GridMultiBlock{TT,2},t::TT,Δt::TT,prob::newPDEProblem) where TT
+2 dimensional multiblock problems
+"""
+function solution(G::GridMultiBlock{TT,2},t::TT,Δt::TT,prob::newPDEProblem) where TT
+    u = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
+
+    for I in eachgrid(G)
+        LG = G.Grids[I]
+        for j = 1:LG.ny
+            for i =1:LG.nx
+                u[I][i,j] = prob.InitialCondition(LG[i,j]...)
+            end
+        end
+    end
+
+    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0)
+end
+
+
+
+
+
 
 
 function setInitialCondition end

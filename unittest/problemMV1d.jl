@@ -4,44 +4,80 @@ using FaADE
 # using ProfileView
 # using Cthulhu
 
-#=
-D1 = Grid1D([0.0,0.5],6)
-D2 = Grid1D([0.5,1.0],6)
-=#
 
 order = 2
 K = 1.0
 
 Δt = 0.01
-t = 0.02
-
-sG1 = Grid1D([0.0,1.0],11)
-
+t = 10.0
 
 u₀(x) = x.^2
-# u₀(x) = sin.(2π*x*2 .+ 1.0)
-
-Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1, order)
-Dr = FaADE.SATs.SAT_Dirichlet(x->1.0,sG1.Δx,Right,1,order)
-# Dl = FaADE.SATs.SAT_Dirichlet(t->sin(1.0),sG1.Δx,Left,1,order)
-# Dr = FaADE.SATs.SAT_Dirichlet(t->sin(4π + 1.0),sG1.Δx,Right,1,order)
-
-B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
-
-# PL = FaADE.SATs.SAT_Periodic(sG1.Δx,1,order,Left)
-# PR = FaADE.SATs.SAT_Periodic(sG1.Δx,1,order,Right)
-# B1 = FaADE.SATs.SATBoundaries(PL,PR)
 
 
-P1 = newProblem1D(order,u₀,K,sG1,B1)
+#=
+Dom1V = Grid1D([0.0,1.0],21)
+
+Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
+BD1V = FaADE.SATs.SATBoundaries(Dl,Dr)
+
+P1V = newProblem1D(order,u₀,K,Dom1V,BD)
+
+println("Solving")
+soln = solve(P1V,Dom1V,Δt,t)
+=#
+
+#= =#
+
+
+D1 = Grid1D([0.0,0.5],11)
+D2 = Grid1D([0.5,1.0],11)
+
+Joints = [[(2,Right)],
+            [(1,Left)]]
+
+Dom2V = GridMultiBlock([D1,D2],Joints)
+
+Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
+BD = FaADE.SATs.SATBoundaries(Dl,Dr)
+
+P2V = newProblem1D(order,u₀,K,Dom2V,BD)
+
+println("Solving")
+@time soln = solve(P2V,Dom2V,Δt,t)
+
+
+
+#=
+D1 = Grid1D([0.0,0.35],8)
+D2 = Grid1D([0.35,0.65],7)
+D3 = Grid1D([0.65,1.0],8)
+
+Joints = [[(2,Right)],
+            [(1,Left),(3,Right)],
+            [(2,Left)]]
+
+Dom3V = GridMultiBlock([D1,D2,D3],Joints)
+
+Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
+BD = FaADE.SATs.SATBoundaries(Dl,Dr)
+
+P3V = newProblem1D(order,u₀,K,Dom3V,BD)
+
+
+println("Solving")
+@time soln = solve(P3V,Dom3V,Δt,t)
+=#
+
+
 
 # DBlock = FaADE.solvers.DataMultiBlock(P1,sG1,0.1,0.0)
 # DBlock = FaADE.solvers.MultiDataBlock(P1,sG1)
 
 # CGBlock = FaADE.solvers.ConjGradMultiBlock(sG1,P1.order)
 
-println("Solving")
-soln = solve(P1,sG1,Δt,t)
 # @profview soln1d = solve(P1,sG1,Δt,t)
 # @profview soln1d = solve(P1,sG1,Δt,t)
 # @benchmark solve($P1,$sG1,$Δt,$t)

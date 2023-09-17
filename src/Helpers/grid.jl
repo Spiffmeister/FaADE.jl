@@ -102,7 +102,7 @@ struct GridMultiBlock{TT  <: Real,
         MET,
         TG,
         TJ,
-        IT <: AbstractArray{Int}} <: GridType{TT,DIM,MET}
+        IT} <: GridType{TT,DIM,MET}
     
     Grids   :: TG
     Joint   :: TJ
@@ -118,7 +118,7 @@ struct GridMultiBlock{TT  <: Real,
         
         inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
 
-        new{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,[1])
+        new{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds)
     end
 end
 """
@@ -200,3 +200,6 @@ Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i],G.gridy[j])
 
 Base.lastindex(G::Grid1D) = G.n
 Base.lastindex(G::Grid2D) = size(G)
+
+
+Base.eltype(G::GridType{TT}) where TT = TT

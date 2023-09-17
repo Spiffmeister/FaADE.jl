@@ -157,16 +157,16 @@ function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where
     applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
 end
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.B.BC_Left,   dest, D.K[1], mode)
-    applySAT!(D.B.BC_Right,  dest, D.K[1], mode)
-    applySAT!(D.B.BC_Up,     dest, D.K[2], mode)
-    applySAT!(D.B.BC_Down,   dest, D.K[2], mode)
+    applySAT!(D.boundary.BC_Left,   dest, D.K[1], mode)
+    applySAT!(D.boundary.BC_Right,  dest, D.K[1], mode)
+    applySAT!(D.boundary.BC_Up,     dest, D.K[2], mode)
+    applySAT!(D.boundary.BC_Down,   dest, D.K[2], mode)
 end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.B.BC_Left,   dest, source, D.K[1], mode)
-    applySAT!(D.B.BC_Right,  dest, source, D.K[1], mode)
-    applySAT!(D.B.BC_Up,     dest, source, D.K[2], mode)
-    applySAT!(D.B.BC_Down,   dest, source, D.K[2], mode)
+    applySAT!(D.boundary.BC_Left,   dest, source, D.K[1], mode)
+    applySAT!(D.boundary.BC_Right,  dest, source, D.K[1], mode)
+    applySAT!(D.boundary.BC_Up,     dest, source, D.K[2], mode)
+    applySAT!(D.boundary.BC_Down,   dest, source, D.K[2], mode)
 end
 """
 Multiblock version
@@ -196,7 +196,11 @@ function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
     end
 end
 @inline function setDiffusionCoefficient!(κ::TT,K::AbstractArray{TT},grid::GridType) where {TT<:Real} end
-@inline setDiffusionCoefficient!(D::newLocalDataBlock,grid::GridType) = setDiffusionCoefficient!(D.κ,D.K,grid)
+@inline setDiffusionCoefficient!(D::newLocalDataBlock{TT,1},grid::GridType) where TT = setDiffusionCoefficient!(D.κ,D.K,grid)
+@inline function setDiffusionCoefficient!(D::newLocalDataBlock{TT,2},grid::GridType) where TT
+    setDiffusionCoefficient!(D.κ[1],D.K[1],grid)
+    setDiffusionCoefficient!(D.κ[2],D.K[2],grid)
+end
 function setDiffusionCoefficient!(D::DataMultiBlock,grid::GridType)
     for I in eachblock(D)
         setDiffusionCoefficient!(D[I],grid)

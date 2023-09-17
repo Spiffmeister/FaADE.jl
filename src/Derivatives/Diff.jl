@@ -45,3 +45,7 @@ function (DO::DerivativeOperator{TT,1,ORD,true,false,false})(cache::VT,u::VT,K::
 end
 
 
+function (DO::DerivativeOperator{TT,2,ORD,true,false,false})(cache::AT,u::AT,K::KT) where {TT,ORD,AT,KT}
+    D₂!(cache,u,K[1],K[2],DO.nx,DO.ny,DO.Δx,DO.Δy,DO.order,DO.order)
+    cache
+end

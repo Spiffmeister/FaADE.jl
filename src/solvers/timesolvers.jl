@@ -339,7 +339,7 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
 
 end
 
-function implicitsolve(P::newProblem1D,G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
+function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -357,7 +357,7 @@ function implicitsolve(P::newProblem1D,G::GridType,Δt::TT,t_f::TT,solverconfig:
     end
 
     DBlock = DataMultiBlock(P,G,Δt,0.0)
-    soln = solution{TT}(G,0.0,Δt,P)
+    soln = solution(G,0.0,Δt,P)
 
     if typeof(G) <: LocalGridType
         DBlock[1].u .= soln.u[1]

@@ -31,9 +31,9 @@ struct SATBoundaries{SATL<:SimultanousApproximationTerm,
         elseif length(BCs) == 2
             new{typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
         elseif length(BCs) == 3
-            new{typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),Nothing}(BCs[1][1],BCs[2][1],BCs[3][1],nothing)
+            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),Nothing}(BCs[1],BCs[2],BCs[3],nothing)
         else
-            new{typeof(BCs[1][1]),typeof(BCs[2][1]),typeof(BCs[3][1]),typeof(BCs[4][1])}(BCs[1][1],BCs[2][1],BCs[3][1],BCs[4][1])
+            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),typeof(BCs[4])}(BCs[1],BCs[2],BCs[3],BCs[4])
         end
     end
 end
