@@ -331,15 +331,19 @@ end
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         solver::Symbol=:cgie,adaptive::Bool=false) where {TT,DIM}
 
-    SD = SolverData{solver}(adaptive)
-
+        
     if solver == :cgie
-        implicitsolve(P,G,Δt,t_f,SD)
-    end
+        SD = SolverData{solver}(adaptive)
+        DBlock = DataMultiBlock(P,G,Δt,0.0)
+        soln = solution(G,0.0,Δt,P)
 
+        # implicitsolve(P,G,Δt,t_f,SD)
+        implicitsolve(soln,DBlock,P,G,Δt,t_f,SD)
+    end
 end
 
-function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
+# function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
+function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -351,13 +355,13 @@ function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solv
     # end
     target_state = TT(1)
 
-    penalty_function_enabled = true
-    if typeof(P.Parallel) <: Nothing
-        penalty_function_enabled = false
-    end
+    penalty_function_enabled = DBlock.parallel
+    # if typeof(DBlock.parallel) <: Nothing
+    #     penalty_function_enabled = false
+    # end
 
-    DBlock = DataMultiBlock(P,G,Δt,0.0)
-    soln = solution(G,0.0,Δt,P)
+    # DBlock = DataMultiBlock(P,G,Δt,0.0)
+    # soln = solution(G,0.0,Δt,P)
 
     if typeof(G) <: LocalGridType
         DBlock[1].u .= soln.u[1]
@@ -380,7 +384,7 @@ function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solv
         end
         
         setBoundaryConditions!(DBlock)
-        setDiffusionCoefficient!(DBlock,G)
+        setDiffusionCoefficient!(DBlock)
         
         applySATs(:b,DBlock,DataMode)
         
@@ -394,10 +398,13 @@ function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solv
             end
 
             # USED FOR DETERMINING EQUILIBRIUM
-            DBlock.SC.Δu = TT(0)
+            # DBlock.SC.Δu = TT(0)
             for i in eachblock(DBlock)
-                DBlock.SC.Δu += norm(DBlock[i].u .- DBlock[i].uₙ₊₁)/norm(DBlock[i].u)
+                # DBlock.SC.Δu += norm(DBlock[i].u .- DBlock[i].uₙ₊₁)/norm(DBlock[i].u)
+                relerr(DBlock[i])
             end
+            collectΔu(DBlock)
+
             # DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
             if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t

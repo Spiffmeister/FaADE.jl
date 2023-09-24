@@ -12,7 +12,7 @@ struct newProblem1D{TT      <: Real,
     ST      <: SourceTerm,
     DO      <: DerivativeOrder,
     SATB    <: SATBoundaries,
-    PART    <: Union{ParallelData,Nothing}
+    PART    # Parallel map, vector of parallel map, or nothing
         } <: newPDEProblem{TT,DIMS}
     InitialCondition    :: Function
     K                   :: DCT
@@ -40,7 +40,7 @@ struct newProblem2D{TT      <: Real,
         ST      <: SourceTerm,
         DO      <: DerivativeOrder,
         SATB    <: SATBoundaries,
-        PART    <: Union{ParallelData,Nothing}
+        PART    # Parallel map, vector of parallel map, or nothing
             } <: newPDEProblem{TT,DIM}
     InitialCondition    :: Function
     Kx                  :: DCT

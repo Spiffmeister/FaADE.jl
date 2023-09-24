@@ -1,8 +1,9 @@
 
 using FaADE
-# using BenchmarkTools
-# using ProfileView
-# using Cthulhu
+using BenchmarkTools
+using ProfileView
+using Cthulhu
+using Profile
 
 
 order = 2
@@ -14,24 +15,26 @@ t = 10.0
 u₀(x) = x.^2
 
 
-#=
-Dom1V = Grid1D([0.0,1.0],21)
 
+
+Dom1V = Grid1D([0.0,1.0],1001)
 Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
 BD1V = FaADE.SATs.SATBoundaries(Dl,Dr)
-
-P1V = newProblem1D(order,u₀,K,Dom1V,BD)
-
+P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
 println("Solving")
-soln = solve(P1V,Dom1V,Δt,t)
-=#
+@benchmark solve($P1V,$Dom1V,$Δt,$t)
+
+# DBlock = FaADE.solvers.DataMultiBlock(P1V,Dom1V,0.0,0.0)
+# @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
+# @code_warntype DBlock[1].boundary[Left]
+
 
 #= =#
 
 
-D1 = Grid1D([0.0,0.5],11)
-D2 = Grid1D([0.5,1.0],11)
+D1 = Grid1D([0.0,0.5],501)
+D2 = Grid1D([0.5,1.0],501)
 
 Joints = [[(2,Right)],
             [(1,Left)]]
@@ -45,9 +48,17 @@ BD = FaADE.SATs.SATBoundaries(Dl,Dr)
 P2V = newProblem1D(order,u₀,K,Dom2V,BD)
 
 println("Solving")
-@time soln = solve(P2V,Dom2V,Δt,t)
+# Profile.clear_malloc_data()
+# soln = solve(P2V,Dom2V,Δt,t)
+# Profile.clear_malloc_data()
+soln = solve(P2V,Dom2V,Δt,t)
+# @profview soln_tmpa = solve(P2V,Dom2V,Δt,t)
+# @profview soln_tmpb = solve(P2V,Dom2V,Δt,t)
+@benchmark solve($P2V,$Dom2V,$Δt,$t)
 
-
+# DBlock = FaADE.solvers.DataMultiBlock(P2V,Dom2V,0.0,0.0)
+# @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
+# @code_warntype DBlock[1].boundary[Left]
 
 #=
 D1 = Grid1D([0.0,0.35],8)

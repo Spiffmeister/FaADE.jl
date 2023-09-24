@@ -46,14 +46,14 @@ function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=
         end
 
 
-        new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+        return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
     end
 
 end
 """
     solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
 """
-function solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
+function solution(grid::LocalGridType{TT},t::TT,Δt::TT,prob::newPDEProblem) where TT
 
     if typeof(grid) <: Grid1D
         u = prob.InitialCondition.(grid.grid)
@@ -67,7 +67,7 @@ function solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) whe
     end
 
 
-    new{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+    return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
 end
 """
     solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT

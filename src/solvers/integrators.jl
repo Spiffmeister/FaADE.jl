@@ -217,32 +217,34 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     @. tmp = uⱼ - Δt*tmp
 end
 
-@inline function A!(write::Symbol,read::Symbol,D::newLocalDataBlock{TT},Δt::TT) where {AT,TT}
+function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) where {TT,DIM,AT,KT,DCT,GT,BT,DT,PT}
     # Compute the derivatives
-    W = getproperty(D,:cache)
-    R = getproperty(D,write)
-    D.Derivative(W,R,D.K)
+    W = getarray(D,:cache)
+    R = getarray(D,read)
+    # D.Derivative(W,R,D.K)
+    mul!(W,R,D.K,D.Derivative)
     # Communicate the boundaries
     # Apply needed SATs
     applySATs(W,R,D,SolutionMode)
     # u = r - Δt Du
-    @. W = R - Δt*W
+    @. W = R - D.SC.Δt*W
+    # muladd!(W,R,-D.SC.Δt,TT(1))
+
+    # A!(D.Derivative,W,R,D.SC.Δt,D.K)
 end
 
-function A!(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
+function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(source,DB)
+    # map(A!())
     for i in eachblock(DB)
-        # cache = u - Δt Du
-        C = getproperty(DB[i],:cache) :: AbstractArray{TT,DIM}
-        U = getproperty(DB[i],source) :: AbstractArray{TT,DIM}
-        # Compute the derivatives
-        DB[i].Derivative(C,U,DB[i].K)
-        applySATs(C,U,DB[i],SolutionMode) #Apply the SATs
-        muladd!(C,U,-DB[i].SC.Δt,TT(1))
-        # @. DB[i].cache = U - Δt*DB[i].cache
+        A!(source,DB[i])
 
-        # A!(DB[i].cache,U,DB[i],Δt)
+        # # cache = u - Δt Du
+        # C = getproperty(DB[i],:cache)
+        # U = getproperty(DB[i],source)
+        # # Compute the derivatives
+        # DB[i].Derivative(C,U,DB[i].K)
+        # applySATs(C,U,DB[i],SolutionMode) #Apply the SATs
+        # muladd!(C,U,-DB[i].SC.Δt,TT(1))
     end
 end
-
-

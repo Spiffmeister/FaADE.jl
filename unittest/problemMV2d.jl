@@ -1,6 +1,6 @@
 
 using FaADE
-# using BenchmarkTools
+using BenchmarkTools
 # using ProfileView
 # using Cthulhu
 
@@ -50,7 +50,8 @@ BD = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
 P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 
 println("Solving")
-@time soln = solve(P2V,Dom2V,Δt,t)
+soln = solve(P2V,Dom2V,Δt,t)
+@benchmark solve($P2V,$Dom2V,$Δt,$t)
 
 
 #=

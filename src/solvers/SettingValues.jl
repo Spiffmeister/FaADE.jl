@@ -15,7 +15,7 @@ function addSource!(F::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
         end
     end
 end
-function addSource!(S::SourceTerm{F},dest::Symbol,D::DataMultiBlock,G::GridType) where {TT,F<:Function}
+function addSource!(S::SourceTerm{F},dest::Symbol,D::DataMultiBlock,G::GridType) where {F<:Function}
     for I in eachblock(D)
         write = getproperty(D[I],dest)
         addSource!(S.F, write, G, D.SC.t, D.SC.Δt)
@@ -25,7 +25,7 @@ function addSource!(S::SourceTerm{Nothing},dest::Symbol,D::DataMultiBlock,G::Gri
 
 
 """
-BoundaryConditions
+    setBoundaryConditions!
 Sets the value of the boundary.
 """
 function setBoundaryConditions! end
@@ -57,65 +57,101 @@ end
 If no boundary condition set or the boundary condition is periodic or an interface, ignore this step
 """
 function setBoundaryCondition!(BC::Nothing,args...) end
-function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) where TT end
+function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) end
 """
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
     # for B in D.boundary
-    setBoundaryCondition!(D.boundary.BC_Left,   D.SC.Δt, D.SC.t)
-    setBoundaryCondition!(D.boundary.BC_Right,  D.SC.Δt, D.SC.t)
-    if DIM == 2
-        setBoundaryCondition!(D.boundary.BC_Up,     D.SC.Δt, D.SC.t)
-        setBoundaryCondition!(D.boundary.BC_Down,   D.SC.Δt, D.SC.t)
+    for I in eachboundary(D)
+        setBoundaryCondition!(D.boundary[I], D.SC.Δt, D.SC.t)
     end
+    # setBoundaryCondition!(D.boundary.BC_Left,   D.SC.Δt, D.SC.t)
+    # setBoundaryCondition!(D.boundary.BC_Right,  D.SC.Δt, D.SC.t)
+    # if DIM == 2
+    #     setBoundaryCondition!(D.boundary.BC_Up,     D.SC.Δt, D.SC.t)
+    #     setBoundaryCondition!(D.boundary.BC_Down,   D.SC.Δt, D.SC.t)
+    # end
     # end
 end
 """
 Calling boundaries from multiblocks
 """
-function setBoundaryConditions!(D::DataMultiBlock) where TT
+function setBoundaryConditions!(D::DataMultiBlock)
     for I in eachblock(D)
         setBoundaryConditions!(D[I])
     end
 end
 
 
+
+"""
+    fillBuffer!
+"""
+function fillBuffer! end
+function fillBuffer!(source,B::newBoundaryData,args...) end
+function fillBuffer!(source::AT,B::newInterfaceBoundaryData,K::AT) where AT
+    B.BufferIn .= source
+end
+"""
+    fillBuffer
+"""
+function fillBuffer end
+function fillBuffer(source::Symbol,B::newBoundaryData,DB::DataMultiBlock) end
+function fillBuffer(source::Symbol,B::newInterfaceBoundaryData,DB::DataMultiBlock)
+    cache = getproperty(DB[B.Joint],source)
+    copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
+end
+function fillBuffer(source::Symbol,DB::DataMultiBlock,I::Int64,side::NodeType)
+    BC = DB[I].boundary[side]
+    fillBuffer(source,BC,DB)
+end
 """
     fillBuffers
 """
 function fillBuffers end
 function fillBuffers(B::newBoundaryData,args...) end
-function fillBuffers(source::Symbol,DB::newLocalDataBlock)
+function fillBuffers(source::Symbol,DB::newLocalDataBlock{TT,DIM}) where {TT,DIM}
     S = getproperty(DB,source)
     copyto!(DB.boundary.RHS_Left,   S)
     copyto!(DB.boundary.RHS_Right,  S)
+    if DIM == 2
+        copyto!(DB.boundary.RHS_Up,     S)
+        copyto!(DB.boundary.RHS_Down,   S)
+    end
 end
-function fillBuffer!(source,B::newBoundaryData,args...) end
-function fillBuffer!(source::AT,B::newInterfaceBoundaryData,K::AT) where AT
-    B.BufferIn .= source
+function fillBuffers(source::Symbol,BC::NTuple{NB,BoundaryStorage},DB::DataMultiBlock{TT}) where {TT,NB}
+    fillBuffer(source,BC[1],DB)
+    fillBuffer(source,BC[2],DB)
+    if NB == 4
+        fillBuffer(source,BC[3], DB)
+        fillBuffer(source,BC[4], DB)
+    end
 end
-function fillBuffer(source::Symbol,B::newBoundaryData,DB::DataMultiBlock) end
-function fillBuffer(source::Symbol,B::newInterfaceBoundaryData,DB::DataMultiBlock)
-    cache = getproperty(DB[B.Joint],source)
-    # println(B.I)
-    # println("----------")
-    copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
+function fillBuffer(source::Symbol,DB::DataMultiBlock{TT,DIM},I::Int64) where {TT,DIM}
+    D = DB[I]
+    fillBuffer(source,D.boundary[1],DB)
+    fillBuffer(source,D.boundary[2],DB)
+    if DIM == 2
+        fillBuffer(source,D.boundary[3],DB)
+        fillBuffer(source,D.boundary[4],DB)
+    end
 end
-
 function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(DB)
-        # println(I)
-        BC = DB[I].boundary.BC_Left
-        # S = getproperty(DB[BC.Joint],source)
-        fillBuffer(source,BC,DB)
-
-        BC = DB[I].boundary.BC_Right
-        # S = getproperty(DB[BC.Joint],source)
-        fillBuffer(source,BC,DB)
+        fillBuffer(source,DB,I)
     end
-    # println("buffer ",DB[1].boundary.BC_Right.BufferIn)
 end
+
+# @generated function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
+#     quote
+#         for I in eachblock(DB)
+#             fillBuffers(source,DB[I].boundary,DB)
+#         end
+#     end
+# end
+
+
 
 
 """
@@ -131,8 +167,19 @@ Apply the SAT
 Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
-@inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {TT,AT}
-    applySAT!(BC.Boundary,dest,K,BC.BufferRHS,mode)
+@inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
+    # if (BC.Boundary.side == Left)
+    if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
+        SAT_Dirichlet_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
+    elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
+        SAT_Neumann_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
+    else
+        applySAT!(BC.Boundary,dest,K,mode)
+    end
+    # else
+        # applySAT!(BC.Boundary,dest,K,mode)
+        # applySAT!(BC.Boundary,dest,K,BC.BufferRHS,mode)
+    # end
     # BC.Boundary(dest,K,BC.BufferRHS,mode)
 end
 """
@@ -142,19 +189,33 @@ Applying SATs in SolutionMode
     applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
 end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,source::AT,mode::SATMode{:SolutionMode}) where {AT}
-    applySAT!(BC.Boundary,dest,K,source,mode)
+    if (BC.Boundary.side == Left) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
+        SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
+    else
+        applySAT!(BC.Boundary,dest,K,source,mode)
+    end
 end
 """
     applySATs
 """
 function applySATs end
 function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-        applySAT!(D.boundary.BC_Left,   dest, D.K, mode)
-        applySAT!(D.boundary.BC_Right,  dest, D.K, mode)
+    for I in eachboundary(D)
+        applySAT!(D.boundary[I],  dest, D.K, mode)
+    end
+        # applySAT!(D.boundary[1],  dest, D.K, mode)
+        # applySAT!(D.boundary[2],  dest, D.K, mode)
 end
 function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    applySAT!(D.boundary.BC_Left,   dest, D.K, source, mode)
-    applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
+    # for I in eachboundary(D)
+    #     applySAT!(D.boundary[I],   dest, D.K, source, mode)
+    # end
+    
+    applySAT!(D.boundary[1],  dest, D.K, source, mode)
+    applySAT!(D.boundary[2],  dest, D.K, source, mode)
+    
+    # applySAT!(D.boundary.BC_Left,   dest, D.K, source, mode)
+    # applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
 end
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.boundary.BC_Left,   dest, D.K[1], mode)
@@ -178,32 +239,64 @@ function applySATs(dest::Symbol,D::DataMultiBlock,mode::SATMode)
     end
 end
 
+
+
+
 """
     setDiffusionCoefficient!
-Sets the diffusion coefficient
+Sets the diffusion coefficient for real or functional diffusion coefficients
 """
 function setDiffusionCoefficient! end
-function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid1D)
+"""
+    setDiffusionCoefficient!
+Sets the diffusion coefficient for scalar diffusion coefficient
+"""
+@inline function setDiffusionCoefficient!(k::TT,K::AbstractArray{TT},grid::GridType) where {TT<:Real}
+    @. K = k
+end
+"""
+    setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid1D)
+1D functional diffusion coefficient
+"""
+@inline function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid1D)
     for i = 1:grid.n
         K[i] = κ(grid[i])
     end
 end
-function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
+"""
+    setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
+2D functional diffusion coefficient
+"""
+@inline function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
     for i = 1:grid.nx
         for j = 1:grid.ny
             K[i,j] = κ(grid[i,j]...)
         end
     end
 end
-@inline function setDiffusionCoefficient!(κ::TT,K::AbstractArray{TT},grid::GridType) where {TT<:Real} end
-@inline setDiffusionCoefficient!(D::newLocalDataBlock{TT,1},grid::GridType) where TT = setDiffusionCoefficient!(D.κ,D.K,grid)
-@inline function setDiffusionCoefficient!(D::newLocalDataBlock{TT,2},grid::GridType) where TT
-    setDiffusionCoefficient!(D.κ[1],D.K[1],grid)
-    setDiffusionCoefficient!(D.κ[2],D.K[2],grid)
+"""
+    setDiffusionCoefficient!(D::newLocalDataBlock{TT,1})
+Set diffusion coefficient for 1D grids
+"""
+setDiffusionCoefficient!(D::newLocalDataBlock{TT,1}) where TT = setDiffusionCoefficient!(D.κ,D.K,D.grid)
+"""
+    setDiffusionCoefficient!(D::newLocalDataBlock{TT,2})
+Set diffusion coefficient for 2D grids
+"""
+function setDiffusionCoefficient!(D::newLocalDataBlock{TT,2}) where TT
+    setDiffusionCoefficient!(D.κ[1],D.K[1],D.grid)
+    setDiffusionCoefficient!(D.κ[2],D.K[2],D.grid)
+    # for i in eachdim(DIM)
+    #     setDiffusionCoefficient!(D.κ[i],D.K[i],D.grid)
+    # end
 end
-function setDiffusionCoefficient!(D::DataMultiBlock,grid::GridType)
+"""
+    setDiffusionCoefficient!(D::DataMultiBlock)
+Set diffusion coefficient for each block
+"""
+function setDiffusionCoefficient!(D::DataMultiBlock)
     for I in eachblock(D)
-        setDiffusionCoefficient!(D[I],grid)
+        setDiffusionCoefficient!(D[I])
     end
 end
 
@@ -244,29 +337,37 @@ end
     muladd!
 multiply-add for multiblock problems
 """
-function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT<:AbstractArray{TT}}
+@inline function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT<:AbstractArray{TT}}
     @. dest = α*dest + β*source
 end
-function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α::TT,β::TT) where {TT}
-    W = getproperty(D,dest)
-    R = getproperty(D,source)
-    muladd!(W,R,α,β)
+function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α,β)
+    W = getarray(D,dest)
+    R = getarray(D,source)
+    @. W = α*W + β*R
+    # muladd!(W,R,α,β)
+    # for i in eachindex(W)
+    #     W[i] = α*W[i] + β*R[i]
+    # end
+    W
 end
 function muladd!(dest::Symbol,source::Symbol,D::DataMultiBlock{TT};α=TT(1),β=TT(1)) where TT
     for I in eachblock(D)
         muladd!(dest,source,D[I],α,β)
     end
 end
+
 """
     setValue
 """
-@inline function setValue(dest::AT,source::AT,α::TT) where {TT<:Real,AT<:AbstractArray{TT}}
+function setValue(dest::AT,source::AT,α::TT) where {TT<:Real,AT<:AbstractArray{TT}}
     @. dest = α*source
 end
-function setValue(dest::Symbol,source::Symbol,D::newLocalDataBlock{TT},α::TT) where TT
-    W = getproperty(D,dest)
-    R = getproperty(D,source)
-    setValue(W,R,α)
+function setValue(dest::Symbol,source::Symbol,D::newLocalDataBlock,α)
+    W = getarray(D,dest)
+    R = getarray(D,source)
+    @. W = α*R
+    # setValue(W,R,α)
+    W
 end
 function setValue(dest::Symbol,source::Symbol,D::DataMultiBlock{TT},α=TT(1)) where TT
     for I in eachblock(D)
@@ -278,11 +379,12 @@ end
     innerprod
 """
 innerprod(u::AT,v::AT,IP::innerH{TT}) where {TT,AT<:AbstractArray{TT}} = IP(u,v)
-@inline function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT,DIM}) :: TT where {TT,DIM} 
-    U = getproperty(D,u)
-    V = getproperty(D,v)
+function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT}) :: TT where {TT}
+    V = getarray(D,v)
+    U = getarray(D,u)
     IP = getproperty(D,:innerprod)
-    return IP(U,V)
+    ret = innerprod(U,V,IP)
+    return ret
 end
 function innerprod(u::Symbol,v::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     local r::TT
@@ -304,4 +406,15 @@ end
         s = getproperty(D[I],source)
         copyto!(d,s)
     end
+end
+
+
+
+
+"""
+"""
+function relerr(D::newLocalDataBlock{TT}) where {TT}
+    u = getarray(D,:u)
+    v = getarray(D,:uₙ₊₁)
+    D.SC.Δu = innerprod(u-v,u-v,D.innerprod)/innerprod(u,u,D.innerprod)
 end

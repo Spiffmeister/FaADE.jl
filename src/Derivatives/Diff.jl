@@ -38,14 +38,24 @@ function Diff!(cache::AT,u::AT,K::KT,D::DerivativeOperator) where {AT,KT}
 end
 
 
+# function Diff!(cache::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,ORD}) where {AT,KT,TT,ORD}
+#      (cache,,U,K)
+#     cache
+# end
 
-function (DO::DerivativeOperator{TT,1,ORD,true,false,false})(cache::VT,u::VT,K::KT) where {TT,ORD,VT,KT}
+function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,DO}) where {AT,KT,TT,DO}
+    D₂!(dest,u,K,D.nx,D.Δx,D.order,TT(0))
+    dest
+end
+
+
+function (DO::DerivativeOperator{TT,1,ORD})(cache::VT,u::VT,K::KT) where {TT,ORD,VT,KT}
     D₂!(cache,u,K,DO.nx,DO.Δx,DO.order,TT(0))
     cache
 end
 
 
-function (DO::DerivativeOperator{TT,2,ORD,true,false,false})(cache::AT,u::AT,K::KT) where {TT,ORD,AT,KT}
+function (DO::DerivativeOperator{TT,2,ORD})(cache::AT,u::AT,K::KT) where {TT,ORD,AT,KT}
     D₂!(cache,u,K[1],K[2],DO.nx,DO.ny,DO.Δx,DO.Δy,DO.order,DO.order)
     cache
 end

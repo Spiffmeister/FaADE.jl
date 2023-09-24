@@ -10,7 +10,7 @@ module solvers
 
     using FaADE.Helpers
 
-    using FaADE.Derivatives: generate_SecondDerivative, DerivativeOrder, GetOrder, DerivativeOperator
+    using FaADE.Derivatives: generate_SecondDerivative, DerivativeOrder, GetOrder, DerivativeOperator, mul!
     
     using FaADE.SATs: SAT, construct_SAT, 
     SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!, SATBoundaries, SimultanousApproximationTerm, SAT_Interface

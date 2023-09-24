@@ -31,20 +31,22 @@ struct Grid1D{TT<:Real,
 
     grid    :: Vector{TT}
     Δx      :: DT
-    n       :: Integer
+    n       :: Int64
 
-    function Grid1D(𝒟::Vector{TT},n::Integer,MType) where TT
-        Δx = (𝒟[2]-𝒟[1])/(n-1)
-        x = collect(range(𝒟[1],𝒟[2],length=n))
-
-        new{TT,TT,typeof(MType)}(x,Δx,n)
-    end
-    function Grid1D(𝒟::Vector{TT}) where TT
-        Δx = diff(𝒟)
-        new{TT,Vector{TT},CurvilinearMetric}(𝒟,Δx,length(𝒟))
-    end
 end
-Grid1D(𝒟,n) = Grid1D(𝒟,n,CartesianMetric())
+function Grid1D(𝒟::Vector{TT},n::Integer) where TT
+    Δx = (𝒟[2]-𝒟[1])/(n-1)
+    x = collect(range(𝒟[1],𝒟[2],length=n))
+
+    # new{TT,TT,CartesianMetric}(x,Δx,n)
+    return Grid1D{TT,typeof(Δx),CartesianMetric}(x,Δx,n)
+end
+function Grid1D(𝒟::Vector{TT}) where TT
+    Δx = diff(𝒟)
+    # new{TT,Vector{TT},CurvilinearMetric}(𝒟,Δx,length(𝒟))
+    return Grid1D{TT,typeof(Δx),CurvilinearMetric}(𝒟,Δx,length(𝒟))
+end
+
 
 """
     Grid2D
@@ -60,22 +62,27 @@ Inputs:
 Returns:
 - Struct for 2D grid object containing grid points in ``x`` and ``y``, ``\\Delta x`` and ``\\Delta y``, and ``n_x`` and ``n_y``.
 """
-struct Grid2D{TT,MET} <: LocalGridType{TT,2,MET}
+struct Grid2D{TT,
+        DT<:Union{Real,Vector{TT}},
+        MET<:MetricType} <: LocalGridType{TT,2,MET}
     gridx   :: Vector{TT}
     gridy   :: Vector{TT}
-    Δx      :: TT
-    Δy      :: TT
+    Δx      :: DT
+    Δy      :: DT
     nx      :: Integer
     ny      :: Integer
-    M       :: MET
-    function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer,MType) where TT
-        gx = Grid1D(𝒟x,nx)
-        gy = Grid1D(𝒟y,ny)
-
-        new{TT,typeof(MType)}(gx.grid,gy.grid, gx.Δx,gy.Δx, gx.n,gy.n,MType)
-    end
 end
-Grid2D(𝒟x,𝒟y,nx,ny) = Grid2D(𝒟x,𝒟y,nx,ny,CartesianMetric())
+function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) where TT
+    gx = Grid1D(𝒟x,nx)
+    gy = Grid1D(𝒟y,ny)
+
+    new{TT,typeof(Δx),CartesianMetric}(gx.grid,gy.grid, gx.Δx,gy.Δx, gx.n,gy.n,MType)
+end
+function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
+    Δx = diff(𝒟x)
+    Δy = diff(𝒟y)
+    return Grid2D{TT,typeof(Δx),CurvilinearMetric}(𝒟x,𝒟y,Δx,Δy,length(𝒟x),length(𝒟y))
+end
 
 
 
@@ -107,19 +114,15 @@ struct GridMultiBlock{TT  <: Real,
     Grids   :: TG
     Joint   :: TJ
     inds    :: IT
+end
 
-    function GridMultiBlock(grids::Vector{Grid1D{TT,DT,MET}},joints) where {TT,DT,MET}
-
-        inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
-
-        new{TT, 1, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
-    end
-    function GridMultiBlock(grids::Vector{Grid2D{TT,MET}},joints) where {TT,MET}
-        
-        inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
-
-        new{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds)
-    end
+function GridMultiBlock(grids::Vector{Grid1D{TT,DT,MET}},joints) where {TT,DT,MET}
+    inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
+    return GridMultiBlock{TT, 1, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
+end
+function GridMultiBlock(grids::Vector{Grid2D{TT,DT,MET}},joints) where {TT,DT,MET}
+    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds)
 end
 """
     GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
@@ -139,6 +142,8 @@ function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
     J = [(i,i+1,Right) for i in 1:length(grids)]
     GridMultiBlock(grids,J)
 end
+
+
 
 """
     GetMinΔ

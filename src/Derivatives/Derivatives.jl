@@ -20,5 +20,6 @@ module Derivatives
     export SecondDerivative
     export DerivativeOrder, GetOrder, DerivativeOperator
     export D₁, D₁!, D₂, D₂!, generate_SecondDerivative
+    export mul!
 
 end
