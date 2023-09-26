@@ -218,16 +218,16 @@ function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where
     # applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
 end
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.boundary.BC_Left,   dest, D.K[1], mode)
-    applySAT!(D.boundary.BC_Right,  dest, D.K[1], mode)
-    applySAT!(D.boundary.BC_Up,     dest, D.K[2], mode)
-    applySAT!(D.boundary.BC_Down,   dest, D.K[2], mode)
+    applySAT!(D.boundary[1],    dest, D.K[1], mode)
+    applySAT!(D.boundary[2],    dest, D.K[1], mode)
+    applySAT!(D.boundary[3],    dest, D.K[2], mode)
+    applySAT!(D.boundary[4],    dest, D.K[2], mode)
 end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.boundary.BC_Left,   dest, source, D.K[1], mode)
-    applySAT!(D.boundary.BC_Right,  dest, source, D.K[1], mode)
-    applySAT!(D.boundary.BC_Up,     dest, source, D.K[2], mode)
-    applySAT!(D.boundary.BC_Down,   dest, source, D.K[2], mode)
+    applySAT!(D.boundary[1],    dest, source, D.K[1], mode)
+    applySAT!(D.boundary[2],    dest, source, D.K[1], mode)
+    applySAT!(D.boundary[3],    dest, source, D.K[2], mode)
+    applySAT!(D.boundary[4],    dest, source, D.K[2], mode)
 end
 """
 Multiblock version
@@ -418,3 +418,18 @@ function relerr(D::newLocalDataBlock{TT}) where {TT}
     v = getarray(D,:uₙ₊₁)
     D.SC.Δu = innerprod(u-v,u-v,D.innerprod)/innerprod(u,u,D.innerprod)
 end
+
+
+"""
+    applyParallelPenalty
+"""
+applyParallelPenalty(D::newLocalDataBlock) = applyParallelPenalty!(D.uₙ₊₁,D.u,D.SC.Δt,D.PGrid)
+"""
+    applyParallelPenalties
+"""
+function applyParallelPenalties(DB::DataMultiBlock)
+    for I in eachblock(DB)
+        applyParallelPenalty(DB[I])
+    end
+end
+

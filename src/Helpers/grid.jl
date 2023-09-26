@@ -76,7 +76,7 @@ function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) whe
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
 
-    new{TT,typeof(Δx),CartesianMetric}(gx.grid,gy.grid, gx.Δx,gy.Δx, gx.n,gy.n,MType)
+    return Grid2D{TT,typeof(gx.Δx),CartesianMetric}(gx.grid, gy.grid, gx.Δx, gy.Δx, gx.n, gy.n)
 end
 function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
     Δx = diff(𝒟x)

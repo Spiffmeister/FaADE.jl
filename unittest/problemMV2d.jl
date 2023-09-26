@@ -31,11 +31,13 @@ soln = solve(P1V,Dom1V,Δt,t)
 #= =#
 
 
-D1 = Grid2D([0.0,0.5],[0.0,1.0],11,11)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],11,11)
+D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
+D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
 
 Joints = [[(1,Left),(2,Right),(1,Up),(1,Down)],
             [(1,Left),(2,Right),(2,Up),(2,Down)]]
+
+
 
 Dom2V = GridMultiBlock([D1,D2],Joints)
 
@@ -46,12 +48,34 @@ Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,2,order)
 # Pu = FaADE.SATs.SAT_Periodic(D1.Δx,2,order,Up)
 # Pd = FaADE.SATs.SAT_Periodic(D1.Δx,2,order,Down)
 BD = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
+# BD = FaADE.SATs.SATBoundaries(Dl,Dr,Pu,Pd)
+
+BCs = [(1,Left,Dl),(1,Up,Du),(1,Down,Dd),(2,Right,Dr),(2,Up,Du),(2,Down,Dd)]
 
 P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 
 println("Solving")
 soln = solve(P2V,Dom2V,Δt,t)
 @benchmark solve($P2V,$Dom2V,$Δt,$t)
+
+
+
+
+#=
+function χ_h!(χ,x::Array{Float64},t)
+    χ[2] = x[1] #p_1            qdot        θ
+    χ[1] = 0.0  #q_1        pdot        ψ
+end
+
+dH(X,x,p,t) = χ_h!(X,x,t)
+PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
+Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
+
+P2VP = newProblem2D(order,u₀,K,K,Dom2V,BD,Pfn)
+soln = solve(P2VP,Dom2V,Δt,t)
+@benchmark solve($P2VP,$Dom2V,$Δt,$t)
+=#
+
 
 
 #=

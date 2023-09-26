@@ -47,15 +47,7 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,DO}) where {AT,KT,
     D₂!(dest,u,K,D.nx,D.Δx,D.order,TT(0))
     dest
 end
-
-
-function (DO::DerivativeOperator{TT,1,ORD})(cache::VT,u::VT,K::KT) where {TT,ORD,VT,KT}
-    D₂!(cache,u,K,DO.nx,DO.Δx,DO.order,TT(0))
-    cache
-end
-
-
-function (DO::DerivativeOperator{TT,2,ORD})(cache::AT,u::AT,K::KT) where {TT,ORD,AT,KT}
-    D₂!(cache,u,K[1],K[2],DO.nx,DO.ny,DO.Δx,DO.Δy,DO.order,DO.order)
-    cache
+function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO}) where {AT,KT,TT,DO}
+    D₂!(dest,u,K[1],K[2],D.nx,D.ny,D.Δx,D.Δy,D.order,D.order)
+    dest
 end

@@ -45,7 +45,7 @@ struct newBoundaryData{
 
         new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
     end
-    function newBoundaryData(G::Grid2D{TT,CartesianMetric},BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newBoundaryData(G::Grid2D{TT},BC,Joint,order::DerivativeOrder{O}) where {TT,O}
 
         if BC.side ∈ [Left,Right]
             n = G.ny
@@ -381,7 +381,7 @@ mutable struct newLocalDataBlock{TT<:Real,
         GT <: GridType,
         BT,
         DT  <: DerivativeOperator,
-        # ST  <: SourceTerm,
+        ST  <: SourceTerm,
         PT, # Parallel map or Nothing
         } <: newLocalDataBlockType{TT,DIM}
     u           :: AT
@@ -396,7 +396,7 @@ mutable struct newLocalDataBlock{TT<:Real,
 
     Derivative  :: DT # :: DerivativeOperator{TT,DIM,DerivativeOrder}
 
-    # source      :: ST
+    source      :: ST
 
     Parallel    :: PT
 
@@ -436,9 +436,11 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
 
     PMap = P.Parallel
 
+    source = SourceTerm{Nothing}(nothing)
+
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G),typeof(BS),typeof(D),typeof(PMap)}(u,uₙ₊₁,K,P.K,G,BS,D,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,P.K,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
     newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
@@ -462,16 +464,19 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
     IP = innerH(G.Grids[I],GetOrder(P.order))
 
     D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),true,false,false)
+    
 
     if typeof(P.Parallel) <: Vector
         PMap = P.Parallel[I]
     else
         PMap = P.Parallel
     end
+    
+    source = SourceTerm{Nothing}(nothing)
 
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,PMap, IP, cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
     newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer)
@@ -483,16 +488,13 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(LG)
     
     if typeof(P.Kx) <: Real
-        Ky = zeros(TT,size(K))
-        K .= P.Kx
-        Ky .= P.Ky
+        K[1] .= P.Kx
+        K[2] .= P.Ky
 
-        KK = [K,Ky]
     elseif typeof(P.K) <: Function
         for i in eachindex(G[I])
-            K[i] .= P.Kx(G[I][i])
-            Ky[i] .= P.Ky(G[I][i])
-            KK = [K,Ky]
+            K[1][i] .= P.Kx(G[I][i])
+            K[2][i] .= P.Ky(G[I][i])
         end
     end
     PK = [P.Kx,P.Ky]
@@ -511,9 +513,11 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) 
         PMap = P.Parallel
     end
 
+    source = SourceTerm{Nothing}(nothing)
+
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,2,typeof(u),typeof(KK),typeof(PK),typeof(LG),typeof(BStor),typeof(D)}(u,uₙ₊₁,KK,PK,LG,BStor,D,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 
 

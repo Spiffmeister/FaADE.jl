@@ -34,13 +34,14 @@ end
 
 
 struct ParallelData{TT<:Real,
-        DIM}
+        DIM,
+        GT}
     PGrid       :: ParallelGrid{TT,DIM,Matrix{TT},Matrix{Vector{TT}}}
     κ           :: TT
     τ           :: TT
     Intercept   :: FieldLineIntercept
-    gridx       :: LinRange{TT,Int64}
-    gridy       :: LinRange{TT,Int64}
+    gridx       :: GT
+    gridy       :: GT
     Δx          :: TT
     Δy          :: TT
 
@@ -57,7 +58,7 @@ struct ParallelData{TT<:Real,
         gridx = LinRange(Grid.gridx[1],Grid.gridx[end],Grid.nx)
         gridy = LinRange(Grid.gridy[1],Grid.gridy[end],Grid.ny)
 
-        new{TT,2}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
+        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
     end
 end
 
