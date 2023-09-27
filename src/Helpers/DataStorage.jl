@@ -43,17 +43,17 @@ mutable struct DataBlock{T,DIM,AT,KT<:Union{AT,Vector{AT}}} <: LocalDataBlockTyp
 
             DiffCoeff = [zeros(T,size(grid)),zeros(T,size(grid))]
             
-            # for j = 1:grid.ny
-            #     for i = 1:grid.nx
-            #         DiffCoeff[1][i,j] = PDE.Kx(grid[i,j]...)
-            #         # DiffCoeff[1][i,j] = PDE.Kx(grid.gridx[i],grid.gridy[j])
-            #         DiffCoeff[2][i,j] = PDE.Ky(grid.gridx[i],grid.gridy[j])
-            #     end
-            # end
-            for i in eachindex(grid)
-                DiffCoeff[1][i] = PDE.Kx(grid[i]...)
-                DiffCoeff[2][i] = PDE.Ky(grid[i]...)
+            for j = 1:grid.ny
+                for i = 1:grid.nx
+                    DiffCoeff[1][i,j] = PDE.Kx(grid[i,j]...)
+                    # DiffCoeff[1][i,j] = PDE.Kx(grid.gridx[i],grid.gridy[j])
+                    DiffCoeff[2][i,j] = PDE.Ky(grid.gridx[i],grid.gridy[j])
+                end
             end
+            # for i in eachindex(grid)
+            #     DiffCoeff[1][i] = PDE.Kx(grid[i]...)
+            #     DiffCoeff[2][i] = PDE.Ky(grid[i]...)
+            # end
             # setCoefficient!(PDE.Kx,DiffCoeff[1],grid)
             # setCoefficient!(PDE.Ky,DiffCoeff[2],grid)
 

@@ -5,23 +5,23 @@
 Adds PDE forcing term
 """
 function addSource! end
-function addSource!(F::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
-    u .+= Δt*F.(grid.grid,t)
+function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
+    u .+= Δt*S.source.(grid.grid,t)
 end
-function addSource!(F::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
+function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
     for j in 1:grid.ny
         for i in 1:grid.nx
-            u[i,j] += Δt*F(grid.gridx[i],grid.gridy[j],t)
+            u[i,j] += Δt*S.source(grid.gridx[i],grid.gridy[j],t)
         end
     end
 end
-function addSource!(S::SourceTerm{F},dest::Symbol,D::DataMultiBlock,G::GridType) where {F<:Function}
+function addSource!(dest::Symbol,D::DataMultiBlock) where {F<:Function}
     for I in eachblock(D)
         write = getproperty(D[I],dest)
-        addSource!(S.F, write, G, D.SC.t, D.SC.Δt)
+        addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt)
     end
 end
-function addSource!(S::SourceTerm{Nothing},dest::Symbol,D::DataMultiBlock,G::GridType) end
+function addSource!(S::SourceTerm{Nothing},tmp...) end
 
 
 """
@@ -62,17 +62,9 @@ function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) end
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
-    # for B in D.boundary
     for I in eachboundary(D)
         setBoundaryCondition!(D.boundary[I], D.SC.Δt, D.SC.t)
     end
-    # setBoundaryCondition!(D.boundary.BC_Left,   D.SC.Δt, D.SC.t)
-    # setBoundaryCondition!(D.boundary.BC_Right,  D.SC.Δt, D.SC.t)
-    # if DIM == 2
-    #     setBoundaryCondition!(D.boundary.BC_Up,     D.SC.Δt, D.SC.t)
-    #     setBoundaryCondition!(D.boundary.BC_Down,   D.SC.Δt, D.SC.t)
-    # end
-    # end
 end
 """
 Calling boundaries from multiblocks
@@ -221,7 +213,15 @@ function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.boundary[1],    dest, D.K[1], mode)
     applySAT!(D.boundary[2],    dest, D.K[1], mode)
     applySAT!(D.boundary[3],    dest, D.K[2], mode)
+    # println(D.boundary[4])
     applySAT!(D.boundary[4],    dest, D.K[2], mode)
+    # println(dest)
+    # println()
+
+    dest[1,:] .= 0.0
+    dest[end,:] .= 0.0
+    dest[:,1] .= 0.0
+    dest[:,end] .= 0.0
 end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.boundary[1],    dest, source, D.K[1], mode)
@@ -344,10 +344,6 @@ function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α,β)
     W = getarray(D,dest)
     R = getarray(D,source)
     @. W = α*W + β*R
-    # muladd!(W,R,α,β)
-    # for i in eachindex(W)
-    #     W[i] = α*W[i] + β*R[i]
-    # end
     W
 end
 function muladd!(dest::Symbol,source::Symbol,D::DataMultiBlock{TT};α=TT(1),β=TT(1)) where TT

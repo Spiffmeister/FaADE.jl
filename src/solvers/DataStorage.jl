@@ -419,28 +419,56 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
 
     if typeof(P.K) <: Real
+        PK = P.K
         K .= P.K
     elseif typeof(P.K) <: Function
+        PK = P.K
         for i in eachindex(G)
             K[i] .= P.K(G[i])
         end
     end
 
     BStor = newBoundaryConditions(P,G)
-
     BS = (BStor.BC_Left,BStor.BC_Right)
-
     IP = innerH(G,GetOrder(P.order))
-    
-    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.n,0,G.Δx,TT(0),true,false,false)
-
+    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.n,0,G.Δx,TT(0))
     PMap = P.Parallel
-
     source = SourceTerm{Nothing}(nothing)
-
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,P.K,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+end
+"""
+    newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
+Initialise a data block for a 2D problem with only 1 grid.
+
+    *THIS METHOD IS PRIMARILY FOR TESTING*
+"""
+function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
+
+    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
+
+    if typeof(P.Kx) <: Real
+        PK = [P.Kx,P.Ky]
+        K[1] .= P.Kx
+        K[2] .= P.Ky
+    elseif typeof(P.Kx) <: Function
+        PK = [P.Kx,P.Ky]
+        for i in eachindex(G)
+            K[1][i] .= P.Ky(G[i])
+            K[2][i] .= P.Kx(G[i])
+        end
+    end
+
+    BStor = newBoundaryConditions(P,G)
+    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
+    IP = innerH(G,GetOrder(P.order))
+    D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,G.nx,G.ny,G.Δx,G.Δy)
+    PMap = P.Parallel
+    source = SourceTerm{Nothing}(nothing)
+    SC = StepConfig{TT}()
+
+    return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
     newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
@@ -456,24 +484,18 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
             K[i] .= P.K(G[i])
         end
     end
-
-    BStor = newBoundaryConditions(P,G,I)
-
-    BS = (BStor.BC_Left,BStor.BC_Right)
-
-    IP = innerH(G.Grids[I],GetOrder(P.order))
-
-    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),true,false,false)
     
-
     if typeof(P.Parallel) <: Vector
         PMap = P.Parallel[I]
     else
         PMap = P.Parallel
     end
-    
-    source = SourceTerm{Nothing}(nothing)
 
+    BStor = newBoundaryConditions(P,G,I)
+    BS = (BStor.BC_Left,BStor.BC_Right)
+    IP = innerH(G.Grids[I],GetOrder(P.order))
+    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
+    source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
@@ -490,7 +512,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) 
     if typeof(P.Kx) <: Real
         K[1] .= P.Kx
         K[2] .= P.Ky
-
     elseif typeof(P.K) <: Function
         for i in eachindex(G[I])
             K[1][i] .= P.Kx(G[I][i])
@@ -499,22 +520,17 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) 
     end
     PK = [P.Kx,P.Ky]
 
-    BStor = newBoundaryConditions(P,G,I)
-
-    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-
-    IP = innerH(LG,GetOrder(P.order))
-
-    D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy,true,false,false)
-
     if typeof(P.Parallel) <: Vector
         PMap = P.Parallel[I]
     else
         PMap = P.Parallel
     end
 
+    BStor = newBoundaryConditions(P,G,I)
+    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
+    IP = innerH(LG,GetOrder(P.order))
+    D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy)
     source = SourceTerm{Nothing}(nothing)
-
     SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
@@ -528,6 +544,10 @@ end
     rt = getfield(D,s)
     return rt :: typeof(rt)
 end
+"""
+    getarray(D::newLocalDataBlock,s::Symbol)
+Type stable getfield for arrays
+"""
 @inline function getarray(D::newLocalDataBlock{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
     rt = getfield(D,s)
     return rt :: AT

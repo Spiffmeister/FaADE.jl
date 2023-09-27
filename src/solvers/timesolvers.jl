@@ -337,13 +337,21 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         DBlock = DataMultiBlock(P,G,Δt,0.0)
         soln = solution(G,0.0,Δt,P)
 
+        if typeof(G) <: LocalGridType
+            DBlock[1].u .= soln.u[1]
+        elseif typeof(G) <: GridMultiBlock
+            for I in eachblock(DBlock)
+                DBlock[I].u .= soln.u[1][I]
+            end
+        end
+
         # implicitsolve(P,G,Δt,t_f,SD)
-        implicitsolve(soln,DBlock,P,G,Δt,t_f,SD)
+        implicitsolve(soln,DBlock,G,Δt,t_f,SD)
     end
 end
 
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
-function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
+function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -363,13 +371,13 @@ function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{
     # DBlock = DataMultiBlock(P,G,Δt,0.0)
     # soln = solution(G,0.0,Δt,P)
 
-    if typeof(G) <: LocalGridType
-        DBlock[1].u .= soln.u[1]
-    elseif typeof(G) <: GridMultiBlock
-        for I in eachblock(DBlock)
-            DBlock[I].u .= soln.u[1][I]
-        end
-    end
+    # if typeof(G) <: LocalGridType
+    #     DBlock[1].u .= soln.u[1]
+    # elseif typeof(G) <: GridMultiBlock
+    #     for I in eachblock(DBlock)
+    #         DBlock[I].u .= soln.u[1][I]
+    #     end
+    # end
     
     t = Δt
     Δt₀ = Δt
@@ -388,10 +396,10 @@ function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{
         
         applySATs(:b,DBlock,DataMode)
         
-        addSource!(P.source,:b,DBlock,G)
+        addSource!(:b,DBlock)
 
         conj_grad!(DBlock,Δt)
-
+        # println(DBlock.SC.converged)
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if penalty_function_enabled
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
@@ -409,7 +417,6 @@ function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{
             if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t
             end
-
             copyto!(:u,:uₙ₊₁,DBlock)
             copyto!(:b,:uₙ₊₁,DBlock)
             if solverconfig.adaptive & (Δt<300Δt₀)
@@ -427,6 +434,7 @@ function implicitsolve(soln,DBlock,P,G,Δt::TT,t_f::TT,solverconfig::SolverData{
             if DBlock.SC.Δt < Δt₀/10.0
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
+            t += Δt
         end
         # if sample < t
         #     sample += sample

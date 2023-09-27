@@ -9,30 +9,53 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-t = 10.0
+# t = 10000.0
+t = 0.02
 
-# u₀(x) = x.^2
+# u₀(x,y) = x.^2
 u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
-#=
-Dom1V = Grid1D([0.0,1.0],21)
 
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
-BD1V = FaADE.SATs.SATBoundaries(Dl,Dr)
+Dom1V = Grid2D([0.0,1.0],[0.0,1.0],7,7)
 
-P1V = newProblem1D(order,u₀,K,Dom1V,BD)
+Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
+Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
+Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
+BD1V = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
+
+P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
 
 println("Solving")
-soln = solve(P1V,Dom1V,Δt,t)
+soln1V = solve(P1V,Dom1V,Δt,t)
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
+
+
+
+BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
+BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
+BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
+BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
+PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
+
+
+
+#=
+maximum.(soln1V.u)
+
+using LinearAlgebra
+norm.(soln1V.u)
+
+using Plots
+surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[1])
+surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[2])
 =#
 
-#= =#
-
-
-D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
+#=
+D1 = Grid2D([0.0,0.5],[0.0,1.0],11,11)
+D2 = Grid2D([0.5,1.0],[0.0,1.0],11,11)
 
 Joints = [[(1,Left),(2,Right),(1,Up),(1,Down)],
             [(1,Left),(2,Right),(2,Up),(2,Down)]]
@@ -56,8 +79,8 @@ P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 
 println("Solving")
 soln = solve(P2V,Dom2V,Δt,t)
-@benchmark solve($P2V,$Dom2V,$Δt,$t)
-
+# @benchmark solve($P2V,$Dom2V,$Δt,$t)
+=#
 
 
 
