@@ -10,7 +10,7 @@ K = 1.0
 
 Δt = 0.01
 # t = 10000.0
-t = 0.02
+t = 0.03
 
 # u₀(x,y) = x.^2
 u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
@@ -27,10 +27,11 @@ BD1V = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
 
 P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
 
-println("Solving")
+println("---Solving---")
 soln1V = solve(P1V,Dom1V,Δt,t)
 # @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
+println("---Solving---")
 
 
 BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
@@ -38,7 +39,7 @@ BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
 BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
 BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
 PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
-solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
+solnO1V = solve(PO1V,Dom1V,Δt,0.02,:cgie)
 
 
 
@@ -47,6 +48,7 @@ maximum.(soln1V.u)
 
 using LinearAlgebra
 norm.(soln1V.u)
+norm.(solnO1V.u)
 
 using Plots
 surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[1])

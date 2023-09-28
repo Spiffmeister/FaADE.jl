@@ -34,8 +34,7 @@ solnP1V = solve(P1V,Dom1V,Δt,t)
 # @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
 # @code_warntype DBlock[1].boundary[Left]
 
-
-
+println("Solving")
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
 BoundaryRight = Boundary(Dirichlet,t->0.0,Right,1)

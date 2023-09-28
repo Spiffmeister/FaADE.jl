@@ -149,21 +149,23 @@ function SAT_Dirichlet_implicit!(SAT::AT,::NodeType{:Right},u::AT,c::AT,
     SAT
 end
 #######
-function SAT_Dirichlet_implicit!(dest::AT,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Left}}
+function SAT_Dirichlet_implicit!(dest::AT,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
     for (S,U,C) in zip(SD.loopaxis(dest),SD.loopaxis(rhs),SD.loopaxis(c))
         for i = 1:SD.order
             S[i] += -SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #D₁ᵀE₀
         end
         S[1] += SD.τ(C[1])*C[1]*U[1]
     end
+    dest
 end
-function SAT_Dirichlet_implicit!(dest::AT,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Right}}
+function SAT_Dirichlet_implicit!(dest::AT,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
     for (S,U,C) in zip(SD.loopaxis(dest),SD.loopaxis(rhs),SD.loopaxis(c))
         for i = 1:SD.order
             S[end-SD.order+i] += SD.α*C[end]*SD.ED₁ᵀ[i]*U[end] #D₁ᵀE₀
         end
         S[end] += SD.τ(C[end])*C[end]*U[end]
     end
+    dest
 end
 ##########
 
@@ -201,32 +203,24 @@ function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
 end
 
 ######################
-function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:DataMode}) where {AT,TN<:NodeType{:Left}}
+function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:DataMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
     for (S,U,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         for i = 1:SD.order #nodes SD.nodes
             S[i] += SD.α*C[1]*SD.ED₁ᵀ[i]*U[1] #u[Left]
         end
         S[1] += -SD.τ(C[1])*C[1]*U[1]
     end
+    dest
 end
-function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:DataMode}) where {AT,TN<:NodeType{:Right}}
+function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:DataMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
     for (S,U,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         for i = 1:SD.order #nodes SD.nodes
             S[end-SD.order+i] += -SD.α*C[end]*SD.ED₁ᵀ[i]*U[end] #u[Right]
         end
         S[end] += -SD.τ(C[end])*C[end]*U[end]
     end
+    dest
 end
-
-# function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,TT},::SATMode{:DataMode}) where {AT,TN,TT}
-#     TN == Left ? di = 0 : di = length(dest)-SD.order
-#     TN == Left ? ni = 1 : ni = length(dest)
-#     TN == Left ? β = TT(1) : β = TT(-1)
-#     for i = 1:SD.order #nodes SD.nodes
-#         dest[di+i] += β*SD.α*c[ni]*SD.ED₁ᵀ[i]*data[ni] #u[Right]
-#     end
-#     dest[ni] += -SD.τ(C[ni])*c[ni]*data[ni]
-# end
 ######################
 
 

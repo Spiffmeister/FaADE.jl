@@ -15,7 +15,7 @@ function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid2D{TT
         end
     end
 end
-function addSource!(dest::Symbol,D::DataMultiBlock) where {F<:Function}
+function addSource!(dest::Symbol,D::DataMultiBlock)
     for I in eachblock(D)
         write = getproperty(D[I],dest)
         addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt)
@@ -177,11 +177,12 @@ end
 """
 Applying SATs in SolutionMode
 """
-@inline function applySAT!(BC::newInterfaceBoundaryData,dest::AT,K::AT,source::AT,mode::SATMode{:SolutionMode}) where {AT}
+@inline function applySAT!(BC::newInterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
     applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
 end
-@inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,source::AT,mode::SATMode{:SolutionMode}) where {AT}
-    if (BC.Boundary.side == Left) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
+@inline function applySAT!(BC::newBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
+    # println("hi ",BC.Boundary.side)
+    if (BC.Boundary.side ∈ [Left,Up]) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
         SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
     else
         applySAT!(BC.Boundary,dest,K,source,mode)
@@ -203,8 +204,8 @@ function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where
     #     applySAT!(D.boundary[I],   dest, D.K, source, mode)
     # end
     
-    applySAT!(D.boundary[1],  dest, D.K, source, mode)
-    applySAT!(D.boundary[2],  dest, D.K, source, mode)
+    applySAT!(D.boundary[1],  dest, source, D.K, mode)
+    applySAT!(D.boundary[2],  dest, source, D.K, mode)
     
     # applySAT!(D.boundary.BC_Left,   dest, D.K, source, mode)
     # applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
@@ -218,11 +219,15 @@ function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     # println(dest)
     # println()
 
-    dest[1,:] .= 0.0
-    dest[end,:] .= 0.0
-    dest[:,1] .= 0.0
-    dest[:,end] .= 0.0
+    # dest[1,:] .= 0.0
+    # dest[end,:] .= 0.0
+    # dest[:,1] .= 0.0
+    # dest[:,end] .= 0.0
 end
+"""
+    applySATs
+applySATs for 2D local block
+"""
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.boundary[1],    dest, source, D.K[1], mode)
     applySAT!(D.boundary[2],    dest, source, D.K[1], mode)
