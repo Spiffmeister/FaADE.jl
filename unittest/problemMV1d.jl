@@ -1,20 +1,20 @@
 
 using FaADE
 using BenchmarkTools
-using ProfileView
-using Cthulhu
-using Profile
+# using ProfileView
+# using Cthulhu
+# using Profile
 
 
 order = 2
 K = 1.0
 
 Δt = 0.01
-t = 0.02
-# t = 100.0
+# t = 0.02
+t = 100.0
 
-# u₀(x) = x.^2
-u₀(x) = exp.(-(x-0.5)^2 / 0.02)
+u₀(x) = x.^2
+# u₀(x) = exp.(-(x-0.5)^2 / 0.02)
 
 
 
@@ -22,31 +22,32 @@ u₀(x) = exp.(-(x-0.5)^2 / 0.02)
 
 
 Dom1V = Grid1D([0.0,1.0],1001)
+
 Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Right,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
 BD1V = FaADE.SATs.SATBoundaries(Dl,Dr)
 P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
 println("Solving")
 solnP1V = solve(P1V,Dom1V,Δt,t)
+
 # @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
 # DBlock = FaADE.solvers.DataMultiBlock(P1V,Dom1V,0.0,0.0)
 # @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
 # @code_warntype DBlock[1].boundary[Left]
 
+
+
 println("Solving")
-u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
+# u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,t->0.0,Right,1)
+BoundaryRight = Boundary(Dirichlet,t->1.0,Right,1)
 P = VariableCoefficientPDE1D(u₀,t->K,order,BoundaryLeft,BoundaryRight)
 solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 
 
 
 
-#= =#
-
-#=
 D1 = Grid1D([0.0,0.5],501)
 D2 = Grid1D([0.5,1.0],501)
 
@@ -69,15 +70,28 @@ println("Solving")
 soln = solve(P2V,Dom2V,Δt,t)
 # @profview soln_tmpa = solve(P2V,Dom2V,Δt,t)
 # @profview soln_tmpb = solve(P2V,Dom2V,Δt,t)
-@benchmark solve($P2V,$Dom2V,$Δt,$t)
-=#
+# @benchmark solve($P2V,$Dom2V,$Δt,$t)
 
 
-
+using Plots
+# plot(Dom1V.grid,solnO1V.u[2])
+plot(Dom1V.grid,solnP1V.u[2])
+plot!(Dom2V.Grids[1].grid,soln.u[2][1])
+plot!(Dom2V.Grids[2].grid,soln.u[2][2])
 
 # DBlock = FaADE.solvers.DataMultiBlock(P2V,Dom2V,0.0,0.0)
 # @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
 # @code_warntype DBlock[1].boundary[Left]
+
+
+
+#=
+using LinearAlgebra
+norm(solnP1V.u[2])
+norm(vcat(soln.u[2][1],soln.u[2][2][2:end]))
+=#
+
+
 
 #=
 D1 = Grid1D([0.0,0.35],8)

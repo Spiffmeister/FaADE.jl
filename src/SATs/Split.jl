@@ -140,3 +140,33 @@ function (SI::SAT_Interface{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buff
         # S⁻[end] += SI.τ₀ * U⁻[end]
     end
 end
+
+#######
+
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
+            S⁺[i] += SI.τ₁ * K⁺[1] * SI.D₁ᵀE₀[i]*(U⁻[end] - U⁺[1])
+            S⁺[1] += SI.α₀ * K⁺[1] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+        # S⁺[1] += -τ₀(K⁺[1]) * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
+    end
+    dest
+end
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        # println(U⁻[end-SI.order+1:end]," ",U⁺)
+        S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            S⁻[end-SI.order+i] +=   SI.τ₁ * K⁻[end] * SI.D₁ᵀE₀[i] * (U⁻[end] - U⁺[1])
+            S⁻[end] +=              SI.α₀ * K⁻[end] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+    end
+    dest
+end
+
+
+#######
+

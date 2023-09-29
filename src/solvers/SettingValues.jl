@@ -178,7 +178,11 @@ end
 Applying SATs in SolutionMode
 """
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
-    applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
+    # applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
+    if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Interface}
+        SAT_Interface!(dest,source,K,BC.BufferIn,BC.Boundary,mode)
+    elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Periodic}
+    end
 end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
     # println("hi ",BC.Boundary.side)

@@ -27,7 +27,7 @@ module SATs
     export SAT_Neumann
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
-    export SAT_Interface
+    export SAT_Interface, SAT_Interface!
 
 
     export SimultanousApproximationTerm
