@@ -75,16 +75,26 @@ struct Grid2D{TT,
     nx      :: Integer
     ny      :: Integer
 end
+"""
+    Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer)
+2D cartesian grid with domain boundaries ``𝒟x`` and ``𝒟y`` and ``nx`` and ``ny`` nodes in ``x`` and ``y`` respectively.
+"""
 function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) where TT
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
-
     return Grid2D{TT,CartesianMetric,typeof(gx.grid),typeof(gx.Δx)}(gx.grid, gy.grid, gx.Δx, gy.Δx, gx.n, gy.n)
 end
-function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
-    Δx = diff(𝒟x)
-    Δy = diff(𝒟y)
-    return Grid2D{TT,CurvilinearMetric,typeof(𝒟x),typeof(Δx)}(𝒟x,𝒟y,Δx,Δy,length(𝒟x),length(𝒟y))
+"""
+    Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer) where TT
+2D curvilinear grid using transfinite interpolation between the four boundary functions.
+
+See [`meshgrid`](@ref) for more details.
+"""
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer) where TT
+    gridx,gridy = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
+    Δx = diff(gridx)
+    Δy = diff(gridy)
+    return Grid2D{TT,CurvilinearMetric,typeof(gridx),typeof(Δx)}(gridx,gridy,Δx,Δy,nx,ny)
 end
 
 

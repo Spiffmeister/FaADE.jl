@@ -10,7 +10,7 @@ Allocating functions for first derivative, useful when need to add value to a ma
 
 See also [`FirstDerivativeInternal!`](@ref) and [`FirstDerivativeBoundary`](@ref)
 """
-function FirstDerivative() end
+function FirstDerivative end
 ### Internal nodes
 """
     FirstDerivative(u::AbstractVector{T},Δx::T,::NodeType{:Internal},order::Integer)

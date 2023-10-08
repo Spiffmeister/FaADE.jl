@@ -11,13 +11,20 @@ See also [`SecondDerivativeInternal!`](@ref) and [`SecondDerivativeBoundary!`](@
 """
 function SecondDerivative end
 ### Internal nodes
+"""
+    SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
+Internal node function.
+"""
 function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
     uₓₓ = zeros(T,length(u))
     SecondDerivativeInternal!(uₓₓ,u,c,Δx,length(u),order,T(0))
     return uₓₓ
 end
-### Boundary nodes
-function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,node::NodeType;order::Integer=2) where T
+"""
+    SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=4) where T
+Boundary node function.
+"""
+function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,node::NT;order::Integer=2) where {T,NT<:Union{NodeType{:Left},NodeType{:Right}}}
     uₓₓ = zeros(BoundaryNodeOutput(order))
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,node,order,T(0))
     return uₓₓ
@@ -33,12 +40,16 @@ end
 
 """
     SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType,::DerivativeOrder{2},i::Int,j::Int,α::T) 
-2D 2nd order pointwise
+2D 2nd order pointwise in x
 """
 @inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType{:Internal,1},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
     uₓₓ[i,j] = α*uₓₓ[i,j] + 
         (0.5*(c[i,j] + c[i-1,j])*u[i-1,j] - 0.5*(c[i+1,j] + 2c[i,j] + c[i-1,j])*u[i,j] + 0.5*(c[i,j] + c[i+1,j])*u[i+1,j])/Δx^2
 end
+"""
+    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType,::DerivativeOrder{2},i::Int,j::Int,α::T)
+2D 2nd order pointwise in y
+"""
 @inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,
         ::NodeType{:Internal,2},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
     uₓₓ[i,j] = α*uₓₓ[i,j] + 
@@ -46,7 +57,7 @@ end
 end
 """
     SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::DerivativeOrder{4},i::Int,j::Int,α::T)
-4th order pointwise
+1D 4th order pointwise
 """
 @inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,
         ::DerivativeOrder{4},i::Int,j::Int,α::T) where T

@@ -9,8 +9,7 @@
     
 Also available as and internally uses in place operator [`D₁!`](@ref).
 """
-function D₁() end
-# 1D First derivative
+function D₁ end
 """
     D₁function D₁(u::AbstractVector{T},Δx::T;order::Integer=2)
 1D implementation of ``D_x`` operator.
@@ -21,7 +20,6 @@ function D₁(u::AbstractVector{T},Δx::T;
     D₁!(uₓ,u,length(u),Δx,order)
     return uₓ
 end
-# 2D First derivative
 """
     D₁(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;order::Integer=2)
 2D implementation of ``D_x`` operator
@@ -41,7 +39,6 @@ end
 See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
 """
 function D₁!() end
-# 1D
 """
     D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
 1D [`D₁!`](@ref).
@@ -52,7 +49,6 @@ function D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,
     FirstDerivativeInternal!(uₓ,u,Δx,n,order)
     FirstDerivativeBoundary!(uₓ,u,Δx,n,Right,order)
 end
-# 1D for 2D
 """
     function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
 1D implementation for 2D problems for [`D₁!`](@ref).
@@ -69,7 +65,6 @@ end
     function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,order::Integer)
 2D [`D₁!`](@ref).
 """
-# 2D
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
         order::Integer) where T
     
