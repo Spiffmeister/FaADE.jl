@@ -172,7 +172,7 @@ struct newBoundaryConditions{DIM,
         if length(J) == 1
             if J[1][2] == Left
                 BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[I].Δx,J[1][2],1,GetOrder(P.order))
-
+# println("type",typeof(P.BoundaryConditions.BoundaryLeft))
                 BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
                 BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,J[1][1],P.order)
             elseif J[1][2] == Right
@@ -181,9 +181,18 @@ struct newBoundaryConditions{DIM,
                 BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J[1][1],P.order)
                 BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCRt,J[1][1],P.order)
             end
-        else
-            BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[I].Δx,J[1][2],1,GetOrder(P.order))
-            BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J[2][1]].Δx,J[2][2],1,GetOrder(P.order))
+        elseif length(J) == 2
+
+            JL = G.Joint[J[1][1]]
+            JR = G.Joint[J[2][1]][1]
+            length(JL) == 1 ? JL = JL[1] : JL = JL[2] # Correct for second node where `JL = ((1,Right),)`
+
+            println(J)
+            println(JL)
+            println(JR)
+
+            BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[JL[1]].Δx,Left,1,GetOrder(P.order))
+            BCRt = SAT_Interface(G.Grids[J[2][1]].Δx,G.Grids[JR[1]].Δx,Right,1,GetOrder(P.order))
 
             BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
             BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2][1]],BCRt,J[2][1],P.order)

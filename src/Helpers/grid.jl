@@ -27,8 +27,9 @@ Returns:
 """
 struct Grid1D{TT<:Real,
         MET <:MetricType,
-        DT  <:Union{Real,Vector{TT}},
-        GT  <:Vector{TT}} <: LocalGridType{TT,1,MET}
+        GT  <:Vector{TT},
+        DT  <:Union{Real,Vector{TT}}
+            } <: LocalGridType{TT,1,MET}
 
     grid    :: GT
     Δx      :: DT
@@ -38,14 +39,11 @@ end
 function Grid1D(𝒟::Vector{TT},n::Integer) where TT
     Δx = (𝒟[2]-𝒟[1])/(n-1)
     x = collect(range(𝒟[1],𝒟[2],length=n))
-
-    # new{TT,TT,CartesianMetric}(x,Δx,n)
-    return Grid1D{TT,CartesianMetric,TT,typeof(x)}(x,Δx,n)
+    return Grid1D{TT,CartesianMetric,typeof(x),typeof(Δx)}(x,Δx,n)
 end
 function Grid1D(𝒟::Vector{TT}) where TT
     Δx = diff(𝒟)
-    # new{TT,Vector{TT},CurvilinearMetric}(𝒟,Δx,length(𝒟))
-    return Grid1D{TT,CurvilinearMetric,typeof(Δx),typeof(x)}(𝒟,Δx,length(𝒟))
+    return Grid1D{TT,CurvilinearMetric,typeof(x),typeof(Δx)}(𝒟,Δx,length(𝒟))
 end
 
 
@@ -65,8 +63,8 @@ Returns:
 """
 struct Grid2D{TT,
         MET<:MetricType,
-        DT<:Union{Real,Vector{TT}},
-        GT<:AbstractArray{TT}
+        GT<:AbstractArray{TT},
+        DT<:Union{Real,AbstractArray{TT}}
             } <: LocalGridType{TT,2,MET}
     gridx   :: GT
     gridy   :: GT
@@ -74,34 +72,111 @@ struct Grid2D{TT,
     Δy      :: DT
     nx      :: Integer
     ny      :: Integer
+
+    J       :: GT
+    qx      :: GT
+    qy      :: GT
+    rx      :: GT
+    ry      :: GT
 end
 """
-    Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer)
-2D cartesian grid with domain boundaries ``𝒟x`` and ``𝒟y`` and ``nx`` and ``ny`` nodes in ``x`` and ``y`` respectively.
+    Grid2D(𝒟x::Vector,𝒟y::Vector,nx::Integer,ny::Integer)
+Construct a 2D grid from the domain boundaries in ``x`` and ``y`` and the number of nodes in ``x`` and ``y``.
 """
 function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) where TT
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
-    return Grid2D{TT,CartesianMetric,typeof(gx.grid),typeof(gx.Δx)}(gx.grid, gy.grid, gx.Δx, gy.Δx, gx.n, gy.n)
+
+    J = 1.0
+    qx = qy = rx = ry = zeros(eltype(gx.grid),1)
+    return Grid2D{TT,CartesianMetric,typeof(gx.grid),typeof(gx.Δx)}(gx.grid, gy.grid, gx.Δx, gy.Δx, gx.n, gy.n,
+        J, qx, qy, rx, ry)
 end
 """
-    Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer) where TT
-2D curvilinear grid using transfinite interpolation between the four boundary functions.
-
-See [`meshgrid`](@ref) for more details.
+    Grid2D(𝒟x::Vector,𝒟y::Vector)
+Construct a 2D grid from vectors in ``x`` and ``y``.
 """
-function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer) where TT
-    gridx,gridy = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
-    Δx = diff(gridx)
-    Δy = diff(gridy)
-    return Grid2D{TT,CurvilinearMetric,typeof(gridx),typeof(Δx)}(gridx,gridy,Δx,Δy,nx,ny)
+function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT},order=2) where TT
+
+    nx, ny = size(𝒟x)
+
+    Δx = zeros(eltype(𝒟x),size(𝒟x))
+    Δy = zeros(eltype(𝒟x),size(𝒟x))
+
+    for i = 1:size(𝒟x,1)-1
+        Δx[i,:] = 𝒟x[i+1,:] - 𝒟x[i,:]
+    end
+    Δx[end,:] = Δx[end-1,:]
+    for j = 1:size(𝒟y,2)-1
+        Δy[:,j] = 𝒟y[:,j+1] - 𝒟y[:,j]
+    end
+    Δy[:,end] = Δy[:,end-1]
+
+    # println(Δx)
+
+    qx = zeros(eltype(𝒟x),size(𝒟x))
+    rx = zeros(eltype(𝒟x),size(𝒟x))
+    qy = zeros(eltype(𝒟y),size(𝒟y))
+    ry = zeros(eltype(𝒟y),size(𝒟y))
+
+    D₁!(qx,𝒟x,nx,1.0,DerivativeOrder{2}(),TT(0),1)
+    @. qx = qx/Δx
+    D₁!(qy,𝒟y,nx,1.0,DerivativeOrder{2}(),TT(0),1)
+    @. qy = qy/Δy
+    D₁!(rx,𝒟x,ny,1.0,DerivativeOrder{2}(),TT(0),2)
+    @. rx = rx/Δx
+    D₁!(ry,𝒟y,ny,1.0,DerivativeOrder{2}(),TT(0),2)
+    @. ry = ry/Δy
+    
+    J = zeros(eltype(𝒟x),size(𝒟x))
+    for i = 1:nx
+        for j = 1:ny
+            J[i,j] = 1/(qx[i,j]*ry[i,j] - rx[i,j]*qy[i,j])
+        end
+    end
+    
+    return Grid2D{TT,CurvilinearMetric,typeof(𝒟x),eltype(𝒟x)}(𝒟x, 𝒟y, TT(1)/TT(nx-1), TT(1)/TT(ny-1), nx, ny,
+        J, qx, qy, rx, ry)
+end
+"""
+    Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer)
+Construct a 2D grid from the boundary functions in ``x`` and ``y`` and the number of nodes in ``x`` and ``y``.
+
+Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate in the ``x`` direction and ``v`` is the coordinate in the ``y`` direction and where ``u`` and ``v`` are in the range ``[0,1]``.
+"""
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=2)
+    X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
+    Grid2D(X,Y,order)
 end
 
 
 
+
+
+
+
+
 """
-    GridMultiBlock
-Grid data for SAT boundary problems
+    GridMultiBlock{TT,DIM,MET,TG,TJ,IT} <: GridType{TT,DIM,MET}
+Grid data for multiblock problems
+
+Grabbing a particular subgrid can be done by ``G.Grids[i]`` which indexes in the order the grids are given. 
+Indexing can be performed by ``G[i]`` for 1D or ``G[i,j]`` for 2D multiblock problems.
+`GridMultiBlock.Joint` contains the information on how to connect grids. If periodic boundary conditions are being used, do not specify the joint across that boundary.
+
+Example grid creation,
+```
+    D1  = Grid2D([0.0,0.5],[0.0,1.0],5,5)
+    D2  = Grid2D([0.5,1.0],[0.0,1.0],5,5)
+    D3  = Grid2D([1.0,1.5],[0.0,1.0],5,5)
+
+    glayout = ([(2,Right)],
+                [(1,Left),(3,Right)],
+                [(2,Left)])
+
+    G = GridMultiBlock((D1,D2,D3),glayout)
+```
+
 """
 struct GridMultiBlock{TT  <: Real,
         DIM,
@@ -113,36 +188,31 @@ struct GridMultiBlock{TT  <: Real,
     Grids   :: TG
     Joint   :: TJ
     inds    :: IT
-end
-
-function GridMultiBlock(grids::Vector{Grid1D{TT,MET,DT}},joints) where {TT,MET,DT}
-    inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
-    return GridMultiBlock{TT, 1, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds)
-end
-function GridMultiBlock(grids::Vector{Grid2D{TT,MET,DT}},joints) where {TT,MET,DT}
-    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
-    return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds)
+    ngrids  :: Int
 end
 """
-    GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
+GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
 Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
-"""
-function GridMultiBlock(grids::Vector{Grid1D{TT,MET,DT}}) where {TT,MET,DT}
-    J = [(i,i+1,Right) for i in 1:length(grids)-1]
-    # J = [(1,2,Right)], [(i,i-1,Left),]
-    GridMultiBlock(grids,J)
+    """
+    function GridMultiBlock(grids::Tuple{Vararg{Grid1D{TT,DT,MET},N}}) where {N,TT,DT,MET}
+    J = [((i-1,Left),(i+1,Right)) for i in 2:length(grids)-1]
+    J = tuple(((2,Right),),J...,((length(grids)-1,Left),))
+    inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
+
+    return GridMultiBlock{TT, 1, MET, typeof(grids), typeof(J),typeof(inds)}(grids,J,inds,length(inds))
 end
 """
-    GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}},J::Vector{Tuple{Int,Int,NodeType}}) where {TT,MET}
-
-Assumes blocks are stacked in `x`
+    GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET},N}}) where {N,TT,MET}
+Multiblock grid for 2D grids, assumes the grids are stacked in X
 """
-function GridMultiBlock(grids::AbstractArray{Grid2D{TT,MET}}) where {TT,MET}
-    J = [(i,i+1,Right) for i in 1:length(grids)]
-    GridMultiBlock(grids,J)
+function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,GT,DT,MET},N}},joints) where {N,TT,GT,DT,MET}
+    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
 end
 
 
+
+#============ Functions ============#
 
 """
     GetMinΔ
@@ -156,7 +226,11 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 
 
 
-
+"""
+    Base.getindex(G::GridType,i::Integer)
+"""
+Base.getindex(G::Grid1D,i...) = G.grid[i...]
+Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i],G.gridy[j])
 
 function Base.getindex(G::GridMultiBlock{TT,1},i::Integer) where TT
     ii = findfirst(x->x ≥ i, G.inds)
@@ -180,30 +254,42 @@ end
 """
 Base.size(G::Grid1D) = (G.n,)
 Base.size(G::Grid2D) = (G.nx,G.ny)
-Base.size(G::GridMultiBlock{TT,1}) where {TT} = (G.inds[end]-length(G.inds)+1,)
-Base.size(G::GridMultiBlock{TT,2}) where {TT} = (G.inds[end,1],G.inds[end,2])
+function Base.size(G::GridMultiBlock{TT}) where {TT}
+    sz = (0,0)
+    for i = 1:G.ngrids
+        sz = sz .+ size(G.Grids[i])
+    end
+    return sz
+end
+
+
 """
-    length(G::GridType)
+    Base.length(G::GridType)
 """
 Base.length(G::GridType) = prod(size(G))
 
+"""
+    Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT}
+"""
 Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 
-Base.eachindex(G::GridMultiBlock{TT,1}) where {TT} = Base.OneTo(length(G))
+"""
+    Base.eachindex(G::GridType)
+"""
+Base.eachindex(G::GridType) = Base.OneTo(length(G))
 
+"""
+    Base.eachindex(G::GridMultiBlock)
+"""
 eachgrid(G::GridMultiBlock) = Base.OneTo(length(G.Grids))
 
-
-# Base.typeof(M::MetricType{MType}) where MType = MType
-
-# Base.getindex(G::GridMultiBlock{},i)
-Base.getindex(G::Grid1D,i...) = G.grid[i...]
-Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i],G.gridy[j])
-
-
-
+"""
+    Base.lastindex(G::GridType)
+"""
 Base.lastindex(G::Grid1D) = G.n
 Base.lastindex(G::Grid2D) = size(G)
 
-
+"""
+    Base.lastindex(G::GridMultiBlock)
+"""
 Base.eltype(G::GridType{TT}) where TT = TT

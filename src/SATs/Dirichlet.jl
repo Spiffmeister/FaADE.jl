@@ -51,7 +51,7 @@ struct SAT_Dirichlet{
             Dirichlet,side,axis,order,ED,RHS,Δx,α,τ,loopaxis,imax,jmax)
     end
 end
-SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order) where {SIDE,AT} = SAT_Dirichlet(RHS,Δx,side,AX,order)
+SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order)
 
 
 

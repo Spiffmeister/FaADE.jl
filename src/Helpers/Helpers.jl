@@ -7,6 +7,7 @@ module Helpers
     include("types.jl")
     include("nifty.jl")
 
+    include("gridconstruction.jl")
     include("grid.jl")
     include("UserTypes.jl")
 
@@ -16,6 +17,7 @@ module Helpers
 
     # types import
     export NodeType, Left, Internal, Right, Up, Down
+    export _flip
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     export SATMode, DataMode, SolutionMode
     export SourceTerm, DiffusionCoefficient

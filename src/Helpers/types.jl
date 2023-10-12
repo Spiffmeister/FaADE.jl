@@ -20,6 +20,20 @@ const Up = NodeType{:Left,2}()
 const Down = NodeType{:Right,2}()
 
 
+function _flip(NT)
+    if NT == Left
+        return Right
+    elseif NT == Right
+        return Left
+    elseif NT == Up
+        return Down
+    elseif NT == Down
+        return Up
+    else
+        return NT
+    end
+end
+
 
 """
     BoundaryCondition

@@ -10,8 +10,8 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-# t = 0.02
-t = 100.0
+t = 0.05
+# t = 1.0
 
 u₀(x) = x.^2
 # u₀(x) = exp.(-(x-0.5)^2 / 0.02)
@@ -51,10 +51,7 @@ solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 D1 = Grid1D([0.0,0.5],501)
 D2 = Grid1D([0.5,1.0],501)
 
-Joints = [[(2,Right)],
-            [(1,Left)]]
-
-Dom2V = GridMultiBlock([D1,D2],Joints)
+Dom2V = GridMultiBlock((D1,D2))
 
 Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
@@ -73,11 +70,7 @@ soln = solve(P2V,Dom2V,Δt,t)
 # @benchmark solve($P2V,$Dom2V,$Δt,$t)
 
 
-using Plots
-# plot(Dom1V.grid,solnO1V.u[2])
-plot(Dom1V.grid,solnP1V.u[2])
-plot!(Dom2V.Grids[1].grid,soln.u[2][1])
-plot!(Dom2V.Grids[2].grid,soln.u[2][2])
+
 
 # DBlock = FaADE.solvers.DataMultiBlock(P2V,Dom2V,0.0,0.0)
 # @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
@@ -94,15 +87,12 @@ norm(vcat(soln.u[2][1],soln.u[2][2][2:end]))
 
 
 #=
-D1 = Grid1D([0.0,0.35],8)
-D2 = Grid1D([0.35,0.65],7)
-D3 = Grid1D([0.65,1.0],8)
+D1 = Grid1D([0.0,0.35],351)
+D2 = Grid1D([0.35,0.65],301)
+D3 = Grid1D([0.65,1.0],351)
 
-Joints = [[(2,Right)],
-            [(1,Left),(3,Right)],
-            [(2,Left)]]
 
-Dom3V = GridMultiBlock([D1,D2,D3],Joints)
+Dom3V = GridMultiBlock((D1,D2,D3))
 
 Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
@@ -110,10 +100,26 @@ BD = FaADE.SATs.SATBoundaries(Dl,Dr)
 
 P3V = newProblem1D(order,u₀,K,Dom3V,BD)
 
-
 println("Solving")
-@time soln = solve(P3V,Dom3V,Δt,t)
+soln3V = solve(P3V,Dom3V,Δt,t)
 =#
+
+
+
+using Plots
+# plot(Dom1V.grid,solnO1V.u[2])
+plot(Dom1V.grid,solnP1V.u[2])
+
+plot!(Dom2V.Grids[1].grid,soln.u[2][1])
+plot!(Dom2V.Grids[2].grid,soln.u[2][2])
+
+# plot!(Dom3V.Grids[1].grid,soln3V.u[2][1])
+# plot!(Dom3V.Grids[2].grid,soln3V.u[2][2])
+# plot!(Dom3V.Grids[3].grid,soln3V.u[2][3])
+
+
+
+
 
 
 

@@ -1,6 +1,78 @@
 
 
 
+
+
+
+"""
+    cosinespace(R::Vector{TT},θ::TT,ζ::TT,m::Vector,n::Vector) where TT
+Cosine term for cylindrical coordinates
+"""
+function cosinespace(R::Array{TT},θ::TT,ζ::TT,m::Vector,n::Vector) where TT
+    local r = 0.0 :: TT
+    for j in eachindex(m)
+        for i in eachindex(n)
+            r += R[i,j]*cos(convert(TT,m[j])*θ - convert(TT,n[i])*ζ)
+        end
+    end
+    return r
+end
+function cosinespace(R::Array{TT},θ::AbstractVector{TT},ζ,m,n) where TT
+    r = zeros(TT,length(θ))
+    for i in eachindex(θ)
+        r[i] = cosinespace(R,θ[i],ζ,m,n)
+    end
+    return r
+end
+
+"""
+    sinusespace(Z::Vector{TT},θ::TT,ζ::TT,m::Vector,n::Vector) where TT
+Sin term for cylindrical coordinates
+"""
+function sinusespace(Z::Array{TT},θ::TT,ζ::TT,m::Vector{Int},n::Vector{Int}) where TT
+    local z = 0.0 :: TT
+    for j in eachindex(m)
+        for i in eachindex(n)
+            z += Z[i,j]*sin(m[j]*θ - n[i]*ζ)
+        end
+    end
+    return z
+end
+function sinusespace(Z::Array{TT},θ::AbstractVector{TT},ζ,m,n) where TT
+    z = zeros(TT,length(θ))
+    for i in eachindex(θ)
+        z[i] = sinusespace(Z,θ[i],ζ,m,n)
+    end
+    return z
+end
+
+
+
+
+"""
+    Torus{TT}
+Represents a torus in boundary using Fourier series in `R` and `Z` coordinates as,
+``R(θ,ζ) = ∑ᵢⱼ Rᵢⱼ cos(mⱼθ - nᵢζ)``
+``Z(θ,ζ) = ∑ᵢⱼ Zᵢⱼ sin(mⱼθ - nᵢζ)``
+where `Rᵢⱼ` and `Zᵢⱼ` are the Fourier coefficients and `mⱼ` and `nᵢ` are the Fourier modes.
+"""
+struct Torus{TT}
+    R::Array{TT}
+    Z::Array{TT}
+    m::Vector{Int}
+    n::Vector{Int}
+end
+
+
+function (T::Torus)(θ::TT,ζ::TT) where TT
+    return [cosinespace(T.R,θ,ζ,T.m,T.n), sinusespace(T.Z,θ,ζ,T.m,T.n)]
+end
+
+
+
+
+
+
 function coordinate(cbottom::Function,cleft::Function,cright::Function,ctop::Function,u::TT,v::TT) where TT
     S = (one(TT)-v)*cbottom(u) + v*ctop(u) + (one(TT)-u)*cleft(v) + u*cright(v) - 
         (u*v*ctop(one(TT)) + u*(one(TT)-v)*cbottom(one(TT)) + v*(one(TT)-u)*ctop(zero(TT)) + (one(TT)-u)*(one(TT)-v)*cbottom(zero(TT)))
@@ -10,8 +82,10 @@ end
 
 
 
+
+
 """
-    meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
+    meshgrid(S,TT,nx,ny)
 """
 function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
     # TT = Float64
@@ -28,6 +102,8 @@ function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Fu
 
     for j = 1:ny
         for i = 1:nx
+            # println(S(u[i],v[j])," ",u[i],",",v[j])
+
             X[i,j] = S(u[i],v[j])[1]
             Y[i,j] = S(u[i],v[j])[2]
         end
@@ -41,75 +117,59 @@ meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::I
 
 
 
-
-
-
 """
-    circulargrid(R::Float64,n::Int)
+    meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
+Generate matrix of coordinates from vectors of coordinates
 """
-function circulargrid(R::Float64,n::Int)
-    
-    # each of the square edges
-    squpper(u)  = [u/2 - 0.25,  0.25]
-    sqleft(v)   = [-0.25,       v/2 - 0.25]
-    sqright(v)  = [0.25,        v/2 - 0.25]
-    sqbottom(u)    = [u/2 - 0.25,  -0.25]
-
-
-    # The 45 degree lines
-    sq45left(u) = [u/2 - 0.25,  u/2 - 0.25]
-    sq45right(u)= [0.25 - u/2,  u/2 - 0.25]
-    sq45top(u)  = [u/2 - 0.25,  0.25 - u/2]
-    sq45bottom(u) = [u/2 - 0.25,  u/2 - 0.25]
-
-
-
-    # Top annulus
-    AUbottom(u) = [u/2 - 0.25, 0.25]
-    AUleft(v)   = v*[cos(3π/4) + 0.25, sin(3π/4) - 0.25] + [-0.25, 0.25]
-    AUright(v)  = v*[cos(π/4) - 0.25, sin(π/4) - 0.25] + [0.25, 0.25]
-    AUtop(u)    = [cos(u*(π/4 - 3π/4) + 3π/4), sin(u*(π/4 - 3π/4) + 3π/4)]
-
-    # Left annulus
-    ALbottom(u) = u*[-cos(3π/4) + 0.25, -sin(3π/4) + 0.25] + [-0.25, 0.25]
-    ALleft(v)   = [cos(v*(3π/4 - 5π/4) + 5π/4), sin(v*(3π/4 - 5π/4) + 5π/4)]
-    ALright(v)  = [-0.25, v/2 - 0.25]
-    ALtop(u)    = u*[0.25 + cos(3π/4), 0.25 + sin(π/4)] + [-cos(3π/4), -sin(π/4)]
-
-    # Bottom annulus
-    ABbottom(u) = [cos(u*(7π/4 - 5π/4) + 5π/4), sin(u*(7π/4 - 5π/4) + 5π/4)]
-    ABleft(v)   = v*[-0.25 - cos(5π/4), -0.25 - sin(5π/4)] + [cos(5π/4), sin(5π/4)]
-    ABright(v)  = v*[0.25 - cos(7π/4), -0.25 - sin(7π/4)] + [cos(7π/4), sin(7π/4)]
-    ABtop(u)    = [u/2 - 0.25, -0.25]
-
-    # Right annulus
-    ARbottom(u) = u*[cos(7π/4) - 0.25, sin(7π/4) + 0.25] + [0.25, -0.25]
-    ARleft(v)   = [0.25, v/2 - 0.25]
-    ARright(v)  = [cos(v*(9π/4 - 7π/4) + 7π/4), sin(v*(9π/4 - 7π/4) + 7π/4)]
-    ARtop(u)    = u*[cos(π/4) - 0.25, sin(π/4) - 0.25] + [0.25, 0.25]
-
-
-
-    sq = Grid2D(sqbottom,sqleft,sqright,squpper,nx,ny)
-    AU = Grid2D(AUbottom,AUleft,AUright,AUtop,nx,ny)
-    AL = Grid2D(ALbottom,ALleft,ALright,ALtop,nx,ny)
-    AB = Grid2D(ABbottom,ABleft,ABright,ABtop,nx,ny)
-    AR = Grid2D(ARbottom,ARleft,ARright,ARtop,nx,ny)
-    
-    
-    glayout = ([(2,Up),(3,Left),(4,Down),(5,Right)],
-                [(1,Down),(3,Left),(5,Right)],
-                [(1,Right),(2,Up),(4,Down)],
-                [(1,Up),(3,Right),(5,Right)],
-                [(1,Left),(2,Left),(4,Down)])
-    
-    
-    G = GridMultiBlock((sq,AU,AL,AB,AR),glayout)
-    
-    
-
-    return x,y
+function meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
+    nx = length(𝒟x)
+    ny = length(𝒟y)
+    X = zeros(nx,ny)
+    Y = zeros(nx,ny)
+    for j = 1:ny
+        for i = 1:nx
+            X[i,j] = 𝒟x[i]
+            Y[i,j] = 𝒟y[j]
+        end
+    end
+    return X,Y
 end
 
 
+"""
+    meshgrid(cinner::Function,couter::Function,nx,ny)
+Meshgrid for annular domains where the inner and outer boundaries are parameterised boundaries
+"""
+function meshgrid(cbottom::Function,cleft::Function,nx::Int,ny::Int)
+    S(u,v) = coordinate(cbottom,cleft,cright,ctop,u,v)
+
+    
+    
+    X = zeros(nx,ny)
+    Y = zeros(nx,ny)
+
+    for j = 1:ny
+        for i = 1:nx
+            X[i,j] = S(u[i],v[j])[1]
+            Y[i,j] = S(u[i],v[j])[2]
+        end
+    end
+    return X,Y
+end
+
+
+
+"""
+    meshgrid(inner::Torus,outer::Torus,ζ,nr,nθ)
+Take two tori and generate a meshgrid between them at a given angle ζ
+"""
+function meshgrid(inner::Torus,outer::Torus,ζ,nr,nθ)
+
+    AL(u) = inner(0.0,0.0) + u*(outer(0.0,0.0) - inner(0.0,0.0))
+    AR(u) = inner(2π,0.0) + u*(outer(2π,0.0) - inner(2π,0.0))
+    
+    X,Y = howtogridding.meshgrid(u->inner(2π*u,0.0), AL, AR, u->outer(2π*u,0.0), nr, nθ)
+
+    return X,Y
+end
 
