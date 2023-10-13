@@ -111,6 +111,102 @@ end
 
 
 
+"""
+    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Internal}}) where {AT}
+Periodic SAT for a single block
+"""
+function SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Internal}}) where {AT}
+
+    for (S,U,K) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c))
+        # Dirichlet terms
+        S[1]  += SP.τ₀(K) * (U[1] - U[end])
+        S[end]+= SP.τ₀(K) * (U[end] - U[1])
+        # Symmeteriser
+        L₁u = (U[1] - U[end])
+        for i = 1:order
+            S[i]            += SP.τ₁*SP.K[1]*SP.D₁ᵀE₀[i]*SP.L₁u
+            S[end-order+i]  += SP.τ₁*SP.K[end]*SP.D₁ᵀEₙ[i]*SP.L₁u
+            #Neumann terms
+            S[1]  += SP.α₀ * (K[1]*SP.E₀D₁[i]*U[i] - K[end]*SP.EₙD₁[i]*U[end-order+i])
+            S[end]+= SP.α₀ * (K[1]*SP.E₀D₁[i]*U[i] - K[end]*SP.EₙD₁[i]*U[end-order+i])
+        end
+    end
+    cache
+end
+
+
+"""
+    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:SolutionMode}) where {AT}
+Periodic SAT for left boundary of a split domain
+"""
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:SolutionMode}) where {AT}
+    for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
+        # Dirichlet terms
+        S[1]  += SP.τ₀(K) * (U[1] - U[end])
+        # Symmeteriser
+        L₁u = (U[1] - U[end])
+        for i = 1:order
+            S[i]            += SP.τ₁*SP.K[1]*SP.D₁ᵀE₀[i]*SP.L₁u
+            #Neumann terms
+            S[1]  += SP.α₀ * (K[1]*SP.E₀D₁[i]*U[i] - K[end]*SP.EₙD₁[i]*U[end-order+i])
+        end
+    end
+    dest
+end
+"""
+    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:SolutionMode}) where {AT}
+Periodic SAT for right boundary of a split domain
+"""
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:SolutionMode}) where {AT}
+    for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
+        # Dirichlet terms
+        S[end]+= SP.τ₀(K) * (U[end] - U[1])
+        # Symmeteriser
+        L₁u = (U[1] - U[end])
+        for i = 1:order
+            S[end-order+i]  += SP.τ₁*SP.K[end]*SP.D₁ᵀEₙ[i]*SP.L₁u
+            #Neumann terms
+            S[end]+= SP.α₀ * (K[1]*SP.E₀D₁[i]*U[i] - K[end]*SP.EₙD₁[i]*U[end-order+i])
+        end
+    end
+    dest
+end
+
+"""
+    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:DataMode}) where {AT}
+Periodic SAT for the left hand buffer
+"""
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:DataMode}) where {AT}
+    for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
+        S[end] = U[end]
+        S[end-1] = TT(0)
+        for i = 1:SP.order
+            S[end-1] += K[end]*SP.EₙD₁[i]*U[end-SP.order+i]
+        end
+    end
+    dest
+end
+"""
+    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:DataMode}) where {AT}
+Periodic SAT for the right hand buffer
+"""
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:DataMode}) where {AT}
+    for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
+        S[1] = U[1]
+        S[2] = TT(0)
+        for i = 1:SP.order
+            S[2] += K[1]*SP.E₀D₁[i]*U[i]
+        end
+    end
+    dest
+end
+
+
+
+
+
+
+
 function (SP::SAT_Periodic{NodeType{:Internal,DIM},TT})(cache::AT,c::AT,u::AT) where {TT,DIM,AT}
     # Non-split domain
     for (S,U,K) in zip(SP.loopaxis(cache),SP.loopaxis(u),SP.loopaxis(c))
