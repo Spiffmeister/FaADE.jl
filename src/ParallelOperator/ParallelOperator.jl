@@ -10,6 +10,7 @@ module ParallelOperator
 
     using FaADE.Helpers
 
+    using FaADE.Grid
 
     include("ParallelData.jl")
     include("ConstructParallelGrid.jl")

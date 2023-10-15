@@ -17,7 +17,15 @@ u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
 
-Dom1V = Grid2D([0.0,1.0],[0.0,1.0],7,7)
+cbottom(u) = [u,0.0]
+cleft(v) = [0.0,v]
+cright(v) = [1.0,v]
+ctop(u) = [u,1.0]
+
+Dom1V = Grid2D(cbottom,cleft,cright,ctop,7,7)
+
+
+# Dom1V = Grid2D([0.0,1.0],[0.0,1.0],7,7)
 
 Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)

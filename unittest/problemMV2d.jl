@@ -23,7 +23,7 @@ Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
 Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
 Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
-BD1V = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
+BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
 
 P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
 

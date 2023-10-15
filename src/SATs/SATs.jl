@@ -11,6 +11,7 @@ module SATs
     using FaADE.Helpers
     # using StaticArrays
 
+    include("types.jl")
 
     include("SAT_Interface.jl")
 
@@ -21,18 +22,20 @@ module SATs
     # include("Robin.jl")
     include("Periodic.jl")
     include("Split.jl")
-    include("Helpers.jl")
+    # include("Helpers.jl")
 
+    export SATMode, DataMode, SolutionMode
     export SAT_Dirichlet, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
     export SAT_Neumann
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
-    export SAT_Interface, SAT_Interface!
+    # export SAT_Interface, SAT_Interface!
+    export generate_Dirichlet, generate_Neumann, generate_Periodic
 
 
     export SimultanousApproximationTerm
-    export construct_SAT
-    export SATBoundaries
+    # export construct_SAT
+    # export SATBoundaries
     # export applySAT!
     
 end

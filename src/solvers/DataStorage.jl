@@ -252,123 +252,21 @@ _newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproxima
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},J,order) where TT = newBoundaryData(G,BC,J,order)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},J,order) where TT   = newBoundaryData(G,BC,J,order)
 
-#========== BOUNDARY DATA ==========#
-"""
-    BoundaryData1D
-Data structure for storage of SATs in 1 dimensional problems
-"""
-struct newBoundaryData1D{TT,
-        SATL <: SimultanousApproximationTerm,
-        SATR <: SimultanousApproximationTerm,
-        CLR <: CartesianIndices,
-        AT} <: BoundaryStorage{TT,1,AT}
-
-    Left        :: SATL
-    Right       :: SATR
-
-    JointLeft   :: Int64
-    JointRight  :: Int64
-
-    LeftIndexFrom   :: CLR
-    RightIndexFrom  :: CLR
-    LRStorageIndex  :: CLR
-
-    u_Left      :: AT
-    u_Right     :: AT
-
-    RHS_Left    :: AT
-    RHS_Right   :: AT
-
-    function newBoundaryData1D(G::Grid1D{TT,MET},order::DerivativeOrder{O},BCL,BCR) where {TT,O,MET}
-
-        nnodes = SATNodeOutput(O)
-
-        u_Left      = zeros(TT,nnodes)
-        u_Right     = zeros(TT,nnodes)
-
-        LeftIndex   = CartesianIndices((1:GetOrder(order),))
-        RightIndex  = CartesianIndices((lastindex(G)-O+1:lastindex(G),))
-
-        new{TT,typeof(BCL),typeof(BCR),typeof(LeftIndex),typeof(u_Left)}(BCL,BCR,1,1,LeftIndex,RightIndex,LeftIndex,u_Left,u_Right,[0.0],[0.0])
-    end
-end
-
-
-"""
-    BoundaryData2D
-Data structure for storage of SATs in 2 dimensional problems
-"""
-struct newBoundaryData2D{TT,
-        SATL <: SimultanousApproximationTerm,
-        SATR <: SimultanousApproximationTerm,
-        SATD <: SimultanousApproximationTerm,
-        SATU <: SimultanousApproximationTerm,
-        AT} <: BoundaryStorage{TT,2,AT}
-
-    Left        :: SATL
-    Right       :: SATR
-    Up          :: SATU
-    Down        :: SATD
-
-    JointLeft   :: Int64
-    JointRight  :: Int64
-    JointUp     :: Int64
-    JointDown   :: Int64
-
-    LeftIndex   :: CartesianIndices
-    RightIndex  :: CartesianIndices
-    UpIndex     :: CartesianIndices
-    DownIndex   :: CartesianIndices
-
-    u_Left      :: AT #Solution along boundary with size determined by derivative order
-    u_Right     :: AT #Solution along boundary with size determined by derivative order
-    u_Up        :: AT #Solution along boundary with size determined by derivative order
-    u_Down      :: AT #Solution along boundary with size determined by derivative order
-
-    RHS_Left    :: AT
-    RHS_Right   :: AT
-    RHS_Up      :: AT
-    RHS_Down    :: AT
-
-    function newBoundaryData2D(grid::Grid2D{TT,MET},order::DerivativeOrder{O},BCL,BCR,BCU,BCD) where {TT,O,MET}
-
-        nnodes = SATNodeOutput(order)
-        ny = grid.ny
-        nx = grid.nx
-
-        u_Left =    zeros(TT,(nnodes,ny)) #x
-        u_Right =   zeros(TT,(nnodes,ny)) #x
-        u_Up =      zeros(TT,(nx,nnodes)) #y
-        u_Down =    zeros(TT,(nx,nnodes)) #y
-
-        RHS_Left =    zeros(TT,(1,ny)) #x
-        RHS_Right =   zeros(TT,(1,ny)) #x
-        RHS_Up =      zeros(TT,(nx,1)) #y
-        RHS_Down =    zeros(TT,(nx,1)) #y
-
-        LeftIndex   = CartesianIndices((1:O,1:ny))
-        RightIndex  = CartesianIndices((lastindex(G)-O+1:lastindex(G),1:ny))
-        UpIndex     = CartesianIndices((1:nx,1:O))
-        DownIndex   = CartesianIndices((1:nx,lastindex(G)-O+1:lastindex(G)))
-
-        new{TT,typeof(BCL),typeof(BCR),typeof(BCU),typeof(BCD),typeof(u_Left)}(BCL,BCR,BCU,BCD,
-            1,1,1,1,
-            LeftIndex,RightIndex,UpIndex,DownIndex,
-            u_Left,u_Right,u_Up,u_Down,
-            RHS_Left,RHS_Right,RHS_Up,RHS_Down)
-    end
-end
 
 
 
-function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM}) where {TT,DIM}
+function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET}) where {TT,DIM,MET}
     u       = zeros(TT,size(G))
     uₙ₊₁    = zeros(TT,size(G))
     if DIM == 1
         K       = zeros(TT,size(G))
         # K = (zeros(TT,G),)
     elseif DIM == 2
-        K       = [zeros(TT,size(G)), zeros(TT,size(G))]
+        if MET == CartesianMetric
+            K       = [zeros(TT,size(G)), zeros(TT,size(G))]
+        elseif MET == CurvilinearMetric
+            K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+        end
         # K = (zeros(TT,size(G)),zeros(TT,size(G)))
     end
     cache   = zeros(TT,size(G))
@@ -471,7 +369,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
 
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-    IP = innerH(G,GetOrder(P.order))
+    IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
     D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,G.nx,G.ny,G.Δx,G.Δy)
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
@@ -502,7 +400,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
 
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right)
-    IP = innerH(G.Grids[I],GetOrder(P.order))
+    IP = innerH(G.Grids[I].Δx,G.Grids[I].n,GetOrder(P.order))
     D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
@@ -513,18 +411,26 @@ end
     newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer)
 Initialise a data block for a 2D multiblock problem
 """
-function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) where TT
+function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer) where {TT,MET}
     LG = G.Grids[I]
 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(LG)
     
     if typeof(P.Kx) <: Real
-        K[1] .= P.Kx
-        K[2] .= P.Ky
+        @. K[1] .= P.Kx * G.J * (G.qx^2 + G.qy^2)
+        @. K[2] .= P.Ky * G.J * (G.rx^2 + G.ry^2)
+        if MET == CurvilinearMetric
+            for i in eachindex(G[I])
+                K[3][i] = P.K * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            end
+        end
     elseif typeof(P.K) <: Function
         for i in eachindex(G[I])
             K[1][i] .= P.Kx(G[I][i])
             K[2][i] .= P.Ky(G[I][i])
+            if MET == CurvilinearMetric
+                K[3][i] .= G[I]
+            end
         end
     end
     PK = [P.Kx,P.Ky]
@@ -537,7 +443,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer) 
 
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-    IP = innerH(LG,GetOrder(P.order))
+    IP = innerH(LG.Δx,LG.Δy,LG.nx,LG.ny,GetOrder(P.order))
     D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy)
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
@@ -618,7 +524,7 @@ Base.length(DB::DataMultiBlock) = DB.nblock
 
 Base.ndims(DB::DataMultiBlock{TT,DIM}) where {TT,DIM} = DIM
 
-@inline eachjoint(BB::newBoundaryData1D) = Base.OneTo(2)
+# @inline eachjoint(BB::newBoundaryData1D) = Base.OneTo(2)
 
 
 

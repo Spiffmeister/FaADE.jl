@@ -15,11 +15,17 @@ module Derivatives
     include("Op_Dx.jl")
     include("Op_Dxx.jl")
 
+    include("HMatrix.jl")
+
     include("Diff.jl")
 
-    export SecondDerivative
+    # export SecondDerivative
     export DerivativeOrder, GetOrder, DerivativeOperator
-    export D₁, D₁!, D₂, D₂!, generate_SecondDerivative
+    export D₁, D₂
+    export D₁!, D₂!
+    export generate_SecondDerivative #legacy function
     export mul!
+
+    export build_H, innerH
 
 end

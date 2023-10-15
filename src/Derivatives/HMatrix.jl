@@ -20,15 +20,16 @@ struct innerH{T<:Real,
     Hy  :: VT
     Δ   :: T
 end
-function innerH(Δx::T,n,order::Int) where {T}
+function innerH(Δx::T,n,order) where T
     H = build_H(order,n)
-    new{T,1,typeof(H)}(H,[1.0], Δx)
+    return innerH{T,1,typeof(H)}(H,[1.0], Δx)
 end
-function innerH(Δx::T,Δy::T,nx,ny,order::Int) where {T} 
+function innerH(Δx::T,Δy::T,nx,ny,order) where T
     Hx = build_H(order,nx)
     Hy = build_H(order,ny)
     return innerH{T,2,typeof(Hx)}(Hx,Hy, Δx*Δy)
 end
+
 
 """
     (H::InnerH)

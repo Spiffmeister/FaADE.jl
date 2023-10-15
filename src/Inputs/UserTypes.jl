@@ -5,6 +5,30 @@ abstract type newPDEProblem{dtype,DIMS} end
 
 
 
+struct SATBoundaries{SATL<:SimultanousApproximationTerm,
+        SATR<:Union{SimultanousApproximationTerm,Nothing},
+        SATU<:Union{SimultanousApproximationTerm,Nothing},
+        SATD<:Union{SimultanousApproximationTerm,Nothing}}
+    BoundaryLeft    :: SATL
+    BoundaryRight   :: SATR
+    BoundaryUp      :: SATU
+    BoundaryDown    :: SATD
+
+
+    function SATBoundaries(BCs...)
+        if length(BCs) == 1
+            new{Nothing,Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
+        elseif length(BCs) == 2
+            new{typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
+        elseif length(BCs) == 3
+            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),Nothing}(BCs[1],BCs[2],BCs[3],nothing)
+        else
+            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),typeof(BCs[4])}(BCs[1],BCs[2],BCs[3],BCs[4])
+        end
+    end
+end
+
+
 
 struct newProblem1D{TT      <: Real,
     DIMS,

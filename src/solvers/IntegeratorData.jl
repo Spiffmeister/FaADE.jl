@@ -58,7 +58,11 @@ struct ConjGradBlock{TT,DIM,AT} <: IntegratorDataBlock{TT,DIM}
         buffer_right    = similar(buffer_left)
         buffer_down     = similar(buffer_up)
 
-        innerprod = innerH(grid,order)
+        if DIM == 1
+            innerprod = innerH(grid.Δx,grid.n,order)
+        elseif DIM == 2
+            innerprod = innerH(grid.Δx,grid.Δy,grid.nx,grid.ny,order)
+        end
 
         scalars = ConjGradScalarBlock{TT}()
 
