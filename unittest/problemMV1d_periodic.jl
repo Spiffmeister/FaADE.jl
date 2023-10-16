@@ -10,45 +10,35 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-# t = 0.05
+# t = 0.03
 t = 10.0
 
-u₀(x) = x.^2
-# u₀(x) = exp.(-(x-0.5)^2 / 0.02)
-
-
-
+u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
 
 #====== Original solver ======#
 Dom1V = Grid1D([0.0,1.0],1001)
 
-# u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
-BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,t->1.0,Right,1)
-P = VariableCoefficientPDE1D(u₀,t->K,order,BoundaryLeft,BoundaryRight)
+PB = PeriodicBoundary(1)
+P = VariableCoefficientPDE1D(u₀,t->K,order,PB)
 println("---Solving old---")
 solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 
-# @benchmark solve($P,$Dom1V,$Δt,$t,:cgie)
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
-# @profview solnO_tmpa = solve(P2V,Dom2V,Δt,t)
-# @profview solnO_tmpb = solve(P2V,Dom2V,Δt,t)
-
-
+# DBlock = FaADE.solvers.DataMultiBlock(P1V,Dom1V,0.0,0.0)
+# @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
+# @code_warntype DBlock[1].boundary[Left]
 
 
 
 #====== New solver 1 volume ======#
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
-BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr)
+Pl = FaADE.SATs.SAT_Periodic(Dom1V.Δx,1,order,Left)
+Pr = FaADE.SATs.SAT_Periodic(Dom1V.Δx,1,order,Right)
+BD1V = FaADE.Inputs.SATBoundaries(Pl,Pr)
 P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t)
-
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
-
 
 
 #====== New solver 2 volume ======#
@@ -57,25 +47,29 @@ D2 = Grid1D([0.5,1.0],501)
 
 Dom2V = GridMultiBlock(D1,D2)
 
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
-println("---Solving 2 volume---")
-P2V = newProblem1D(order,u₀,K,Dom2V,BD)
+Pl = FaADE.SATs.SAT_Periodic(D1.Δx,1,order,Left)
+Pr = FaADE.SATs.SAT_Periodic(D2.Δx,1,order,Right)
+BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
 
+P2V = newProblem1D(order,u₀,K,Dom2V,BD)
+println("---Solving 2 volume---")
 soln2V = solve(P2V,Dom2V,Δt,t)
 
-# @benchmark solve($P2V,$Dom2V,$Δt,$t)
 
-# solve(P2V,Dom2V,Δt,t)
 # Profile.clear_malloc_data()
-# solve(P2V,Dom2V,Δt,t)
-
+# soln = solve(P2V,Dom2V,Δt,t)
+# Profile.clear_malloc_data()
 # @profview soln_tmpa = solve(P2V,Dom2V,Δt,t)
 # @profview soln_tmpb = solve(P2V,Dom2V,Δt,t)
+# @benchmark solve($P2V,$Dom2V,$Δt,$t)
+
+#=
 
 
 
+# DBlock = FaADE.solvers.DataMultiBlock(P2V,Dom2V,0.0,0.0)
+# @code_warntype FaADE.solvers.fillBuffer(:u,DBlock,1,Left)
+# @code_warntype DBlock[1].boundary[Left]
 
 
 
@@ -87,7 +81,7 @@ norm(vcat(soln.u[2][1],soln.u[2][2][2:end]))
 
 
 
-#=
+
 D1 = Grid1D([0.0,0.35],351)
 D2 = Grid1D([0.35,0.65],301)
 D3 = Grid1D([0.65,1.0],351)
@@ -103,25 +97,22 @@ P3V = newProblem1D(order,u₀,K,Dom3V,BD)
 
 println("Solving")
 soln3V = solve(P3V,Dom3V,Δt,t)
-=#
 
 
 
 
-#=
 using Plots
-plot(Dom1V.grid,solnO1V.u[2])
-plot(Dom1V.grid,soln1V.u[2])
+# plot(Dom1V.grid,solnO1V.u[2])
+plot(Dom1V.grid,solnP1V.u[2])
 
-plot!(Dom2V.Grids[1].grid,soln2V.u[2][1])
-plot!(Dom2V.Grids[2].grid,soln2V.u[2][2])
+plot!(Dom2V.Grids[1].grid,soln.u[2][1])
+plot!(Dom2V.Grids[2].grid,soln.u[2][2])
 
-# plot!(Dom3V.Grids[1].grid,soln3V.u[2][1])
-# plot!(Dom3V.Grids[2].grid,soln3V.u[2][2])
-# plot!(Dom3V.Grids[3].grid,soln3V.u[2][3])
+plot!(Dom3V.Grids[1].grid,soln3V.u[2][1])
+plot!(Dom3V.Grids[2].grid,soln3V.u[2][2])
+plot!(Dom3V.Grids[3].grid,soln3V.u[2][3])
+
 =#
-
-
 
 
 

@@ -144,6 +144,11 @@ end
 
 
 
+struct Joint
+    index   :: Int64
+    side    :: NodeType
+end
+
 
 
 
@@ -182,21 +187,20 @@ struct GridMultiBlock{TT  <: Real,
     ngrids  :: Int
 end
 """
-    GridMultiBlock(grids::Tuple{Vararg{Grid1D{TT,MET},N}},joints) where {N,TT,MET}
-Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
-"""
-function GridMultiBlock(grids::Tuple{Vararg{Grid1D{TT,DT,MET},N}},joints) where {N,TT,DT,MET}
-    inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
-    return GridMultiBlock{TT, 1, MET, typeof(grids), typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
-end
-"""
     GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
 Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
 """
-function GridMultiBlock(grids::Tuple{Vararg{Grid1D{TT,DT,MET},N}}) where {N,TT,DT,MET}
-    J = [(i,i+1,Right) for i in 1:length(grids)-1]
-    J = tuple(J...)
-    GridMultiBlock(grids,J)
+function GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
+    if length(grids) == 2
+        J = (Joint(2,Right),Joint(1,Left))
+    elseif length(grids) > 2
+        for i = 2:length(grids)-1
+            J = [(Joint(i-1,Right),Joint(i+1,Left))...]
+        end
+        J = tuple(Joint(2,Right),J...,Joint(length(grids)-1,Left))
+    end
+    inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
+    return GridMultiBlock{TT,1,MET,typeof(grids),typeof(J),typeof(inds)}(grids,J,inds,length(inds))
 end
 """
     GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET},N}}) where {N,TT,MET}
@@ -290,3 +294,9 @@ Base.lastindex(G::Grid2D) = size(G)
     Base.lastindex(G::GridMultiBlock)
 """
 Base.eltype(G::GridType{TT}) where TT = TT
+
+
+"""
+    coordtype(G::GridType{TT,DIM,MET}) where {TT,DIM,MET}
+"""
+coordtype(G::GridType{TT,DIM,MET}) where {TT,DIM,MET} = MET

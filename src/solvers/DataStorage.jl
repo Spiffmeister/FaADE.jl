@@ -148,8 +148,13 @@ struct newBoundaryConditions{DIM,
         newBoundaryConditions(P::newPDEProblem{TT,1},G::LocalGridType)
     """
     function newBoundaryConditions(P::newPDEProblem{TT,DIM},G::LocalGridType) where {TT,DIM}
-        BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
-        BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
+        if P.BoundaryConditions.BoundaryLeft.type != Periodic
+            BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,1,P.order)
+            BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,1,P.order)
+        else
+            BCL = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryLeft,1,P.order)
+            BCR = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryRight,1,P.order)
+        end
         if DIM == 1
             # NB = 2
             BCU = nothing
@@ -169,33 +174,42 @@ struct newBoundaryConditions{DIM,
     function newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64) where {TT}
 
         J = G.Joint[I]
-        if length(J) == 1
-            if J[1][2] == Left
-                BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[I].Δx,J[1][2],1,GetOrder(P.order))
-# println("type",typeof(P.BoundaryConditions.BoundaryLeft))
-                BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
-                BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,J[1][1],P.order)
-            elseif J[1][2] == Right
-                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J[1][1]].Δx,J[1][2],1,GetOrder(P.order))
-                
-                BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J[1][1],P.order)
-                BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCRt,J[1][1],P.order)
-            end
-        elseif length(J) == 2
+        if typeof(J) <: Joint
+            if J.side == Left
+                BCLt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,1,GetOrder(P.order))
+                BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCLt,J.index,P.order)
 
-            JL = G.Joint[J[1][1]]
-            JR = G.Joint[J[2][1]][1]
+                if P.BoundaryConditions.BoundaryRight.type != Periodic
+                    BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,J.index,P.order)
+                else
+                    BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryRight,J.index,P.order)
+                end
+
+            elseif J.side == Right
+                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J.index].Δx,J.side,1,GetOrder(P.order))
+                BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCRt,J.index,P.order)
+
+                if P.BoundaryConditions.BoundaryLeft.type != Periodic
+                    BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
+                else
+                    BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
+                end
+            end
+        elseif length(J) == 2 #TODO
+
+            JL = G.Joint[J[1].index]
+            JR = G.Joint[J[2].index][1]
             length(JL) == 1 ? JL = JL[1] : JL = JL[2] # Correct for second node where `JL = ((1,Right),)`
 
             println(J)
             println(JL)
             println(JR)
 
-            BCLt = SAT_Interface(G.Grids[J[1][1]].Δx,G.Grids[JL[1]].Δx,Left,1,GetOrder(P.order))
-            BCRt = SAT_Interface(G.Grids[J[2][1]].Δx,G.Grids[JR[1]].Δx,Right,1,GetOrder(P.order))
+            BCLt = SAT_Interface(G.Grids[J[1].index].Δx,G.Grids[JL.index].Δx,Left,1,GetOrder(P.order))
+            BCRt = SAT_Interface(G.Grids[J[2].index].Δx,G.Grids[JR.index].Δx,Right,1,GetOrder(P.order))
 
-            BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1][1]],BCLt,J[1][1],P.order)
-            BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2][1]],BCRt,J[2][1],P.order)
+            BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1].index],BCLt,J[1].index,P.order)
+            BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2].index],BCRt,J[2].index,P.order)
         end
 
         BCU = nothing
@@ -253,6 +267,39 @@ _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichle
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},J,order) where TT   = newBoundaryData(G,BC,J,order)
 
 
+
+
+
+# function _setKoefficient!(K,)
+function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {TT,MET}
+    if typeof(P.Kx) <: Real
+        if MET == CartesianMetric
+            println("hi")
+            @. K[1] = P.Kx
+            @. K[2] = P.Ky
+        elseif MET == CurvilinearMetric
+            for i in eachindex(G)
+                K[1][i] = P.Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+                K[2][i] = P.Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+                K[3][i] = P.Kxy* G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            end
+        end
+    elseif typeof(P.Kx) <: Function
+        if MET == CartesianMetric
+            for i in eachindex(G)
+                K[1][i] = P.Kx(G[i])
+                K[2][i] = P.Ky(G[i])
+            end
+        elseif MET == CurvilinearMetric
+            for i in eachindex(G)
+                K[1][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+                K[2][i] = P.Ky(G[i]) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+                K[3][i] = P.Kxy(G[i])* G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            end
+        end
+    end
+    K
+end
 
 
 function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET}) where {TT,DIM,MET}
@@ -337,7 +384,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
 
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right)
-    IP = innerH(G,GetOrder(P.order))
+    IP = innerH(G.Δx,G.n,GetOrder(P.order))
     D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.n,0,G.Δx,TT(0))
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
@@ -355,17 +402,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
 
-    if typeof(P.Kx) <: Real
-        PK = [P.Kx,P.Ky]
-        K[1] .= P.Kx
-        K[2] .= P.Ky
-    elseif typeof(P.Kx) <: Function
-        PK = [P.Kx,P.Ky]
-        for i in eachindex(G)
-            K[1][i] .= P.Ky(G[i])
-            K[2][i] .= P.Kx(G[i])
-        end
-    end
+    _setKoefficient!(K,P,G)
+    PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
@@ -416,24 +454,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(LG)
     
-    if typeof(P.Kx) <: Real
-        @. K[1] .= P.Kx * G.J * (G.qx^2 + G.qy^2)
-        @. K[2] .= P.Ky * G.J * (G.rx^2 + G.ry^2)
-        if MET == CurvilinearMetric
-            for i in eachindex(G[I])
-                K[3][i] = P.K * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
-            end
-        end
-    elseif typeof(P.K) <: Function
-        for i in eachindex(G[I])
-            K[1][i] .= P.Kx(G[I][i])
-            K[2][i] .= P.Ky(G[I][i])
-            if MET == CurvilinearMetric
-                K[3][i] .= G[I]
-            end
-        end
-    end
-    PK = [P.Kx,P.Ky]
+    _setKoefficient!(K,P,LG)
+    PK = (P.Kx,P.Ky)
 
     if typeof(P.Parallel) <: Vector
         PMap = P.Parallel[I]

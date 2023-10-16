@@ -5,7 +5,7 @@ Submodule containing the grid data structure and functions.
 """
 module Grid
 
-    # using FaADE.Helpers
+    using FaADE.Helpers
     # using Derivatives: DerivativeOrder, D₁!
 
     include("grids.jl")
@@ -14,6 +14,9 @@ module Grid
 
     export GridType, LocalGridType
     export CartesianMetric, CurvilinearMetric
+    export coordtype
+
+    export Joint
 
     export Grid1D, Grid2D, GridMultiBlock
     export Torus

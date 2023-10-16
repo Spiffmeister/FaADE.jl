@@ -9,7 +9,7 @@ struct SAT_Periodic{
         TT<:Real,
         VT<:Vector{TT},
         F1<:Function,F2<:Function} <: SimultanousApproximationTerm{:Periodic}
-    
+    type        :: BoundaryConditionType
     side        :: TN
     axis        :: Int
     order       :: Int
@@ -35,7 +35,7 @@ struct SAT_Periodic{
         loopaxis = SelectLoopDirection(axis)
 
         new{typeof(Internal),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
-            Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
+            Periodic,Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
     end
     function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
@@ -48,7 +48,7 @@ struct SAT_Periodic{
         loopaxis = SelectLoopDirection(axis)
 
         new{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
-            side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
+            Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
     end
 end
 
