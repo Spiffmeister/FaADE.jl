@@ -232,19 +232,27 @@ struct newBoundaryConditions{DIM,
 
         # Loop over joints
         if typeof(J) <: Joint
+            # If there is a single joint
             for i in 1:length(faces)
                 if J.side == faces[i]
                     BCt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,GetAxis(J.side),GetOrder(P.order))
                     BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
-                    push!(BCS,BC)
                 else
+
                     BCt = getfield(P.BoundaryConditions,Pfaces[i])
-                    BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
-                    push!(BCS,BC)
+                    if BCt.type != Periodic
+                        BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
+                    else
+                        BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
+                    end
+
+                    # BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
                 end
+                push!(BCS,BC)
             end
         else
             for j in 1:length(J)
+                # If there are multiple joints
                 JC = J[j]
                 for i in 1:length(faces)
                     if JC.side == faces[i]
@@ -253,7 +261,12 @@ struct newBoundaryConditions{DIM,
                         push!(BCS,BC)
                     else
                         BCt = getfield(P.BoundaryConditions,Pfaces[i])
-                        BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
+                        if BCt.type != Periodic
+                            BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
+                        else
+                            BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
+                        end
+                        # BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
                         push!(BCS,BC)
                     end
                 end
