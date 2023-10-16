@@ -8,8 +8,10 @@ module Grid
     using FaADE.Helpers
     # using Derivatives: DerivativeOrder, D₁!
 
-    include("grids.jl")
+    include("DerivativeFirst.jl")
     include("toroidal.jl")
+    include("generating.jl")
+    include("grids.jl")
     # include("data.jl")
 
     export GridType, LocalGridType

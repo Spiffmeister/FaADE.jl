@@ -109,10 +109,10 @@ function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT},order=2) where TT
     yq = zeros(eltype(𝒟y),size(𝒟y))
     yr = zeros(eltype(𝒟y),size(𝒟y))
 
-    D₁!(xq,𝒟x,nx,TT(1)/TT(nx-1),DerivativeOrder{2}(),TT(0),1)
-    D₁!(yq,𝒟y,nx,TT(1)/TT(nx-1),DerivativeOrder{2}(),TT(0),1)
-    D₁!(xr,𝒟x,ny,TT(1)/TT(ny-1),DerivativeOrder{2}(),TT(0),2)
-    D₁!(yr,𝒟y,ny,TT(1)/TT(ny-1),DerivativeOrder{2}(),TT(0),2)
+    D₁!(xq,𝒟x,nx,TT(1)/TT(nx-1),2,1)
+    D₁!(yq,𝒟y,nx,TT(1)/TT(nx-1),2,1)
+    D₁!(xr,𝒟x,ny,TT(1)/TT(ny-1),2,2)
+    D₁!(yr,𝒟y,ny,TT(1)/TT(ny-1),2,2)
     
     J = zeros(eltype(𝒟x),size(𝒟x))
     for i = 1:nx

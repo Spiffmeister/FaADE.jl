@@ -9,47 +9,46 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-# t = 10000.0
-t = 0.03
+t = 1.0
 
 # u₀(x,y) = x.^2
 u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
 
-cbottom(u) = [u,0.0]
-cleft(v) = [0.0,v]
-cright(v) = [1.0,v]
-ctop(u) = [u,1.0]
-
-Dom1V = Grid2D(cbottom,cleft,cright,ctop,7,7)
-
-
-# Dom1V = Grid2D([0.0,1.0],[0.0,1.0],7,7)
-
-Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
-BD1V = FaADE.SATs.SATBoundaries(Dl,Dr,Du,Dd)
-
-P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
-
-println("---Solving---")
-soln1V = solve(P1V,Dom1V,Δt,t)
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
-
-println("---Solving---")
-
+# Original solver
+Dom1V = Grid2D([0.0,1.0],[0.0,1.0],21,21)
 
 BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
 BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
 BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
 BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
 PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
-solnO1V = solve(PO1V,Dom1V,Δt,0.02,:cgie)
+println("---Solving old---")
+solnO1V = solve(PO1V,Dom1V,Δt,t-Δt,:cgie) #-Δt to ensure ends at the same time as new methods
 
 
+
+
+# New solver 1 volume
+cbottom(u) = [u,0.0]
+cleft(v) = [0.0,v]
+cright(v) = [1.0,v]
+ctop(u) = [u,1.0]
+
+Dom1V = Grid2D(cbottom,cleft,cright,ctop,21,21)
+
+Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
+Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
+Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
+BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+
+P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
+
+println("---Solving 1 volume---")
+soln1V = solve(P1V,Dom1V,Δt,t)
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
 #=
 maximum.(soln1V.u)

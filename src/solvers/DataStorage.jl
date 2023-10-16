@@ -113,7 +113,7 @@ struct newInterfaceBoundaryData{
             end
 
         elseif BC.side ∈ [Up,Down]
-            n = G.nx
+            n = G2.nx
             BufferIn    = zeros(TT,(n,O))
             BufferOut   = zeros(TT,(n,O))
 
@@ -162,8 +162,13 @@ struct newBoundaryConditions{DIM,
             # BC = (BCL,BCR)
         elseif DIM ==2
             # NB = 4
-            BCU = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryUp,1,P.order)
-            BCD = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryDown,1,P.order)
+            if P.BoundaryConditions.BoundaryUp.type != Periodic
+                BCU = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryUp,1,P.order)
+                BCD = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryDown,1,P.order)
+            else
+                BCU = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryUp,1,P.order)
+                BCD = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryDown,1,P.order)
+            end
             # BC = (BCL,BCR,BCU,BCD)
         end
         new{1,typeof(BCL),typeof(BCR),typeof(BCU),typeof(BCD)}(BCL,BCR,BCU,BCD)
@@ -201,9 +206,9 @@ struct newBoundaryConditions{DIM,
             JR = G.Joint[J[2].index][1]
             length(JL) == 1 ? JL = JL[1] : JL = JL[2] # Correct for second node where `JL = ((1,Right),)`
 
-            println(J)
-            println(JL)
-            println(JR)
+            # println(J)
+            # println(JL)
+            # println(JR)
 
             BCLt = SAT_Interface(G.Grids[J[1].index].Δx,G.Grids[JL.index].Δx,Left,1,GetOrder(P.order))
             BCRt = SAT_Interface(G.Grids[J[2].index].Δx,G.Grids[JR.index].Δx,Right,1,GetOrder(P.order))
@@ -224,22 +229,34 @@ struct newBoundaryConditions{DIM,
         Pfaces = [:BoundaryLeft,:BoundaryRight,:BoundaryUp,:BoundaryDown]
 
         BCS = []
-        if length(G.Joint[I]) != 4
-            error("Insufficient information to set up block boundary conditions")
-        end
 
         # Loop over joints
-        for i in 1:length(G.Joint[I])
-        # for J in G.Joint[I]
-            J = G.Joint[I][i]
-            if J[1] == I
-                BCt = getfield(P.BoundaryConditions,Pfaces[i])
-                BC = _newBoundaryCondition(G.Grids[I],BCt,J[1],P.order)
-                push!(BCS,BC)
-            else
-                BCt = SAT_Interface(G.Grids[J[1]].Δx,G.Grids[I].Δx,J[2],GetAxis(J[2]),GetOrder(P.order))
-                BC = _newBoundaryCondition(G.Grids[I],G.Grids[J[1]],BCt,J[1],P.order)
-                push!(BCS,BC)
+        if typeof(J) <: Joint
+            for i in 1:length(faces)
+                if J.side == faces[i]
+                    BCt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,GetAxis(J.side),GetOrder(P.order))
+                    BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
+                    push!(BCS,BC)
+                else
+                    BCt = getfield(P.BoundaryConditions,Pfaces[i])
+                    BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
+                    push!(BCS,BC)
+                end
+            end
+        else
+            for j in 1:length(J)
+                JC = J[j]
+                for i in 1:length(faces)
+                    if JC.side == faces[i]
+                        BCt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,GetAxis(J.side),GetOrder(P.order))
+                        BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
+                        push!(BCS,BC)
+                    else
+                        BCt = getfield(P.BoundaryConditions,Pfaces[i])
+                        BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
+                        push!(BCS,BC)
+                    end
+                end
             end
         end
         new{2,typeof(BCS[1]),typeof(BCS[2]),typeof(BCS[3]),typeof(BCS[4])}(BCS[1],BCS[2],BCS[3],BCS[4])
@@ -274,14 +291,13 @@ _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann}
 function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {TT,MET}
     if typeof(P.Kx) <: Real
         if MET == CartesianMetric
-            println("hi")
             @. K[1] = P.Kx
             @. K[2] = P.Ky
         elseif MET == CurvilinearMetric
             for i in eachindex(G)
                 K[1][i] = P.Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
                 K[2][i] = P.Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-                K[3][i] = P.Kxy* G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+                K[3][i] = P.Kx * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
             end
         end
     elseif typeof(P.Kx) <: Function
@@ -294,7 +310,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {T
             for i in eachindex(G)
                 K[1][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
                 K[2][i] = P.Ky(G[i]) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-                K[3][i] = P.Kxy(G[i])* G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+                K[3][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
             end
         end
     end

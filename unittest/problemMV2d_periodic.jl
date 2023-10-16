@@ -21,26 +21,25 @@ u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
 # Original solver
-Dom1V = Grid2D([0.0,1.0],[0.0,1.0],21,21)
+Dom1V = Grid2D([0.0,1.0],[-π,π],21,21)
 
 BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
-BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
-BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
-BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
-PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+BoundaryRight   = Boundary(Dirichlet,(y,t)->1.0,Right,1)
+BoundaryUpDown  = PeriodicBoundary(2)
+
+PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 println("---Solving old---")
-solnO1V = solve(PO1V,Dom1V,Δt,100.0-Δt,:cgie) #-Δt to ensure ends at the same time as new methods
+solnO1V = solve(PO1V,Dom1V,Δt,t-Δt,:cgie) #-Δt to ensure ends at the same time as new methods
 
 
 
 
 # New solver 1 volume
-
 Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
-BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+Pu = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Up)
+Pd = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Down)
+BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Pu,Pd)
 
 P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
 
@@ -51,8 +50,8 @@ soln1V = solve(P1V,Dom1V,Δt,t)
 
 
 # New solover 2 volume
-D1 = Grid2D([0.0,0.5],[0.0,1.0],11,21)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],11,21)
+D1 = Grid2D([0.0,0.5],[-π,π],11,21)
+D2 = Grid2D([0.5,1.0],[-π,π],11,21)
 
 joints = (Joint(2,Up),Joint(1,Down))
 
@@ -60,11 +59,11 @@ Dom2V = GridMultiBlock((D1,D2),joints)
 
 Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,2,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+Pu = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Up)
+Pd = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Down)
+BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Pu,Pd)
 
-# BCs = [(1,Left,Dl),(1,Up,Du),(1,Down,Dd),(2,Right,Dr),(2,Up,Du),(2,Down,Dd)]
+BCs = [(1,Left,Dl),(1,Up,Pu),(1,Down,Pd),(2,Right,Dr),(2,Up,Pu),(2,Down,Pd)]
 
 P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 

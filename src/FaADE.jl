@@ -39,7 +39,7 @@ module FaADE
 
     using FaADE.Derivatives: D₁, D₂!
 
-    using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric
+    using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     
     using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
 
@@ -50,7 +50,7 @@ module FaADE
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
-    export Grid1D, Grid2D, GridMultiBlock
+    export Grid1D, Grid2D, GridMultiBlock, Joint
     export Boundary, PeriodicBoundary, CartesianMetric, CurvilinearMetric
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
     export construct_grid, generate_parallel_penalty
