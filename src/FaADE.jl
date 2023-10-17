@@ -53,7 +53,7 @@ module FaADE
     export Grid1D, Grid2D, GridMultiBlock, Joint
     export Boundary, PeriodicBoundary, CartesianMetric, CurvilinearMetric
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
-    export construct_grid, generate_parallel_penalty
+    export construct_grid, generate_parallel_penalty, ParallelData
 
     export D₁, D₂, D₂!
 

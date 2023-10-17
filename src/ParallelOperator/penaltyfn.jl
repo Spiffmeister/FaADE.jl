@@ -156,17 +156,17 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     local wf :: TT
     local wb :: TT
 
-    I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
+    I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
 
     τ = -sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
-
+# println("hi")
     for j = 1:P.gridy.len
         for i = 1:P.gridx.len
             P.w_f[i,j] = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
             P.w_b[i,j] = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
         end
     end
-    ττ = τ*norm(u - (P.w_f + P.w_b),Inf)
+    ττ = τ*norm(u - (P.w_f + P.w_b)/2,Inf)
     @. u = 1.0/(1.0 - P.κ * ττ * Δt) * 
         ( u -  P.κ*Δt*ττ/2.0 * (P.w_f + P.w_b) )
 
