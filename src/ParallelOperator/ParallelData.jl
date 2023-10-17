@@ -45,20 +45,26 @@ struct ParallelData{TT<:Real,
     Δx          :: TT
     Δy          :: TT
 
-    function ParallelData(PGrid::ParallelGrid,Grid::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
+    w_f         :: Matrix{TT}
+    w_b         :: Matrix{TT}
+
+    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
 
         intercept_fieldlines = FieldLineIntercept(intercept)
         # intercept_fieldlines = intercept
 
         # K = DiffusionCoefficient(κ)
 
-        τ = -sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
+        τ = -sqrt((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1])/(G.Δx*G.Δy))
 
 
-        gridx = LinRange(Grid.gridx[1],Grid.gridx[end],Grid.nx)
-        gridy = LinRange(Grid.gridy[1],Grid.gridy[end],Grid.ny)
+        gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
+        gridy = LinRange(G.gridy[1],G.gridy[end],G.ny)
 
-        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
+        w_f = zeros(TT,size(G))
+        w_b = zeros(TT,size(G))
+
+        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,w_f,w_b)
     end
 end
 

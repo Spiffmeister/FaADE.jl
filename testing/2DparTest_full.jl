@@ -17,8 +17,8 @@ using FaADE
 ###
 𝒟x = [0.0,1.0]
 𝒟y = [-π,π]
-nx = 21
-ny = 21
+nx = 81
+ny = 81
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
 kx(x,y) = 1.0
@@ -26,7 +26,8 @@ ky(x,y) = 1.0
 
 
 Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
-t_f = 100Δt
+# t_f = 100Δt
+t_f = 10.0
 
 u₀(x,y) = x
 
@@ -39,7 +40,7 @@ BoundaryUpDown = PeriodicBoundary(2)
 order = 2
 method = :cgie
 
-P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+P = VariableCoefficientPDE2D(u₀,ky,kx,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
 
 
@@ -56,7 +57,7 @@ end
 dH(X,x,p,t) = χ_h!(X,x,params,t)
 PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
 # Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
-PData = FaADE.ParallelData(PGrid,Dom)
+PData = FaADE.ParallelData(PGrid,Dom,κ=1e12)
 
 
 println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
@@ -65,12 +66,16 @@ println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final
 # using Profile
 
 Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
-@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
-# @time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,Pgrid=PData)
+# @time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,Pgrid=PData)
 
 surface(soln.u[2])
 
-contour(soln.u[2])
+include("../../paper_JCP2023/FieldLines.jl")
+
+poindata = FieldLines.construct_poincare(dH,[0.0,1.0],[-π,π])
+scatter(poindata.θ,poindata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,xlims=𝒟y)
+contour!(Dom.gridy,Dom.gridx,soln.u[2],linewidth=3)
 
 #=
 println("Plotting")

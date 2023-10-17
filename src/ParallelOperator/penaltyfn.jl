@@ -119,7 +119,7 @@ function ParallelPenalty2D!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT
     # -1.0/sqrt(D.Δx * D.Δy/( (D.gridx[end]-D.gridx[1]) * (D.gridy[end] - D.gridy[1]) ))
     # τ = -T(1)
     # τ = -D.Δx
-    
+
     for j = 1:ny
         for i = 1:nx
             # H = H_y[i]*H_x[j]
@@ -160,17 +160,26 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
 
     τ = -sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
 
-
     for j = 1:P.gridy.len
         for i = 1:P.gridx.len
-
-            wf = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
-            wb = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
-            u[i,j] = 1.0/(1.0 - P.κ * τ * Δt) * 
-                ( u[i,j] -  P.κ*Δt*τ/2.0 * (wf + wb) )
-            
+            P.w_f[i,j] = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
+            P.w_b[i,j] = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
         end
     end
+    ττ = τ*norm(u - (P.w_f + P.w_b),Inf)
+    @. u = 1.0/(1.0 - P.κ * ττ * Δt) * 
+        ( u -  P.κ*Δt*ττ/2.0 * (P.w_f + P.w_b) )
+
+    # for j = 1:P.gridy.len
+    #     for i = 1:P.gridx.len
+
+    #         # wf = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
+    #         # wb = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
+    #         u[i,j] = 1.0/(1.0 - P.κ * ττ * Δt) * 
+    #             ( u[i,j] -  P.κ*Δt*ττ/2.0 * (wf + wb) )
+            
+    #     end
+    # end
 
 end
 

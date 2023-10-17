@@ -5,6 +5,14 @@
 Adds PDE forcing term
 """
 function addSource! end
+function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
+    for j in 1:grid.ny
+        for i in 1:grid.nx
+            u[i,j] += Δt*S(grid.gridx[i],grid.gridy[j],t)
+        end
+    end
+    u
+end
 function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
     u .+= Δt*S.source.(grid.grid,t)
 end
