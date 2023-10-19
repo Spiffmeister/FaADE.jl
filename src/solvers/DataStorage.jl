@@ -300,7 +300,7 @@ _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann}
 
 
 
-# function _setKoefficient!(K,)
+
 function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {TT,MET}
     if typeof(P.Kx) <: Real
         if MET == CartesianMetric
@@ -318,6 +318,9 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {T
             for i in eachindex(G)
                 K[1][i] = P.Kx(G[i])
                 K[2][i] = P.Ky(G[i])
+
+                D₁!(K[3],K[1],G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
+                D₁!(K[4],K[2],G.ny,G.Δy,2,TT(0),2) # Cross derivative term in y
             end
         elseif MET == CurvilinearMetric
             for i in eachindex(G)
@@ -341,7 +344,7 @@ function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET}) where {TT,DIM,ME
         if MET == CartesianMetric
             K       = [zeros(TT,size(G)), zeros(TT,size(G))]
         elseif MET == CurvilinearMetric
-            K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+            K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
         end
         # K = (zeros(TT,size(G)),zeros(TT,size(G)))
     end
@@ -414,7 +417,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right)
     IP = innerH(G.Δx,G.n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.n,0,G.Δx,TT(0))
+    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0))
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
@@ -437,7 +440,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
-    D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,G.nx,G.ny,G.Δx,G.Δy)
+    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy)
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
@@ -468,7 +471,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right)
     IP = innerH(G.Grids[I].Δx,G.Grids[I].n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order)}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
+    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 
@@ -495,7 +498,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
     IP = innerH(LG.Δx,LG.Δy,LG.nx,LG.ny,GetOrder(P.order))
-    D = DerivativeOperator{TT,2,typeof(P.order)}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy)
+    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy)
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 

@@ -3,71 +3,11 @@
 #======================================#
 # Author: Dean Muir, Kenneth Duru
 
-"""
-    SecondDerivative
-Allocating functions for second derivative, useful when need to add value to a matrix.
-
-See also [`SecondDerivativeInternal!`](@ref) and [`SecondDerivativeBoundary!`](@ref)
-"""
-function SecondDerivative end
-### Internal nodes
-"""
-    SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
-Internal node function.
-"""
-function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=2) where T
-    uₓₓ = zeros(T,length(u))
-    SecondDerivativeInternal!(uₓₓ,u,c,Δx,length(u),order,T(0))
-    return uₓₓ
-end
-"""
-    SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::NodeType{:Internal};order::Integer=4) where T
-Boundary node function.
-"""
-function SecondDerivative(u::AbstractVector{T},c::AbstractVector{T},Δx::T,node::NT;order::Integer=2) where {T,NT<:Union{NodeType{:Left},NodeType{:Right}}}
-    uₓₓ = zeros(BoundaryNodeOutput(order))
-    SecondDerivativeBoundary!(uₓₓ,u,c,Δx,node,order,T(0))
-    return uₓₓ
-end
 
 
 
 
 
-
-
-
-
-"""
-    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType,::DerivativeOrder{2},i::Int,j::Int,α::T) 
-2D 2nd order pointwise in x
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType{:Internal,1},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
-    uₓₓ[i,j] = α*uₓₓ[i,j] + 
-        (0.5*(c[i,j] + c[i-1,j])*u[i-1,j] - 0.5*(c[i+1,j] + 2c[i,j] + c[i-1,j])*u[i,j] + 0.5*(c[i,j] + c[i+1,j])*u[i+1,j])/Δx^2
-end
-"""
-    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::NodeType,::DerivativeOrder{2},i::Int,j::Int,α::T)
-2D 2nd order pointwise in y
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,
-        ::NodeType{:Internal,2},::DerivativeOrder{2},i::Int,j::Int,α::T) where T
-    uₓₓ[i,j] = α*uₓₓ[i,j] + 
-        (0.5*(c[i,j] + c[i,j-1])*u[i,j-1] - 0.5*(c[i,j+1] + 2c[i,j] + c[i,j-1])*u[i,j] + 0.5*(c[i,j] + c[i,j+1])*u[i,j+1])/Δx^2
-end
-"""
-    SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,::DerivativeOrder{4},i::Int,j::Int,α::T)
-1D 4th order pointwise
-"""
-@inline function SecondDerivativeInternal(u::AbstractVector{T},c::AbstractVector{T},Δx::T,
-        ::DerivativeOrder{4},i::Int,j::Int,α::T) where T
-    uₓₓ[j] = α*uₓₓ[j] -
-        ( (-c[j-1]/0.6e1 + c[j-2]/0.8e1 + c[j]/0.8e1)*u[j-2] +
-        (-c[j-2]/0.6e1 - c[j+1]/0.6e1 - c[j-1]/0.2e1 - c[j]/0.2e1)*u[j-1] +
-        (c[j-2]/0.24e2 + 0.5e1/0.6e1*c[j-1] + 0.5e1/0.6e1*c[j+1] + c[j+2]/0.24e2 + 0.3e1/0.4e1*c[j])*u[j] +
-        (-c[j-1]/0.6e1 - c[j+2]/0.6e1 - c[j]/0.2e1 - c[j+1]/0.2e1)*u[j+1] +
-        (-c[j+1]/0.6e1 + c[j]/0.8e1 + c[j+2]/0.8e1)*u[j+2] )/Δx^2
-end
 
 
 
@@ -86,112 +26,57 @@ function SecondDerivativeInternal! end
 
 Second order 1D second derivative internal stencil
 """
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::DerivativeOrder{2},i::Int,α::T) where T
-    @inbounds uₓₓ[i] = α*uₓₓ[i] + 
-        (0.5*(c[i] + c[i-1])*u[i-1] - 0.5*(c[i+1] + 2c[i] + c[i-1])*u[i] + 0.5*(c[i] + c[i+1])*u[i+1])/Δx^2
+@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::DerivativeOrder{2},i::Int) where {T,AT<:AbstractVector{T}}
+    @inbounds (0.5*(c[i] + c[i-1])*u[i-1] - 0.5*(c[i+1] + 2c[i] + c[i-1])*u[i] + 0.5*(c[i] + c[i+1])*u[i+1])/Δx^2
 end
+@inline function SecondDerivativeInternal(u::AT,cx::AT,Δx::T,::DerivativeOrder{4},i::Int) where {T,AT<:AbstractVector{T}}
+    @inbounds ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
+    (-cx[i-2]/0.6e1 - cx[i+1]/0.6e1 - cx[i-1]/0.2e1 - cx[i]/0.2e1)*u[i-1] +
+    (cx[i-2]/0.24e2 + 0.5e1/0.6e1*cx[i-1] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
+    (-cx[i-1]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
+    (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
+end
+@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::DerivativeOrder{6},i::Int) where {T,AT<:AbstractVector{T}}
+    @inbounds -((c[i-2]/0.40e2 + c[i-1]/0.40e2 - 0.11e2/0.360e3*c[i-3] - 0.11e2/0.360e3*c[i])*u[i-3] +
+        (c[i-3]/0.20e2 - 0.3e1/0.10e2*c[i-1] + c[i+1]/0.20e2 + 0.7e1/0.40e2*c[i] + 0.7e1/0.40e2*c[i-2])*u[i-2] + 
+        (-c[i-3]/0.40e2 - 0.3e1/0.10e2*c[i-2] - 0.3e1/0.10e2*c[i+1] - c[i+2]/0.40e2 - 0.17e2/0.40e2*c[i] - 0.17e2/0.40e2*c[i-1])*u[i-1] + 
+        (c[i-3]/0.180e3 + c[i-2]/0.8e1 + 0.19e2/0.20e2*c[i-1] + 0.19e2/0.20e2*c[i+1] + c[i+2]/0.8e1 + c[i+3]/0.180e3 + 0.101e3/0.180e3*c[i])*u[i] + 
+        (-c[i-2]/0.40e2 - 0.3e1/0.10e2*c[i-1] - 0.3e1/0.10e2*c[i+2] - c[i+3]/0.40e2 - 0.17e2/0.40e2*c[i] - 0.17e2/0.40e2*c[i+1])*u[i+1] + 
+        (c[i-1]/0.20e2 - 0.3e1/0.10e2*c[i+1] + c[i+3]/0.20e2 + 0.7e1/0.40e2*c[i] + 0.7e1/0.40e2*c[i+2])*u[i+2] + 
+        (c[i+1]/0.40e2 + c[i+2]/0.40e2 - 0.11e2/0.360e3*c[i] - 0.11e2/0.360e3*c[i+3])*u[i+3])/Δx^2
+end
+
+"""
+    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT)
+
+
+Internal nodes affect nodes from `1.5*order+1` giving the following:
+    Order 2: `2:nx-1`
+    Order 4: `7:nx-6`
+    Order 6: `10:nx-9`
+"""
 @inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
-        Δx::TT,nx::Integer,order::DerivativeOrder,α::TT) where {TT,VT<:AbstractVector{TT}}
-    for i = 2:nx-1
-        SecondDerivativeInternal!(uₓₓ,u,cx,Δx,order,i,α)
-        # @inbounds uₓₓ[i] = α*uₓₓ[i] +
-        #     ((cx[i] + cx[i-1])*u[i-1] - (cx[i+1] + 2cx[i] + cx[i-1])*u[i] + (cx[i] + cx[i+1])*u[i+1])/(2Δx^2)
+        Δx::TT,nx::Integer,order::DerivativeOrder{O},α::TT) where {TT,VT<:AbstractVector{TT},O}
+    O == 2 ? m = O : m = floor(Int,(1.5O))+1
+    for i = m:nx-m+1
+        @inbounds uₓₓ[i] = α*uₓₓ[i] + SecondDerivativeInternal(u,cx,Δx,order,i)
     end
     uₓₓ
 end
-"""
-    function SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{4},α::TT)
-
-Fourth order 1D second derivative internal stencil
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
-    Δx::TT,nx::Integer,::DerivativeOrder{4},α::TT) where {TT,VT<:AbstractVector{TT}}
-    for i = 7:nx-6
-        @inbounds    uₓₓ[i] = α*uₓₓ[i] + 
-            ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
-            (-cx[i-2]/0.6e1 - cx[i+1]/0.6e1 - cx[i-1]/0.2e1 - cx[i]/0.2e1)*u[i-1] +
-            (cx[i-2]/0.24e2 + 0.5e1/0.6e1*cx[i-1] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
-            (-cx[i-1]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
-            (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
-    end
-    uₓₓ
-end
-"""
-    SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,::DerivativeOrder{6},i::Int,j::Int,α::T)
-2D 6th order pointwise
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},c::AbstractArray{T},Δx::T,nx::Integer,
-        ::DerivativeOrder{6},i::Int,j::Int,α::T) where T
-    for j = 10:nx-9
-        @inbounds uₓₓ[j] = α*uₓₓ[j] - 
-            ((c[j-2]/0.40e2 + c[j-1]/0.40e2 - 0.11e2/0.360e3*c[j-3] - 0.11e2/0.360e3*c[j])*u[j-3] +
-            (c[j-3]/0.20e2 - 0.3e1/0.10e2*c[j-1] + c[j+1]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j-2])*u[j-2] + 
-            (-c[j-3]/0.40e2 - 0.3e1/0.10e2*c[j-2] - 0.3e1/0.10e2*c[j+1] - c[j+2]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j-1])*u[j-1] + 
-            (c[j-3]/0.180e3 + c[j-2]/0.8e1 + 0.19e2/0.20e2*c[j-1] + 0.19e2/0.20e2*c[j+1] + c[j+2]/0.8e1 + c[j+3]/0.180e3 + 0.101e3/0.180e3*c[j])*u[j] + 
-            (-c[j-2]/0.40e2 - 0.3e1/0.10e2*c[j-1] - 0.3e1/0.10e2*c[j+2] - c[j+3]/0.40e2 - 0.17e2/0.40e2*c[j] - 0.17e2/0.40e2*c[j+1])*u[j+1] + 
-            (c[j-1]/0.20e2 - 0.3e1/0.10e2*c[j+1] + c[j+3]/0.20e2 + 0.7e1/0.40e2*c[j] + 0.7e1/0.40e2*c[j+2])*u[j+2] + 
-            (c[j+1]/0.40e2 + c[j+2]/0.40e2 - 0.11e2/0.360e3*c[j] - 0.11e2/0.360e3*c[j+3])*u[j+3])/Δx^2
-    end
-end
 
 
 
-#====== 2D VERSIONS ======#
-"""
-    function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T)
 
-Second order 2D second derivative internal 5 point stencil
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
-        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
-        Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T) where T
-    
-    for j = 2:ny-1
-        for i = 2:nx-1
-            @inbounds uₓₓ[i,j] = α*uₓₓ[i,j] +
-                ((cx[i,j] + cx[i-1,j])*u[i-1,j] - (cx[i+1,j] + 2cx[i,j] + cx[i-1,j])*u[i,j] + (cx[i,j] + cx[i+1,j])*u[i+1,j])/(2.0Δx^2) +
-                ((cy[i,j] + cy[i,j-1])*u[i,j-1] - (cy[i,j+1] + 2cy[i,j] + cy[i,j-1])*u[i,j] + (cy[i,j] + cy[i,j+1])*u[i,j+1])/(2.0Δy^2)
-        end
-    end
-    uₓₓ
-end
-"""
-function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{2},α::T)
-
-Fourth order 2D second derivative internal 5 point stencil
-"""
-@inline function SecondDerivativeInternal!(uₓₓ::AbstractArray{T},
-        u::AbstractArray{T},cx::AbstractArray{T},cy::AbstractArray{T},
-        Δx::T,Δy::T,nx::Integer,ny::Integer,::DerivativeOrder{4},α::T) where T
-    
-    for j = 7:ny-6
-        for i = 7:nx-6
-            @inbounds uₓₓ[i,j] = α*uₓₓ[i,j] + 
-                (   (-cx[i,j-1]/0.6e1 + cx[i,j-2]/0.8e1 + cx[i,j]/0.8e1)*u[i,j-2] +
-                    (-cx[i,j-2]/0.6e1 - cx[i,j+1]/0.6e1 - cx[i,j-1]/0.2e1 - cx[i,j]/0.2e1)*u[i,j-1] +
-                    ( cx[i,j-2]/0.24e2 + 0.5e1/0.6e1*cx[i,j-1] + 0.5e1/0.6e1*cx[i,j+1] + cx[i,j+2]/0.24e2 + 0.3e1/0.4e1*cx[i,j])*u[i,j] +
-                    (-cx[i,j-1]/0.6e1 - cx[i,j+2]/0.6e1 - cx[i,j]/0.2e1 - cx[i,j+1]/0.2e1)*u[i,j+1] +
-                    (-cx[i,j+1]/0.6e1 + cx[i,j]/0.8e1 + cx[i,j+2]/0.8e1)*u[i,j+2]
-                    )/(-Δy^2) +    # y derivative
-                (   (-cy[i-1,j]/0.6e1 + cy[i-2,j]/0.8e1 + cy[i,j]/0.8e1)*u[i-2,j] +
-                    (-cy[i-2,j]/0.6e1 - cy[i+1,j]/0.6e1 - cy[i-1,j]/0.2e1 - cy[i,j]/0.2e1)*u[i-1,j] +
-                    ( cy[i-2,j]/0.24e2 + 0.5e1/0.6e1*cy[i-1,j] + 0.5e1/0.6e1*cy[i+1,j] + cy[i+2,j]/0.24e2 + 0.3e1/0.4e1*cy[i,j])*u[i,j] +
-                    (-cy[i-1,j]/0.6e1 - cy[i+2,j]/0.6e1 - cy[i,j]/0.2e1 - cy[i+1,j]/0.2e1)*u[i+1,j] +
-                    (-cy[i+1,j]/0.6e1 + cy[i,j]/0.8e1 + cy[i+2,j]/0.8e1)*u[i+2,j]
-                    )/(-Δx^2)      # x derivative
-        end
-    end
-    uₓₓ
-end
 
 
 
 #====== BOUNDARY OPERATORS ======#
 """
     SecondDerivativeBoundary!
+
+Since boundary stencils for the second derivative are not symmetric, Left and Right nodes are separate functions
 """
 function SecondDerivativeBoundary! end
-#====== 2D VERSIONS ======#
 """
     SecondDerivativeBoundary!
 1D in place function for second derivative on boundary nodes
@@ -208,7 +93,7 @@ end
     
     uₓₓ[end] = α*uₓₓ[end]
 end
-#====== 2D VERSIONS ======#
+
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
         Δx::TT,::NodeType{:Left},::DerivativeOrder{4},α::TT) where TT
@@ -294,8 +179,6 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
 
     uₓₓ
 end
-
-
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     u::AbstractVector{TT},c::AbstractVector{TT},
     Δx::TT,::NodeType{:Right},::DerivativeOrder{4},α::TT) where TT

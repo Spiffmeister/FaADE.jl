@@ -10,7 +10,8 @@ struct DerivativeOperator2D{DiffuseX,DiffuseY,AdvectX,AdvectY} <: DerivativeOper
 struct DerivativeOrder{O} end
 struct DerivativeOperator{TT<:Real,
         DIM,
-        DO<:DerivativeOrder} <: DerivativeOperatorType{DIM}
+        DO<:DerivativeOrder,
+        COEFF} <: DerivativeOperatorType{DIM}
     order   :: DO
     nx      :: Int64
     ny      :: Int64

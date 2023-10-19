@@ -19,7 +19,7 @@ function generate_SecondDerivative(nx::Int64,ny::Int64,Δx::Float64,Δy::Float64
             Δx=Δx, Δy=Δy,
             DO=DO
         
-        Diff!(uₓₓ,u,cx,cy) = D₂!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,DO,DO)
+        Diff!(uₓₓ,u,cx,cy) = D₂!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,DO,DO,0.0)
         return Diff!
     end
 end
@@ -47,7 +47,39 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,DO}) where {AT,KT,
     D₂!(dest,u,K,D.nx,D.Δx,D.order,TT(0))
     dest
 end
-function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO}) where {AT,KT,TT,DO}
-    D₂!(dest,u,K[1],K[2],D.nx,D.ny,D.Δx,D.Δy,D.order,D.order)
+function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Constant}) where {TT,AT<:AbstractArray{TT},KT,DO<:DerivativeOrder}
+
+    for (A,B,C) in zip(eachcol(dest),eachcol(u),eachcol(K[1]))
+        D₂!(A,B,C,D.nx,D.Δx,D.order,TT(0))
+    end
+    for (A,B,C) in zip(eachrow(dest),eachrow(u),eachrow(K[2]))
+        D₂!(A,B,C,D.ny,D.Δy,D.order,TT(1))
+    end
+
     dest
 end
+
+function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Variable}) where {TT,AT<:AbstractArray{TT},KT,DO<:DerivativeOrder}
+
+    for (A,B,Kx,DKy) in zip(eachcol(dest),eachcol(u),eachcol(K[1]),eachcol(K[4]))
+        D₂!(A,B,Kx,D.nx,D.Δx,D.order,TT(0))
+        D₁!(A,DKy,C,D.nx,D.Δx,D.order,TT(1))
+    end
+    for (A,B,Ky,DKx) in zip(eachrow(dest),eachrow(u),eachrow(K[2]),eachrow(K[3]))
+        D₂!(A,B,Ky,D.ny,D.Δy,D.order,TT(1))
+        D₁!(A,DKx,C,D.ny,D.Δy,D.order,TT(1))
+    end
+
+    dest
+end
+
+
+
+# function MixedOp(dest,u,cx,Dcy,Δx,Δy,DO,α)
+#     local cache :: TT
+#     for i = m:nx-m+1
+#         cache = SecondDerivativeInternal(u,cx,Δx,DO,i)
+#         cache += Dcy[i]*FirstDerivativeInternal(u,Δy,DO,i)
+#         dest[i] = α*dest[i] + cache
+#     end
+# end

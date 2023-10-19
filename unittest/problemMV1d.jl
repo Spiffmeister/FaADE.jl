@@ -11,7 +11,7 @@ K = 1.0
 
 Δt = 0.01
 # t = 0.05
-t = 10.0
+t = 100.0
 
 u₀(x) = x.^2
 # u₀(x) = exp.(-(x-0.5)^2 / 0.02)
@@ -47,7 +47,7 @@ P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t)
 
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
+@benchmark solve($P1V,$Dom1V,$Δt,$t)
 
 
 
@@ -108,14 +108,15 @@ soln3V = solve(P3V,Dom3V,Δt,t)
 
 
 
-#=
+
 using Plots
 plot(Dom1V.grid,solnO1V.u[2])
+
 plot(Dom1V.grid,soln1V.u[2])
 
 plot!(Dom2V.Grids[1].grid,soln2V.u[2][1])
 plot!(Dom2V.Grids[2].grid,soln2V.u[2][2])
-
+#=
 # plot!(Dom3V.Grids[1].grid,soln3V.u[2][1])
 # plot!(Dom3V.Grids[2].grid,soln3V.u[2][2])
 # plot!(Dom3V.Grids[3].grid,soln3V.u[2][3])

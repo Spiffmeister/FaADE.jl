@@ -1,5 +1,6 @@
 
 using FaADE
+using LinearAlgebra
 using BenchmarkTools
 # using ProfileView
 # using Cthulhu
@@ -10,8 +11,8 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-# t = 100.0
-t = 0.03
+t = 100.0
+# t = 0.03
 
 # Set initial condition
 # u₀(x,y) = x.^2
@@ -21,7 +22,7 @@ u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
 # Original solver
-Dom1V = Grid2D([0.0,1.0],[0.0,1.0],21,21)
+Dom1V = Grid2D([0.0,1.0],[0.0,1.0],41,41)
 
 BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
 BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
@@ -30,12 +31,13 @@ BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
 PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 println("---Solving old---")
 solnO1V = solve(PO1V,Dom1V,Δt,100.0-Δt,:cgie) #-Δt to ensure ends at the same time as new methods
+@benchmark solve($PO1V,$Dom1V,$Δt,100.0-$Δt,:cgie)
 
-
+@profview solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
+@profview solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
 
 
 # New solver 1 volume
-
 Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
 Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
@@ -46,13 +48,16 @@ P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
 
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t)
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
+@benchmark solve($P1V,$Dom1V,$Δt,$t)
+
+@profview soln1V = solve(P1V,Dom1V,Δt,t)
+@profview soln1V = solve(P1V,Dom1V,Δt,t)
 
 
 
 # New solover 2 volume
-D1 = Grid2D([0.0,0.5],[0.0,1.0],11,21)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],11,21)
+D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
+D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
 
 joints = (Joint(2,Up),Joint(1,Down))
 
@@ -70,23 +75,22 @@ P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 
 println("---Solving 2 volume---")
 soln2V = solve(P2V,Dom2V,Δt,t)
-# @benchmark solve($P2V,$Dom2V,$Δt,$t)
+@benchmark solve($P2V,$Dom2V,$Δt,$t)
 
 
 
 
 
-#=
-maximum.(soln1V.u)
+println("Original solver ",norm(solnO1V.u[2]))
+println("New 1V solver ",norm(soln1V.u[2]))
 
-using LinearAlgebra
-norm.(soln1V.u)
-norm.(solnO1V.u)
+
+
+
 
 using Plots
-surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[1])
 surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[2])
-=#
+
 
 
 

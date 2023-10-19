@@ -70,9 +70,12 @@ function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) end
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
-    for I in eachboundary(D)
-        setBoundaryCondition!(D.boundary[I], D.SC.Δt, D.SC.t)
-    end
+    # for I in eachboundary(D)
+        setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t)
+        setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t)
+        setBoundaryCondition!(D.boundary[3], D.SC.Δt, D.SC.t)
+        setBoundaryCondition!(D.boundary[4], D.SC.Δt, D.SC.t)
+    # end
 end
 """
 Calling boundaries from multiblocks
@@ -192,12 +195,13 @@ Applying SATs in SolutionMode
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Periodic}
     end
 end
-@inline function applySAT!(BC::newBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
-    # println("hi ",BC.Boundary.side)
-    if (BC.Boundary.side ∈ [Left,Up]) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
+function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
+    # if (BC.Boundary.side ∈ [Left,Up]) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
+    # println(BCT)
+    if BCT <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
     else
-        applySAT!(BC.Boundary,dest,K,source,mode)
+        error("Not implemented")
     end
 end
 """
@@ -412,7 +416,12 @@ end
 """
     copyto!
 """
-@inline function Base.copyto!(dest,source,D::DataMultiBlock)
+@inline function Base.copyto!(dest::Symbol,source::Symbol,D::newLocalDataBlock)
+    d = getarray(D,dest)
+    s = getarray(D,source)
+    copyto!(d,s)
+end
+@inline function Base.copyto!(dest::Symbol,source::Symbol,D::DataMultiBlock)
     for I in eachblock(D)
         d = getproperty(D[I],dest)
         # d .= getproperty(D[I],source)
@@ -429,7 +438,9 @@ end
 function relerr(D::newLocalDataBlock{TT}) where {TT}
     u = getarray(D,:u)
     v = getarray(D,:uₙ₊₁)
-    D.SC.Δu = innerprod(u-v,u-v,D.innerprod)/innerprod(u,u,D.innerprod)
+    cache = getarray(D,:cache)
+    cache = u - v
+    D.SC.Δu = innerprod(cache,cache,D.innerprod)/innerprod(u,u,D.innerprod)
 end
 
 
