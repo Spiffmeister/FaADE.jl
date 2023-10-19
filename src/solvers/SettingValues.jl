@@ -71,11 +71,12 @@ Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
     # for I in eachboundary(D)
-        setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t)
-        setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t)
+    setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t)
+    setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t)
+    if DIM == 2
         setBoundaryCondition!(D.boundary[3], D.SC.Δt, D.SC.t)
         setBoundaryCondition!(D.boundary[4], D.SC.Δt, D.SC.t)
-    # end
+    end
 end
 """
 Calling boundaries from multiblocks
@@ -171,7 +172,6 @@ Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
-    # if (BC.Boundary.side == Left)
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
@@ -206,44 +206,31 @@ function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,
 end
 """
     applySATs
+Solution and Data modes
 """
 function applySATs end
 function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    for I in eachboundary(D)
-        applySAT!(D.boundary[I],  dest, D.K, mode)
-    end
-        # applySAT!(D.boundary[1],  dest, D.K, mode)
-        # applySAT!(D.boundary[2],  dest, D.K, mode)
+    # applySAT!(D.boundary[1],  dest, D.K, mode)
+    # applySAT!(D.boundary[2],  dest, D.K, mode)
+    dest[1] = 0.0
+    dest[end] = 1.0
 end
 function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    # for I in eachboundary(D)
-    #     applySAT!(D.boundary[I],   dest, D.K, source, mode)
-    # end
-    
-    applySAT!(D.boundary[1],  dest, source, D.K, mode)
-    applySAT!(D.boundary[2],  dest, source, D.K, mode)
-    
-    # applySAT!(D.boundary.BC_Left,   dest, D.K, source, mode)
-    # applySAT!(D.boundary.BC_Right,  dest, D.K, source, mode)
-end
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.boundary[1],    dest, D.K[1], mode)
-    applySAT!(D.boundary[2],    dest, D.K[1], mode)
-    applySAT!(D.boundary[3],    dest, D.K[2], mode)
-    # println(D.boundary[4])
-    applySAT!(D.boundary[4],    dest, D.K[2], mode)
-    # println(dest)
-    # println()
-
-    # dest[1,:] .= 0.0
-    # dest[end,:] .= 0.0
-    # dest[:,1] .= 0.0
-    # dest[:,end] .= 0.0
+    # applySAT!(D.boundary[1],  dest, source, D.K, mode)
+    # applySAT!(D.boundary[2],  dest, source, D.K, mode)
+    dest[1] = 0.0
+    dest[end] = 1.0
 end
 """
     applySATs
 applySATs for 2D local block
 """
+function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
+    applySAT!(D.boundary[1],    dest, D.K[1], mode)
+    applySAT!(D.boundary[2],    dest, D.K[1], mode)
+    applySAT!(D.boundary[3],    dest, D.K[2], mode)
+    applySAT!(D.boundary[4],    dest, D.K[2], mode)
+end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
     applySAT!(D.boundary[1],    dest, source, D.K[1], mode)
     applySAT!(D.boundary[2],    dest, source, D.K[1], mode)

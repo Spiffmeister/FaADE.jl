@@ -114,50 +114,50 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         @warn warnstr
     end
 end
-function conj_grad!(DBlock::newLocalDataBlock{TT,DIM,AT},Δt::TT;
-    atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
+# function conj_grad!(DBlock::newLocalDataBlock{TT,DIM,AT},Δt::TT;
+#     atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
 
-    local rnorm::TT
-    local unorm::TT
-    local dₖAdₖ::TT
-    local βₖ::TT
-    local αₖ::TT
+#     local rnorm::TT
+#     local unorm::TT
+#     local dₖAdₖ::TT
+#     local βₖ::TT
+#     local αₖ::TT
 
-    # x₀ = uₙ #Initial guess
-    # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
-    # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    A!(DBlock.rₖ,DBlock.u,DBlock,Δt)
-    @. DBlock.rₖ = DBlock.rₖ - DBlock.b
+#     # x₀ = uₙ #Initial guess
+#     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
+#     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
+#     A!(DBlock.rₖ,DBlock.u,DBlock,Δt)
+#     @. DBlock.rₖ = DBlock.rₖ - DBlock.b
 
-    @. DBlock.dₖ = -DBlock.rₖ # dₖ = -rₖ
+#     @. DBlock.dₖ = -DBlock.rₖ # dₖ = -rₖ
 
-    i = 0
-    rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
-    unorm = max(sqrt(DBlock.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
-    while (rnorm > rtol*unorm) & (i < maxIT)
-        A!(DBlock.cache,DBlock.dₖ,DBlock,Δt) # Adₖ = dₖ - Δt*D(dₖ)
-        dₖAdₖ = CGB.innerprod(DBlock.dₖ,DBlock.cache)
-        αₖ = -DBlock.innerprod(DBlock.rₖ,DBlock.dₖ)/dₖAdₖ
-        @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*DBlock.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
+#     i = 0
+#     rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
+#     unorm = max(sqrt(DBlock.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+#     while (rnorm > rtol*unorm) & (i < maxIT)
+#         A!(DBlock.cache,DBlock.dₖ,DBlock,Δt) # Adₖ = dₖ - Δt*D(dₖ)
+#         dₖAdₖ = CGB.innerprod(DBlock.dₖ,DBlock.cache)
+#         αₖ = -DBlock.innerprod(DBlock.rₖ,DBlock.dₖ)/dₖAdₖ
+#         @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*DBlock.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
 
-        # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
-        A!(DBlock.rₖ,DBlock.uₙ₊₁,DBlock,Δt)
-        @. DBlock.rₖ = DBlock.rₖ - DBlock.b
+#         # rₖ = (xₖ₊₁ - Δt*Dxₖ₊₁ - b)
+#         A!(DBlock.rₖ,DBlock.uₙ₊₁,DBlock,Δt)
+#         @. DBlock.rₖ = DBlock.rₖ - DBlock.b
 
-        A!(DBlock.cache,DBlock.rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
+#         A!(DBlock.cache,DBlock.rₖ,DBlock,Δt) # Drₖ = rₖ - Δt*D(rₖ)
 
-        βₖ = DBlock.innerprod(DBlock.rₖ,DBlock.cache)/dₖAdₖ
-        @. DBlock.dₖ = βₖ*DBlock.dₖ - DBlock.rₖ
+#         βₖ = DBlock.innerprod(DBlock.rₖ,DBlock.cache)/dₖAdₖ
+#         @. DBlock.dₖ = βₖ*DBlock.dₖ - DBlock.rₖ
 
-        rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
-        i += 1
-    end
-    if (rnorm>rtol*unorm) & warnings
-        CGB.scalar.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
-        @warn warnstr
-    end
-end
+#         rnorm = sqrt(DBlock.innerprod(DBlock.rₖ,DBlock.rₖ))
+#         i += 1
+#     end
+#     if (rnorm>rtol*unorm) & warnings
+#         CGB.scalar.converged = false
+#         warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+#         @warn warnstr
+#     end
+# end
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
     atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM}
 
@@ -242,13 +242,48 @@ function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
     # map(A!())
     for i in eachblock(DB)
         A!(source,DB[i])
-
-        # # cache = u - Δt Du
-        # C = getproperty(DB[i],:cache)
-        # U = getproperty(DB[i],source)
-        # # Compute the derivatives
-        # DB[i].Derivative(C,U,DB[i].K)
-        # applySATs(C,U,DB[i],SolutionMode) #Apply the SATs
-        # muladd!(C,U,-DB[i].SC.Δt,TT(1))
     end
 end
+
+
+"""
+    implicit_euler
+Implicit Euler with conjugate gradient method
+"""
+function implicit_euler(DBlock::DataMultiBlock)
+    addSource!(:b,DBlock)
+    applySATs(:b,DBlock,DataMode)
+    conj_grad!(DBlock,Δt)
+end
+
+
+"""
+    crank_nicholson
+Use the Crank-Nicholson method to solve the PDE
+"""
+function crank_nicholson(DBlock::DataMultiBlock,Δt::TT) where TT
+
+    # Crank-Nicholson needs Δt/2
+    for i in eachblock(DBlock)
+        DBlock[i].SC.Δt /= TT(2) 
+    end
+
+    # Compute the right hand side
+    # Compute (I-Δt/2 D)uₙ
+    for I in eachblock(DBlock)
+        cache = getarray(DBlock[I],:cache)
+        b = getarray(DBlock[I],:b)
+        # applySATs(b,DBlock[I],DataMode)
+        mul!(cache,DBlock[I].b,DBlock[I].K,DBlock[I].Derivative)
+        @. b = b + DBlock[I].SC.Δt*cache
+    end
+
+    # Compute uₙ₊₁
+    conj_grad!(DBlock,Δt)
+end
+
+# function expint()
+# end
+
+
+
