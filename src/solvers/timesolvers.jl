@@ -168,7 +168,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
 end
 #= 2D SOLVER =#
 function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;
-        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid,ParallelData}=nothing,source::Union{Nothing,Function}=nothing,warnings=false,target=1e-8) where T
+        adaptive::Bool=false,penalty_func::Union{Nothing,Function}=nothing,Pgrid::Union{Nothing,ParallelGrid,ParallelData}=nothing,source::Union{Nothing,Function}=nothing,warnings=false,target=1e-8,nf=1) where T
 
     local btype1 :: BoundaryConditionType
     local btype2 :: BoundaryConditionType
@@ -188,7 +188,8 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     soln = solution{T}(grid,T(0),Δt,Prob)
 
     if typeof(Pgrid) <: ParallelGrid
-        penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
+        # penalty_func = generate_parallel_penalty(Pgrid,grid,Prob.order)
+        println("hi")
     end
     typeof(penalty_func) <: Nothing ? penalty_function_enabled = false : penalty_function_enabled = true
 
@@ -254,7 +255,6 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     while t ≤ t_f
     # for k = 1:nf
         # t = k*Δt
-        # t += Δt
 
         if btype1 != Periodic #Left/Right boundaries
             setBoundaryConditions!(Prob.BoundaryConditions.Left.RHS,DBlock.boundary.RHS_Left,grid.gridy,grid.ny,t,Δt)
@@ -277,7 +277,9 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
         
         if CGBlock.scalar.converged | !adaptive
             # If CG converges OR adaptive time stepping is off
+            # println(Pgrid)
             if typeof(Pgrid) <: ParallelData
+                # println("hi")
                 applyParallelPenalty!(DBlock.uₙ₊₁,DBlock.u,Δt,Pgrid)
             elseif penalty_function_enabled
                 # println(DBlock.uₙ₊₁[1,10])
@@ -324,8 +326,12 @@ end
 """
     SolverData{method,adaptive}
 """
-struct SolverData{method} 
-    adaptive :: Bool
+struct SolverData{method,TT} 
+    adaptive    :: Bool
+    target      :: TT
+    function SolverData{TT}(;adaptive=false,target=0,method=:cgie) where TT
+        new{method,TT}(adaptive,target)
+    end
 end
 
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
@@ -333,7 +339,7 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
 
         
     if solver == :cgie
-        SD = SolverData{solver}(adaptive)
+        SD = SolverData{TT}(adaptive=adaptive,method=solver)
         DBlock = DataMultiBlock(P,G,Δt,0.0)
         soln = solution(G,0.0,Δt,P)
 
@@ -351,7 +357,7 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
 end
 
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
-function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT}
+function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
     # target_state = 0.0
     # if t_f == Inf
@@ -379,26 +385,30 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData{:c
     #     end
     # end
     
-    t = Δt
+    t = TT(0)
     Δt₀ = Δt
 
     copyto!(:uₙ₊₁,  :u, DBlock)
     copyto!(:b,     :u, DBlock)
 
     while t < t_f
-        for I in eachblock(DBlock)
-            DBlock[I].SC.t = t
-            DBlock[I].SC.Δt = Δt
-        end
+        # for I in eachblock(DBlock)
+        #     DBlock[I].SC.t = t
+        #     DBlock[I].SC.Δt = Δt
+        # end
         
-        setBoundaryConditions!(DBlock)
-        setDiffusionCoefficient!(DBlock)
-        
-        applySATs(:b,DBlock,DataMode)
-        
-        addSource!(:b,DBlock)
+        # setBoundaryConditions!(DBlock)
+        # setDiffusionCoefficient!(DBlock)
+        # applySATs(:b,DBlock,DataMode)
+        # addSource!(:b,DBlock)
 
-        conj_grad!(DBlock,Δt)
+        if typeof(solverconfig) <: SolverData{:cgie}
+            implicit_euler(DBlock,t,Δt)
+        elseif typeof(solverconfig) <: SolverData{:cn}
+            crank_nicholson(DBlock,t,Δt)
+        end
+        # conj_grad!(DBlock,Δt)
+        # crank_nicholson(DBlock)
         # println(DBlock.SC.converged)
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if penalty_function_enabled
@@ -434,7 +444,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData{:c
             if DBlock.SC.Δt < Δt₀/10.0
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
-            t += Δt
+            # t += Δt
         end
         # if sample < t
         #     sample += sample

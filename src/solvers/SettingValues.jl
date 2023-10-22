@@ -6,6 +6,7 @@ Adds PDE forcing term
 """
 function addSource! end
 function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
+    #legacy
     for j in 1:grid.ny
         for i in 1:grid.nx
             u[i,j] += Δt*S(grid.gridx[i],grid.gridy[j],t)
@@ -13,20 +14,20 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
     end
     u
 end
-function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
-    u .+= Δt*S.source.(grid.grid,t)
+function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where TT
+    u .+= Δt*(1-θ)*S.source(grid.grid,t) + Δt*θ*S.source(grid.grid,t+Δt)
 end
-function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
+function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where TT
     for j in 1:grid.ny
         for i in 1:grid.nx
-            u[i,j] += Δt*S.source(grid.gridx[i],grid.gridy[j],t)
+            u[i,j] += Δt*(1-θ)*S.source(grid.gridx[i],grid.gridy[j],t) + Δt*θ*S.source(grid.gridx[i],grid.gridy[j],t+Δt)
         end
     end
 end
-function addSource!(dest::Symbol,D::DataMultiBlock)
+function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
     for I in eachblock(D)
         write = getproperty(D[I],dest)
-        addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt)
+        addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt,θ)
     end
 end
 function addSource!(S::SourceTerm{Nothing},tmp...) end
@@ -38,9 +39,11 @@ Sets the value of the boundary.
 """
 function setBoundaryConditions! end
 function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
+    # 1D - LEGACY
     Bound[1] = Δt*RHS(t)
 end
 function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
+    # 2D - LEGACY
     for i = 1:n
         Bound[i] = Δt*RHS(grid[i],t)
     end
@@ -53,12 +56,12 @@ function setBoundaryCondition! end
 function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,args...) where {TT,Fn<:Real}
     @. B.BufferRHS = Δt*B.RHS
 end
-function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT) where {TT,Fn<:Function}
-    B.BufferRHS[1] = Δt*B.RHS(t)
+function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
+    B.BufferRHS[1] = Δt*(θ-1)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
 end
-function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT) where {TT,Fn<:Function}
+function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
-        B.BufferRHS[i] = Δt*B.RHS(B.X[i],t)
+        B.BufferRHS[i] = Δt*(θ-1)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
     end
 end
 """
@@ -71,11 +74,11 @@ Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
     # for I in eachboundary(D)
-    setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t)
-    setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t)
+    setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t, D.SC.θ)
+    setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t, D.SC.θ)
     if DIM == 2
-        setBoundaryCondition!(D.boundary[3], D.SC.Δt, D.SC.t)
-        setBoundaryCondition!(D.boundary[4], D.SC.Δt, D.SC.t)
+        setBoundaryCondition!(D.boundary[3], D.SC.Δt, D.SC.t, D.SC.θ)
+        setBoundaryCondition!(D.boundary[4], D.SC.Δt, D.SC.t, D.SC.θ)
     end
 end
 """
@@ -204,22 +207,29 @@ function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,
         error("Not implemented")
     end
 end
+
+function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
+    if BCT <: SimultanousApproximationTerm{:Dirichlet}
+        SAT_Dirichlet_explicit!(dest,source,BC.Boundary,K,mode)
+    end
+end
+
 """
     applySATs
 Solution and Data modes
 """
 function applySATs end
 function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    # applySAT!(D.boundary[1],  dest, D.K, mode)
-    # applySAT!(D.boundary[2],  dest, D.K, mode)
-    dest[1] = 0.0
-    dest[end] = 1.0
+    applySAT!(D.boundary[1],  dest, D.K, mode)
+    applySAT!(D.boundary[2],  dest, D.K, mode)
+    # dest[1] = 0.0
+    # dest[end] = 1.0
 end
 function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
-    # applySAT!(D.boundary[1],  dest, source, D.K, mode)
-    # applySAT!(D.boundary[2],  dest, source, D.K, mode)
-    dest[1] = 0.0
-    dest[end] = 1.0
+    applySAT!(D.boundary[1],  dest, source, D.K, mode)
+    applySAT!(D.boundary[2],  dest, source, D.K, mode)
+    # dest[1] = 0.0
+    # dest[end] = 1.0
 end
 """
     applySATs

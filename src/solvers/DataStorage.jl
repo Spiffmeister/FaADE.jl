@@ -12,9 +12,10 @@ mutable struct StepConfig{TT}
     t   :: TT
     Δt  :: TT
     Δu  :: TT
+    θ   :: TT
     converged :: Bool
 
-    function StepConfig{TT}(t=TT(0),Δt=TT(0)) where TT
+    function StepConfig{TT}(t=TT(0),Δt=TT(0),θ=TT(1)) where TT
         new{TT}(t,Δt,TT(0),true)
     end
 end

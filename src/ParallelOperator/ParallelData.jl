@@ -55,7 +55,8 @@ struct ParallelData{TT<:Real,
 
         # K = DiffusionCoefficient(κ)
 
-        τ = -sqrt(1.0/((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1]) * G.Δx*G.Δy))
+        # τ = -sqrt(1.0/((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1]) * G.Δx*G.Δy))
+        τ = -1/(G.Δx*G.Δy)
 
 
         gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)

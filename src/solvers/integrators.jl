@@ -158,7 +158,7 @@ end
 #         @warn warnstr
 #     end
 # end
-function conj_grad!(DBlock::DataMultiBlock{TT,DIM},Δt::TT;
+function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     atol=1.e-5,rtol=1.e-10,maxIT::Int=10,warnings=false) where {TT,DIM}
 
     local rnorm::TT
@@ -250,10 +250,19 @@ end
     implicit_euler
 Implicit Euler with conjugate gradient method
 """
-function implicit_euler(DBlock::DataMultiBlock)
+function implicit_euler(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
+    # t += DBlock.SC.Δt
+    for I in eachblock(DBlock)
+        DBlock[I].SC.t += DBlock[I].SC.Δt
+        DBlock[I].SC.Δt = Δt
+    end
+
+    setBoundaryConditions!(DBlock)
+    setDiffusionCoefficient!(DBlock)
+
     addSource!(:b,DBlock)
     applySATs(:b,DBlock,DataMode)
-    conj_grad!(DBlock,Δt)
+    conj_grad!(DBlock)
 end
 
 
@@ -261,12 +270,29 @@ end
     crank_nicholson
 Use the Crank-Nicholson method to solve the PDE
 """
-function crank_nicholson(DBlock::DataMultiBlock,Δt::TT) where TT
+function crank_nicholson(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
+
+    # Δt/2 (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
+    
+    addSource!(:b,DBlock)
+    setBoundaryConditions!(DBlock)
+    applySATs(:b,DBlock,ExplicitMode)
+    
+    for I in eachblock(DBlock)
+        DBlock[I].SC.t += DBlock[I].SC.Δt
+        DBlock[I].SC.Δt = Δt
+    end
 
     # Crank-Nicholson needs Δt/2
     for i in eachblock(DBlock)
-        DBlock[i].SC.Δt /= TT(2) 
+        DBlock[i].SC.t -= DBlock[i].SC.Δt
+        DBlock[i].SC.Δt /= TT(2)
     end
+
+    addSource!(:b,DBlock)
+    applySATs(:b,DBlock,DataMode)
+
+    
 
     # Compute the right hand side
     # Compute (I-Δt/2 D)uₙ
@@ -279,7 +305,7 @@ function crank_nicholson(DBlock::DataMultiBlock,Δt::TT) where TT
     end
 
     # Compute uₙ₊₁
-    conj_grad!(DBlock,Δt)
+    conj_grad!(DBlock)
 end
 
 # function expint()

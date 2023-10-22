@@ -117,6 +117,23 @@ function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Ri
         S[end] += τ(C[end])*(U[end] - RHS(t))
     end
 end
+###
+function SAT_Dirichlet_explicit!(dest::AT,source::AT,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:ExplicitMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    for (S,U,R,C) in zip(loopaxis(dest),loopaxis(source),loopaxis(rhs),loopaxis(c))
+        for i = 1:SD.order
+            S[i] .+= SD.α*C[1]*(SD.ED₁ᵀ[i]*U[1] .- R[1])
+        end
+        S[1] += SD.τ(C[1])*(U[1] - R[1])
+    end
+end
+function SAT_Dirichlet_explicit!(dest::AT,source,rhs::AT,c::AT,SD::SAT_Dirichlet{TN},::SATMode{:ExplicitMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    for (S,U,R,C) in zip(SD.loopaxis(dest),loopaxis(source),SD.loopaxis(rhs),SD.loopaxis(c))
+        for i = 1:order
+            S[end-SD.order+i] += -SD.α*C[end]*(SD.ED₁ᵀ[i]*U[end] - R[end]) #D₁ᵀE₀
+        end
+        S[end] -= SD.τ(C[end])*C[end]*(U[end] - R[end])
+    end
+end
 
 #=== Implicit methods ===#
 """

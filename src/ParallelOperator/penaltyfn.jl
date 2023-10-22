@@ -167,7 +167,9 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
             P.w_b[i,j] = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
         end
     end
-    ττ = P.τ*norm(u - (P.w_f + P.w_b)/2,Inf)/norm((P.w_f + P.w_b)/2,Inf) * 1e-4
+    
+    ττ = P.τ*norm(u - (P.w_f + P.w_b)/2,Inf)/norm((P.w_f + P.w_b)/2,Inf)^3
+
     @. u = 1.0/(1.0 - P.κ * ττ * Δt) * 
         ( u -  P.κ*Δt*ττ/2.0 * (P.w_f + P.w_b) )
 
