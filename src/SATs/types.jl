@@ -8,4 +8,4 @@ Used when the conjugate gradient solver is being used so the solver knows which 
 struct SATMode{T} end
 const DataMode = SATMode{:DataMode}()
 const SolutionMode = SATMode{:SolutionMode}()
-
+const ExplicitMode = SATMode{:ExplicitMode}()

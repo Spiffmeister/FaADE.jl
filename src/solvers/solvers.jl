@@ -15,7 +15,11 @@ module solvers
 
     using FaADE.Grid
     
-    using FaADE.SATs: SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, SATMode, DataMode, SolutionMode#,
+    using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
+    SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!,
+    SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, 
+    SATMode, DataMode, SolutionMode, ExplicitMode
+    #,
     # SATBoundaries, SAT, construct_SAT
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!

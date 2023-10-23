@@ -27,7 +27,7 @@ end
 function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
     for I in eachblock(D)
         write = getproperty(D[I],dest)
-        addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt,θ)
+        addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt,D[I].SC.θ)
     end
 end
 function addSource!(S::SourceTerm{Nothing},tmp...) end
@@ -57,11 +57,11 @@ function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,args...) wher
     @. B.BufferRHS = Δt*B.RHS
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
-    B.BufferRHS[1] = Δt*(θ-1)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
+    B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
-        B.BufferRHS[i] = Δt*(θ-1)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
+        B.BufferRHS[i] = Δt*(1-θ)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
     end
 end
 """
@@ -210,7 +210,7 @@ end
 
 function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
-        SAT_Dirichlet_explicit!(dest,source,BC.Boundary,K,mode)
+        SAT_Dirichlet_explicit!(dest,source,BC.BufferRHS,K,BC.Boundary,mode)
     end
 end
 

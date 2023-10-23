@@ -16,7 +16,7 @@ mutable struct StepConfig{TT}
     converged :: Bool
 
     function StepConfig{TT}(t=TT(0),Δt=TT(0),θ=TT(1)) where TT
-        new{TT}(t,Δt,TT(0),true)
+        new{TT}(t,Δt,TT(0),θ,true)
     end
 end
 
@@ -401,7 +401,7 @@ Initialise a data block for a 1D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
+function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
 
@@ -421,7 +421,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
     D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0))
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
-    SC = StepConfig{TT}()
+    # SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
@@ -541,10 +541,10 @@ struct DataMultiBlock{TT<:Real,
     parallel:: Bool
 
 
-    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT) where {TT,DIM}
+    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         # DTA = [newLocalDataBlock(P,G)]
-        DTA = (newLocalDataBlock(P,G),)
-        SC = StepConfig{TT}(t,Δt)
+        SC = StepConfig{TT}(t,Δt,θ)
+        DTA = (newLocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)
     end
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT) where {TT,DIM}

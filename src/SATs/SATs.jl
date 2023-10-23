@@ -24,8 +24,8 @@ module SATs
     include("Split.jl")
     # include("Helpers.jl")
 
-    export SATMode, DataMode, SolutionMode
-    export SAT_Dirichlet, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
+    export SATMode, DataMode, SolutionMode, ExplicitMode
+    export SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
     export SAT_Neumann
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
