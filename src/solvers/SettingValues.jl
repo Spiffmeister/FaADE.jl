@@ -175,18 +175,18 @@ Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
+    TT = eltype(dest)
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
+        # if BC.Boundary.side == Right
+            # SATs.SAT_Dirichlet_data!(dest,source,K,BC.Boundary,TT(1),TT(1))
+            # dest[end] = 1.0
+        # end
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
         SAT_Neumann_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
     else
         applySAT!(BC.Boundary,dest,K,mode)
     end
-    # else
-        # applySAT!(BC.Boundary,dest,K,mode)
-        # applySAT!(BC.Boundary,dest,K,BC.BufferRHS,mode)
-    # end
-    # BC.Boundary(dest,K,BC.BufferRHS,mode)
 end
 """
 Applying SATs in SolutionMode
@@ -203,6 +203,10 @@ function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,
     # println(BCT)
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
+        # if BC.Boundary.side == Right
+            # SAT_Dirichlet_data!(dest,source,K,BC.Boundary,TT(1),TT(1))
+            # dest[end] = 1.0
+        # end
     else
         error("Not implemented")
     end
@@ -219,17 +223,13 @@ end
 Solution and Data modes
 """
 function applySATs end
-function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
+function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT} #data mode
     applySAT!(D.boundary[1],  dest, D.K, mode)
     applySAT!(D.boundary[2],  dest, D.K, mode)
-    # dest[1] = 0.0
-    # dest[end] = 1.0
 end
-function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT}
+function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT} #solution mode
     applySAT!(D.boundary[1],  dest, source, D.K, mode)
     applySAT!(D.boundary[2],  dest, source, D.K, mode)
-    # dest[1] = 0.0
-    # dest[end] = 1.0
 end
 """
     applySATs

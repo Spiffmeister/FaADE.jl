@@ -153,10 +153,8 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) whe
     # Apply needed SATs
     applySATs(W,R,D,SolutionMode)
     # u = r - Δt Du
-    @. W = R - D.SC.θ*D.SC.Δt*W
-    # muladd!(W,R,-D.SC.Δt,TT(1))
-
-    # A!(D.Derivative,W,R,D.SC.Δt,D.K)
+    # read == :uₙ₊₁ ? Δt = D.SC.Δt*D.SC.θ : Δt = D.SC.Δt
+    @. W = R - D.SC.Δt*W
 end
 
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
@@ -193,31 +191,36 @@ end
     crank_nicholson
 Use the Crank-Nicholson method to solve the PDE
 """
-function crank_nicholson(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
-
+function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
+    # println(DBlock.SC.θ)
     # b = u_n already set; SATs applied after so compute 
     # b = (I - Δt/2 D_\perp)uₙ
     for I in eachblock(DBlock)
         DBlock[I].SC.Δt = Δt
     end
+
+    setDiffusionCoefficient!(DBlock)
     setBoundaryConditions!(DBlock)
+
     # b += Δt/2 (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
     for I in eachblock(DBlock)
         cache = getarray(DBlock[I],:cache)
         u = getarray(DBlock[I],:u)
         b = getarray(DBlock[I],:b)
         
-        mul!(cache,u,DBlock[I].K,DBlock[I].Derivative)  # D₂u
-        @. b = u + (TT(1)-DBlock.SC.θ)*DBlock[I].SC.Δt*cache          # I - Δt/2 D₂u
+        mul!(cache,u,DBlock[I].K,DBlock[I].Derivative)      # D₂u
+        @. b = u + (1-DBlock.SC.θ)*DBlock.SC.Δt*cache    # I - Δt/2 D₂u
 
-        @. cache = u * Δt/TT(2)
-        applySATs(b,cache,DBlock[I],ExplicitMode)       # bcs set to Δt/2 (g^{n+1} + g^{n}) already
+        @. cache = u * (1-DBlock.SC.θ)*DBlock.SC.Δt
+
+        applySATs(b,DBlock[I],DataMode)             # SATs on u already
+        applySATs(b,cache,DBlock[I],SolutionMode)   # SATs on D₂u
     end
     addSource!(:b,DBlock)
     
     for I in eachblock(DBlock)
-        DBlock[I].SC.t += DBlock[I].SC.Δt
-        DBlock[I].SC.Δt = Δt/2
+        DBlock[I].SC.t += DBlock.SC.Δt
+        DBlock[I].SC.Δt = DBlock.SC.Δt*DBlock.SC.θ
     end
 
     # Compute uₙ₊₁ = (I - D)^{-1} b
@@ -225,12 +228,18 @@ function crank_nicholson(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
 end
 
 
-function RHS!(cache,source,D)
-    cache = SecondDerivativeBoundary!()
-    cache = SecondDerivativeBoundary!()
-    cache = SecondDerivativeBoundary!()
 
-    applySAT
+
+
+
+function RHS!(cache,source,D)
+    
+    if (θ - 1) != TT(0)
+        mul!(cache,source,D.K,D.Derivative)
+        @. cache = u + (TT(1)-DBlock.SC.θ)*DBlock[I].SC.Δt*cache    # I - Δt/2 D₂u
+    end
+
+    applySATs(cache,source,D,SolutionMode)
 
     cache = source
 end

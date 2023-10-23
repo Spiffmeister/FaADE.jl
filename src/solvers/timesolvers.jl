@@ -338,13 +338,16 @@ struct SolverData{method,TT}
 end
 
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
-        solver::Symbol=:cgie,adaptive::Bool=false) where {TT,DIM}
+        solver::Symbol=:cgie,adaptive::Bool=false,θ=TT(1)) where {TT,DIM}
 
         
-    if solver ∈ [:cgie,:cn]
-        θ = TT(1)
-        if solver == :cn
-            θ = TT(0.5)
+    if solver ∈ [:cgie,:cn,:theta]
+        if solver == :cgie
+            θ == TT(1)
+        elseif solver == :cn
+            θ = TT(1/2)
+        elseif solver == :theta
+            θ = θ
         end
         SD = SolverData{TT}(adaptive=adaptive,method=solver)
         DBlock = DataMultiBlock(P,G,Δt,0.0,θ=θ)
@@ -368,42 +371,36 @@ end
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
-    # target_state = 0.0
-    # if t_f == Inf
-    #     target_state = 1e-5
-    #     println("Going for steady state at rel-error Δu=",target_state)
-    #     @warn "MAX ITERATIONS NOT SET"
-    #     @warn "MAX ITERATIONS NOT SET"
-    #     @warn "MAX ITERATIONS NOT SET"
-    # end
     target_state = TT(1)
 
     penalty_function_enabled = DBlock.parallel
     
-    t = TT(0)
+    # t = TT(0)
+    t = Δt
     Δt₀ = Δt
 
     copyto!(:uₙ₊₁,  :u, DBlock)
     copyto!(:b,     :u, DBlock)
-
+    
+    println(DBlock.SC.θ)
     while t < t_f
-        for I in eachblock(DBlock)
-            DBlock[I].SC.t = t
-            DBlock[I].SC.Δt = Δt
-        end
-        
+
+        # for I in eachblock(DBlock)
+        #     DBlock[I].SC.t = t
+        #     DBlock[I].SC.Δt = Δt
+        # end
         # setBoundaryConditions!(DBlock)
         # setDiffusionCoefficient!(DBlock)
         # applySATs(:b,DBlock,DataMode)
         # addSource!(:b,DBlock)
-        if typeof(solverconfig) <: SolverData{:cgie}
-            crank_nicholson(DBlock,t,Δt)
-        elseif typeof(solverconfig) <: SolverData{:cn}
-            crank_nicholson(DBlock,t,Δt)
-        end
         # conj_grad!(DBlock)
-        # crank_nicholson(DBlock)
-        # println(DBlock.SC.converged)
+
+        if typeof(solverconfig) <: SolverData{:cgie}
+            implicit_euler(DBlock,t,Δt)
+        else
+            theta_method(DBlock,t,Δt)
+        end
+        
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if penalty_function_enabled
                 penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
