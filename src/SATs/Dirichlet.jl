@@ -243,18 +243,46 @@ function SAT_Dirichlet_implicit_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{
 end
 
 
-#=
+
+
+
 # Operation along vector
-function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN},α::TT,β::TT) where {TT,VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    # TN == Left ? j = 1 : j = length(dest)
+    # TN == Left ? n = 1 : n = length(dest)
+    TN == Left ? m = 1 : m = -1
+
     for i = 1:SD.order #nodes SD.nodes
-        dest[i] += SD.α*c[1]*SD.ED₁ᵀ[i]*data[1] #u[Left]
+        # dest[n + m*i] += m * SD.α*c[n]*SD.ED₁ᵀ[i]*data[n] #u[Left]
+        dest[i] = α*dest[i] + TT(m) * β * SD.α*c[1]*SD.ED₁ᵀ[i]*data[1] #u[Left]
     end
-    dest[1] += -SD.τ(c[1])*c[1]*data[1]
+    dest[1] = α*dest[1] - β * SD.τ(c[1])*c[1]*data[1]
 end
-function SAT_Dirichlet_solution!(dest,data,c,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    TN == Left ? m = 1 : m = -1
     for i = 1:SD.order #nodes SD.nodes
-        dest[i] += SD.α*c[end]*SD.ED₁ᵀ[i]*data[end] #u[Right]
+        dest[end-SD.order+i] = α*dest[i] + TT(m) * β * SD.α*c[end]*SD.ED₁ᵀ[i]*data[end] #u[Left]
     end
-    dest[end] += -SD.τ(c[end])*c[end]*data[end]
+    dest[end] = α*dest[1] - β * SD.τ(c[end])*c[end]*data[end]
 end
-=#
+
+
+function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    for i = 1:SD.order #nodes SD.nodes
+        dest[i] += -SD.α*c[1]*SD.ED₁ᵀ[i]*data[1] #u[Right]
+    end
+    dest[1] += SD.τ(c[1])*c[1]*data[1]
+end
+function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    for i = 1:SD.order #nodes SD.nodes
+        dest[end-SD.order+i] += SD.α*c[end]*SD.ED₁ᵀ[i]*data[end] #u[Right]
+    end
+    dest[end] += SD.τ(c[end])*c[end]*data[end]
+end
+
+function SAT_Dirichlet_injection!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    TN == Left ? n = 1 : n = length(dest)
+    dest[n] = data[1]
+end
+
+
