@@ -65,8 +65,7 @@ function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = n
     if order == 2
-        uₓ[j] = (u[j+i] - u[j])/Δx
-        uₓ[j] = uₓ[j]/Δx
+        uₓ[j] = T(i)*(u[j+i] - u[j])/Δx
     elseif order == 4
         uₓ[j]       = T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
         uₓ[j+i]     = T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx

@@ -44,9 +44,9 @@ function D₁! end
 1D [`D₁!`](@ref).
 """
 function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
-    FirstDerivativeBoundary!(uₓ,u,Δx,n,Left,order,α)
+    FirstDerivativeBoundary!(uₓ,u,Δx,Left,order,α)
     FirstDerivativeInternal!(uₓ,u,Δx,n,order,α)
-    FirstDerivativeBoundary!(uₓ,u,Δx,n,Right,order,α)
+    FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
 function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
     FirstDerivativeBoundary!(uₓ,c,u,Δx,n,Left,order,α)

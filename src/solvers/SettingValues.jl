@@ -101,9 +101,10 @@ function fillBuffer!(source::AT,B::newInterfaceBoundaryData,K::AT) where AT
     B.BufferIn .= source
 end
 """
-    fillBuffer
+fillBuffer
 """
 function fillBuffer end
+function fillBuffer(source,B::Nothing,args...) end # no boundary data
 function fillBuffer(source::Symbol,B::newBoundaryData,DB::DataMultiBlock) end
 function fillBuffer(source::Symbol,B::newInterfaceBoundaryData,DB::DataMultiBlock)
     cache = getproperty(DB[B.Joint],source)
@@ -173,6 +174,7 @@ Apply the SAT
 """
 Applying SATs in DataMode ignoring interface terms
 """
+@inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
     TT = eltype(dest)

@@ -22,6 +22,8 @@ end
 
 #========== NEW  DATA ==============#
 
+struct newBoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
+
 """
     newBoundaryData
 Container for Dirichlet, Neumann and Robin boundary conditions.
@@ -415,10 +417,17 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
         end
     end
 
-    BStor = newBoundaryConditions(P,G)
-    BS = (BStor.BC_Left,BStor.BC_Right)
+    pbound = false
+    if (P.BoundaryConditions.BoundaryLeft.type == Periodic) & (GetOrder(P.order) == 2)
+        pbound = true
+        BS = (nothing,nothing)
+    else
+        BStor = newBoundaryConditions(P,G)
+        BS = (BStor.BC_Left,BStor.BC_Right)
+    end
+
     IP = innerH(G.Δx,G.n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0))
+    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0),pbound,false)
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
     # SC = StepConfig{TT}()
@@ -431,7 +440,7 @@ Initialise a data block for a 2D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
+function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
 
@@ -441,10 +450,10 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
-    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy)
+    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     PMap = P.Parallel
     source = SourceTerm{Nothing}(nothing)
-    SC = StepConfig{TT}()
+    # SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
@@ -472,7 +481,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right)
     IP = innerH(G.Grids[I].Δx,G.Grids[I].n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0))
+    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 
@@ -499,7 +508,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     BStor = newBoundaryConditions(P,G,I)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
     IP = innerH(LG.Δx,LG.Δy,LG.nx,LG.ny,GetOrder(P.order))
-    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy)
+    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,LG.nx,LG.ny,LG.Δx,LG.Δy,false,false)
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 

@@ -8,15 +8,23 @@ struct DerivativeOperator2D{DiffuseX,DiffuseY,AdvectX,AdvectY} <: DerivativeOper
 
 
 struct DerivativeOrder{O} end
+
+
+# struct NDDerivativeOperator{TT,DIM,DO,COEFF} <: DerivativeOperatorType{DIM}
+#     DO :: NTuple{DIM,DerivativeOrder{TT,1,DO,COEFF}}
+# end
+
 struct DerivativeOperator{TT<:Real,
         DIM,
         DO<:DerivativeOrder,
         COEFF} <: DerivativeOperatorType{DIM}
-    order   :: DO
-    nx      :: Int64
-    ny      :: Int64
-    Δx      :: TT
-    Δy      :: TT
+    order       :: DO
+    nx          :: Int64
+    ny          :: Int64
+    Δx          :: TT
+    Δy          :: TT
+    xperiodic   :: Bool
+    yperiodic   :: Bool
 end
 
 GetOrder(D::DerivativeOrder{O}) where {O} = O

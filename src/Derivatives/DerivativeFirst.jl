@@ -81,7 +81,7 @@ function FirstDerivativeBoundary! end
 @inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{2},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
     node <: Left ? i = 1 : i = -1
     node <: Left ? j = 1 : j = n
-    uₓ[j] = α*uₓ[j] + c[j]*(u[j+i] - u[j])/Δx
+    uₓ[j] = α*uₓ[j] + c[j]*T(i)*(u[j+i] - u[j])/Δx
 end
 @inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
     node <: Left ? i = 1 : i = -1
@@ -104,10 +104,10 @@ end
     # uₓ[j:i:j+5i] = uₓ[j:i:j+5i]/Δx
 end
 
-@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{2},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
-    node <: Left ? i = 1 : i = -1
-    node <: Left ? j = 1 : j = n
-    uₓ[j] = α*uₓ[j] + (u[j+i] - u[j])/Δx
+@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::T,node::NodeType{TN},::DerivativeOrder{2},α::T) where {T,AT<:AbstractVector{T},TN}
+    node == :Left ? i = 1 : i = -1
+    node == :Left ? j = 1 : j = lastindex(u)
+    uₓ[j] = α*uₓ[j] + T(i)*(u[j+i] - u[j])/Δx
 end
 @inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
     node <: Left ? i = 1 : i = -1

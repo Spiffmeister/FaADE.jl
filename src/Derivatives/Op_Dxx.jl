@@ -50,11 +50,6 @@ function D₂!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
         nx::Integer,ny::Integer,Δx::T,Δy::T,
         # order_x::DerivativeOrder,order_y::DerivativeOrder) where {T,AT}
         order_x::DerivativeOrder,order_y::DerivativeOrder,α::T) where {T,AT<:AbstractMatrix{T}}
-        
-        # DerivativeOperator{2,2,0,0}
-
-    # DOx = DerivativeOrder{order_x}()
-    # DOy = DerivativeOrder{order_y}()
     
     for (A,B,C) in zip(eachcol(uₓₓ),eachcol(u),eachcol(cx))
         D₂!(A,B,C,nx,Δx,order_x,α)

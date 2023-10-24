@@ -37,7 +37,7 @@ module FaADE
     # using FaADE.Helpers: Boundary, PeriodicBoundary
     # using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using FaADE.Derivatives: D₁, D₂!
+    using FaADE.Derivatives: D₁, D₂!, D₁!
 
     using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     
@@ -55,7 +55,7 @@ module FaADE
     export VariableCoefficientPDE1D, VariableCoefficientPDE2D
     export construct_grid, generate_parallel_penalty, ParallelData
 
-    export D₁, D₂, D₂!
+    export D₁, D₂, D₂!, D₁!
 
     export solve#, build_H
     

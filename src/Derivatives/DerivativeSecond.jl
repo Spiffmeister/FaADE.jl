@@ -98,7 +98,9 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
         Δx::TT,::NodeType{:Left},::DerivativeOrder{4},α::TT) where TT
 
-    B₁Su = -1/Δx*c[1]*(-24/17*u[1] + 59/34*u[2] - 4/17*u[3] - 3/34*u[4])
+    B₁Su = -1/Δx*c[1]*(-24/17*u[1] + 59/34*u[2] - 4/17*u[3] - 3/34*u[4]) #fully compatible
+    # B₁Su = -1/Δx*c[1]*(-11/6*u[1] + 3*u[2] - 3/2*u[3] + 1/3*u[4])
+
 
     # uₓₓ[1]  = 
     cache = 
@@ -186,7 +188,8 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     n = lastindex(u)
     m = lastindex(uₓₓ)
 
-    BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n])
+    BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n]) #full compatible
+    # BₙSu = 1/Δx*c[n]*(-1/3*u[n-3] + 3/2*u[n-2] - 3*u[n-1] + 11/6*u[n])
     
     # uₓₓ[m-5]    = 
     cache =
@@ -270,6 +273,31 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
 end
 
 
+@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,AT<:AbstractVector{TT},TN}
+    TN == :Left ? n = 1 : n = lastindex(u)
+    m = lastindex(u)
+    @inbounds uₓₓ[n] = α*uₓₓ[n] + (0.5*(c[n] + c[m-1])*u[m-1] - 0.5*(c[2] + 2c[n] + c[m-1])*u[n] + 0.5*(c[n] + c[2])*u[2])/Δx^2
+end
+#=
+@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,cx::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{4},α::TT) where {TT,AT<:AbstractVector{TT},TN}
+    TN == :Left ? n = 1 : n = lastindex(u)
+    TN == :Left ? in = 1 : in = -1
+    m = lastindex(u)
+
+    for j = n:n+in*6-1
+        i   = mod1(j,m-1)
+        im  = mod1(i-1,m-1)
+        imm = mod1(i-2,m-1)
+        
+        uₓₓ[i] = α*uₓₓ[i] + 
+        ((-cx[im]/0.6e1 + cx[imm]/0.8e1 + cx[i]/0.8e1)*u[imm] +
+        (-cx[imm]/0.6e1 - cx[i+1]/0.6e1 - cx[im]/0.2e1 - cx[i]/0.2e1)*u[im] +
+        (cx[imm]/0.24e2 + 0.5e1/0.6e1*cx[im] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
+        (-cx[imm]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
+        (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
+    end
+end
+=#
 
 
 ### Left boundary
