@@ -49,9 +49,9 @@ function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) wh
     FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
 function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
-    FirstDerivativeBoundary!(uₓ,c,u,Δx,n,Left,order,α)
+    FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,order,α)
     FirstDerivativeInternal!(uₓ,c,u,Δx,n,order,α)
-    FirstDerivativeBoundary!(uₓ,c,u,Δx,n,Right,order,α)
+    FirstDerivativeBoundary!(uₓ,c,u,Δx,Right,order,α)
 end
 """
     function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)

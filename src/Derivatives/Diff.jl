@@ -58,7 +58,7 @@ end
 function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Constant}) where {TT,AT<:AbstractArray{TT},KT,DO<:DerivativeOrder}
 
     for (A,B,C) in zip(eachcol(dest),eachcol(u),eachcol(K[1]))
-        SecondDerivativeInternal!(A,B,C,D.nx,D.Δx,D.order,TT(0))
+        SecondDerivativeInternal!(A,B,C,D.Δx,D.nx,D.order,TT(0))
         if !D.xperiodic
             SecondDerivativeBoundary!(A,B,C,D.Δx,Left,D.order,TT(0))
             SecondDerivativeBoundary!(A,B,C,D.Δx,Right,D.order,TT(0))
@@ -79,11 +79,11 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Variable}) whe
 
     for (A,B,Kx,DKy) in zip(eachcol(dest),eachcol(u),eachcol(K[1]),eachcol(K[4]))
         D₂!(A,B,Kx,D.nx,D.Δx,D.order,TT(0))
-        D₁!(A,DKy,C,D.nx,D.Δx,D.order,TT(1))
+        D₁!(A,DKy,DKy,D.nx,D.Δx,D.order,TT(1))
     end
     for (A,B,Ky,DKx) in zip(eachrow(dest),eachrow(u),eachrow(K[2]),eachrow(K[3]))
         D₂!(A,B,Ky,D.ny,D.Δy,D.order,TT(1))
-        D₁!(A,DKx,C,D.ny,D.Δy,D.order,TT(1))
+        D₁!(A,DKx,DKx,D.ny,D.Δy,D.order,TT(1))
     end
 
     dest

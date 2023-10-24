@@ -61,7 +61,7 @@ end
     FirstDerivativeInternal!(uₓ::AT,c::AT,u::AT,Δx::T,n::Int,DO::DerivativeOrder,α::T)
 In place first derivative function for internal nodes for computing ``DₓC Dₓu``
 """
-@inline function FirstDerivativeInternal!(uₓ::AT,c::AT,u::AT,Δx::T,n::Int,DO::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
+@inline function FirstDerivativeInternal!(uₓ::AT,c::AT,u::AT,Δx::T,n::Int,DO::DerivativeOrder{O},α::T) where {T,AT<:AbstractVector{T},O}
     local ux :: T
     m = floor(Int,(O+2)/2)
     for i = m:n-m+1
@@ -78,14 +78,14 @@ end
 1D in place function for first derivative on boundary nodes
 """
 function FirstDerivativeBoundary! end
-@inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{2},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
-    node <: Left ? i = 1 : i = -1
-    node <: Left ? j = 1 : j = n
+@inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::NodeType{TN},::DerivativeOrder{2},α::T) where {T,AT<:AbstractVector{T},TN}
+    node == :Left ? i = 1 : i = -1
+    node == :Left ? j = 1 : j = lastindex(u)
     uₓ[j] = α*uₓ[j] + c[j]*T(i)*(u[j+i] - u[j])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
-    node <: Left ? i = 1 : i = -1
-    node <: Left ? j = 1 : j = n
+@inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::NodeType{TN},::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN}
+    node == :Left ? i = 1 : i = -1
+    node == :Left ? j = 1 : j = n
     uₓ[j]       = α*uₓ[i]   + c[j]      * T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
     uₓ[j+i]     = α*uₓ[j+i] + c[j+i]    * T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx
     uₓ[j+2i]    = α*uₓ[j+2i]+ c[j+2i]   * T(i)*(T(4/43)*u[j]  - T(59/86)*u[j+i]   + T(59/86)*u[j+3i]  - T(4/43)*u[j+4i])/Δx
