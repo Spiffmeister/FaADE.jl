@@ -51,9 +51,9 @@ u₀(x,y) = x^2
 kx(x,y) = 2.0
 ky(x,y) = 2.0
 
-uxx, u, K, ue = buildprob2D(Dom1V,u₀,kx,ky,(x,y)->2.0)
+uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
 
-setKoefficient!(K,kx,ky,Dom1V)
+setKoefficient!(K,kx,ky,Dom)
 
 
 order = FaADE.Derivatives.DerivativeOrder{2}()
@@ -65,5 +65,27 @@ DO = FaADE.Derivatives.DerivativeOperator{Float64,2,typeof(order),:Constant}(ord
 FaADE.Derivatives.mul!(uxx,u,K,DOc)
 
 FaADE.Derivatives.mul!(uxx,u,[K[1],K[2]],DO)
+
+
+
+"""
+    Test with packing x points near the origin
+"""
+
+
+f(u) = (sinh(π*(2u-1))/sinh(π) + 1)/2 # point packing at 0.5
+
+# New solver 1 volume
+cbottom(u) = [f(u),0.0]
+cleft(v) = [0.0,v]
+cright(v) = [1.0,v]
+ctop(u) = [f(u),1.0]
+
+Dom2 = Grid2D(cbottom,cleft,cright,ctop,21,21)
+
+DOc = FaADE.Derivatives.DerivativeOperator{Float64,2,typeof(order),:Variable}(order,Dom.nx,Dom.ny,Dom.Δx,Dom.Δy,false,false)
+
+FaADE.Derivatives.mul!(uxx,u,K,DOc)
+
 
 
