@@ -17,6 +17,7 @@ module solvers
     
     using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
     SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!,
+    SAT_Neumann, SAT_Neumann_implicit_data!, SAT_Neumann_implicit_solution!,
     SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, 
     SATMode, DataMode, SolutionMode, ExplicitMode
     #,

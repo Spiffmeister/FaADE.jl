@@ -332,15 +332,16 @@ end
 struct SolverData{method,TT} 
     adaptive    :: Bool
     target      :: TT
-    function SolverData{TT}(;adaptive=false,target=0,method=:cgie) where TT
-        new{method,TT}(adaptive,target)
+    parallel    :: Bool
+    function SolverData{TT}(;adaptive=false,target=0,method=:cgie,parallel=false) where TT
+        new{method,TT}(adaptive,target,parallel)
     end
 end
 
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         solver::Symbol=:cgie,adaptive::Bool=false,θ=TT(1)) where {TT,DIM}
 
-        
+    P.Parallel === nothing ? parallel = false : parallel = true 
     if solver ∈ [:cgie,:cn,:theta]
         if solver == :cgie
             θ == TT(1)
@@ -349,7 +350,7 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         elseif solver == :theta
             θ = θ
         end
-        SD = SolverData{TT}(adaptive=adaptive,method=solver)
+        SD = SolverData{TT}(adaptive=adaptive,method=solver,parallel=parallel)
         DBlock = DataMultiBlock(P,G,Δt,0.0,θ=θ)
         soln = solution(G,0.0,Δt,P)
 
@@ -382,7 +383,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     copyto!(:uₙ₊₁,  :u, DBlock)
     copyto!(:b,     :u, DBlock)
     
-    println(DBlock.SC.θ)
+    # println(DBlock.SC.θ)
     while t < t_f
 
         # for I in eachblock(DBlock)
@@ -402,8 +403,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         end
         
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
-            if penalty_function_enabled
-                penalty_func(DBlock.uₙ₊₁,DBlock.u,Δt)
+            if solverconfig.parallel
+                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock[1].Parallel)
             end
 
             # USED FOR DETERMINING EQUILIBRIUM

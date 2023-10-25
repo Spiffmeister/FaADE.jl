@@ -429,7 +429,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     IP = innerH(G.Δx,G.n,GetOrder(P.order))
     D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0),pbound,false)
     PMap = P.Parallel
-    source = SourceTerm{Nothing}(nothing)
+    source = P.source
     # SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
@@ -452,7 +452,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
     D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     PMap = P.Parallel
-    source = SourceTerm{Nothing}(nothing)
+    source = P.source
+    # source = SourceTerm{Nothing}(nothing)
     # SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)

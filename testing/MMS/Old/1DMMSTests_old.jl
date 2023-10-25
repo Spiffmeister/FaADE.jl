@@ -3,13 +3,14 @@ using LinearAlgebra
 # using Plots
 # using LaTeXStrings
 
+using Pkg
+# Pkg.activate(".")
 using FaADE
 
-
-
 rundirichlet = true
-runneumann = true
-runperiodic = true
+runneumann = false
+runperiodic = false
+
 
 ###=== GLOBAL PROPS ===###
 𝒟x = [0.0,1.0]
@@ -34,41 +35,42 @@ end
 function comp_MMS(Dx,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         F,ũ,ũ₀,order;
-        dt_scale=0.01,t_f=1.0,k=1.0)
+        dt_scale=0.01,t_f=0.01,k=1.0)
 
     comp_soln = []
     MMS_soln = []
     grids = []
     relerr = []
     interr = []
+    # X boundaries
+    if BX0Type != Periodic
+        Bx0 = Boundary(BX0Type,BoundaryX0,Left,1)
+        BxL = Boundary(BXLType,BoundaryXL,Right,1)
+    else
+        Bx0L = PeriodicBoundary(1)
+    end
 
-
+    # Construct the correct problem
+    function MakeProb(k)
+        if (BX0Type != Periodic)
+            return VariableCoefficientPDE1D(ũ₀,k,order,Bx0,BxL)
+        elseif (BX0Type == Periodic)
+            return VariableCoefficientPDE1D(ũ₀,k,order,Bx0L)
+        end
+    end
 
     # Loop
     for n in npts
         Dom = Grid1D(Dx,n)
         
-        # X boundaries
-        if BX0Type == Periodic
-            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-        elseif BX0Type == Dirichlet
-            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,1,order)
-            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,1,order)
-        elseif BX0Type == Neumann
-            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,1,order)
-            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,1,order)
-        end
-        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL)
+        Δt = dt_scale*Dom.Δx^2
 
-        Δt = dt_scale*Dom.Δx
+        K(x) = k
 
-        K = k
-
-        P = newProblem1D(order,ũ₀,K,Dom,BD,F,nothing)
+        P = MakeProb(K)
 
         # println("Solving n=",Dom.n," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=0.5)
+        soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
 
         u_MMS = generate_MMS(ũ,Dom,t_f)
 
@@ -100,7 +102,7 @@ ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
 ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
-K = 1.0
+K = 1.0e-4
 F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
         -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
@@ -143,6 +145,7 @@ if rundirichlet
 
     println("=====")
 end
+
 
 if runneumann
     # Neumann
@@ -222,7 +225,7 @@ savefig(p,".//testing//MMS//MMSTests.eps")
 
 
 
-
+#=
 O2Conv = (n=npts,
     conv_D = O2_DirichletMMS.conv_rate,
     conv_N = O2_NeumannMMS.conv_rate,
@@ -243,16 +246,12 @@ O4Conv = (n=npts,
 
 using JLD2
 jldsave("testing/MMS/FullMMS1D.jld2";O2Conv,O4Conv)
+=#
 
 
-
-
-
-
-# using Plots
-# using LaTeXStrings
 
 #=
+
 pO2 = plot(axis=:log,minorgrid=true)
 plot!(pO2,    (O2_DirichletMMS.npts),     (O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
@@ -260,10 +259,8 @@ plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"
 plot!(pO2,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
 plot!(pO2,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:square)
 plot!(pO2,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
-=#
 
-#=
-pO2 = plot()
+
 plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$"), markershape=:circle
 plot!(pO2,    log.(O2_PeriodicMMS.npts),      log.(O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:circle)
@@ -298,7 +295,7 @@ savefig(pO4,".//testing//MMS//MMSTests_order4.png")
 
 
 
-
+#=
 using DelimitedFiles
 
 nameappend=string("K=",K)
@@ -316,3 +313,4 @@ end
 open(string("testing/MMS/1DMMS_Rates_O4",nameappend,".csv"),"w") do io
     writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
 end
+=#

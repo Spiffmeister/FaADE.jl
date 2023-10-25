@@ -5,6 +5,13 @@
 Adds PDE forcing term
 """
 function addSource! end
+function addSource!(S::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
+    #legacy
+    for i in 1:grid.n
+        u[i] += Δt*S(grid.grid[i],t)
+    end
+    u
+end
 function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
     #legacy
     for j in 1:grid.ny
@@ -14,10 +21,12 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
     end
     u
 end
-function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where TT
-    u .+= Δt*(1-θ)*S.source(grid.grid,t) + Δt*θ*S.source(grid.grid,t+Δt)
+function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
+    for i = 1:grid.n
+        u[i] += Δt*(1-θ)*S.source(grid[i],t) + Δt*θ*S.source(grid[i],t+Δt)
+    end
 end
-function addSource!(S::SourceTerm{Function},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where TT
+function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
     for j in 1:grid.ny
         for i in 1:grid.nx
             u[i,j] += Δt*(1-θ)*S.source(grid.gridx[i],grid.gridy[j],t) + Δt*θ*S.source(grid.gridx[i],grid.gridy[j],t+Δt)
@@ -177,15 +186,10 @@ Applying SATs in DataMode ignoring interface terms
 @inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
-    TT = eltype(dest)
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
-        # if BC.Boundary.side == Right
-            # SATs.SAT_Dirichlet_data!(dest,source,K,BC.Boundary,TT(1),TT(1))
-            # dest[end] = 1.0
-        # end
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
-        SAT_Neumann_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
+        SAT_Neumann_implicit_data!(dest,BC.BufferRHS,BC.Boundary)
     else
         applySAT!(BC.Boundary,dest,K,mode)
     end
@@ -201,14 +205,10 @@ Applying SATs in SolutionMode
     end
 end
 function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
-    # if (BC.Boundary.side ∈ [Left,Up]) & (typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet})
-    # println(BCT)
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
-        # if BC.Boundary.side == Right
-            # SAT_Dirichlet_data!(dest,source,K,BC.Boundary,TT(1),TT(1))
-            # dest[end] = 1.0
-        # end
+    elseif BCT <: SimultanousApproximationTerm{:Neumann}
+        SAT_Neumann_implicit_solution!(dest,source,K,BC.Boundary)
     else
         error("Not implemented")
     end
