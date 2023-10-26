@@ -15,9 +15,10 @@ function D₁ end
 1D implementation of ``D_x`` operator.
 """
 function D₁(u::AbstractVector{T},Δx::T;
-    order::Integer=2) where T
+        order::Integer=2) where T
     uₓ = zeros(T,length(u))
-    D₁!(uₓ,u,length(u),Δx,order)
+    DO = DerivativeOrder{order}()
+    D₁!(uₓ,u,length(u),Δx,DO,0.0)
     return uₓ
 end
 """

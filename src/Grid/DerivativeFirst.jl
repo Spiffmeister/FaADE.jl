@@ -42,11 +42,11 @@ function FirstDerivativeInternal! end
 function FirstDerivativeInternal!(uₓ::AbstractVector{T},u::AbstractVector{T},Δx::T,n::Integer,order::Integer) where T
     if order == 2
         for i = 2:n-1
-            uₓ[i] = (u[i+1] - u[i-1])/(T(2)*Δx)
+            uₓ[i] = (u[i+1] - u[i-1])/(2Δx)
         end
     elseif order == 4
         for i = 3:n-2
-            uₓ[i] = (T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
+            uₓ[i] = (T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/(Δx)
         end
     elseif order == 6
         for i = 4:n-3
@@ -61,17 +61,17 @@ end
 1D in place function for first derivative on boundary nodes
 """
 function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
-        u::AbstractVector{T},Δx::T,n::Integer,NT::NodeType,order::Integer) where T
-    NT == Left ? i = 1 : i = -1
-    NT == Left ? j = 1 : j = n
+        u::AbstractVector{T},Δx::T,n::Integer,::NodeType{TN},order::Integer) where {T,TN}
+    TN == :Left ? i = 1 : i = -1
+    TN == :Left ? j = 1 : j = n
     if order == 2
         uₓ[j] = T(i)*(u[j+i] - u[j])/Δx
     elseif order == 4
-        uₓ[j]       = T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
-        uₓ[j+i]     = T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx
-        uₓ[j+2i]    = T(i)*(T(4/43)*u[j]  - T(59/86)*u[j+i]   + T(59/86)*u[j+3i]  - T(4/43)*u[j+4i])/Δx
-        uₓ[j+3i]    = T(i)*(T(3/98)*u[j]  - T(59/98)*u[j+2i]  + T(32/49)*u[j+4i]  - T(4/49)*u[j+5i])/Δx
-        uₓ[j:i:j+3i] = uₓ[j:i:j+5i]/Δx
+        uₓ[j]       = T(i)*(T(-24/17)*u[j]  + T(59/34)*u[j+i]       + T(-4/17)*u[j+2i] + T(-3/34)*u[j+3i])/Δx
+        uₓ[j+i]     = T(i)*(T(-1/2)*u[j]    + T(1/2)*u[j+2i])/Δx
+        uₓ[j+2i]    = T(i)*(T(4/43)*u[j]    + T(-59/86)*u[j+i]      + T(59/86)*u[j+3i] + T(-4/43)*u[j+4i])/Δx
+        uₓ[j+3i]    = T(i)*(T(3/98)*u[j]    + T(-59/98)*u[j+2i]     + T(32/49)*u[j+4i] + T(-4/49)*u[j+5i])/Δx
+        # uₓ[j:i:j+3i] = uₓ[j:i:j+3i]/Δx
     elseif order == 6
         uₓ[j]       = T(i)*( T(-1.582533518939116)*u[j] + T(2.033378678700676)*u[j+i] - T(0.141512858744873)*u[j+2i] + T(-0.450398306578272)*u[j+3i] + T(0.104488069284042)*u[j+4i] + T(0.036577936277544)*u[j+5i] )
         uₓ[j+i]     = T(i)*( T(-0.462059195631158)*u[j] + T(0.287258622978251)*u[j+2i] + T(0.258816087376832)*u[j+3i] + T(-0.069112065532624)*u[j+4i] - T(0.014903449191300)*u[j+5i] )

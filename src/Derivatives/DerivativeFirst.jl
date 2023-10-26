@@ -110,17 +110,16 @@ end
     uₓ[j] = α*uₓ[j] + T(i)*(u[j+i] - u[j])/Δx
 end
 @inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
-    node <: Left ? i = 1 : i = -1
-    node <: Left ? j = 1 : j = n
-    uₓ[j]       = α*uₓ[i]   + T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
-    uₓ[j+i]     = α*uₓ[j+i] + T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx
-    uₓ[j+2i]    = α*uₓ[j+2i]+ T(i)*(T(4/43)*u[j]  - T(59/86)*u[j+i]   + T(59/86)*u[j+3i]  - T(4/43)*u[j+4i])/Δx
-    uₓ[j+3i]    = α*uₓ[j+2i]+ T(i)*(T(3/98)*u[j]  - T(59/98)*u[j+2i]  + T(32/49)*u[j+4i]  - T(4/49)*u[j+5i])/Δx
-    # uₓ[j:i:j+3i] = uₓ[j:i:j+i]/Δx
+    node == Left ? i = 1 : i = -1
+    node == Left ? j = 1 : j = lastindex(u)
+    uₓ[j]       = T(i)*(T(-24/17)*u[j]  + T(59/34)*u[j+i]       + T(-4/17)*u[j+2i] + T(-3/34)*u[j+3i])/Δx
+    uₓ[j+i]     = T(i)*(T(-1/2)*u[j]    + T(1/2)*u[j+2i])/Δx
+    uₓ[j+2i]    = T(i)*(T(4/43)*u[j]    + T(-59/86)*u[j+i]      + T(59/86)*u[j+3i] + T(-4/43)*u[j+4i])/Δx
+    uₓ[j+3i]    = T(i)*(T(3/98)*u[j]    + T(-59/98)*u[j+2i]     + T(32/49)*u[j+4i] + T(-4/49)*u[j+5i])/Δx
 end
 @inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{6},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
-    node <: Left ? i = 1 : i = -1
-    node <: Left ? j = 1 : j = n
+    node == Left ? i = 1 : i = -1
+    node == Left ? j = 1 : j = n
     uₓ[j]       = α*uₓ[j]   + T(i)*( T(-1.582533518939116)*u[j] + T(2.033378678700676)*u[j+i] - T(0.141512858744873)*u[j+2i] + T(-0.450398306578272)*u[j+3i] + T(0.104488069284042)*u[j+4i] + T(0.036577936277544)*u[j+5i] )/Δx
     uₓ[j+i]     = α*uₓ[j+i] + T(i)*( T(-0.462059195631158)*u[j] + T(0.287258622978251)*u[j+2i] + T(0.258816087376832)*u[j+3i] + T(-0.069112065532624)*u[j+4i] - T(0.014903449191300)*u[j+5i] )/Δx
     uₓ[j+2i]    = α*uₓ[j+2i]+ T(i)*( T(0.071247104721830)* u[j] - T(0.636451095137907)*u[j+i] + T(0.606235523609147)*u[j+3i] + T(-0.022902190275815)*u[j+4i] - T(0.018129342917256)*u[j+5i] )/Δx
