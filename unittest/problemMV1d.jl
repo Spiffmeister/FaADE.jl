@@ -10,25 +10,37 @@ order = 2
 K = 1.0
 
 Δt = 0.01
-# t = 0.05
-t = 100.0
+t = 1.0
+# t = 10.0
 
-u₀(x) = x.^2
+# u₀(x) = x.^2
 # u₀(x) = exp.(-(x-0.5)^2 / 0.02)
 
+ωx = 15.5
+cx = 0.0
+
+K = 1.0
 
 
-
+# Solution
+exact(x,t) = cos(2π*t) * sin(2π*x*ωx + cx)
+# Initial condition
+u₀(x) = sin(2π*ωx*x + cx)
+# Source
+F(x,t) = -2π*sin(2π*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
+            
+BxL(t) = cos(2π*t) * sin(cx) #Boundary condition x=0
+BxR(t) = cos(2π*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
 
 #====== Original solver ======#
-Dom1V = Grid1D([0.0,1.0],1001)
+Dom1V = Grid1D([0.0,1.0],501)
 
 # u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
-BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,t->1.0,Right,1)
+BoundaryLeft = Boundary(Dirichlet,BxL,Left,1)
+BoundaryRight = Boundary(Dirichlet,BxR,Right,1)
 P = VariableCoefficientPDE1D(u₀,t->K,order,BoundaryLeft,BoundaryRight)
 println("---Solving old---")
-solnO1V = solve(P,Dom1V,Δt,t,:cgie)
+solnO1V = solve(P,Dom1V,Δt,t,source=F,:cgie)
 
 # @benchmark solve($P,$Dom1V,$Δt,$t,:cgie)
 
@@ -40,17 +52,18 @@ solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 
 
 #====== New solver 1 volume ======#
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
+Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom1V.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom1V.Δx,Right,1,order)
 BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr)
-P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
+P1V = newProblem1D(order,u₀,K,Dom1V,BD1V,F,nothing)
 println("---Solving 1 volume---")
-soln1V = solve(P1V,Dom1V,Δt,t)
+soln1V = solve(P1V,Dom1V,Δt,t,solver=:theta,θ=0.5)
+# soln1V = solve(P1V,Dom1V,Δt,t)
 
-@benchmark solve($P1V,$Dom1V,$Δt,$t)
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
 
-
+#=
 #====== New solver 2 volume ======#
 D1 = Grid1D([0.0,0.5],501)
 D2 = Grid1D([0.5,1.0],501)
@@ -64,6 +77,9 @@ println("---Solving 2 volume---")
 P2V = newProblem1D(order,u₀,K,Dom2V,BD)
 
 soln2V = solve(P2V,Dom2V,Δt,t)
+=#
+
+
 
 # @benchmark solve($P2V,$Dom2V,$Δt,$t)
 
@@ -105,17 +121,25 @@ println("Solving")
 soln3V = solve(P3V,Dom3V,Δt,t)
 =#
 
-
-
-
+e = [exact(Dom1V.grid[i],solnO1V.t[2]) for i in eachindex(Dom1V)]
 
 using Plots
-plot(Dom1V.grid,solnO1V.u[2])
 
-plot(Dom1V.grid,soln1V.u[2])
 
-plot!(Dom2V.Grids[1].grid,soln2V.u[2][1])
-plot!(Dom2V.Grids[2].grid,soln2V.u[2][2])
+l = @layout[a; b]
+p1 = plot(Dom1V.grid,solnO1V.u[2],label="old")
+plot!(p1, Dom1V.grid,soln1V.u[2],label="new")
+plot!(p1, Dom1V.grid,e,label="exact")
+
+
+p2 = plot(solnO1V.u[2] .- e,label="old err")
+plot!(p2,soln1V.u[2] .- e,label="new err")
+plot!(p2,soln1V.u[2] .- solnO1V.u[2],linestyle=:dash,label="new old err")
+
+plot(p1,p2,layout=l)
+
+# plot!(Dom2V.Grids[1].grid,soln2V.u[2][1])
+# plot!(Dom2V.Grids[2].grid,soln2V.u[2][2])
 #=
 # plot!(Dom3V.Grids[1].grid,soln3V.u[2][1])
 # plot!(Dom3V.Grids[2].grid,soln3V.u[2][2])

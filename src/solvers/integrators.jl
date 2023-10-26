@@ -129,7 +129,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     end
     if (rnorm>rtol*unorm) & warnings
         DBlock.SC.converged = false
-        warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        warnstr = string("CG did not converge with Δt=",DBlock.SC.Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
@@ -172,13 +172,14 @@ Implicit Euler with conjugate gradient method
 function implicit_euler(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     # advance time
     for I in eachblock(DBlock)
-        DBlock[I].SC.t += DBlock[I].SC.Δt
+        # DBlock[I].SC.t += DBlock[I].SC.Δt
+        DBlock[I].SC.t = t
         DBlock[I].SC.Δt = Δt
     end
+    setBoundaryConditions!(DBlock)
     # update diff coefficients
     setDiffusionCoefficient!(DBlock)
     # Set and update boundary data
-    setBoundaryConditions!(DBlock)
     applySATs(:b,DBlock,DataMode)
     # add source terms
     addSource!(:b,DBlock)
@@ -196,6 +197,7 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     # b = u_n already set; SATs applied after so compute 
     # b = (I - Δt/2 D_\perp)uₙ
     for I in eachblock(DBlock)
+        DBlock[I].SC.t = t
         DBlock[I].SC.Δt = Δt
     end
 
@@ -208,13 +210,14 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
         u = getarray(DBlock[I],:u)
         b = getarray(DBlock[I],:b)
         
-        mul!(cache,u,DBlock[I].K,DBlock[I].Derivative)      # D₂u
-        @. b = u + (1-DBlock.SC.θ)*DBlock.SC.Δt*cache    # I - Δt/2 D₂u
-
-        @. cache = u * (1-DBlock.SC.θ)*DBlock.SC.Δt
+        if DBlock[I].SC.θ != TT(1)
+            mul!(cache,u,DBlock[I].K,DBlock[I].Derivative)      # D₂u
+            @. b = u + (1-DBlock.SC.θ)*DBlock.SC.Δt*cache    # I - Δt/2 D₂u
+            @. cache = u * (1-DBlock.SC.θ)*DBlock.SC.Δt
+            applySATs(b,cache,DBlock[I],SolutionMode)   # SATs on D₂u
+        end
 
         applySATs(b,DBlock[I],DataMode)             # SATs on u already
-        applySATs(b,cache,DBlock[I],SolutionMode)   # SATs on D₂u
     end
     addSource!(:b,DBlock)
     

@@ -86,10 +86,10 @@ end
 @inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::NodeType{TN},::DerivativeOrder{4},α::T) where {T,AT<:AbstractVector{T},TN}
     node == :Left ? i = 1 : i = -1
     node == :Left ? j = 1 : j = n
-    uₓ[j]       = α*uₓ[i]   + c[j]      * T(i)*(T(24/17)*u[j] + T(59/34)*u[j+i]   - T(4/17)*u[j+2i]   - T(3/34)*u[j+3i])/Δx
-    uₓ[j+i]     = α*uₓ[j+i] + c[j+i]    * T(i)*(T(1/2)*u[j]   + T(1/2)*u[j+2i])/Δx
-    uₓ[j+2i]    = α*uₓ[j+2i]+ c[j+2i]   * T(i)*(T(4/43)*u[j]  - T(59/86)*u[j+i]   + T(59/86)*u[j+3i]  - T(4/43)*u[j+4i])/Δx
-    uₓ[j+3i]    = α*uₓ[j+2i]+ c[j+3i]   * T(i)*(T(3/98)*u[j]  - T(59/98)*u[j+2i]  + T(32/49)*u[j+4i]  - T(4/49)*u[j+5i])/Δx
+    uₓ[j]       = α*uₓ[i]   + c[j]      * T(i)*(T(-24/17)*u[j]+ T(59/34)*u[j+i]   + T(-4/17)*u[j+2i]   - T(-3/34)*u[j+3i])/Δx
+    uₓ[j+i]     = α*uₓ[j+i] + c[j+i]    * T(i)*(T(-1/2)*u[j]  + T(1/2)*u[j+2i])/Δx
+    uₓ[j+2i]    = α*uₓ[j+2i]+ c[j+2i]   * T(i)*(T(4/43)*u[j]  + T(-59/86)*u[j+i]   + T(59/86)*u[j+3i]  + T(-4/43)*u[j+4i])/Δx
+    uₓ[j+3i]    = α*uₓ[j+2i]+ c[j+3i]   * T(i)*(T(3/98)*u[j]  + T(-59/98)*u[j+2i]  + T(32/49)*u[j+4i]  + T(-4/49)*u[j+5i])/Δx
     # uₓ[j:i:j+3i] = uₓ[j:i:j+i]/Δx
 end
 @inline function FirstDerivativeBoundary!(uₓ::AT,c::AT,u::AT,Δx::T,node::TN,::DerivativeOrder{6},α::T) where {T,AT<:AbstractVector{T},TN<:Union{NodeType{:Left},NodeType{:Right}}}
