@@ -104,7 +104,7 @@ function solve(Prob::VariableCoefficientPDE1D,grid::GridType{T,1},Δt::T,t_f::T,
     
     
     # while t < t_f
-    nt = 1000; for i = 1:nt
+    nt = 1; for i = 1:nt
         t = i*Δt
         
         if solver == :cgie
@@ -247,7 +247,7 @@ function solve(Prob::VariableCoefficientPDE2D,grid::GridType{T,2},Δt::T,t_f::T,
     if t_f != Inf
         tprint₀ = tprint = t_f/10.0
     else
-        tprint₀ = tprint = 10000.0
+        tprint₀ = tprint = 10.0
     end
 
     # tmpu = zeros(T,(grid.nx,grid.ny))
@@ -385,8 +385,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     
     # println(DBlock.SC.θ)
     # while t < t_f
-    nt = 1000; for i = 1:nt
-        t = (i-1)*Δt
+    nt = 1; for i = 1:nt
+        t = i*Δt
 
         # for I in eachblock(DBlock)
         #     DBlock[I].SC.t = t

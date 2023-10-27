@@ -10,7 +10,7 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt:
     for i in 1:grid.n
         u[i] += Δt*S(grid.grid[i],t)
     end
-    # println(u[501])
+    # println(u[100]," ",Δt*S(grid.grid[100],t))
     u
 end
 function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
@@ -24,9 +24,10 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
 end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
     for i = 1:grid.n
-        u[i] += Δt*(1-θ)*S.source(grid[i],t) + Δt*θ*S.source(grid[i],t+Δt)
+        u[i] += Δt*(1-θ)*S.source(grid[i],t-Δt) + Δt*θ*S.source(grid[i],t)
     end
-    # println(u[501])
+    # println(u[100]," ",Δt*(1-θ)*S.source(grid[100],t-Δt) + Δt*θ*S.source(grid[100],t))
+    u
 end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
     for j in 1:grid.ny
@@ -68,9 +69,7 @@ function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,args...) wher
     @. B.BufferRHS = Δt*B.RHS
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
-    # println("hi ",t)
-    B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
-    # println(B.BufferRHS[1])
+    B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t-Δt) + Δt*θ*B.RHS(t)
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
