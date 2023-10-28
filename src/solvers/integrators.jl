@@ -35,7 +35,7 @@ In-place conjugate gradient method.
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,AT},Δt::TT;
-        atol=1.e-5,rtol=1.e-14,maxIT::Int=10,warnings=true) where {TT,DIM,AT}
+        atol=1.e-5,rtol=1.e-14,maxIT::Int=10,warnings=false) where {TT,DIM,AT}
     # LEGACY
     local rnorm::TT
     local unorm::TT
@@ -43,11 +43,9 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     local βₖ::TT
     local αₖ::TT
     
-    println("b ",CGB.b[100])
     # x₀ = uₙ #Initial guess
     # CGB.b .= DBlock.uₙ₊₁ #uₙ₊₁ is our initial guess and RHS
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
-    # println(CGB.b[100])
     A!(RHS,CGB.rₖ,DBlock.u,Δt,DBlock.K)
     CGB.rₖ .= CGB.rₖ .- CGB.b
     # DBlock.uₙ₊₁ .= DBlock.u
@@ -57,7 +55,6 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
     unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
-    println(rnorm," ",unorm)
     while (rnorm > rtol*unorm) & (i < maxIT)
         A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
@@ -75,7 +72,6 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
         i += 1
     end
-    # println("unp1 ",DBlock.uₙ₊₁[100])
     if (rnorm>rtol*unorm) & warnings
         CGB.scalar.converged = false
         warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
@@ -83,7 +79,7 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     end
 end
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-14,maxIT::Int=10,warnings=true) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-14,maxIT::Int=10,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -96,20 +92,20 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     # rₖ = (uₙ₊₁ - Δt*uₓₓⁿ⁺¹) - (uₙ + F)
     # A!(CGB.rₖ,DBlock.u,DBlock)
     A!(:u,DBlock)
-    println("b ",DBlock[1].b[100], " ",DBlock[1].u[100]," ",DBlock[1].cache[100])
     setValue(:rₖ,:cache,DBlock)
     muladd!(:rₖ,:b,DBlock,β=TT(-1)) #rₖ = rₖ - b
     setValue(:dₖ,:rₖ,DBlock,TT(-1)) #dₖ = -rₖ
 
-    mul!(DBlock[1].cache,DBlock[1].u,DBlock[1].K,DBlock[1].Derivative)
-    DBlock[1].cache .= DBlock.SC.Δt*DBlock[1].cache
-    addSource!(DBlock[1].source,DBlock[1].cache,DBlock[1].grid,DBlock[1].SC.t,DBlock[1].SC.Δt,0.0)
-    println("cache ",DBlock[1].cache[100])
+    # mul!(DBlock[1].cache,DBlock[1].u,DBlock[1].K,DBlock[1].Derivative)
+    # A!(:u,DBlock)
+    # DBlock[1].cache .= DBlock.SC.Δt*DBlock[1].cache
+    # addSource!(DBlock[1].source,DBlock[1].cache,DBlock[1].grid,DBlock[1].SC.t,DBlock[1].SC.Δt,0.0)
+    # rnorm = sqrt(innerprod(:cache,:cache,DBlock)) #√(rₖ,rₖ)ₕ
 
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     unorm = max(sqrt(innerprod(:uₙ₊₁,:uₙ₊₁,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
-    println(rnorm," ",unorm)
+    # println("norms ",rnorm," ",unorm)
     while (rnorm > rtol*unorm) & (i < maxIT)
         # Comm dₖ boundaries
         A!(:dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
@@ -150,7 +146,6 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
 end
 # b = (1+(1-θ)ΔtD)u^n + (1-θ)ΔtF^n + θΔtF^{n+1} + θSAT_data^{n+1} + (1-θ)SAT_data^{n}
 # rk = (1-θΔtD)u^n
-
 #b = (1+ΔtD)u^n + ΔtF^n + SAT_data^{n}
 #rk = u^n
 #b - rk = ΔtD(u^n) + ΔtF^n
@@ -174,13 +169,10 @@ function Awonky!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}
     mul!(W,R,D.K,D.Derivative)      # D₂u
     applySATs(W,R,D,SolutionMode)   # D⟂ = D₂u + SATu
 
-    println(W[100])
     @. W = R + (1-D.SC.θ)*D.SC.Δt*W # u + (1-θ)ΔtD⟂u
-    println(W[100])
-    addSource!(D.source,R,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
-    println(W[100])
+    addSource!(D.source,W,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
     applySATs(W,D,DataMode) # + RHS SATs
-    println(W[100])
+    @. R = W
 end
 
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
