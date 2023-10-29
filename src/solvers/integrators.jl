@@ -55,8 +55,10 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     i = 0
     rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
     unorm = max(sqrt(CGB.innerprod(DBlock.uₙ₊₁,DBlock.uₙ₊₁)),1e-14)
+    # println("rnorm ",rnorm," ",unorm," ",CGB.rₖ[200:205])
     while (rnorm > rtol*unorm) & (i < maxIT)
         A!(RHS,CGB.Adₖ,CGB.dₖ,Δt,DBlock.K) # Adₖ = dₖ - Δt*D(dₖ)
+        # println(CGB.Adₖ[200:205])
         dₖAdₖ = CGB.innerprod(CGB.dₖ,CGB.Adₖ)
         αₖ = -CGB.innerprod(CGB.rₖ,CGB.dₖ)/dₖAdₖ
         @. DBlock.uₙ₊₁ = DBlock.uₙ₊₁ + αₖ*CGB.dₖ #xₖ₊₁ = xₖ + αₖ*dₖ
@@ -72,6 +74,7 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
         rnorm = sqrt(CGB.innerprod(CGB.rₖ,CGB.rₖ))
         i += 1
     end
+    # println("unp1 ",DBlock.uₙ₊₁[1]," ",DBlock.uₙ₊₁[end])
     if (rnorm>rtol*unorm) & warnings
         CGB.scalar.converged = false
         warnstr = string("CG did not converge with Δt=",Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
@@ -95,20 +98,16 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     setValue(:rₖ,:cache,DBlock)
     muladd!(:rₖ,:b,DBlock,β=TT(-1)) #rₖ = rₖ - b
     setValue(:dₖ,:rₖ,DBlock,TT(-1)) #dₖ = -rₖ
-
-    # mul!(DBlock[1].cache,DBlock[1].u,DBlock[1].K,DBlock[1].Derivative)
-    # A!(:u,DBlock)
-    # DBlock[1].cache .= DBlock.SC.Δt*DBlock[1].cache
-    # addSource!(DBlock[1].source,DBlock[1].cache,DBlock[1].grid,DBlock[1].SC.t,DBlock[1].SC.Δt,0.0)
-    # rnorm = sqrt(innerprod(:cache,:cache,DBlock)) #√(rₖ,rₖ)ₕ
-
+    
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     unorm = max(sqrt(innerprod(:uₙ₊₁,:uₙ₊₁,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
+    # println("rnorm ",rnorm," ",unorm," ",DBlock[1].rₖ[200:205])
     # println("norms ",rnorm," ",unorm)
     while (rnorm > rtol*unorm) & (i < maxIT)
         # Comm dₖ boundaries
         A!(:dₖ,DBlock) # Adₖ = dₖ - Δt*D(dₖ)
+        # println(DBlock[1].cache[200:205])
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #dₖAdₖ = (dₖ,Ddₖ)
         αₖ = -innerprod(:rₖ,:dₖ,DBlock)/dₖAdₖ #αₖ = -(rₖ,dₖ)/dₖAdₖ
         muladd!(:uₙ₊₁,:dₖ,DBlock,β=αₖ) #uₙ₊₁ = uₙ + αₖdₖ
@@ -127,7 +126,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
         rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock))
         i += 1
     end
-    # println("unp1 ",DBlock[1].uₙ₊₁[100])
+    # println("unp1 ",DBlock[1].uₙ₊₁[1]," ",DBlock[1].uₙ₊₁[end])
     if (rnorm>rtol*unorm) & warnings
         DBlock.SC.converged = false
         warnstr = string("CG did not converge with Δt=",DBlock.SC.Δt,", rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
@@ -144,11 +143,7 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     @. tmp = uⱼ - Δt*tmp
     tmp
 end
-# b = (1+(1-θ)ΔtD)u^n + (1-θ)ΔtF^n + θΔtF^{n+1} + θSAT_data^{n+1} + (1-θ)SAT_data^{n}
-# rk = (1-θΔtD)u^n
-#b = (1+ΔtD)u^n + ΔtF^n + SAT_data^{n}
-#rk = u^n
-#b - rk = ΔtD(u^n) + ΔtF^n
+
 function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) where {TT,DIM,AT,KT,DCT,GT,BT,DT,PT}
     # Compute the derivatives
     W = getarray(D,:cache)
@@ -165,14 +160,14 @@ function Awonky!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}
     # Compute the derivatives
     W = getarray(D,:cache)
     R = getarray(D,read)
-    
+
     mul!(W,R,D.K,D.Derivative)      # D₂u
     applySATs(W,R,D,SolutionMode)   # D⟂ = D₂u + SATu
-
-    @. W = R + (1-D.SC.θ)*D.SC.Δt*W # u + (1-θ)ΔtD⟂u
-    addSource!(D.source,W,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
-    applySATs(W,D,DataMode) # + RHS SATs
-    @. R = W
+    
+    @. R = R + (1-D.SC.θ)*D.SC.Δt*W # u + (1-θ)ΔtD⟂u
+    setBoundaryConditions!(D)
+    applySATs(R,D,DataMode) # + RHS SATs
+    addSource!(D.source,R,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
