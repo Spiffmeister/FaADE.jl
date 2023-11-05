@@ -25,12 +25,11 @@ module SATs
     # include("Helpers.jl")
 
     export SATMode, DataMode, SolutionMode, ExplicitMode
-    export SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!
-    export SAT_Neumann, SAT_Neumann_implicit_data!, SAT_Neumann_implicit_solution!
+    export SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_solution!, SAT_Dirichlet_data!
+    export SAT_Neumann, SAT_Neumann_data!, SAT_Neumann_solution!
     export SAT_Periodic, SAT_Periodic!
     # export SAT_Robin
     # export SAT_Interface, SAT_Interface!
-    export generate_Dirichlet, generate_Neumann, generate_Periodic
 
 
     export SimultanousApproximationTerm

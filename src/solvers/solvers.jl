@@ -16,12 +16,10 @@ module solvers
     using FaADE.Grid
     
     using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
-    SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_implicit_data!, SAT_Dirichlet_implicit!, SAT_Dirichlet_explicit!,
-    SAT_Neumann, SAT_Neumann_implicit_data!, SAT_Neumann_implicit_solution!,
+    SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_solution!, SAT_Dirichlet_data!,
+    SAT_Neumann, SAT_Neumann_data!, SAT_Neumann_solution!,
     SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, 
     SATMode, DataMode, SolutionMode, ExplicitMode
-    #,
-    # SATBoundaries, SAT, construct_SAT
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!
 
@@ -29,7 +27,7 @@ module solvers
     BoundaryConditionData, Boundary, PeriodicBoundary,
     PDEProblem, VariableCoefficientPDE1D, VariableCoefficientPDE2D,BoundaryConditions,
     # old imports
-    DataBlockType, BoundaryStorage, DataBlock, BoundaryData1D, BoundaryData2D, SAT#, copyUtoSAT!, copySATtoU!, addSATtoU!,addSource!, BoundaryConditions
+    DataBlockType, BoundaryStorage, DataBlock, BoundaryData1D, BoundaryData2D
 
     
     include("DataStorage.jl")
