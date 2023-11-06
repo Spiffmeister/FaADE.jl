@@ -14,59 +14,44 @@ struct SAT_Neumann{
     TN<:NodeType,
     TT<:Real,
     VT<:Vector{TT},
-    F1<:Function, F2<:Function} <: SimultanousApproximationTerm{:Neumann}
+    F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Neumann}
     
-    type    :: BoundaryConditionType
     side    :: TN
     axis    :: Int
     order   :: Int
-    ED₁     :: VT
     RHS     :: F1
+    H⁻¹E    :: TT
+    D₁      :: VT
     Δx      :: TT
     τ       :: TT
-    loopaxis:: F2
+    loopaxis:: LAT
     ### CONSTRUCTOR ###
     function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN,F1}
 
         check_boundary(side)
 
-        ED = BoundaryDerivative(side,Δx,order)
-        τ = SATpenalties(Neumann,Δx,order)
         LA = SelectLoopDirection(axis)
 
-        new{TN,TT,Vector{TT},F1,typeof(LA)}(Neumann,side,axis,order,ED,RHS,Δx,τ,LA)
-    end
-end
+
+        Hinv = _InverseMassMatrix(order,Δx,side)
+        E = _BoundaryOperator(TT,side)
+        D₁ = _BoundaryDerivative(Δx,order,side)
 
 
-"""
-    generate_Neumann
-Generates SAT functions for Neumann boundary conditions.
-"""
-function generate_Neumann end
-function generate_Neumann(SATN::SAT_Neumann,solver)
-    loopdirection = SelectLoopDirection(SATN.axis)
-
-    let τ = SATN.τ,
-        BD = SATN.ED₁,
-        side = SATN.side,
-        order = SATN.order
-
-        if solver == :cgie
-            CGTerm(cache::AbstractArray,u::AbstractArray,c::AbstractArray,::SATMode{:SolutionMode}) =
-                SAT_Neumann_implicit!(cache,side,u,c,τ,BD,order,loopdirection)
-            CGTerm(cache::AbstractArray,RHS,c::AbstractArray,::SATMode{:DataMode}) =
-                SAT_Neumann_implicit_data!(cache,side,RHS,c,τ,BD,order,loopdirection)
-
-            return CGTerm
-        elseif solver ∈ [:euler,:RK4]
-            Term(cache,u,c,t) = SAT_Neumann_explicit!(SATN.RHS,cache,side,u,c,t,τ,BD,order,loopdirection)
-
-            return Term
+        # τ * H⁻¹ * E
+        if typeof(side) <: NodeType{:Left}
+            n = -1 # normal vector
+            H⁻¹E    = n*Hinv[1]*E
+        elseif typeof(side) <: NodeType{:Right}
+            n = -1 # normal vector
+            H⁻¹E    = n*Hinv[end]*E
         end
+
+        τ = TT(1)
+
+        new{TN,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA)
     end
 end
-
 
 
 
@@ -159,16 +144,40 @@ function SAT_Neumann_implicit_data!(SAT::AbstractArray{T},::NodeType{:Right},u::
     end
 end
 
+# #== NEW ==#
+# function SAT_Neumann_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:NodeType{SIDE}} where SIDE
+#     SIDE == :Left ? j = 1 : j = lastindex(dest)
+#     SIDE == :Left ? b =-1 : b = -1
+#     dest[j] -= b*SN.τ*SN.H⁻¹E*u[1]
+#     # dest[j] -= SN.τ*SN.H⁻¹E*u[1] #-1 for right
+# end
+# #== NEW ==#
+# function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT,TN<:NodeType{SIDE}} where SIDE
+#     SIDE == :Left ? j = 1 : j = lastindex(dest)
+#     SIDE == :Left ? m = 0 : m = j-SN.order
+#     SIDE == :Left ? b = -1 : b = 1
+#     for i = 1:SN.order
+#         dest[j] += b*SN.τ * SN.H⁻¹E * c[1] * SN.D₁[i]*u[m+i]
+#         # dest[j] += SN.τ * SN.H⁻¹E * c[j] * SN.D₁[i]*u[m+i] #-1 for left
+#     end
+# end
+
+
+
 #== NEW ==#
-function SAT_Neumann_implicit_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
-    for (S,U) in zip(SN.loopaxis(dest),SN.loopaxis(u))
-        S[1] -= SN.τ*U[1]
+function SAT_Neumann_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:NodeType{:Left}}
+    dest[1] -= SN.τ*SN.H⁻¹E*u[1]
+end
+function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT,TN<:NodeType{:Left}}
+    for i = 1:SN.order
+        dest[1] += SN.τ * SN.H⁻¹E * c[1] * SN.D₁[i]*u[i]
     end
 end
-function SAT_Neumann_implicit_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
-    for (S,U) in zip(SN.loopaxis(dest),SN.loopaxis(u))
-        S[end] -= -SN.τ*U[end]
+function SAT_Neumann_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:NodeType{:Right}}
+    dest[end] -= SN.τ*SN.H⁻¹E*u[end]
+end
+function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT,TN<:NodeType{:Right}}
+    for i = 1:SN.order
+        dest[end] += SN.τ * SN.H⁻¹E * c[end] * SN.D₁[i]*u[end-SN.order+i]
     end
 end
-
-

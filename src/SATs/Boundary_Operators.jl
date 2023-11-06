@@ -57,8 +57,8 @@ function _InverseMassMatrix(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
         return reverse(Hinv)
     end
 end
-_BoundaryNormal(TT,::NodeType{:Left}) = TT(-1)
-_BoundaryNormal(TT,::NodeType{:Right}) = TT(1)
+_BoundaryOperator(TT,::NodeType{:Left}) = TT(-1)
+_BoundaryOperator(TT,::NodeType{:Right}) = TT(1)
 
 
 function _BoundaryDerivative(Δx::TT,order::Int,::NodeType{TN}) where {TT,TN}
@@ -72,13 +72,10 @@ function _BoundaryDerivative(Δx::TT,order::Int,::NodeType{TN}) where {TT,TN}
 
     if TN == :Left
         return D
-    else
-        return reverse(D)
+    elseif TN == :Right
+        return reverse(-D)
     end
 end
-
-
-
 
 """
     BoundaryDerivative

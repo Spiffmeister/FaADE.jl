@@ -38,7 +38,7 @@ struct SAT_Dirichlet{
 
         Hinv = _InverseMassMatrix(order,Δx,side)
         D₁ᵀ = _DerivativeTranspose(order,Δx,side)
-        E = _BoundaryNormal(TT,side)
+        E = _BoundaryOperator(TT,side)
         
         # τ * H⁻¹ * E * SD.H⁻¹ * E * (u-f)
         if typeof(side) <: NodeType{:Left}
