@@ -91,20 +91,17 @@ function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) wher
     end
     dest
 end
-
-# function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{:Right}}
-#     for i = 1:SD.order #nodes SD.nodes
-#         dest[end-SD.order+i] = dest[i] + SD.α*c[end]*SD.ED₁ᵀ[i]*data[end] #u[Left]
-#     end
-#     dest[end] = dest[1] - SD.τ(c[end])*c[end]*data[end]
-# end
+function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) where {AT<:AbstractMatrix}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
+        SAT_Dirichlet_data!(DEST,DATA,C,SD)
+    end
+end
 
 
 function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{SIDE}} where SIDE
 
     SIDE == :Left ? j = 1 : j = lastindex(dest)
     SIDE == :Left ? m = 0 : m = j-SD.order
-    # SIDE == :Left ? o = 1 : o = lastindex(data)
 
     dest[j] += SD.τ(c[j])*SD.H⁻¹EH⁻¹E*c[j]*data[j]
     for i = 1:SD.order #nodes SD.nodes
@@ -112,13 +109,10 @@ function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) 
     end
     dest
 end
-
-# function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{:Right}}
-#     τ = SD.τ(c[end])
-#     for i = 1:SD.order #nodes SD.nodes
-#         dest[end-SD.order+i] = dest[end-SD.order+i] + SD.α*c[end]*SD.ED₁ᵀ[i]*data[end] #u[Right] dest + SD.α * SD.h[i]/SD.Δx * SD.ED₁ᵀ[i] * data[end]
-#     end
-#     dest[end] = dest[end] + τ*c[end]*data[end]
-# end
+function SAT_Dirichlet_solution!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) where {AT<:AbstractMatrix}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
+        SAT_Dirichlet_solution!(DEST,DATA,C,SD)
+    end
+end
 
 

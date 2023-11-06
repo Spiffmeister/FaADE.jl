@@ -9,7 +9,7 @@ using FaADE
 
 rundirichlet = true
 runneumann = true
-runperiodic = true
+runperiodic = false
 
 ###=== GLOBAL PROPS ===###
 𝒟x = [0.0,1.0]
@@ -34,7 +34,7 @@ end
 function comp_MMS(Dx,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         F,ũ,ũ₀,order;
-        dt_scale=0.01,t_f=1.0,k=1.0)
+        dt_scale=0.10,t_f=5.0,k=1.0,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
@@ -67,10 +67,10 @@ function comp_MMS(Dx,npts,
 
         P = newProblem1D(order,ũ₀,K,Dom,BD,F,nothing)
 
-        # println("Solving n=",Dom.n," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=0.5)
+        println("Solving n=",Dom.n," case with Δt=",Δt)
+        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
 
-        u_MMS = generate_MMS(ũ,Dom,t_f)
+        u_MMS = generate_MMS(ũ,Dom,soln.t[2])
 
         push!(comp_soln,soln)
         push!(grids,Dom)
@@ -89,55 +89,61 @@ end
 
 
 ###=== MMS TESTS ===###
-# npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
+# npts = [25,51,101,201,401,801]
+# npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151]
+
+
+θ = 1.0
 
 
 # Solution
-ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
+ũ(x,t;ωt=1.0, ωx=1.0,cx=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
 
 # Initial condition
-ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
+ũ₀(x;ωt=1.0, ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
 K = 1.0
-F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
-        -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
-            K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
+F(x,t;ωt=1.0, ωx=1.0,cx=0.0,K=1.0) = 
+        -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
+            K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
             
     
 println("K=",K)
+
 
 if rundirichlet
     # Dirichlet
     println("=====")
     println("Dirichlet")
     cx=1.0
-    ωx=8.0
+    ωx=9.0
+    ωt=1.0
 
-    println("ωx=",ωx,",  cx=",cx)
 
-    analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
-    IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-    FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
+    analytic(x,t) = ũ(x,t, ωt=ωt, ωx=ωx, cx=cx)
+    IC(x) = ũ₀(x, ωt=ωt, ωx=ωx, cx=cx)
+    FD(x,t) = F(x,t, ωt=ωt, ωx=ωx, cx=cx, K=K)
 
-    BxLũ(t) = cos(2π*t) * sin(cx) #Boundary condition x=0
-    BxRũ(t;Lx=1.0) = cos(2π*t) * sin(2π*Lx*ωx + cx) #Boundary condition x=Lx
+    BxLũ(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
+    BxRũ(t;Lx=1.0) = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) #Boundary condition x=Lx
 
     order = 2
     println("order=",order)
     O2_DirichletMMS = comp_MMS(𝒟x,npts,
         BxLũ,Dirichlet,BxRũ,Dirichlet,
         FD,analytic,IC,order,
-        k=K)
+        k=K,θ=θ)
 
     order = 4
     println("order=",order)
     O4_DirichletMMS = comp_MMS(𝒟x,npts,
         BxLũ,Dirichlet,BxRũ,Dirichlet,
         FD,analytic,IC,order,
-        k=K)
+        k=K,θ=θ)
 
+    println("ωx=",ωx,",  cx=",cx,", ωt=",ωt,", θ=",θ)
     println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
     println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
@@ -150,30 +156,31 @@ if runneumann
     println("Neumann")
 
     cx=1.0
-    ωx=8.5
+    ωx=9.0
+    ωt=1.0
 
     println("ωx=",ωx,"  cx=",cx)
 
-    analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
-    IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-    FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
+    analytic(x,t) = ũ(x,t, ωt=ωt, ωx=ωx, cx=cx)
+    IC(x) = ũ₀(x, ωt=ωt, ωx=ωx, cx=cx)
+    FD(x,t) = F(x,t, ωt=ωt, ωx=ωx, cx=cx, K=K)
 
-    BxLũ(t) =         2π*ωx * K * cos(2π*t) * cos(cx) #Boundary condition x=0
-    BxRũ(t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx) #Boundary condition x=Lx
+    BxLũ(t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
+    BxRũ(t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx) #Boundary condition x=Lx
 
     order = 2
     println("order=",order)
     O2_NeumannMMS = comp_MMS(𝒟x,npts,
         BxLũ,Neumann,BxRũ,Neumann,
         FD,analytic,IC,order,
-        k=K)
+        k=K,θ=θ)
 
     order = 4
     println("order=",order)
     O4_NeumannMMS = comp_MMS(𝒟x,npts,
         BxLũ,Neumann,BxRũ,Neumann,
         FD,analytic,IC,order,
-        k=K)
+        k=K,θ=θ)
 
     println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
     println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
@@ -222,7 +229,7 @@ savefig(p,".//testing//MMS//MMSTests.eps")
 
 
 
-
+#=
 O2Conv = (n=npts,
     conv_D = O2_DirichletMMS.conv_rate,
     conv_N = O2_NeumannMMS.conv_rate,
@@ -243,43 +250,51 @@ O4Conv = (n=npts,
 
 using JLD2
 jldsave("testing/MMS/FullMMS1D.jld2";O2Conv,O4Conv)
-
-
-
-
-
-
-# using Plots
-# using LaTeXStrings
-
-#=
-pO2 = plot(axis=:log,minorgrid=true)
-plot!(pO2,    (O2_DirichletMMS.npts),     (O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
-plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
-plot!(pO2,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-plot!(pO2,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:square)
-plot!(pO2,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
 =#
 
+
+
+
+
+using Plots
+using LaTeXStrings
+
+
+pO2 = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
+# plot!(pO2,    O2_NeumannMMS.npts,       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
+# plot!(pO2,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
+
+# pO4 = plot(O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle, axis=:log)
+# plot!(pO4,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:square)
+# plot!(pO4,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
+
+# plot!(pO2, [npts[2],npts[end-1]], -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2),    linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
+
+# plot!(pO2, npts, npts.^2 , linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
+
+p = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
+plot!(p, O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+
+
+
 #=
-pO2 = plot()
-plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$"), markershape=:circle
+pO2 = plot(log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    log.(O2_PeriodicMMS.npts),      log.(O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:circle)
 
 plot!(pO2, log.([npts[2],npts[end-1]]), -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2) .+ log(sum(O2_DirichletMMS.relerr[1:2]/2)),
     linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
+=#
+# savefig(pO2,".//testing//MMS//MMSTests_order2.eps")
+# savefig(pO2,".//testing//MMS//MMSTests_order2.png")
 
-savefig(pO2,".//testing//MMS//MMSTests_order2.eps")
-savefig(pO2,".//testing//MMS//MMSTests_order2.png")
-
-
+#=
 pO4 = plot(axis=:log,minorgrid=true)
+#=
 plot!(pO4,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
-
+=#
 plot!(pO4,    log.(O4_DirichletMMS.npts),     log.(O4_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    log.(O4_NeumannMMS.npts),       log.(O4_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
 plot!(pO4,    log.(O4_PeriodicMMS.npts),      log.(O4_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
@@ -290,15 +305,26 @@ plot!(pO4, log.([npts[2],npts[end-1]]),
 plot!(pO4, log.([npts[2],npts[end-1]]), 
     -log.([npts[2],npts[end-1]].^4) .+ log(npts[2]^4) .+ log(sum(O4_DirichletMMS.relerr[1:2]/2)),
     linestyle=:dashdot, linecolor=:black, label=L"$\mathcal{O}(h^4)$")
-
-savefig(pO4,".//testing//MMS//MMSTests_order4.eps")
-savefig(pO4,".//testing//MMS//MMSTests_order4.png")
-
 =#
+# savefig(pO4,".//testing//MMS//MMSTests_order4.eps")
+# savefig(pO4,".//testing//MMS//MMSTests_order4.png")
 
 
 
 
+
+
+
+
+# plot(O4_DirichletMMS.comp_soln[8].u[2],label="comp")
+# plot!(O4_DirichletMMS.MMS_soln[8],label="exact")
+
+plot(O4_DirichletMMS.comp_soln[8].u[2] .- O4_DirichletMMS.MMS_soln[8],label="err")
+
+
+
+
+#=
 using DelimitedFiles
 
 nameappend=string("K=",K)
@@ -316,3 +342,4 @@ end
 open(string("testing/MMS/1DMMS_Rates_O4",nameappend,".csv"),"w") do io
     writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
 end
+=#

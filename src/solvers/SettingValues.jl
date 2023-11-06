@@ -10,7 +10,6 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt:
     for i in 1:grid.n
         u[i] += Δt*S(grid.grid[i],t)
     end
-    # println(u[100]," ",Δt*S(grid.grid[100],t))
     u
 end
 function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
@@ -22,11 +21,12 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
     end
     u
 end
+
+function addSource!(S::SourceTerm{Nothing},tmp...) end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
     for i = 1:grid.n
-        u[i] += Δt*(1-θ)*S.source(grid[i],t-Δt) + Δt*θ*S.source(grid[i],t)
+        u[i] += Δt*(1-θ)*S.source(grid[i],t) + Δt*θ*S.source(grid[i],t+Δt)
     end
-    # println(u[100]," ",Δt*(1-θ)*S.source(grid[100],t-Δt) + Δt*θ*S.source(grid[100],t))
     u
 end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
@@ -42,7 +42,6 @@ function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
         addSource!(D[I].source, write, D[I].grid, D[I].SC.t, D[I].SC.Δt,D[I].SC.θ)
     end
 end
-function addSource!(S::SourceTerm{Nothing},tmp...) end
 
 
 """
@@ -53,6 +52,7 @@ function setBoundaryConditions! end
 function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
     # 1D - LEGACY
     Bound[1] = Δt*RHS(t)
+    # println(Bound)
 end
 function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
     # 2D - LEGACY
@@ -69,7 +69,7 @@ function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,args...) wher
     @. B.BufferRHS = Δt*B.RHS
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
-    B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t-Δt) + Δt*θ*B.RHS(t)
+    B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
@@ -190,9 +190,9 @@ Applying SATs in DataMode ignoring interface terms
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
-        SAT_Dirichlet_implicit_data!(dest,BC.BufferRHS,K,BC.Boundary,mode)
+        SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.Boundary)
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
-        SAT_Neumann_implicit_data!(dest,BC.BufferRHS,BC.Boundary)
+        SAT_Neumann_data!(dest,BC.BufferRHS,BC.Boundary)
     else
         applySAT!(BC.Boundary,dest,K,mode)
     end
@@ -209,9 +209,9 @@ Applying SATs in SolutionMode
 end
 function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
-        SAT_Dirichlet_implicit!(dest,source,K,BC.Boundary,mode)
+        SAT_Dirichlet_solution!(dest,source,K,BC.Boundary)
     elseif BCT <: SimultanousApproximationTerm{:Neumann}
-        SAT_Neumann_implicit_solution!(dest,source,K,BC.Boundary)
+        SAT_Neumann_solution!(dest,source,K,BC.Boundary)
     else
         error("Not implemented")
     end
@@ -355,7 +355,7 @@ end
 
 
 """
-    muladd!
+    muladd!(dest,source,α,β)
 multiply-add for multiblock problems
 """
 @inline function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT<:AbstractArray{TT}}

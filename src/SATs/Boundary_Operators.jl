@@ -61,7 +61,7 @@ _BoundaryOperator(TT,::NodeType{:Left}) = TT(-1)
 _BoundaryOperator(TT,::NodeType{:Right}) = TT(1)
 
 
-function _BoundaryDerivative(Δx::TT,order::Int,::NodeType{TN}) where {TT,TN}
+function _BoundaryDerivative(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
     if order == 2
         return [-1.0,1.0]/Δx
     elseif order == 4

@@ -6,59 +6,86 @@ using BenchmarkTools
 # using Profile
 
 
-order = 2
+order = 4
 K = 1.0
 
-Δt = 1.e-5
-t = 1.0
-# t = 10.0
+n = 51
 
-# u₀(x) = x.^2
-# u₀(x) = exp.(-(x-0.5)^2 / 0.02)
 
-ωx = 15.5
-cx = 0.0
+# Δt = 1.0e-1
+t = 1.7
+Δt = 1/(n-1)
+nt = round(t/Δt)
+Δt = t/nt
+
+
+ωx = 1.0
+ωt = 1.0
+cx = pi/2
 
 K = 1.0
+
+θ = 1.0
 
 
 # Solution
-exact(x,t) = cos(2π*t) * sin(2π*x*ωx + cx)
-# Initial condition
-u₀(x) = sin(2π*ωx*x + cx)
+
+exact(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+u₀(x) = exact(x,0.0)
+F(x,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
+# DIRICHLET
+BxL(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
+BxR(t) = cos(2π*ωt*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
+# NEUMANN
+# BxL(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
+# BxR(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx + cx) #Boundary condition x=Lx
+
+
+
+
+
+# u₀(x) = x^3
+# F(x,t) = 6*x
+# exact(x,t) = x
+# BxL(t) = 0.0
+# BxR(t) = 1.0
+
+
+# u₀(x) = x^2
+# F(x,t) = 0.0
+# exact(x,t) = x
+# BxL(t) = 0.0
+# BxR(t) = 1.0
+
+
+# u₀(x) = exp.(-(x-0.5)^2 / 0.02)
+# exact(x,t) = 0.0
+# BxL(t) = 0.0
+# BxR(t) = 0.0
+
+
 # Source
-F(x,t) = -2π*sin(2π*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
-            
-BxL(t) = cos(2π*t) * sin(cx) #Boundary condition x=0
-BxR(t) = cos(2π*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
+
+
 
 #====== Original solver ======#
-Dom1V = Grid1D([0.0,1.0],1001)
-
-# u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
-BoundaryLeft = Boundary(Dirichlet,BxL,Left,1)
-BoundaryRight = Boundary(Dirichlet,BxR,Right,1)
-P = VariableCoefficientPDE1D(u₀,t->K,order,BoundaryLeft,BoundaryRight)
-println("---Solving old---")
-solnO1V = solve(P,Dom1V,Δt,t,source=F,:cgie)
-# solnO1V = solve(P,Dom1V,Δt,t,:cgie)
-
-# @benchmark solve($P,$Dom1V,$Δt,$t,:cgie)
-
-# @profview solnO_tmpa = solve(P2V,Dom2V,Δt,t)
-# @profview solnO_tmpb = solve(P2V,Dom2V,Δt,t)
-
+Dom = Grid1D([0.0,1.0],n)
 
 
 
 
 #====== New solver 1 volume ======#
-Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom1V.Δx,Right,1,order)
-BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr)
-P1V = newProblem1D(order,u₀,K,Dom1V,BD1V,F,nothing)
+Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right,1,order)
+BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+
+# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+# BD1V = FaADE.Inputs.SATBoundaries(Pl,Pr)
+
+P = newProblem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
-soln1V = solve(P1V,Dom1V,Δt,t,solver=:theta,θ=0)
+soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
 # soln1V = solve(P1V,Dom1V,Δt,t)
 
 # @benchmark solve($P1V,$Dom1V,$Δt,$t)
@@ -92,7 +119,6 @@ soln2V = solve(P2V,Dom2V,Δt,t)
 
 
 
-Δt*(1-0.5)*F(Dom1V[100],0) + Δt*0.5*F(Dom1V[100],Δt)
 
 
 #=
@@ -121,22 +147,31 @@ println("Solving")
 soln3V = solve(P3V,Dom3V,Δt,t)
 =#
 
-e = [exact(Dom1V.grid[i],solnO1V.t[2]) for i in eachindex(Dom1V)]
-u0 = [u₀(Dom1V.grid[i]) for i in eachindex(Dom1V)]
+e = [exact(Dom.grid[i],soln.t[2]) for i in eachindex(Dom)]
+# e = [Dom1V.grid[i] for i in eachindex(Dom1V)]
+# e = zeros(Dom1V.n)
+u0 = [u₀(Dom.grid[i]) for i in eachindex(Dom)]
+
+using LinearAlgebra
+# println("n=",n," error ",norm(e .- soln.u[2])/norm(e))
+println("n=",n," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx))
+
+
 
 using Plots
 
+prng = 1:n
+# prng = n-4:n
+# prng = 100:110
 
 l = @layout[a; b]
-p1 = plot(Dom1V.grid,solnO1V.u[2],label="old")
-plot!(p1, Dom1V.grid,soln1V.u[2],label="new")
-plot!(p1, Dom1V.grid,e,label="exact")
+p1 = plot()
+plot!(p1, Dom.grid[prng],soln.u[2][prng],label="new")
+plot!(p1, Dom.grid[prng],e[prng],label="exact")
+# plot!(p1, Dom1V.grid[prng],[u₀(Dom1V.grid[i]) for i in prng],label="u₀",legend=true,linestyle=:dash)
 
-
-# p2 = plot(solnO1V.u[2] .- e,label="old err")
-# plot!(p2,soln1V.u[2] .- e,label="new err")
-# plot!(p2,soln1V.u[2] .- solnO1V.u[2],linestyle=:dash,label="new old err")
-p2 = plot(abs.(soln1V.u[2] .- solnO1V.u[2]),linestyle=:dash,label="new old err")
+p2 = plot()
+plot!(p2,   abs.(soln.u[2][prng] .- e[prng]),label="err")
 
 plot(p1,p2,layout=l)
 

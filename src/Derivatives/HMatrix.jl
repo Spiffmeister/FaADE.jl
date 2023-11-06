@@ -20,6 +20,12 @@ struct innerH{T<:Real,
     Hy  :: VT
     Δ   :: T
 end
+function innerH(n)
+    H = build_H(2,n)
+    H[1] = 1.0
+    H[end] = 1.0
+    return innerH{Float64,1,typeof(H)}(H,[1.0], 1.0)
+end
 function innerH(Δx::T,n,order) where T
     H = build_H(order,n)
     return innerH{T,1,typeof(H)}(H,[1.0], Δx)

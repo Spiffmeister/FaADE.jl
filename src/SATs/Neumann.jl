@@ -35,7 +35,7 @@ struct SAT_Neumann{
 
         Hinv = _InverseMassMatrix(order,Δx,side)
         E = _BoundaryOperator(TT,side)
-        D₁ = _BoundaryDerivative(Δx,order,side)
+        D₁ = _BoundaryDerivative(order,Δx,side)
 
 
         # τ * H⁻¹ * E

@@ -10,14 +10,31 @@ using BenchmarkTools
 order = 2
 K = 1.0
 
-Δt = 0.01
-t = 100.0
-# t = 0.03
+nx = ny = 51
 
-# Set initial condition
-# u₀(x,y) = x.^2
-u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
+Δt = 1e-5
+t = 1.7
+nt = round(t/Δt)
+Δt = t/nt
 
+ωt = 1.0
+ωx = 1.0
+ωy = 1.0
+cx = 0.0
+cy = 0.0
+
+Kx = 1.0
+Ky = 1.0
+
+θ = 1.0
+
+
+# Solution
+exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+u₀(x,y) = exact(x,y,0.0)
+F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*cos(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*cos(2π*y*ωy + cy)
 
 
 
