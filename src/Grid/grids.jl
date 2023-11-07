@@ -87,10 +87,12 @@ function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) whe
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
 
-    # J = 1.0
+    X = repeat(gx.grid,1,ny)
+    Y = repeat(gy.grid',nx,1)
 
-    J = qx = qy = rx = ry = zeros(eltype(gx.grid),1)
-    return Grid2D{TT,CartesianMetric,typeof(gx.grid),typeof(gx.Δx)}(gx.grid, gy.grid, gx.Δx, gy.Δx, gx.n, gy.n,
+    J = qx = qy = rx = ry = zeros(eltype(gx.grid),(1,1))
+
+    return Grid2D{TT,CartesianMetric,typeof(X),typeof(gx.Δx)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
         J, qx, qy, rx, ry)
 end
 """
@@ -231,7 +233,10 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
     Base.getindex(G::GridType,i::Integer)
 """
 Base.getindex(G::Grid1D,i...) = G.grid[i...]
-Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i],G.gridy[j])
+Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i,j],G.gridy[i,j])
+Base.getindex(G::Grid2D{TT},i::Integer) where TT = (G.gridx[i],G.gridy[i])
+
+
 
 function Base.getindex(G::GridMultiBlock{TT,1},i::Integer) where TT
     ii = findfirst(x->x ≥ i, G.inds)

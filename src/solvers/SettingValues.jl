@@ -23,18 +23,16 @@ function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt:
 end
 
 function addSource!(S::SourceTerm{Nothing},tmp...) end
-function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
-    for i = 1:grid.n
-        u[i] += Δt*(1-θ)*S.source(grid[i],t) + Δt*θ*S.source(grid[i],t+Δt)
+function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
+    # for j in 1:grid.ny
+    #     for i in 1:grid.nx
+    #         u[i,j] += Δt*(1-θ)*S.source(t,grid.gridx[i],grid.gridy[j]) + Δt*θ*S.source(t+Δt,grid.gridx[i,j],grid.gridy[i,j])
+    #     end
+    # end
+    for I in eachindex(grid)
+        u[I] += Δt*(1-θ)*S.source(t,grid[I]...) + Δt*θ*S.source(t+Δt,grid[I]...)
     end
     u
-end
-function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
-    for j in 1:grid.ny
-        for i in 1:grid.nx
-            u[i,j] += Δt*(1-θ)*S.source(grid.gridx[i],grid.gridy[j],t) + Δt*θ*S.source(grid.gridx[i],grid.gridy[j],t+Δt)
-        end
-    end
 end
 function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
     for I in eachblock(D)
@@ -48,18 +46,18 @@ end
     setBoundaryConditions!
 Sets the value of the boundary.
 """
-function setBoundaryConditions! end
-function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
-    # 1D - LEGACY
-    Bound[1] = Δt*RHS(t)
-    # println(Bound)
-end
-function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
-    # 2D - LEGACY
-    for i = 1:n
-        Bound[i] = Δt*RHS(grid[i],t)
-    end
-end
+# function setBoundaryConditions! end
+# function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
+#     # 1D - LEGACY
+#     Bound[1] = Δt*RHS(t)
+#     # println(Bound)
+# end
+# function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
+#     # 2D - LEGACY
+#     for i = 1:n
+#         Bound[i] = Δt*RHS(grid[i],t)
+#     end
+# end
 """
     BoundaryConditions
 Sets the value of the boundary.
@@ -73,7 +71,7 @@ function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT)
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
-        B.BufferRHS[i] = Δt*(1-θ)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
+        B.BufferRHS[i] = Δt*(1-θ)*B.RHS(t,B.X[i]) + Δt*θ*B.RHS(t+Δt,B.X[i])
     end
 end
 """

@@ -22,6 +22,7 @@ mutable struct solution{TT,
 end
 """
     solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
+    DEPRECATED
 """
 function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
     if preallocate
@@ -37,11 +38,9 @@ function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=
         if typeof(grid) <: Grid1D
             u = prob.InitialCondition.(grid.grid)
         elseif typeof(grid) <: Grid2D
-            u = zeros(TT,(grid.nx,grid.ny))
-            for j = 1:grid.ny
-                for i = 1:grid.nx
-                    u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
-                end
+            u = zeros(TT,size(grid))
+            for I in eachindex(grid)
+                u[I] = prob.InitialCondition(grid[I]...)
             end
         end
 
@@ -54,18 +53,7 @@ end
     solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
 """
 function solution(grid::LocalGridType{TT},t::TT,Δt::TT,prob::newPDEProblem) where TT
-
-    if typeof(grid) <: Grid1D
-        u = prob.InitialCondition.(grid.grid)
-    elseif typeof(grid) <: Grid2D
-        u = zeros(TT,(grid.nx,grid.ny))
-        for j = 1:grid.ny
-            for i = 1:grid.nx
-                u[i,j] = prob.InitialCondition.(grid.gridx[i],grid.gridy[j])
-            end
-        end
-    end
-
+    u = _setInitialCondition(prob.InitialCondition,grid)
 
     return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
 end
@@ -100,11 +88,16 @@ end
 
 
 
-
-
+function _setInitialCondition end
+function _setInitialCondition(IC::Function,G::LocalGridType{TT}) where TT
+    u = zeros(TT,size(G))
+    for I in eachindex(G)
+        u[I] = IC(G[I]...)
+    end
+    return u
+end
 
 function setInitialCondition end
-setInitialCondition(IC,G::Grid1D) = IC.(G.grid)
 function setInitialCondition(IC,G::GridMultiBlock{TT,1}) where TT
     u = [zeros(TT,length(G.Grids[i])) for i in eachindex(G.Grids)]
     for j in eachindex(G.Grids)
@@ -113,16 +106,6 @@ function setInitialCondition(IC,G::GridMultiBlock{TT,1}) where TT
         end
     end
 end
-function setInitialCondition(IC,G::Grid2D{TT}) where TT
-    u = [zeros(TT,(G.Grids[i].grid.nx,G.Grids[i].grid.ny)) for i in eachindex(G.Grids)]
-    for j = 1:G.inds[2,end]
-        for i = 1:G.inds[1,end]
-            u[i,j] = IC(G[i,j],G[i,j])
-        end
-    end
-    return u
-end
-
 
 
 function UpdateSolution!(soln::solution{T,AT},u::AbstractArray{T},t::T,Δt::T) where {T,AT}
