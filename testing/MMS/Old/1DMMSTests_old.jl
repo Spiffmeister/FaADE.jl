@@ -35,7 +35,7 @@ end
 function comp_MMS(Dx,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         F,ũ,ũ₀,order;
-        dt_scale=0.01,t_f=0.01,k=1.0)
+        dt_scale=0.5,t_f=10.0,k=1.0)
 
     comp_soln = []
     MMS_soln = []
@@ -63,7 +63,8 @@ function comp_MMS(Dx,npts,
     for n in npts
         Dom = Grid1D(Dx,n)
         
-        Δt = dt_scale*Dom.Δx^2
+        # Δt = dt_scale*Dom.Δx^2
+        Δt = dt_scale*Dom.Δx
 
         K(x) = k
 
@@ -72,7 +73,7 @@ function comp_MMS(Dx,npts,
         # println("Solving n=",Dom.n," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
 
-        u_MMS = generate_MMS(ũ,Dom,t_f)
+        u_MMS = generate_MMS(ũ,Dom,soln.t[2])
 
         push!(comp_soln,soln)
         push!(grids,Dom)
@@ -92,7 +93,7 @@ end
 
 ###=== MMS TESTS ===###
 # npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151]
 
 
 # Solution
@@ -102,7 +103,7 @@ ũ(x,t;ωx=1.0,cx=0.0) = cos(2π*t) * sin(2π*x*ωx + cx)
 ũ₀(x;ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
-K = 1.0e-4
+K = 1.0
 F(x,t;ωx=1.0,cx=0.0,K=1.0) = 
         -2π*sin(2π*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*t)*sin(2π*x*ωx + cx)
@@ -114,8 +115,8 @@ if rundirichlet
     # Dirichlet
     println("=====")
     println("Dirichlet")
-    cx=1.0
-    ωx=8.0
+    cx=0.0
+    ωx=15.0
 
     println("ωx=",ωx,",  cx=",cx)
 
@@ -314,3 +315,14 @@ open(string("testing/MMS/1DMMS_Rates_O4",nameappend,".csv"),"w") do io
     writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
 end
 =#
+
+
+
+using Plots
+plot(O4_DirichletMMS.comp_soln[8].u[2],label="comp")
+plot!(O4_DirichletMMS.MMS_soln[8],label="exact")
+
+
+
+plot(O4_DirichletMMS.comp_soln[8].u[2] .- O4_DirichletMMS.MMS_soln[8],label="err")
+

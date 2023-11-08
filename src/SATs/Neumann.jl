@@ -40,11 +40,10 @@ struct SAT_Neumann{
 
         # τ * H⁻¹ * E
         if typeof(side) <: NodeType{:Left}
-            n = -1 # normal vector
-            H⁻¹E    = n*Hinv[1]*E
+            H⁻¹E    = Hinv[1]
         elseif typeof(side) <: NodeType{:Right}
             n = -1 # normal vector
-            H⁻¹E    = n*Hinv[end]*E
+            H⁻¹E    = n*Hinv[end]
         end
 
         τ = TT(1)
@@ -165,19 +164,30 @@ end
 
 
 #== NEW ==#
-function SAT_Neumann_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:NodeType{:Left}}
+function SAT_Neumann_data!(dest::VT,u::VT,SN::SAT_Neumann{TN}) where {VT<:AbstractVector,TN<:NodeType{:Left}}
     dest[1] -= SN.τ*SN.H⁻¹E*u[1]
 end
-function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT,TN<:NodeType{:Left}}
+function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT<:AbstractVector,TN<:NodeType{:Left}}
     for i = 1:SN.order
         dest[1] += SN.τ * SN.H⁻¹E * c[1] * SN.D₁[i]*u[i]
     end
 end
-function SAT_Neumann_data!(dest::AT,u::AT,SN::SAT_Neumann{TN}) where {AT,TN<:NodeType{:Right}}
+function SAT_Neumann_data!(dest::VT,u::VT,SN::SAT_Neumann{TN}) where {VT<:AbstractVector,TN<:NodeType{:Right}}
     dest[end] -= SN.τ*SN.H⁻¹E*u[end]
 end
-function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT,TN<:NodeType{:Right}}
+function SAT_Neumann_solution!(dest::VT,u::VT,c::VT,SN::SAT_Neumann{TN}) where {VT<:AbstractVector,TN<:NodeType{:Right}}
     for i = 1:SN.order
         dest[end] += SN.τ * SN.H⁻¹E * c[end] * SN.D₁[i]*u[end-SN.order+i]
+    end
+end
+
+function SAT_Neumann_data!(dest::AT,u,SN::SAT_Neumann) where {AT<:AbstractMatrix}
+    for (DEST,U) in zip(SN.loopaxis(dest),SN.loopaxis(u))
+        SAT_Neumann_data!(DEST,U,SN)
+    end
+end
+function SAT_Neumann_solution!(dest::AT,u::AT,c::AT,SN::SAT_Neumann) where {AT<:AbstractMatrix}
+    for (DEST,U,C) in zip(SN.loopaxis(dest),SN.loopaxis(u),SN.loopaxis(c))
+        SAT_Neumann_solution!(DEST,U,C,SN)
     end
 end

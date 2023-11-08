@@ -6,10 +6,10 @@ using BenchmarkTools
 # using Profile
 
 
-order = 4
+order = 2
 K = 1.0
 
-n = 51
+n = 41
 
 
 # Δt = 1.0e-1
@@ -21,7 +21,7 @@ nt = round(t/Δt)
 
 ωx = 1.0
 ωt = 1.0
-cx = pi/2
+cx = 1.0
 
 K = 1.0
 
@@ -30,15 +30,15 @@ K = 1.0
 
 # Solution
 
-exact(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+exact(t,x) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
 u₀(x) = exact(x,0.0)
-F(x,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
+F(t,x) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
 # DIRICHLET
-BxL(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
-BxR(t) = cos(2π*ωt*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
+# BxL(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
+# BxR(t) = cos(2π*ωt*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
 # NEUMANN
-# BxL(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
-# BxR(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx + cx) #Boundary condition x=Lx
+BxL(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
+BxR(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx + cx) #Boundary condition x=Lx
 
 
 
@@ -75,13 +75,13 @@ Dom = Grid1D([0.0,1.0],n)
 
 
 #====== New solver 1 volume ======#
-Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right,1,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# Dl = FaADE.SATs.SAT_Neumann(BxL,Dom.Δx,Left,1,order)
+# Dr = FaADE.SATs.SAT_Neumann(BxR,Dom.Δx,Right,1,order)
+# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 
-# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-# BD1V = FaADE.Inputs.SATBoundaries(Pl,Pr)
+Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
 
 P = newProblem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
@@ -147,10 +147,10 @@ println("Solving")
 soln3V = solve(P3V,Dom3V,Δt,t)
 =#
 
-e = [exact(Dom.grid[i],soln.t[2]) for i in eachindex(Dom)]
+e = [exact(soln.t[2],Dom[i]) for i in eachindex(Dom)]
 # e = [Dom1V.grid[i] for i in eachindex(Dom1V)]
 # e = zeros(Dom1V.n)
-u0 = [u₀(Dom.grid[i]) for i in eachindex(Dom)]
+u0 = [u₀(Dom[i]) for i in eachindex(Dom)]
 
 using LinearAlgebra
 # println("n=",n," error ",norm(e .- soln.u[2])/norm(e))

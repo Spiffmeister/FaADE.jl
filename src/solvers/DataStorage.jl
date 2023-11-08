@@ -54,17 +54,17 @@ struct newBoundaryData{
             n = G.ny
             BufferRHS = zeros(TT,(1,n))
             if BC.side == Left
-                X = ones(TT,n) * G.gridy[1]
+                X = G.gridy[1,:]
             else
-                X = ones(TT,n) * G.gridy[n]
+                X = G.gridy[G.ny,:]
             end
         elseif BC.side ∈ [Up,Down]
             n = G.nx
             BufferRHS = zeros(TT,(n,1))
             if BC.side == Up
-                X = ones(TT,n) * G.gridx[1]
+                X = G.gridx[:,1]
             else
-                X = ones(TT,n) * G.gridx[n]
+                X = G.gridx[:,G.nx]
             end
         end
 
@@ -418,13 +418,13 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     end
 
     pbound = false
-    if (typeof(P.BoundaryConditions.BoundaryLeft) <: SimultanousApproximationTerm{:Periodic}) & (GetOrder(P.order) == 2)
-        pbound = true
-        BS = (nothing,nothing)
-    else
+    # if (typeof(P.BoundaryConditions.BoundaryLeft) <: SimultanousApproximationTerm{:Periodic}) & (GetOrder(P.order) == 2)
+    #     pbound = true
+    #     BS = (nothing,nothing)
+    # else
         BStor = newBoundaryConditions(P,G)
         BS = (BStor.BC_Left,BStor.BC_Right)
-    end
+    # end
 
     IP = innerH(G.Δx,G.n,GetOrder(P.order))
     D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0),pbound,false)
@@ -566,6 +566,7 @@ struct DataMultiBlock{TT<:Real,
 
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         # DTA = [newLocalDataBlock(P,G)]
+
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = (newLocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)

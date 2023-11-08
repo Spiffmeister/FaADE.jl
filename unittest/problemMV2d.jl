@@ -1,7 +1,8 @@
 
 using FaADE
 using LinearAlgebra
-using BenchmarkTools
+using Plots
+# using BenchmarkTools
 # using ProfileView
 # using Cthulhu
 
@@ -10,10 +11,12 @@ using BenchmarkTools
 order = 2
 K = 1.0
 
-nx = ny = 51
 
-Δt = 1e-5
-t = 1.7
+nx = ny = 21
+
+# Δt = 1e-3
+t = 0.5
+Δt = 1/(nx-1) * 1/(ny-1) * 0.1
 nt = round(t/Δt)
 Δt = t/nt
 
@@ -30,48 +33,65 @@ Ky = 1.0
 
 
 # Solution
-exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
-u₀(x,y) = exact(x,y,0.0)
-F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*cos(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*cos(2π*y*ωy + cy)
+exact(t,x,y) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+u₀(x,y) = exact(0.0,x,y)
+F(t,x,y) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+# DIRICHLET
+BxL(t,y) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
+BxR(t,y) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
+ByL(t,x) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
+ByR(t,x) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
+
+
+
+# exact(t,x,y) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+# u₀(x,y) = exact(0.0,x,y)
+# F(t,x,y) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
+#     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
+
+#=
+exact(t,x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
+u₀(x,y) = exact(0.0,x,y)
+BxL(t,y) = 0.0
+BxR(t,y) = 0.0
+ByL(t,x) = 0.0
+ByR(t,x) = 0.0
+=#
 
 
 
 # Original solver
-Dom1V = Grid2D([0.0,1.0],[0.0,1.0],41,41)
-
-BoundaryLeft    = Boundary(Dirichlet,(y,t)->0.0,Left,1)
-BoundaryRight   = Boundary(Dirichlet,(y,t)->0.0,Right,1)
-BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
-BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
-PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
-println("---Solving old---")
-solnO1V = solve(PO1V,Dom1V,Δt,100.0-Δt,:cgie) #-Δt to ensure ends at the same time as new methods
-@benchmark solve($PO1V,$Dom1V,$Δt,100.0-$Δt,:cgie)
-
-@profview solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
-@profview solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
-
+Dom = Grid2D([0.0,1.0],[0.0,1.0],nx,ny)
 
 # New solver 1 volume
-Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
-BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+# Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,1,order)
+# Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right,1,order)
+# Du = FaADE.SATs.SAT_Dirichlet(ByL,Dom.Δx,Up,2,order)
+# Dd = FaADE.SATs.SAT_Dirichlet(ByR,Dom.Δx,Down,2,order)
+# BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
 
-P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
+Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+Pu = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
+Pd = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
+BD = FaADE.Inputs.SATBoundaries(Pl,Pr,Pu,Pd)
+
+P = newProblem2D(order,u₀,K,K,Dom,BD,F,nothing)
 
 println("---Solving 1 volume---")
-soln1V = solve(P1V,Dom1V,Δt,t)
-@benchmark solve($P1V,$Dom1V,$Δt,$t)
+soln = solve(P,Dom,Δt,Δt)
+soln = solve(P,Dom,Δt,t)
 
-@profview soln1V = solve(P1V,Dom1V,Δt,t)
-@profview soln1V = solve(P1V,Dom1V,Δt,t)
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
+
+# @profview soln1V = solve(P1V,Dom1V,Δt,t)
+# @profview soln1V = solve(P1V,Dom1V,Δt,t)
 
 
 
+#=
 # New solover 2 volume
 D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
 D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
@@ -93,25 +113,35 @@ P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
 println("---Solving 2 volume---")
 soln2V = solve(P2V,Dom2V,Δt,t)
 @benchmark solve($P2V,$Dom2V,$Δt,$t)
+=#
 
 
 
 
 
-println("Original solver ",norm(solnO1V.u[2]))
-println("New 1V solver ",norm(soln1V.u[2]))
+
+e = [exact(soln.t[2],Dom.gridx[i,j],Dom.gridy[i,j]) for i in 1:Dom.nx, j in 1:Dom.ny]
+
+E = zeros(size(Dom))
+for I in eachindex(Dom)
+    E[I] = exact(soln.t[2]+Δt,Dom[I]...)
+end
+u0 = [u₀(Dom.gridx[i,j],Dom.gridy[i,j]) for i in 1:Dom.nx, j in 1:Dom.ny]
 
 
 
+println("n=",nx," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx*Dom.Δy))
+surface(Dom.gridx,Dom.gridy,soln.u[2])
 
 
-using Plots
-surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[2])
+l = @layout[a b]
+
+p1 = surface(Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
+p2 = surface(Dom.gridx,Dom.gridy,e,colorbar=false)
+p12 = plot(p1,p2)
 
 
-
-
-
+# p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 
 
 #=
@@ -169,54 +199,3 @@ println("Solving")
 # @profview soln1d = solve(P1,sG1,Δt,t)
 # @profview soln1d = solve(P1,sG1,Δt,t)
 # @benchmark solve($P1,$sG1,$Δt,$t)
-
-#=
-println("Solve 2")
-BoundaryLeft = Boundary(Dirichlet,t->0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,t->1.0,Right,1)
-P = VariableCoefficientPDE1D(u₀,x->1.0,order,BoundaryLeft,BoundaryRight)
-soln1b = solve(P,sG1,Δt,t,:cgie)
-@benchmark soln1b = solve($P,$sG1,$Δt,$t,:cgie)
-=#
-
-#=
-order = 2
-u₀(x) = x.^3
-K = 1.0
-
-Δt = 0.01
-t = 10.0
-
-sG1 = Grid1D([0.0,1.0],11)
-sG2 = Grid1D([1.0,2.0],6)
-
-G = FaADE.Helpers.GridMultiBlock([sG1,sG2])
-
-Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1,2)
-Dr = FaADE.SATs.SAT_Dirichlet(x->1.0,sG1.Δx,Right,1,2)
-B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
-
-P1 = newProblem1D(order,u₀,K,G,B1)
-
-DBlock = FaADE.solvers.DataMultiBlock(P1,G,0.1,0.0)
-
-
-
-Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1,2)
-Dr = FaADE.SATs.SAT_Dirichlet(x->0.0,sG2.Δx,Right,1,2)
-
-B = FaADE.SATs.SATBoundaries(Dl,Dr)
-
-
-
-P = newProblem1D(order,u₀,K,G,B)
-
-
-
-
-s2G1 = Grid2D([0.0,0.5],[0.0,1.0],6,6)
-s2G2 = Grid2D([0.5,1.0],[0.0,1.0],11,6)
-
-G2 = FaADE.Helpers.GridMultiBlock([s2G1,s2G2])
-
-=#

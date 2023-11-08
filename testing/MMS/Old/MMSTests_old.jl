@@ -1,7 +1,10 @@
 using LinearAlgebra
 
 using Plots
+using LaTeXStrings
 
+# using Pkg
+# Pkg.activate(".")
 using FaADE
 
 
@@ -17,8 +20,8 @@ using FaADE
 
 
 TestDirichlet   = true
-TestNeumann     = true
-TestPeriodic    = true
+TestNeumann     = false
+TestPeriodic    = false
 
 
 # Generates the exact MMS solution
@@ -26,7 +29,7 @@ function generate_MMS(MMS::Function,grid::Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx
-            u_MMS[i,j] = MMS(t,grid.gridx[i,j],grid.gridy[i,j])
+            u_MMS[i,j] = MMS(grid.gridx[i],grid.gridy[j],t)
         end
     end
     return u_MMS
@@ -40,50 +43,55 @@ function comp_MMS(Dx,Dy,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         BoundaryY0,BY0Type,BoundaryYL,BYLType,
         F,ũ,ũ₀,order;
-        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
+        dt_scale=0.01,t_f=0.01,kx=1.0,ky=kx)
 
     comp_soln = []
     MMS_soln = []
     grids = []
     relerr = []
+    # X boundaries
+    if BX0Type != Periodic
+        Bx0 = Boundary(BX0Type,BoundaryX0,Left,1)
+        BxL = Boundary(BXLType,BoundaryXL,Right,1)
+    else
+        Bx0L = PeriodicBoundary(1)
+    end
+    # Y boundaries
+    if BY0Type != Periodic
+        By0 = Boundary(BY0Type,BoundaryY0,Up,2)
+        ByL = Boundary(BYLType,BoundaryYL,Down,2)
+    else
+        By0L = PeriodicBoundary(2)
+    end
+
+    # Construct the correct problem
+    function MakeProb(kx,ky)
+        if (BX0Type != Periodic) & (BY0Type != Periodic)
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0,ByL)
+        elseif (BX0Type != Periodic) & (BY0Type == Periodic) 
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0,BxL,By0L)
+        elseif (BX0Type == Periodic) & (BY0Type != Periodic)
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0,ByL)
+        else
+            return VariableCoefficientPDE2D(ũ₀,kx,ky,order,Bx0L,By0L)
+        end
+    end
 
     # Loop
     for n in npts
         Dom = Grid2D(Dx,Dy,n,n)
+        
+        Δt = dt_scale*Dom.Δx^2
 
-        # X boundaries
-        if BX0Type == Periodic
-            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-            By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
-            ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
-        elseif BX0Type == Dirichlet
-            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  1,order)
-            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, 1,order)
-            By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Up,    2,order)
-            ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Down,  2,order)
-        elseif BX0Type == Neumann
-            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
-            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
-            By0 = FaADE.SATs.SAT_Neumann(BoundaryY0,Dom.Δy,Up,      2,order)
-            ByL = FaADE.SATs.SAT_Neumann(BoundaryYL,Dom.Δy,Down,    2,order)
-        end
-        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
+        Kx(x,y) = kx
+        Ky(x,y) = ky
 
-
-        Δt = dt_scale*Dom.Δx*Dom.Δy
-        nt = round(t_f/Δt)
-        Δt = t_f/nt
-
-        # Kx(x,y) = kx
-        # Ky(x,y) = ky
-
-        P = newProblem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
+        P = MakeProb(Kx,Ky)
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
+        soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
 
-        u_MMS = generate_MMS(ũ,Dom,soln.t[2])
+        u_MMS = generate_MMS(ũ,Dom,t_f)
 
         push!(comp_soln,soln)
         push!(grids,Dom)
@@ -102,13 +110,11 @@ end
 ###=== MMS TESTS ===###
 npts = [21,31,41,51,61,71,81,91,101]
 
-θ = 0.5
 
 # Solution
-ũ(t,x,y;
-    ωt=1.0,
+ũ(x,y,t;
     ωx=1.0,cx=0.0,
-    ωy=1.0,cy=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+    ωy=1.0,cy=0.0) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
 
 # Initial condition
 ũ₀(x,y;
@@ -117,15 +123,12 @@ ũ₀(x,y;
 
 
 K = 1.0
-
-F(t,x,y;
-    ωt=1.0,
+F(x,y,t;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0,
     K = 1.0) = 
-        -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-            K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-            K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+        -2π*sin(2π*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+            K * 4π^2 * (ωx^2 + ωy^2) * cos(2π*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) 
             
     
 println("=== K=",K," ===")
@@ -136,20 +139,19 @@ if TestDirichlet
     println("Dirichlet")
     cx=1.0
     cy=0.0
-    ωx=1.0
-    ωy=1.0
-    ωt=9.0
+    ωx=9.0
+    ωy=7.5
 
-    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-    BxLũ(t,y)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(t,y;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(t,x)           = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-    ByRũ(t,x;Ly=1.0)    = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t)           = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t)           = cos(2π*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0)    = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -157,7 +159,7 @@ if TestDirichlet
         BxLũ,Dirichlet,BxRũ,Dirichlet,
         ByLũ,Dirichlet,ByRũ,Dirichlet,
         FD,analytic,IC,order,
-        kx=K,ky=K,θ=θ)
+        kx=K,ky=K)
 
     order = 4
     println("order=",order)
@@ -165,17 +167,20 @@ if TestDirichlet
         BxLũ,Dirichlet,BxRũ,Dirichlet,
         ByLũ,Dirichlet,ByRũ,Dirichlet,
         FD,analytic,IC,order,
-        kx=K,ky=K,θ=θ)
+        kx=K,ky=K)
 
     println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
     println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-    # pD = plot(axis=:log,minorgrid=true)
-    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)    
-    # savefig(pD,"2DMMSDirichlet.png")
+    pD = plot(axis=:log,minorgrid=true)
+    plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+    
+    savefig(pD,"2DMMSDirichlet.png")
 
 
     println("=====")
@@ -190,20 +195,19 @@ if TestNeumann
 
     cx=1.0
     cy=0.0
-    ωx=1.0
-    ωy=1.0
-    ωt=9.0
+    ωx=9.0
+    ωy=7.5
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-    BxLũ(t,y) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(t,y;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(t,x) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-    ByRũ(t,x;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -211,7 +215,7 @@ if TestNeumann
         BxLũ,Neumann,BxRũ,Neumann,
         ByLũ,Neumann,ByRũ,Neumann,
         FD,analytic,IC,order,
-        kx=K, ky=K,θ=θ)
+        kx=K, ky=K)
 
     order = 4
     println("order=",order)
@@ -219,16 +223,19 @@ if TestNeumann
         BxLũ,Neumann,BxRũ,Neumann,
         ByLũ,Neumann,ByRũ,Neumann,
         FD,analytic,IC,order,
-        kx=K, ky=K,θ=θ)
+        kx=K, ky=K)
 
     println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
     println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-    # pN = plot(axis=:log,minorgrid=true)
-    # plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+    pN = plot(axis=:log,minorgrid=true)
+    plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+
     # savefig(pN,"2DMMSNeumann.png")
 
     println("=====")
@@ -238,48 +245,58 @@ end
 # Periodic
 if TestPeriodic
     println("=====")
-    println("Periodic")
+    println("Dirichlet/Periodic")
 
     cx=1.0
     cy=0.0
-    ωx=1.0
-    ωy=1.0
-    ωt=9.0
+    ωx=7.0
+    ωy=6.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+
+    BxLũ(y,t)           = cos(2π*t) * sin(cx)               * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0)    = cos(2π*t) * sin(2π*Lx*ωx + cx)    * sin(2π*y*ωy + cy) #Boundary condition x=Lx
 
     order = 2
     O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-        nothing,Periodic,nothing,Periodic,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
         nothing,Periodic,nothing,Periodic,
         FD,analytic,IC,order,
-        kx=K, ky=K,θ=θ)
+        kx=K, ky=K)
 
     order = 4
     O4_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-        nothing,Periodic,nothing,Periodic,
+        BxLũ,Dirichlet,BxRũ,Dirichlet,
         nothing,Periodic,nothing,Periodic,
         FD,analytic,IC,order,
-        kx=K, ky=K,θ=θ)
+        kx=K, ky=K)
 
-    println("Order 2 Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
-    println("Order 4 Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
+    println("Order 2 Dirichlet/Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
+    println("Order 4 Dirichlet/Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-    # pP = plot(axis=:log,minorgrid=true)
-    # plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+    pP = plot(axis=:log,minorgrid=true)
+    plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    
+    
+    plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
+
     # savefig(pP,"2DMMSPeriodic.png")
 
     println("=====")
 end
 
 
+surface(O4_DirichletMMS.comp_soln[1].u[2] .- O4_DirichletMMS.MMS_soln[1],label="err")
+
+
+
+#=
 if TestDirichlet == TestNeumann == TestPeriodic
     O2Conv = (n=npts,
         conv_D = O2_DirichletMMS.conv_rate,
@@ -321,26 +338,15 @@ if TestDirichlet == TestNeumann == TestPeriodic
         writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
     end
 end
+=#
 
 
-
-
-
-
-# using Plots
-# p = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle,axis=:log)
-# plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
-
-
-
-# plot(O4_DirichletMMS.comp_soln[10].u[2],label="comp")
-# plot!(O4_DirichletMMS.MMS_soln[10],label="exact")
-
-# surface(O2_DirichletMMS.comp_soln[1].u[2] .- O2_DirichletMMS.MMS_soln[1],label="err")
-# surface(O2_DirichletMMS.comp_soln[2].u[2] .- O2_DirichletMMS.MMS_soln[2],label="err")
 
 
 #=
+
+pO2 = plot(axis=:log,minorgrid=true)
+plot!(pO2,    (O2_DirichletMMS.npts),     (O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
 plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
 plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
 

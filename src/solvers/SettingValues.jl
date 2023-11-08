@@ -5,30 +5,8 @@
 Adds PDE forcing term
 """
 function addSource! end
-function addSource!(S::Function,u::AbstractArray{TT},grid::Grid1D{TT},t::TT,Δt::TT) where TT
-    #legacy
-    for i in 1:grid.n
-        u[i] += Δt*S(grid.grid[i],t)
-    end
-    u
-end
-function addSource!(S::Function,u::AbstractArray{TT},grid::Grid2D{TT},t::TT,Δt::TT) where TT
-    #legacy
-    for j in 1:grid.ny
-        for i in 1:grid.nx
-            u[i,j] += Δt*S(grid.gridx[i],grid.gridy[j],t)
-        end
-    end
-    u
-end
-
 function addSource!(S::SourceTerm{Nothing},tmp...) end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
-    # for j in 1:grid.ny
-    #     for i in 1:grid.nx
-    #         u[i,j] += Δt*(1-θ)*S.source(t,grid.gridx[i],grid.gridy[j]) + Δt*θ*S.source(t+Δt,grid.gridx[i,j],grid.gridy[i,j])
-    #     end
-    # end
     for I in eachindex(grid)
         u[I] += Δt*(1-θ)*S.source(t,grid[I]...) + Δt*θ*S.source(t+Δt,grid[I]...)
     end
@@ -42,22 +20,6 @@ function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
 end
 
 
-"""
-    setBoundaryConditions!
-Sets the value of the boundary.
-"""
-# function setBoundaryConditions! end
-# function setBoundaryConditions!(RHS::Function,Bound::AT,t::T,Δt::T) where {AT,T}
-#     # 1D - LEGACY
-#     Bound[1] = Δt*RHS(t)
-#     # println(Bound)
-# end
-# function setBoundaryConditions!(RHS::Function,Bound::AT,grid::Vector{T},n::Int,t::T,Δt::T) where {AT,T}
-#     # 2D - LEGACY
-#     for i = 1:n
-#         Bound[i] = Δt*RHS(grid[i],t)
-#     end
-# end
 """
     BoundaryConditions
 Sets the value of the boundary.
@@ -203,6 +165,7 @@ Applying SATs in SolutionMode
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Interface}
         SAT_Interface!(dest,source,K,BC.BufferIn,BC.Boundary,mode)
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Periodic}
+        SAT_Periodic!(dest,source,K,BC.Boundary)
     end
 end
 function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
