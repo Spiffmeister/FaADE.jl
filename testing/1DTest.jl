@@ -2,7 +2,7 @@ using LinearAlgebra
 using Printf
 using Plots
 
-# using BenchmarkTools
+using BenchmarkTools
 # using ProfileView
 # using Cthulhu
 
@@ -21,7 +21,7 @@ Dom = Grid1D(𝒟,n)
 K(x) = 1.0
 
 Δt = 0.01
-t_f = 10.0
+t_f = 100.0
 
 # u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 u₀(x) = sin.(2π*x*2 .+ 1.0)
@@ -51,14 +51,14 @@ println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f,"   orde
 # @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
 
 
-soln = solve(P,Dom,Δt,t_f,:cgie)
+# soln = solve(P,Dom,Δt,t_f,:cgie)
 # scatter(soln.grid.grid,soln.u[1])#,xlims=(0.0,1.0),ylims=(0.0,1.0))
 # scatter!(soln.grid.grid,soln.u[2])#,xlims=(0.0,1.0),ylims=(0.0,1.0))
 
 
 # @profview solve(P,Dom,Δt,t_f,:cgie)
 # @profview solve(P,Dom,Δt,t_f,:cgie)
-# @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
+@benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
 
 
 # @time solve(P,Dom,Δt,t_f,:cgie)

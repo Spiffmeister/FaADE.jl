@@ -8,7 +8,7 @@ function addSource! end
 function addSource!(S::SourceTerm{Nothing},tmp...) end
 function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
     for I in eachindex(grid)
-        u[I] += Δt*(1-θ)*S.source(t,grid[I]...) + Δt*θ*S.source(t+Δt,grid[I]...)
+        u[I] += Δt*(1-θ)*S.source(grid[I]...,t) + Δt*θ*S.source(grid[I]...,t+Δt)
     end
     u
 end
@@ -33,7 +33,7 @@ function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT)
 end
 function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
-        B.BufferRHS[i] = Δt*(1-θ)*B.RHS(t,B.X[i]) + Δt*θ*B.RHS(t+Δt,B.X[i])
+        B.BufferRHS[i] = Δt*(1-θ)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
     end
 end
 """

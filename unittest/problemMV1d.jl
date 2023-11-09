@@ -1,5 +1,6 @@
 
 using FaADE
+using LinearAlgebra
 using BenchmarkTools
 # using ProfileView
 # using Cthulhu
@@ -19,29 +20,26 @@ nt = round(t/Δt)
 Δt = t/nt
 
 
-ωx = 1.0
+ωx = 9.0
 ωt = 1.0
 cx = 1.0
 
 K = 1.0
 
-θ = 1.0
+θ = 0.5
 
 
 # Solution
 
-exact(t,x) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+exact(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
 u₀(x) = exact(x,0.0)
-F(t,x) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
+F(x,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
 # DIRICHLET
 # BxL(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
 # BxR(t) = cos(2π*ωt*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
 # NEUMANN
 BxL(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
 BxR(t) = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx + cx) #Boundary condition x=Lx
-
-
-
 
 
 # u₀(x) = x^3
@@ -75,13 +73,13 @@ Dom = Grid1D([0.0,1.0],n)
 
 
 #====== New solver 1 volume ======#
-# Dl = FaADE.SATs.SAT_Neumann(BxL,Dom.Δx,Left,1,order)
-# Dr = FaADE.SATs.SAT_Neumann(BxR,Dom.Δx,Right,1,order)
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+Dl = FaADE.SATs.SAT_Neumann(BxL,Dom.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Neumann(BxR,Dom.Δx,Right,1,order)
+BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 
-Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
+# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+# BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
 
 P = newProblem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
@@ -90,69 +88,15 @@ soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
 
 # @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
-#=
-#====== New solver 2 volume ======#
-D1 = Grid1D([0.0,0.5],501)
-D2 = Grid1D([0.5,1.0],501)
-
-Dom2V = GridMultiBlock(D1,D2)
-
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
-println("---Solving 2 volume---")
-P2V = newProblem1D(order,u₀,K,Dom2V,BD)
-
-soln2V = solve(P2V,Dom2V,Δt,t)
-=#
-
-
-
-# @benchmark solve($P2V,$Dom2V,$Δt,$t)
-
-# solve(P2V,Dom2V,Δt,t)
-# Profile.clear_malloc_data()
-# solve(P2V,Dom2V,Δt,t)
-
-# @profview soln_tmpa = solve(P2V,Dom2V,Δt,t)
-# @profview soln_tmpb = solve(P2V,Dom2V,Δt,t)
 
 
 
 
-
-#=
-using LinearAlgebra
-norm(solnP1V.u[2])
-norm(vcat(soln.u[2][1],soln.u[2][2][2:end]))
-=#
-
-
-
-#=
-D1 = Grid1D([0.0,0.35],351)
-D2 = Grid1D([0.35,0.65],301)
-D3 = Grid1D([0.65,1.0],351)
-
-
-Dom3V = GridMultiBlock((D1,D2,D3))
-
-Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
-BD = FaADE.SATs.SATBoundaries(Dl,Dr)
-
-P3V = newProblem1D(order,u₀,K,Dom3V,BD)
-
-println("Solving")
-soln3V = solve(P3V,Dom3V,Δt,t)
-=#
-
-e = [exact(soln.t[2],Dom[i]) for i in eachindex(Dom)]
+e = [exact(Dom[i],t+Δt) for i in eachindex(Dom)]
 # e = [Dom1V.grid[i] for i in eachindex(Dom1V)]
 # e = zeros(Dom1V.n)
 u0 = [u₀(Dom[i]) for i in eachindex(Dom)]
 
-using LinearAlgebra
 # println("n=",n," error ",norm(e .- soln.u[2])/norm(e))
 println("n=",n," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx))
 
@@ -161,8 +105,6 @@ println("n=",n," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx))
 using Plots
 
 prng = 1:n
-# prng = n-4:n
-# prng = 100:110
 
 l = @layout[a; b]
 p1 = plot()
@@ -247,4 +189,60 @@ s2G2 = Grid2D([0.5,1.0],[0.0,1.0],11,6)
 
 G2 = FaADE.Helpers.GridMultiBlock([s2G1,s2G2])
 
+=#
+
+
+#====== New solver 2 volume ======#
+#=
+D1 = Grid1D([0.0,0.5],501)
+D2 = Grid1D([0.5,1.0],501)
+
+Dom2V = GridMultiBlock(D1,D2)
+
+Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
+BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+println("---Solving 2 volume---")
+P2V = newProblem1D(order,u₀,K,Dom2V,BD)
+
+soln2V = solve(P2V,Dom2V,Δt,t)
+=#
+
+
+
+# @benchmark solve($P2V,$Dom2V,$Δt,$t)
+
+# solve(P2V,Dom2V,Δt,t)
+# Profile.clear_malloc_data()
+# solve(P2V,Dom2V,Δt,t)
+
+# @profview soln_tmpa = solve(P2V,Dom2V,Δt,t)
+# @profview soln_tmpb = solve(P2V,Dom2V,Δt,t)
+
+
+
+#=
+using LinearAlgebra
+norm(solnP1V.u[2])
+norm(vcat(soln.u[2][1],soln.u[2][2][2:end]))
+=#
+
+
+
+#=
+D1 = Grid1D([0.0,0.35],351)
+D2 = Grid1D([0.35,0.65],301)
+D3 = Grid1D([0.65,1.0],351)
+
+
+Dom3V = GridMultiBlock((D1,D2,D3))
+
+Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
+Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
+BD = FaADE.SATs.SATBoundaries(Dl,Dr)
+
+P3V = newProblem1D(order,u₀,K,Dom3V,BD)
+
+println("Solving")
+soln3V = solve(P3V,Dom3V,Δt,t)
 =#

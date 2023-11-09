@@ -33,31 +33,35 @@ Ky = 1.0
 
 
 # Solution
-exact(t,x,y) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
-u₀(x,y) = exact(0.0,x,y)
-F(t,x,y) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+u₀(x,y) = exact(x,y,0.0)
+F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
     K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
 # DIRICHLET
-BxL(t,y) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
-BxR(t,y) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
-ByL(t,x) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
-ByR(t,x) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
+# BxL(y,t) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
+# BxR(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
+# ByL(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
+# ByR(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
+# NEUMANN
+BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+BxRũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(2π*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+ByLũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+ByRũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*ωy + cy) #Boundary condition y=Ly
 
 
-
-# exact(t,x,y) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+# exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
 # u₀(x,y) = exact(0.0,x,y)
-# F(t,x,y) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
+# F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
 #     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
 
 #=
-exact(t,x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
+exact(x,y,t) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 u₀(x,y) = exact(0.0,x,y)
-BxL(t,y) = 0.0
-BxR(t,y) = 0.0
-ByL(t,x) = 0.0
-ByR(t,x) = 0.0
+BxL(y,t) = 0.0
+BxR(y,t) = 0.0
+ByL(x,t) = 0.0
+ByR(x,t) = 0.0
 =#
 
 

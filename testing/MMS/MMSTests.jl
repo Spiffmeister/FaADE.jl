@@ -26,7 +26,7 @@ function generate_MMS(MMS::Function,grid::Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx
-            u_MMS[i,j] = MMS(t,grid.gridx[i,j],grid.gridy[i,j])
+            u_MMS[i,j] = MMS(grid.gridx[i,j],grid.gridy[i,j],t)
         end
     end
     return u_MMS
@@ -100,12 +100,12 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = [21,31,41,51,61,71,81,91,101]
+npts = [21,31,41,51,61]#,71,81,91,101]
 
 θ = 0.5
 
 # Solution
-ũ(t,x,y;
+ũ(x,y,t;
     ωt=1.0,
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
@@ -118,7 +118,7 @@ ũ₀(x,y;
 
 K = 1.0
 
-F(t,x,y;
+F(x,y,t;
     ωt=1.0,
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0,
@@ -142,14 +142,14 @@ if TestDirichlet
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-    BxLũ(t,y)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(t,y;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(t,x)           = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-    ByRũ(t,x;Ly=1.0)    = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t)           = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0)    = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -192,18 +192,18 @@ if TestNeumann
     cy=0.0
     ωx=1.0
     ωy=1.0
-    ωt=9.0
+    ωt=1.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-    BxLũ(t,y) =         2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(t,y;Lx=1.0) =  2π*ωx * K * cos(2π*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(t,x) =         2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-    ByRũ(t,x;Ly=1.0) =  2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(y,t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+    BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    ByLũ(x,t) =         2π*ωy * K * cos(2π*ωt*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+    ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*ωt*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -248,9 +248,9 @@ if TestPeriodic
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
 
-    analytic(t,x,y) = ũ(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(t,x,y) = F(t,x,y, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
     order = 2
     O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,

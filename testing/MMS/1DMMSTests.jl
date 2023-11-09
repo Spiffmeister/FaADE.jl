@@ -22,7 +22,7 @@ runperiodic = false
 function generate_MMS(MMS::Function,grid::Grid1D,t::Float64)
     u_MMS = zeros(grid.n)
     for i = 1:grid.n
-        u_MMS[i] = MMS(t,grid.grid[i])
+        u_MMS[i] = MMS(grid.grid[i],t)
     end
     return u_MMS
 end
@@ -94,18 +94,18 @@ npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
 # npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151]
 
 
-θ = 1.0
+θ = 0.5
 
 
 # Solution
-ũ(t,x;ωt=1.0, ωx=1.0,cx=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+ũ(x,t;ωt=1.0, ωx=1.0,cx=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
 
 # Initial condition
 ũ₀(x;ωt=1.0, ωx=1.0,cx=0.0) = sin(2π*ωx*x + cx)
 
 
 K = 1.0
-F(t,x;ωt=1.0, ωx=1.0,cx=0.0,K=1.0) = 
+F(x,t;ωt=1.0, ωx=1.0,cx=0.0,K=1.0) = 
         -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
             K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
             
@@ -122,9 +122,9 @@ if rundirichlet
     ωt=1.0
 
 
-    analytic(t,x) = ũ(t, x, ωt=ωt, ωx=ωx, cx=cx)
+    analytic(x,t) = ũ(x,t, ωt=ωt, ωx=ωx, cx=cx)
     IC(x) = ũ₀(x, ωt=ωt, ωx=ωx, cx=cx)
-    FD(t,x) = F(t,x, ωt=ωt, ωx=ωx, cx=cx, K=K)
+    FD(x,t) = F(x,t, ωt=ωt, ωx=ωx, cx=cx, K=K)
 
     BxLũ(t) = cos(2π*ωt*t) * sin(cx) #Boundary condition x=0
     BxRũ(t;Lx=1.0) = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) #Boundary condition x=Lx
@@ -156,14 +156,14 @@ if runneumann
     println("Neumann")
 
     cx=pi/2
-    ωx=9.0
-    ωt=1.0
+    ωx=1.0
+    ωt=9.0
 
     println("ωx=",ωx,"  cx=",cx)
 
-    analytic(t,x) = ũ(t,x, ωt=ωt, ωx=ωx, cx=cx)
+    analytic(x,t) = ũ(x,t, ωt=ωt, ωx=ωx, cx=cx)
     IC(x) = ũ₀(x, ωt=ωt, ωx=ωx, cx=cx)
-    FD(t,x) = F(t,x, ωt=ωt, ωx=ωx, cx=cx, K=K)
+    FD(x,t) = F(x,t, ωt=ωt, ωx=ωx, cx=cx, K=K)
 
     BxLũ(t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx) #Boundary condition x=0
     BxRũ(t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx) #Boundary condition x=Lx
@@ -198,9 +198,9 @@ if runperiodic
 
     println("ωx=",ωx,",  cx=",cx)
 
-    analytic(t,x) = ũ(t,x, ωx=ωx, cx=cx)
+    analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
     IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-    FD(t,x) = F(t,x, ωx=ωx, cx=cx, K=K)
+    FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
 
     order = 2
     O2_PeriodicMMS = comp_MMS(𝒟x,npts,

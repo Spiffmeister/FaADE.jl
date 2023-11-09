@@ -78,7 +78,7 @@ function conj_grad!(RHS,DBlock::DataBlock{TT,DIM,AT},CGB::ConjGradBlock{TT,DIM,A
     end
 end
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-14,maxIT::Int=100,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-12,maxIT::Int=1000,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -91,13 +91,10 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     setValue(:rₖ,:cache,DBlock) # r ← cache
     muladd!(:rₖ,:b,DBlock,α=TT(-1)) # r = b - cache
     setValue(:dₖ,:rₖ,DBlock) # d = r
-
+    
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
-# println("u ",DBlock[1].u[1:4])
-# println("b ",DBlock[1].b[1:4])
-# println("r ",DBlock[1].rₖ[1:4]," ",rnorm)
     while (rnorm > rtol*unorm) & (i < maxIT)
         # testA!(:dₖ,DBlock[1]) # cache ← Adₖ
         A!(:dₖ,DBlock[1]) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
@@ -146,12 +143,9 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) whe
     R = getarray(D,read)
 
     mul!(W,R,D.K,D.Derivative) # W ← D(u)
-    # println("W ",W[1:4])
     applySATs(W,R,D,SolutionMode) # W += SATu
-    # println("W ",W[1:4])
     
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
-    # println("W ",W[1:4])
 
     W
 end
@@ -175,7 +169,6 @@ function CGRHS!(D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) where {TT,DI
     applySATs(b,D,DataMode) # + RHS SATs
     
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
-    
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(:u,DB)
@@ -201,7 +194,6 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     
     # b = Δt (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
     CGRHS!(DBlock)
-
     # Compute uₙ₊₁ = (I - D)^{-1} b
     conj_grad!(DBlock)
 end

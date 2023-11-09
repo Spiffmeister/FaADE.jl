@@ -87,10 +87,15 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     t = TT(0)
     Δt₀ = Δt
 
-    copyto!(:uₙ₊₁,  :u, DBlock)
-    while t < t_f+Δt/2
-    # nt = 1000; for i = 1:nt
-    #     t = (i-1)*Δt
+
+
+    # copyto!(:uₙ₊₁,  :u, DBlock)
+    # while t < t_f
+
+    nt = round(t_f/Δt)
+    # nt = 1;
+    for i = 0:nt
+        t = i*Δt
 
         theta_method(DBlock,t,Δt)
 
@@ -135,7 +140,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     end
 
     if typeof(G) <: LocalGridType
-        push!(soln.u,DBlock[1].u)
+        push!(soln.u,DBlock[1].uₙ₊₁)
     else
         outu = [DBlock[I].u for I in eachblock(DBlock)]
         push!(soln.u,outu)
