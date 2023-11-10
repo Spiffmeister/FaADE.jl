@@ -155,9 +155,9 @@ if runneumann
     println("=====")
     println("Neumann")
 
-    cx=pi/2
-    ωx=1.0
-    ωt=9.0
+    cx=1.0
+    ωx=9.0
+    ωt=1.0
 
     println("ωx=",ωx,"  cx=",cx)
 
@@ -195,12 +195,13 @@ if runperiodic
 
     cx=1.0
     ωx=8.0
+    ωt=1.0
 
     println("ωx=",ωx,",  cx=",cx)
 
-    analytic(x,t) = ũ(x,t, ωx=ωx, cx=cx)
-    IC(x) = ũ₀(x, ωx=ωx, cx=cx)
-    FD(x,t) = F(x,t, ωx=ωx, cx=cx, K=K)
+    analytic(x,t) = ũ(x,t,ωt=ωt, ωx=ωx, cx=cx)
+    IC(x) = ũ₀(x, ωt=ωt, ωx=ωx, cx=cx)
+    FD(x,t) = F(x,t, ωt=ωt, ωx=ωx, cx=cx, K=K)
 
     order = 2
     O2_PeriodicMMS = comp_MMS(𝒟x,npts,
@@ -256,11 +257,11 @@ jldsave("testing/MMS/FullMMS1D.jld2";O2Conv,O4Conv)
 
 
 
-using Plots
-using LaTeXStrings
+# using Plots
+# using LaTeXStrings
 
 
-pO2 = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
+# pO2 = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
 # plot!(pO2,    O2_NeumannMMS.npts,       O2_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
 # plot!(pO2,    O2_PeriodicMMS.npts,      O2_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
 
@@ -272,8 +273,8 @@ pO2 = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichl
 
 # plot!(pO2, npts, npts.^2 , linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
 
-p = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
-plot!(p, O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+# p = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle, axis=:log)
+# plot!(p, O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
 
 
 
@@ -319,7 +320,7 @@ plot!(pO4, log.([npts[2],npts[end-1]]),
 # plot(O4_DirichletMMS.comp_soln[8].u[2],label="comp")
 # plot!(O4_DirichletMMS.MMS_soln[8],label="exact")
 
-plot(O4_DirichletMMS.comp_soln[8].u[2] .- O4_DirichletMMS.MMS_soln[8],label="err")
+# plot(O4_DirichletMMS.comp_soln[8].u[2] .- O4_DirichletMMS.MMS_soln[8],label="err")
 
 
 

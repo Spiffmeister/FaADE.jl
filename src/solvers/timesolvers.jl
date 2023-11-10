@@ -66,9 +66,11 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
 
         if typeof(G) <: LocalGridType
             DBlock[1].u .= soln.u[1]
+            # DBlock[1].uₙ₊₁ .= soln.u[1]
         elseif typeof(G) <: GridMultiBlock
             for I in eachblock(DBlock)
                 DBlock[I].u .= soln.u[1][I]
+                # DBlock[I].uₙ₊₁ .= soln.u[1][I]
             end
         end
 
@@ -89,13 +91,13 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
 
 
-    # copyto!(:uₙ₊₁,  :u, DBlock)
-    # while t < t_f
+    copyto!(:uₙ₊₁,  :u, DBlock)
+    while t < t_f
 
-    nt = round(t_f/Δt)
+    # nt = round(t_f/Δt)
     # nt = 1;
-    for i = 0:nt
-        t = i*Δt
+    # for i = 0:nt
+    #     t = i*Δt
 
         theta_method(DBlock,t,Δt)
 

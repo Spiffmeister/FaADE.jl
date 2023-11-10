@@ -165,7 +165,7 @@ struct newBoundaryConditions{DIM,
             # BC = (BCL,BCR)
         elseif DIM ==2
             # NB = 4
-            if !(typeof(P.BoundaryConditions.BoundaryLeft) <: SimultanousApproximationTerm{:Periodic})
+            if !(typeof(P.BoundaryConditions.BoundaryUp) <: SimultanousApproximationTerm{:Periodic})
                 BCU = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryUp,1,P.order)
                 BCD = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryDown,1,P.order)
             else

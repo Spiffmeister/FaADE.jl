@@ -71,7 +71,7 @@ function comp_MMS(Dx,Dy,npts,
         BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
 
 
-        Δt = dt_scale*Dom.Δx*Dom.Δy
+        Δt = dt_scale*Dom.Δx
         nt = round(t_f/Δt)
         Δt = t_f/nt
 
@@ -100,7 +100,7 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = [21,31,41,51,61]#,71,81,91,101]
+npts = [21,31,41,51,61,71,81,91,101]
 
 θ = 0.5
 
@@ -192,13 +192,13 @@ if TestNeumann
     cy=0.0
     ωx=1.0
     ωy=1.0
-    ωt=1.0
+    ωt=9.0
 
-    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy)
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
-    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(x,y,t) = F(x,y,t, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
     BxLũ(y,t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
     BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
@@ -240,7 +240,7 @@ if TestPeriodic
     println("=====")
     println("Periodic")
 
-    cx=1.0
+    cx=0.0
     cy=0.0
     ωx=1.0
     ωy=1.0
