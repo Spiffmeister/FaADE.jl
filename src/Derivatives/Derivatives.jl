@@ -23,7 +23,6 @@ module Derivatives
     export DerivativeOrder, GetOrder, DerivativeOperator
     export D₁, D₂
     export D₁!, D₂!
-    export generate_SecondDerivative #legacy function
     export mul!
 
     export build_H, innerH

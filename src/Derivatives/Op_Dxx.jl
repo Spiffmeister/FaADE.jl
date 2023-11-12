@@ -10,15 +10,23 @@
 Not in place second derivative operators
 """
 function D₂ end
-function D₂(u::TA,c::TA,n::Integer,Δx::TT,order::DerivativeOrder) where {TT,TA <: AbstractVector{TT}}
+"""
+Vector version of [`D₂`](@ref).
+"""
+function D₂(u::VT,c::VT,Δx::TT,order::Int=2) where {TT,VT<:AbstractVector{TT}}
     uₓₓ = zeros(eltype(u),length(u))
-    D₂!(uₓₓ,u,c,n,Δx,order,0.0)
+    DO = DerivativeOrder{order}()
+    D₂!(uₓₓ,u,c,length(u),Δx,DO,0.0)
     return uₓₓ
 end
-function D₂(u::TA,cx::TA,cy::TA,nx::Integer,ny::Integer,Δx::TT,Δy::TT,
-    orderx::DO,ordery::DO) where {TT,TA <: AbstractVector{TT},DO<:DerivativeOrder}
+"""
+Matrix version of [`D₂`](@ref).
+"""
+function D₂(u::AT,cx::AT,cy::AT,Δx::TT,Δy::TT,order::Int=2) where {TT,AT <: AbstractMatrix{TT}}
+    n = size(u)
     uₓₓ = zeros(eltype(u),size(u))
-    D₂!(uₓₓ,u,cx,cy,nx,ny,Δx,Δy,orderx,ordery)
+    DO = DerivativeOrder{order}()
+    D₂!(uₓₓ,u,cx,cy,n[1],n[2],Δx,Δy,DO,DO,TT(0))
     return uₓₓ
 end
 
@@ -37,6 +45,7 @@ function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Right,order,α)
     uₓₓ
 end
+
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
 function D₂!(uₓₓ::AT,u::AT,c::AT,n::Integer,Δ::T,order::DerivativeOrder,α::T,dim::Integer) where {T,AT<:AbstractArray{T}}
     loopdir = SelectLoopDirection(dim)    
@@ -57,8 +66,8 @@ function D₂!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
     for (A,B,C) in zip(eachrow(uₓₓ),eachrow(u),eachrow(cy))
         D₂!(A,B,C,ny,Δy,order_y,T(1))
     end
-    
 
     uₓₓ
 end
+
 

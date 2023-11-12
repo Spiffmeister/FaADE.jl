@@ -37,7 +37,7 @@ module FaADE
     # using FaADE.Helpers: Boundary, PeriodicBoundary
     # using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using FaADE.Derivatives: D₁, D₂!, D₁!
+    using FaADE.Derivatives: D₁, D₂, D₁!, D₂!
 
     using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     

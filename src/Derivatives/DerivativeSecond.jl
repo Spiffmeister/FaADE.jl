@@ -273,31 +273,32 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
 end
 
 
+
 @inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,AT<:AbstractVector{TT},TN}
     TN == :Left ? n = 1 : n = lastindex(u)
     m = lastindex(u)
     @inbounds uₓₓ[n] = α*uₓₓ[n] + (0.5*(c[n] + c[m-1])*u[m-1] - 0.5*(c[2] + 2c[n] + c[m-1])*u[n] + 0.5*(c[n] + c[2])*u[2])/Δx^2
 end
-#=
 @inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,cx::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{4},α::TT) where {TT,AT<:AbstractVector{TT},TN}
     TN == :Left ? n = 1 : n = lastindex(u)
-    TN == :Left ? in = 1 : in = -1
+    TN == :Left ? in = 1 : in = -1 #If on the left 1:6 if on right n-5:n
+    # TN == :Left ? m = lastindex(u)-1 : m = lastindex(u)
     m = lastindex(u)
 
-    for j = n:n+in*6-1
-        i   = mod1(j,m-1)
-        im  = mod1(i-1,m-1)
-        imm = mod1(i-2,m-1)
+    for j = n:n+6in-1
+        i   = mod1(j,m)
+        im  = _prev(j,m);   ip = _next(j,m)
+        imm = _prev(j-1,m); ipp = _next(j+1,m)
         
         uₓₓ[i] = α*uₓₓ[i] + 
         ((-cx[im]/0.6e1 + cx[imm]/0.8e1 + cx[i]/0.8e1)*u[imm] +
-        (-cx[imm]/0.6e1 - cx[i+1]/0.6e1 - cx[im]/0.2e1 - cx[i]/0.2e1)*u[im] +
-        (cx[imm]/0.24e2 + 0.5e1/0.6e1*cx[im] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
-        (-cx[imm]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
-        (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
+        (-cx[imm]/0.6e1 - cx[ip]/0.6e1 - cx[im]/0.2e1 - cx[i]/0.2e1)*u[im] +
+        (cx[imm]/0.24e2 + 0.5e1/0.6e1*cx[im] + 0.5e1/0.6e1*cx[ip] + cx[ipp]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
+        (-cx[imm]/0.6e1 - cx[ipp]/0.6e1 - cx[i]/0.2e1 - cx[ip]/0.2e1)*u[ip] +
+        (-cx[ip]/0.6e1 + cx[i]/0.8e1 + cx[ipp]/0.8e1)*u[ipp])/(-Δx^2)
     end
 end
-=#
+
 
 
 ### Left boundary

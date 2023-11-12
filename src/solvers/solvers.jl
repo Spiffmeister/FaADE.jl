@@ -10,7 +10,7 @@ module solvers
 
     using FaADE.Helpers
 
-    using FaADE.Derivatives: generate_SecondDerivative, DerivativeOrder, GetOrder, DerivativeOperator, mul!,
+    using FaADE.Derivatives: DerivativeOrder, GetOrder, DerivativeOperator, mul!,
     innerH
 
     using FaADE.Grid
