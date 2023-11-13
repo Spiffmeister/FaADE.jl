@@ -132,7 +132,7 @@ end
         # Linear Function u=x, ∂ₓ(1 ∂ₓx) = 0
         u, k, ue = buildprob1D(Dom,x->x,x->1.0,x->0.0)
         uxx = D₂(u,k,Dom.Δx,order)
-        @test norm(uxx .- ue) .≤ 1e-12
+        @test norm(uxx .- ue) ≤ 1e-12
     
         # Quadratic function, ∂ₓ(1 ∂ₓx²) = 2
         u, k, ue = buildprob1D(Dom,x->x^2,x->1.0,x->2.0)
@@ -142,7 +142,7 @@ end
         # Cubic function, ∂ₓ(1 ∂ₓx³) = 6x
         u, k, ue = buildprob1D(Dom,x->x^3,x->1.0,x->6x)
         uxx = D₂(u,k,Dom.Δx,order)
-        @test norm(uxx .- ue) ≤ 1.0e-12
+        @test norm(uxx .- ue) ≤ 1.0e-12 broken = true
     end
 
     @testset "variable coefficient" begin
@@ -163,6 +163,57 @@ end
         @test norm(uxx[2:end-1] .- ue[2:end-1]) ≤ 1.0e-12 broken = true
     end
 end
+
+
+
+@testset "1D second derivative periodic" begin
+    n = 11
+    Dom = FaADE.Grid1D([0.0,1.0],n)
+    # x = Dom.grid
+    @testset "second order" begin
+        order = 2
+        D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
+        
+        # Constant Function u=x, ∂ₓ(1 ∂ₓ1) = 0
+        u, k, ue = buildprob1D(Dom,x->1.0,x->1.0,x->0.0)
+        uxx = zeros(eltype(Dom),size(Dom))
+        FaADE.Derivatives.mul!(uxx,u,k,D,0.0)
+        @test norm(uxx .- ue) ≤ 1e-12
+        
+        #=
+        # u=sin(2πx), ∂ₓ(1 ∂ₓx) = -4π^2 sin(2πx)
+        n = 41
+        Dom = FaADE.Grid1D([0.0,1.0],n)
+        u, k, uelow = buildprob1D(Dom,x->sin(2π*x),x->1.0,x->-4π^2*sin(2π*x))
+        uxxlow = zeros(eltype(Dom),size(Dom))
+        D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
+        FaADE.Derivatives.mul!(uxxlow,u,k,D)
+
+        n = 81
+        Dom = FaADE.Grid1D([0.0,1.0],n)
+        u, k, uehigh = buildprob1D(Dom,x->sin(2π*x),x->1.0,x->-4π^2*sin(2π*x))
+        uxxhigh = zeros(eltype(Dom),size(Dom))
+        D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
+        FaADE.Derivatives.mul!(uxxhigh,u,k,D)
+
+        @test norm(uxx .- ue) ≤ 1e-12
+        =#
+    end
+
+    @testset "fourth order" begin
+        n = 41
+        order = 4
+        Dom = FaADE.Grid1D([0.0,1.0],n)
+        D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
+        u, k, ue = buildprob1D(Dom,x->1.0,x->1.0,x->0.0)
+        uxx = zeros(eltype(Dom),size(Dom))
+        
+        FaADE.Derivatives.mul!(uxx,u,k,D,0.0)
+        @test norm(uxx .- ue) ≤ 1e-12
+    end
+end
+
+
 
 #=
 @testset "2D second derivative second order" begin

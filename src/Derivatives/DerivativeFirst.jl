@@ -10,21 +10,14 @@ Single node 1D first derivative function.
 """
 function FirstDerivativeInternal end
 @inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{2},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    # for i = 2:n-1
     @inbounds β*(u[i+1] - u[i-1])/(T(2)*Δx)
-    # end
 end
 @inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{4},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    # for i = 3:n-2
     @inbounds β*(T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
-    # end
 end
 @inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{6},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    # for i = 4:n-3
     @inbounds β*(-T(1/60)*u[i-3] + T(3/20)*u[i-2] - T(3/4)*u[i-1] + T(3/4)*u[i+1] - T(3/20)*u[i+2] + T(1/60)*u[i+3])/Δx
-    # end
 end
-
 
 
 """
@@ -105,3 +98,18 @@ end
 
 
 
+
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{2},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(u[_prev(i,n)] - u[_next(i,n)])/(T(2)*Δx)
+end
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{4},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(T(1/12)*u[_prev(i-1,n)] - T(2/3)*u[_prev(i,n)] + T(2/3)*u[_next(i,n)] - T(1/12)*u[_next(i+1,n)])/Δx
+end
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{6},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(-T(1/60)*u[_prev(i-2,n)] + T(3/20)*u[_prev(i-1,n)] - T(3/4)*u[_prev(i,n)] + T(3/4)*u[_next(i,n)] - T(3/20)*u[_next(i+1,n)] + T(1/60)*u[_next(i+2,n)])/Δx
+end
+function FirstDerivativePeriodic!(dest::VT,K::VT,u::VT,Δx::TT,DO::DerivativeOrder,n::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+    for i = 1:n
+        @inbounds dest[i] = α*dest[i] + FirstDerivativePeriodic(u,Δx,DO,n,i,K[i])
+    end
+end

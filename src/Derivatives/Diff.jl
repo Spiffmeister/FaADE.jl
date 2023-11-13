@@ -1,47 +1,10 @@
 
 
-"""
-    generate_SecondDerivative
-
-Returns a function `Diff(uₓₓ,u,c...)` which computes the derivative in 1 or 2 dimensions
-"""
-function generate_SecondDerivative end
-function generate_SecondDerivative(n::Int64,Δx::Float64,order::DerivativeOrder)
-    # DO = DerivativeOrder{order}()
-    let n = n, Δx=Δx, order=order
-        Diff!(uₓₓ,u,c) = D₂!(uₓₓ,u,c,n,Δx,order,0.0)
-        return Diff!
-    end
-end
-function generate_SecondDerivative(nx::Int64,ny::Int64,Δx::Float64,Δy::Float64,order::Integer)
-    DO = DerivativeOrder{order}()
-    let nx=nx, ny=ny,
-            Δx=Δx, Δy=Δy,
-            DO=DO
-        
-        Diff!(uₓₓ,u,cx,cy) = D₂!(uₓₓ,u,cx,cy, nx,ny,Δx,Δy,DO,DO,0.0)
-        return Diff!
-    end
-end
 
 
-
-"""
-    Diff!(cache,u,K,D::DerivativeOperator)
-Apply the derivative operator to `u` given the diffusion coefficient `K` and store result in `cache`
-"""
-function Diff!(cache::AT,u::AT,K::KT,D::DerivativeOperator) where {AT,KT}
-    for (C,U) in zip(cache,u,K)
-        D(C,U,K)
-    end
-    cache
-end
+function mul! end
 
 
-# function Diff!(cache::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,ORD}) where {AT,KT,TT,ORD}
-#      (cache,,U,K)
-#     cache
-# end
 
 function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,DO}) where {AT,KT,TT,DO}
     # D₂!(dest,u,K,D.nx,D.Δx,D.order,TT(0))
@@ -55,6 +18,8 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,1,DO}) where {AT,KT,
     end
     dest
 end
+
+
 function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Constant}) where {TT,AT<:AbstractArray{TT},KT,DO<:DerivativeOrder}
 
     for (A,B,C) in zip(eachcol(dest),eachcol(u),eachcol(K[1]))
@@ -66,7 +31,6 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Constant}) whe
             SecondDerivativeBoundaryPeriodic!(A,B,C,D.Δx,Left,D.order,TT(0))
             SecondDerivativeBoundaryPeriodic!(A,B,C,D.Δx,Right,D.order,TT(0))
         end
-        # D₂!(A,B,C,D.nx,D.Δx,D.order,TT(0))
     end
     for (A,B,C) in zip(eachrow(dest),eachrow(u),eachrow(K[2]))
         D₂!(A,B,C,D.ny,D.Δy,D.order,TT(1))
@@ -75,26 +39,65 @@ function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Constant}) whe
     dest
 end
 
-function mul!(dest::AT,u::AT,K::KT,D::DerivativeOperator{TT,2,DO,:Variable}) where {TT,AT<:AbstractArray{TT},KT,DO<:DerivativeOrder}
-    for (A,B,Kx,DKy) in zip(eachcol(dest),eachcol(u),eachcol(K[1]),eachcol(K[4]))
-        D₂!(A,B,Kx,D.nx,D.Δx,D.order,TT(0))
-        D₁!(A,DKy,B,D.nx,D.Δx,D.order,TT(1))
-    end
-    for (A,B,Ky,DKx) in zip(eachrow(dest),eachrow(u),eachrow(K[2]),eachrow(K[3]))
-        D₂!(A,B,Ky,D.ny,D.Δy,D.order,TT(1))
-        D₁!(A,DKx,B,D.ny,D.Δy,D.order,TT(1))
-    end
 
+
+"""
+    mul! for Diffusion problems
+"""
+function mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Constant},α) where {TT<:Real,VT<:AbstractVector{TT},DO<:DerivativeOrder}
+    if !D.periodic
+        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,D.order,α)
+    elseif D.periodic
+        SecondDerivativePeriodic!(dest,u,K,D.Δx,D.order,D.n,α)
+    end
+    dest
+end
+function mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Variable},α) where {TT<:Real,VT<:AbstractVector{TT},DO<:DerivativeOrder}
+    if !D.periodic
+        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,D.order,α)
+        FirstDerivativeInternal!(dest,K,u,D.Δx,D.order,TT(1))
+        FirstDerivativeBoundary!(dest,K,u,D.Δx,Left,D.order,TT(1))
+        FirstDerivativeBoundary!(dest,K,u,D.Δx,Right,D.order,TT(1))
+    elseif D.periodic
+        SecondDerivativePeriodic!(dest,u,K,D.Δx,D.order,D.n,α)
+        FirstDerivativePeriodic!(dest,K,u,D.Δx,D.order,D.n,TT(1))
+    end
     dest
 end
 
+"""
+    Multidimensional version of constant coefficient
+"""
+function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Constant}) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO<:DerivativeOrder}
+    cx = c[1]
+    cy = c[2]
 
+    for (DEST,U,K) in zip(eachcol(dest),eachcol(u),eachcol(cx))
+        mul!(DEST,U,K,D.DO[1],TT(0))
+    end
+    for (DEST,U,K) in zip(eachrow(dest),eachrow(u),eachrow(cy))
+        mul!(DEST,U,K,D.DO[2],TT(1))
+    end
+    dest
+end
+"""
+    Multidimensional version of variable coefficient
+"""
+function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable}) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO<:DerivativeOrder}
+    cx = c[1]
+    cy = c[2]
+    cxy = c[3]
 
-# function MixedOp(dest,u,cx,Dcy,Δx,Δy,DO,α)
-#     local cache :: TT
-#     for i = m:nx-m+1
-#         cache = SecondDerivativeInternal(u,cx,Δx,DO,i)
-#         cache += Dcy[i]*FirstDerivativeInternal(u,Δy,DO,i)
-#         dest[i] = α*dest[i] + cache
-#     end
-# end
+    for (DEST,U,Kx,Kxy) in zip(eachcol(dest),eachcol(u),eachcol(cx),eachcol(cxy))
+        mul!(DEST,U,Kx,Kxy,D)
+    end
+    for (DEST,U,Ky,Kxy) in zip(eachrow(dest),eachrow(u),eachrow(cy),eachrow(cxy))
+        mul!(DEST,U,Ky,Kxy,D)
+    end
+    dest
+end
+

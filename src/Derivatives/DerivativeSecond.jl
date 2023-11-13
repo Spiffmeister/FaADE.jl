@@ -68,6 +68,31 @@ end
 
 
 
+@inline function SecondDerivativePeriodic(u::VT,c::VT,Δx::TT,::DerivativeOrder{2},n::Integer,i::Integer) where {TT,VT<:AbstractVector{TT}}
+    @inbounds (0.5*(c[i] + c[_prev(i,n)])*u[_prev(i,n)] - 0.5*(c[_next(i,n)] + 2c[i] + c[_prev(i,n)])*u[i] + 0.5*(c[i] + c[_next(i,n)])*u[_next(i,n)])/Δx^2
+end
+@inline function SecondDerivativePeriodic(u::AT,cx::AT,Δx::T,::DerivativeOrder{4},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
+    im = _prev(i,n); ip = _next(i,n)
+    imm = _prev(i-1,n); ipp = _next(i+1,n)
+
+    @inbounds ((-cx[im]/0.6e1 + cx[imm]/0.8e1 + cx[i]/0.8e1)*u[imm] +
+    (-cx[imm]/0.6e1 - cx[ip]/0.6e1 - cx[ip]/0.2e1 - cx[i]/0.2e1)*u[ip] +
+    (cx[imm]/0.24e2 + 0.5e1/0.6e1*cx[im] + 0.5e1/0.6e1*cx[ip] + cx[ipp]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
+    (-cx[im]/0.6e1 - cx[ipp]/0.6e1 - cx[i]/0.2e1 - cx[ip]/0.2e1)*u[ip] +
+    (-cx[ip]/0.6e1 + cx[i]/0.8e1 + cx[ipp]/0.8e1)*u[ipp])/(-Δx^2)
+end
+
+function SecondDerivativePeriodic!(dest::VT,u::VT,c::VT,Δx::TT,DO::DerivativeOrder,n::Integer,α::TT) where {TT,VT}
+    for i = 1:n
+        dest[i] = α*dest[i] + SecondDerivativePeriodic(u,c,Δx,DO,n,i)
+    end
+    dest
+end
+
+
+
+
+
 
 
 #====== BOUNDARY OPERATORS ======#
