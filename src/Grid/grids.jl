@@ -99,23 +99,44 @@ end
     Grid2D(𝒟x::Vector,𝒟y::Vector)
 Construct a 2D grid from vectors in ``x`` and ``y`` for curvilinear ``x,y``.
 """
-function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT},order=2) where TT
-
+function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT};order=nothing,periodicx=false,periodicy=false) where TT
+    
     nx, ny = size(𝒟x)
-
     Δx = TT(1)/TT(nx-1)
     Δy = TT(1)/TT(ny-1)
+    
+    if isnothing(order)
+        if (nx ≥ 16) & (ny ≥ 16)
+            order = 4
+        else
+            order = 2
+        end
+    end
 
     xq = zeros(eltype(𝒟x),size(𝒟x))
     xr = zeros(eltype(𝒟x),size(𝒟x))
     yq = zeros(eltype(𝒟y),size(𝒟y))
     yr = zeros(eltype(𝒟y),size(𝒟y))
 
-    D₁!(xq,𝒟x,nx,TT(1)/TT(nx-1),2,1)
-    D₁!(yq,𝒟y,nx,TT(1)/TT(nx-1),2,1)
-    D₁!(xr,𝒟x,ny,TT(1)/TT(ny-1),2,2)
-    D₁!(yr,𝒟y,ny,TT(1)/TT(ny-1),2,2)
+    # Derivatives of x,y wrt q
+    if periodicx
+        PeriodicD₁!(xq,𝒟x,nx,Δx,order,1)
+        PeriodicD₁!(yq,𝒟y,nx,Δx,order,1)
+    else
+        D₁!(xq,𝒟x,nx,Δx,order,1)
+        D₁!(yq,𝒟y,nx,Δx,order,1)
+    end
     
+    # Derivatives of x,y wrt r
+    if periodicy
+        PeriodicD₁!(xr,𝒟x,ny,Δy,order,2)
+        PeriodicD₁!(yr,𝒟y,ny,Δy,order,2)
+    else
+        D₁!(xr,𝒟x,ny,Δy,order,2)
+        D₁!(yr,𝒟y,ny,Δy,order,2)
+    end
+
+    # Jacobian
     J = zeros(eltype(𝒟x),size(𝒟x))
     for i = 1:nx
         for j = 1:ny
@@ -123,6 +144,7 @@ function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT},order=2) where TT
         end
     end
 
+    # Computational coordinate derivatives
     qx = yr./J # yr -> qx
     qy = -xr./J # xr -> qy
     rx = -yq./J # yr -> rx

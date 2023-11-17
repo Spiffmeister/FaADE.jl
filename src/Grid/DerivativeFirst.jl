@@ -3,32 +3,33 @@
 #=====================================#
 # Author: Dean Muir, Kenneth Duru
 
-"""
-    D₁!
-1D and 2D in place first derivative operator.
 
-See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
+@inline _next(i,stop) = i+1 > stop ? rem(i+1,stop+1)+2 : i+1
+@inline _prev(i,stop) = i-1 ≤ 1 ? mod1(i-1,stop-1) : i-1
+
+
 """
-function D₁! end
+    FirstDerivativeInternal
+Single node 1D first derivative function.
 """
-    D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
-1D [`D₁!`](@ref).
-"""
-function D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer) where T
-    FirstDerivativeBoundary!(uₓ,u,Δx,n,Left,order)
-    FirstDerivativeInternal!(uₓ,u,Δx,n,order)
-    FirstDerivativeBoundary!(uₓ,u,Δx,n,Right,order)
+function FirstDerivativePeriodic end
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{2},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
+    @inbounds (u[_next(i,n)] - u[_prev(i,n)])/(T(2)*Δx)
+end
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{4},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
+    @inbounds (T(1/12)*u[_prev(i-1,n)] - T(2/3)*u[_prev(i,n)] + T(2/3)*u[_next(i,n)] - T(1/12)*u[_next(i+1,n)])/Δx
+end
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{6},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
+    @inbounds (-T(1/60)*u[_prev(i-2,n)] + T(3/20)*u[_prev(i-1,n)] - T(3/4)*u[_prev(i,n)] + T(3/4)*u[_next(i,n)] - T(3/20)*u[_next(i+1,n)] + T(1/60)*u[_next(i+2,n)])/Δx
 end
 """
-    function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
-1D implementation for 2D problems for [`D₁!`](@ref).
+    FirstDerivativePeriodic!
 """
-function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer) where T
-    loopdir = SelectLoopDirection(dim)
-    for (cache,U) in zip(loopdir(uₓ),loopdir(u))
-        D₁!(cache,U,n,Δ,order)
+function FirstDerivativePeriodic!(dest::TV,u::TV,Δx::TT,n::Integer,order::Integer) where {TT,TV<:AbstractVector{TT}}
+    for i = 1:n
+        dest[i] = FirstDerivativePeriodic(u,Δx,Val(order),n,i)
     end
-    uₓ
+    dest
 end
 
 
@@ -56,6 +57,7 @@ function FirstDerivativeInternal!(uₓ::AbstractVector{T},u::AbstractVector{T},�
 end
 
 
+
 """
     FirstDerivativeBoundary!
 1D in place function for first derivative on boundary nodes
@@ -65,7 +67,7 @@ function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = n
     if order == 2
-        uₓ[j] = T(i)*(u[j+i] - u[j])/Δx
+        uₓ[j]       = T(i)*(u[j+i] - u[j])/Δx
     elseif order == 4
         uₓ[j]       = T(i)*(T(-24/17)*u[j]  + T(59/34)*u[j+i]       + T(-4/17)*u[j+2i] + T(-3/34)*u[j+3i])/Δx
         uₓ[j+i]     = T(i)*(T(-1/2)*u[j]    + T(1/2)*u[j+2i])/Δx
@@ -81,4 +83,45 @@ function FirstDerivativeBoundary!(uₓ::AbstractVector{T},
         uₓ[j+5i]    = T(i)*( T(-0.011398193015050)*u[j] + T(0.020437334208704)*u[j+i] + T(0.011220896474665)*u[j+2i] + T( 0.063183694641876)*u[j+3i] - T(0.691649024426814)*u[j+4i] + T(0.739709139060752)*u[j+6i] + T(-0.147941827812150)*u[j+7i] + T(0.016437980868017)*u[j+8i] )
         uₓ[j:i:j+5i] = uₓ[j:i:j+5i]/Δx
     end
+end
+
+
+
+"""
+    D₁!
+1D and 2D in place first derivative operator.
+
+See also [`FirstDerivativeBoundary!`](@ref) and [`FirstDerivativeInternal!`](@ref).
+"""
+function D₁! end
+"""
+    D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
+1D [`D₁!`](@ref).
+"""
+function D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer) where T
+    FirstDerivativeBoundary!(uₓ,u,Δx,n,Left,order)
+    FirstDerivativeInternal!(uₓ,u,Δx,n,order)
+    FirstDerivativeBoundary!(uₓ,u,Δx,n,Right,order)
+end
+"""
+    function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
+1D implementation for 2D problems for [`D₁!`](@ref).
+"""
+function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer) where T
+    loopdir = SelectLoopDirection(dim)
+    for (cache,U) in zip(loopdir(uₓ),loopdir(u))
+        D₁!(cache,U,n,Δ,order)
+    end
+    uₓ
+end
+"""
+    function PeriodicD₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer)
+1D implementation for 2D problems for [`D₁!`](@ref).
+"""
+function PeriodicD₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer) where T
+    loopdir = SelectLoopDirection(dim)
+    for (cache,U) in zip(loopdir(uₓ),loopdir(u))
+        FirstDerivativePeriodic!(cache,U,Δ,n,order)
+    end
+    uₓ
 end
