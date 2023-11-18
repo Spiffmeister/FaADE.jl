@@ -67,7 +67,11 @@ end
 
 
 
-
+"""
+    SecondDerivativePeriodic
+Pointwise stencil for a second derivative
+"""
+function SecondDerivativePeriodic end
 @inline function SecondDerivativePeriodic(u::VT,c::VT,Δx::TT,::DerivativeOrder{2},n::Integer,i::Integer) where {TT,VT<:AbstractVector{TT}}
     @inbounds (0.5*(c[i] + c[_prev(i,n)])*u[_prev(i,n)] - 0.5*(c[_next(i,n)] + 2c[i] + c[_prev(i,n)])*u[i] + 0.5*(c[i] + c[_next(i,n)])*u[_next(i,n)])/Δx^2
 end
@@ -76,7 +80,7 @@ end
     imm = _prev(i-1,n); ipp = _next(i+1,n)
 
     @inbounds ((-cx[im]/0.6e1 + cx[imm]/0.8e1 + cx[i]/0.8e1)*u[imm] +
-    (-cx[imm]/0.6e1 - cx[ip]/0.6e1 - cx[ip]/0.2e1 - cx[i]/0.2e1)*u[ip] +
+    (-cx[imm]/0.6e1 - cx[ip]/0.6e1 - cx[im]/0.2e1 - cx[i]/0.2e1)*u[im] +
     (cx[imm]/0.24e2 + 0.5e1/0.6e1*cx[im] + 0.5e1/0.6e1*cx[ip] + cx[ipp]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
     (-cx[im]/0.6e1 - cx[ipp]/0.6e1 - cx[i]/0.2e1 - cx[ip]/0.2e1)*u[ip] +
     (-cx[ip]/0.6e1 + cx[i]/0.8e1 + cx[ipp]/0.8e1)*u[ipp])/(-Δx^2)
@@ -108,15 +112,9 @@ function SecondDerivativeBoundary! end
 """
 @inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
-        Δx::TT,::NodeType{:Left},::DerivativeOrder{2},α::TT) where TT
-
-    uₓₓ[1] = α*uₓₓ[1]
-end
-@inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
-        u::AbstractArray{TT},c::AbstractArray{TT},
-        Δx::TT,::NodeType{:Right},::DerivativeOrder{2},α::TT) where TT
-    
-    uₓₓ[end] = α*uₓₓ[end]
+        Δx::TT,::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,TN}
+    TN == :Left ? j = 1 : j = lastindex(uₓₓ)
+    uₓₓ[j] = α*uₓₓ[j]
 end
 
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
