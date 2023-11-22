@@ -26,5 +26,6 @@ module Derivatives
     export mul!
 
     export build_H, innerH
+    export MassMatrix, DiagonalH, CompositeH
 
 end

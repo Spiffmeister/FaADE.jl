@@ -48,17 +48,17 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
     ymode ∈ modelist ? nothing : error("mode unavailable")
 
     if typeof(grid) <: Grid2D
-        xy = [[x,y] for y in grid.gridy for x in grid.gridx]
+        xy = [collect(grid[I]) for I in eachindex(grid)]
     end
 
-    BPlane = construct_plane(χ,xy,z[1],(grid.nx,grid.ny))
-    FPlane = construct_plane(χ,xy,z[2],(grid.nx,grid.ny))
-    plane = reshape(xy,grid.nx,grid.ny)
+    BPlane = construct_plane(χ,xy,z[1],size(grid))
+    FPlane = construct_plane(χ,xy,z[2],size(grid))
+    # plane = reshape(xy,grid.nx,grid.ny)
 
     postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
     postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
 
-    Pgrid = ParallelGrid{T,2,typeof(BPlane.x),typeof(plane)}(plane,BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
+    Pgrid = ParallelGrid{T,2,typeof(BPlane.x)}(BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
 
     return Pgrid
 end

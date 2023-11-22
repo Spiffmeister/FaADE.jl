@@ -1,5 +1,56 @@
 
 
+abstract type MassMatrix{TYPE,TT,VT} end
+
+struct DiagonalH{TT<:Real,VT<:AbstractVector{TT},TYPE} <: MassMatrix{TYPE,TT,VT}
+    Boundary    :: VT
+    Interior    :: TT
+    Δ           :: TT
+    n           :: Int64
+    Bwidth      :: Int64
+
+    function DiagonalH(order::Int,Δx::TT,n::Int) where {TT}
+        if order == 2
+            H = TT.([1//2])
+        elseif order == 4
+            H = TT.([17//48, 59//48, 43//48, 49//48])
+        end
+
+        interior = one(TT)
+
+        new{TT,Vector{TT},:Diagonal}(H,interior,Δx,n,length(H))
+    end
+end
+
+
+struct CompositeH{DIM,TT<:Real,VT<:AbstractArray,TYPE}
+    H :: NTuple{DIM,MassMatrix{TYPE,TT,VT}}
+    sz :: Vector{Int}
+    function CompositeH(H...)
+        sz = [H[i].n for i in 1:length(H)]
+        new{length(H),eltype(H[1].Boundary),typeof(H[1].Boundary),:Diagonal}(H,sz)
+    end
+end
+
+
+
+
+function mul!(u::VT,H::DiagonalH{TT},v::VT) where {TT,VT<:AbstractVector{TT}}
+    tmp = TT(0)
+    for i = 1:B.n
+        tmp += u[i] * H[i] * v[i]
+    end
+    return tmp
+end
+function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
+    tmp = TT(0)
+    for j = 1:H.sz[2]
+        for i = 1:H.sz[1]
+            tmp += u[i,j] * H[1][i] * H[2][j] * v[i,j]
+        end
+    end
+end
+
 
 
 """
@@ -81,4 +132,37 @@ function build_H(order,n)
 end
 
 
+
+
+
+Base.size(H::DiagonalH) = (H.n,H.n)
+Base.size(H::CompositeH) = (H.sz[1],H.sz[2])
+
+Base.length(H::DiagonalH) = H.n
+Base.length(H::CompositeH) = prod(H.sz)
+
+Base.lastindex(H::CompositeH) = length(H)
+
+
+function Base.getindex(H::DiagonalH,i::Int)
+    if i < 1 || i > H.n
+        error("Index out of bounds")
+    elseif i <= H.Bwidth
+        return H.Boundary[i] * H.Δ
+    elseif i > H.n - H.Bwidth
+        return H.Boundary[H.n-i+1] * H.Δ
+    else
+        return H.Interior * H.Δ
+    end
+end
+function Base.getindex(H::DiagonalH{TT},i::Int,j::Int) where {TT}
+    if i != j
+        return TT(0)
+    else
+        return H[i]*H.Δ
+    end
+end
+function Base.getindex(H::CompositeH,i::Int,j::Int)
+    return H.H[1][i]*H.H[2][j]
+end
 

@@ -52,6 +52,17 @@ Represents a torus in boundary using Fourier series in `R` and `Z` coordinates a
 ``R(θ,ζ) = ∑ᵢⱼ Rᵢⱼ cos(mⱼθ - nᵢζ)``
 ``Z(θ,ζ) = ∑ᵢⱼ Zᵢⱼ sin(mⱼθ - nᵢζ)``
 where `Rᵢⱼ` and `Zᵢⱼ` are the Fourier coefficients and `mⱼ` and `nᵢ` are the Fourier modes.
+
+Example:
+```julia
+Rin = [3e-1]; Zin=[-3e-1]
+Rout = [6e-1]; Zout=[-6e-1]
+
+inner = Torus(Rout,Zout,[1],[0])
+outer = Torus(Rout,Zout,[1],[0])
+
+meshgrid(inner,outer,0.0,11,21)
+```
 """
 struct Torus{TT}
     R::Array{TT}
