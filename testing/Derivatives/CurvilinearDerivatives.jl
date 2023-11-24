@@ -16,8 +16,8 @@ function buildprob2D(D,f,cx,cy,e)
     for i in 1:D.nx
         for j in 1:D.ny
             if FaADE.Grid.coordtype(D) == CartesianMetric
-                ue[i,j] = e(D.gridx[i],D.gridy[j])
-                u[i,j]  = f(D.gridx[i],D.gridy[j])
+                ue[i,j] = e(D.gridx[i,j],D.gridy[i,j])
+                u[i,j]  = f(D.gridx[i,j],D.gridy[j])
             else
                 ue[i,j] = e(D.gridx[i,j],D.gridy[i,j])
                 u[i,j]  = f(D.gridx[i,j],D.gridy[i,j])
@@ -50,37 +50,158 @@ function setKoefficient!(K,kx,ky,G::FaADE.Grid.LocalGridType{TT,2,MET}) where {T
 end
 
 
-# New solver 1 volume
-cbottom(u) = [u,0.0]
-cleft(v) = [0.0,v]
-cright(v) = [1.0,v]
-ctop(u) = [u,1.0]
+@testset "2D Cartesian box" begin
+    cbottom(u) = [u,0.0]
+    cleft(v) = [0.0,v]
+    cright(v) = [1.0,v]
+    ctop(u) = [u,1.0]
+    
+    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    
+    u₀(x,y) = x^2
+    kx(x,y) = 1.0
+    ky(x,y) = 1.0
+    
+    uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
+    
+    setKoefficient!(K,kx,ky,Dom)
+    
+    order = FaADE.Derivatives.DerivativeOrder{2}()
 
-Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
+    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
 
-DomO = Grid2D([0.0,1.0],[0.0,1.0],21,21)
+    D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
 
-u₀(x,y) = x^2
-# u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
-kx(x,y) = 2.0
-ky(x,y) = 2.0
+    FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
 
-uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
-
-setKoefficient!(K,kx,ky,DomO)
-
-
-order = FaADE.Derivatives.DerivativeOrder{2}()
-
-
-DOc = FaADE.Derivatives.DerivativeOperator{Float64,2,typeof(order),:Variable}(order,Dom.nx,Dom.ny,Dom.Δx,Dom.Δy,false,false)
-DO = FaADE.Derivatives.DerivativeOperator{Float64,2,typeof(order),:Constant}(order,Dom.nx,Dom.ny,Dom.Δx,Dom.Δy,false,false)
-
-FaADE.Derivatives.mul!(uxx,u,K,DOc)
-
-FaADE.Derivatives.mul!(uxx,u,[K[1],K[2]],DO)
+    @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+end    
 
 
+
+
+@testset "2D rescaled rectangle" begin
+    # x∈[0,2], y∈[0,1] rescaled to computational domain q∈[0,1], r=y
+    cbottom(u) = [2u,0.0]
+    cleft(v) = [0.0,v]
+    cright(v) = [2.0,v]
+    ctop(u) = [2u,1.0]
+    
+    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    
+    u₀(x,y) = x^2
+    kx(x,y) = 1.0
+    ky(x,y) = 1.0
+    
+    uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
+    
+    setKoefficient!(K,kx,ky,Dom)
+    
+    order = FaADE.Derivatives.DerivativeOrder{2}()
+
+    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
+    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
+
+    D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+
+    FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+
+    uxx_real = uxx./Dom.J
+
+    @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+end    
+
+
+
+
+@testset "2D rhombus" begin
+    # x∈[0,2], y∈[0,1] rescaled to computational domain q∈[0,1], r=y
+    
+    cbottom(u) = [-1.0,0.0] + u*[1,-1]
+    cleft(v) = [-1.0,0.0] + v*[1,1]
+    cright(v) = [0.0,-1.0] + v*[1,1]
+    ctop(u) = [0.0,1.0] + u*[1,-1]
+    
+    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    
+    kx(x,y) = 1.0
+    ky(x,y) = 1.0
+    
+    setKoefficient!(K,kx,ky,Dom)
+
+    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
+    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
+
+    @testset "Quadratic function" begin
+        u₀(x,y) = x^2
+        uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
+        setKoefficient!(K,kx,ky,Dom)
+        
+        D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+
+        uxx_real = uxx./Dom.J
+    
+        @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+    end
+
+    @testset "Exponential function" begin
+        u₀(x,y) = exp(-(x^2 + y^2)/0.02)
+        uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> u₀(x,y) * 4.0*(-0.02 + x^2 + y^2)/0.02^2)
+        setKoefficient!(K,kx,ky,Dom)
+        
+        D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+
+        uxx_real = uxx./Dom.J
+    
+        @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10 broken = true
+    end
+
+end
+
+
+@testset "chevron" begin
+    function cbottom(u)
+        x = u
+        u ≤ 0.5 ? y = -u : y = u-1
+        return [x,y]
+    end
+
+    cleft(v) = [0.0,v]
+
+    function ctop(u)
+        x = u
+        u ≤ 0.5 ? y = 1-u : y = u
+        return [x,y]
+    end
+
+    cright(v) = [1.0,v]
+
+    Dom = Grid2D(cbottom,cleft,cright,ctop,11,11)
+
+    u₀(x,y) = y^2
+
+    uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> u₀(x,y) * 4.0*(-0.02 + x^2 + y^2)/0.02^2)
+    setKoefficient!(K,kx,ky,Dom)
+
+    
+
+
+end
+
+
+
+
+
+# FaADE.Derivatives.mul!(uxx,u,K,DOc)
+
+# FaADE.Derivatives.mul!(uxx,u,[K[1],K[2]],DO)
+
+#=
 
 """
     Test with packing x points near the origin
@@ -128,3 +249,4 @@ FaADE.Derivatives.mul!(uxxc,u,K,DOc)
 
 
 
+=#

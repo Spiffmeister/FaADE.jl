@@ -74,6 +74,14 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
             end
         end
 
+        
+        if parallel
+            for I in eachblock(DBlock)
+                compute_parallel_operator(DBlock[I].Parallel.w_b,DBlock[I].u,DBlock[I].Parallel)
+            end
+        end
+
+
         # implicitsolve(P,G,Δt,t_f,SD)
         implicitsolve(soln,DBlock,G,Δt,t_f,SD)
     else
@@ -92,18 +100,20 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
 
     copyto!(:uₙ₊₁,  :u, DBlock)
-    while t < t_f
-
-    # nt = round(t_f/Δt)
+    
+    # while t < t_f+Δt/2
+    nt = round(t_f/Δt)
     # nt = 1;
-    # for i = 0:nt
-    #     t = i*Δt
+    for i = 0:nt
+        t = i*Δt
 
         theta_method(DBlock,t,Δt)
 
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
-                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock[1].Parallel)
+                println("b4",norm(DBlock[1].uₙ₊₁))
+                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel)
+                println("afta",norm(DBlock[1].uₙ₊₁))
             end
 
             # USED FOR DETERMINING EQUILIBRIUM

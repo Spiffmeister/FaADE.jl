@@ -11,6 +11,7 @@ module ParallelOperator
 
     using FaADE.Helpers
     using FaADE.Derivatives: build_H
+    using FaADE.Derivatives: MassMatrix, DiagonalH, CompositeH
 
     using FaADE.Grid
 
@@ -24,5 +25,6 @@ module ParallelOperator
     export construct_grid
     export generate_parallel_penalty
     export applyParallelPenalty!
+    export compute_parallel_operator
 
 end

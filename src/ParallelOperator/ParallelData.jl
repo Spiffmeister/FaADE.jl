@@ -16,14 +16,10 @@ In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
 """
 struct ParallelGrid{TT<:Real,
         DIM,
-        AT<:Matrix{TT},
-        PA<:Matrix{Vector{TT}}}
+        AT<:Matrix{TT}}
 
-    plane   :: PA
     Bplane  :: ParGrid{TT,AT}
     Fplane  :: ParGrid{TT,AT}
-    # w_f     :: AT
-    # w_b     :: AT
 end
 
 
@@ -36,7 +32,7 @@ end
 struct ParallelData{TT<:Real,
         DIM,
         GT}
-    PGrid       :: ParallelGrid{TT,DIM,Matrix{TT},Matrix{Vector{TT}}}
+    PGrid       :: ParallelGrid{TT,DIM,Matrix{TT}}
     κ           :: TT
     τ           :: TT
     Intercept   :: FieldLineIntercept
@@ -45,10 +41,12 @@ struct ParallelData{TT<:Real,
     Δx          :: TT
     Δy          :: TT
 
+    H           :: CompositeH{2,TT,Vector{TT},:Diagonal}
+
     w_f         :: Matrix{TT}
     w_b         :: Matrix{TT}
 
-    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
+    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT};κ=TT(1),intercept=nothing,order=2) where {TT}
 
         intercept_fieldlines = FieldLineIntercept(intercept)
         # intercept_fieldlines = intercept
@@ -56,7 +54,15 @@ struct ParallelData{TT<:Real,
         # K = DiffusionCoefficient(κ)
 
         # τ = -sqrt(1.0/((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1]) * G.Δx*G.Δy))
-        τ = -1/(G.Δx*G.Δy)
+        # τ = -1/(G.Δx*G.Δy)
+        # τ = TT(-1)
+
+        τ = TT(1)
+
+        Hx = DiagonalH(order,G.Δx,G.nx)
+        Hy = DiagonalH(order,G.Δy,G.ny)
+
+        H = CompositeH(Hx,Hy)
 
 
         gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
@@ -65,7 +71,7 @@ struct ParallelData{TT<:Real,
         w_f = zeros(TT,size(G))
         w_b = zeros(TT,size(G))
 
-        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,w_f,w_b)
+        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b)
     end
 end
 
