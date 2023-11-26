@@ -111,9 +111,9 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
-                println("b4",norm(DBlock[1].uₙ₊₁))
+                # println("b4",norm(DBlock[1].uₙ₊₁))
                 applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel)
-                println("afta",norm(DBlock[1].uₙ₊₁))
+                # println("afta",norm(DBlock[1].uₙ₊₁))
             end
 
             # USED FOR DETERMINING EQUILIBRIUM

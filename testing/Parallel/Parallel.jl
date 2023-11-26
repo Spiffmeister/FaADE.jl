@@ -45,7 +45,7 @@ u₀(x,y) = 0.0
 
 
 
-κ_para = 1.0e3
+κ_para = 1.0e10
 k = 1.0 #perpendicular diffusion
 println("===PARA=",κ_para,"===ORDER=",order,"===")
 

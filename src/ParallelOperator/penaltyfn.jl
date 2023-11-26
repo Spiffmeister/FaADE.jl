@@ -192,7 +192,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
 
     # w_f = getarray(P.w_f)
     # w_b = getarray(P.w_b)
-    println("parallel")
+    # println("parallel")
     #= NEW METHOD =#
     κ = P.κ
     w_b = P.w_b
@@ -220,7 +220,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
 end
 
 function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int) where {TT,AT}
-    println(norm(u))
+    # println(norm(u))
     for j in 1:ny
         for i in 1:nx
             u[i,j] = 1/(1 + θ * Δt * κ * τ / H[i,j]) * (
@@ -229,7 +229,7 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
                 )
         end
     end
-    println(norm(u))
+    # println(norm(u))
     u
 end
 
