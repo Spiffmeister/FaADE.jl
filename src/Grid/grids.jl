@@ -268,6 +268,7 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
     Base.getindex(G::GridType,i::Integer)
 """
 Base.getindex(G::Grid1D,i::Integer) = G.grid[i]
+Base.getindex(G::Grid2D,i::Integer) = (G.gridx[i],G.gridy[i])
 Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i,j],G.gridy[i,j])
 
 

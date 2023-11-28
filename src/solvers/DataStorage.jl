@@ -595,9 +595,9 @@ end
 
 
 
-function Base.iterate(DMB::DataMultiBlock,state=0)
+function Base.iterate(DMB::DataMultiBlock,state=1)
     state >= length(DMB) && return
-    return DMB.DTA[state], state+1
+    return DMB.Block[state], state+1
 end
 
 Base.getindex(DB::DataMultiBlock,i::Integer) = Base.getindex(DB.Block,i)

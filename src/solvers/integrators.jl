@@ -147,6 +147,7 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     end
 
     setDiffusionCoefficient!(DBlock)
+    # map(setDiffusionCoefficient!,DBlock.Block)
     setBoundaryConditions!(DBlock)
     
     # b = Δt (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
