@@ -64,12 +64,11 @@ Returns:
 struct Grid2D{TT,
         MET<:MetricType,
         GT<:AbstractArray{TT},
-        DT<:Union{Real,AbstractArray{TT}}
             } <: LocalGridType{TT,2,MET}
     gridx   :: GT
     gridy   :: GT
-    Δx      :: DT
-    Δy      :: DT
+    Δx      :: TT
+    Δy      :: TT
     nx      :: Integer
     ny      :: Integer
 
@@ -92,7 +91,7 @@ function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) whe
 
     J = qx = qy = rx = ry = zeros(eltype(gx.grid),(1,1))
 
-    return Grid2D{TT,CartesianMetric,typeof(X),typeof(gx.Δx)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
+    return Grid2D{TT,CartesianMetric,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
         J, qx, qy, rx, ry)
 end
 """
@@ -150,7 +149,7 @@ function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT};order=nothing,periodicx=fals
     rx = -yq./J # yr -> rx
     ry = xq./J # xq -> ry
     
-    return Grid2D{TT,CurvilinearMetric,typeof(𝒟x),eltype(𝒟x)}(𝒟x, 𝒟y, TT(1)/TT(nx-1), TT(1)/TT(ny-1), nx, ny,
+    return Grid2D{TT,CurvilinearMetric,typeof(𝒟x)}(𝒟x, 𝒟y, TT(1)/TT(nx-1), TT(1)/TT(ny-1), nx, ny,
         J, qx, qy, rx, ry)
 end
 """
@@ -161,7 +160,7 @@ Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate 
 """
 function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=2)
     X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
-    Grid2D(X,Y,order)
+    Grid2D(X,Y;order=order)
 end
 
 
@@ -228,14 +227,28 @@ function GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
 end
 """
     GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET},N}}) where {N,TT,MET}
-Multiblock grid for 2D grids, assumes the grids are stacked in X
+Multiblock grid for 2D grids
+
+For a stacked grid (i.e. a series of grids in a row) one can run,
+```julia
+    D1  = Grid2D([0.0,0.5],[0.0,1.0],5,5)
+    D2  = Grid2D([0.5,1.0],[0.0,1.0],5,5)
+    D3  = Grid2D([1.0,1.5],[0.0,1.0],5,5)
+
+    glayout = ([(2,Right)],
+                [(1,Left),(3,Right)],
+                [(2,Left)])
+
+    G = GridMultiBlock((D1,D2,D3),glayout)
+```
+
+TODO: Add example for non-stacked grids
+TODO: Add checking that there are no hanging nodes
 """
-function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,GT,DT,MET},N}},joints) where {N,TT,GT,DT,MET}
-    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET,GT},N}},joints) where {N,TT,GT,MET}
+    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]    
     return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
 end
-
-
 
 #============ Functions ============#
 
@@ -254,9 +267,8 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 """
     Base.getindex(G::GridType,i::Integer)
 """
-Base.getindex(G::Grid1D,i...) = G.grid[i...]
+Base.getindex(G::Grid1D,i::Integer) = G.grid[i]
 Base.getindex(G::Grid2D,i::Integer,j::Integer) = (G.gridx[i,j],G.gridy[i,j])
-Base.getindex(G::Grid2D{TT},i::Integer) where TT = (G.gridx[i],G.gridy[i])
 
 
 
