@@ -26,5 +26,6 @@ module ParallelOperator
     export generate_parallel_penalty
     export applyParallelPenalty!
     export compute_parallel_operator
+    export MagneticField
 
 end

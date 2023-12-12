@@ -1,5 +1,14 @@
 
 
+struct Injection_Dirichlet{
+        TN<:NodeType,
+        F1<:Function}
+    side    :: TN
+    RHS     :: F1
+end
+
+
+
 """
     SAT_Dirichlet
 Storage of all objects needed for a Dirichlet SAT ``\\left. u\\right|_{x_i} = g(t)`` where ``i\\in\\{0,1\\}``.
@@ -63,16 +72,16 @@ SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order) where {SIDE,AX} = SAT_Diric
 ###
 function SAT_Dirichlet_explicit!(dest::VT,u::VT,RHS::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
     for i = 1:SD.order
-        dest[i] += SD.α*c[1]*SD.H⁻¹D₁ᵀE[i]*(U[1] - RHS[1])
+        dest[i] += SD.α*c[1]*SD.H⁻¹D₁ᵀE[i]*(u[1] - RHS[1])
     end
     S[1] += SD.τ(c[1])*SD.H⁻¹EH⁻¹E*(u[1] - RHS[1])
 end
 function SAT_Dirichlet_explicit!(dest::VT,u::VT,RHS::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Right},NodeType{:Down}}}
     j = lastindex(dest)
     for i = 1:SD.order
-        dest[j-SD.order+i] += SD.α*C[j]*SD.H⁻¹D₁ᵀE[i]*(U[j] - RHS[j]) #D₁ᵀE₀
+        dest[j-SD.order+i] += SD.α*C[j]*SD.H⁻¹D₁ᵀE[i]*(u[j] - RHS[j]) #D₁ᵀE₀
     end
-    S[j] += SD.τ(c[j])*c[j]SD.H⁻¹EH⁻¹E*(U[j] - RHS[j])
+    S[j] += SD.τ(c[j])*c[j]SD.H⁻¹EH⁻¹E*(u[j] - RHS[j])
 end
 
 

@@ -22,7 +22,11 @@ struct ParallelGrid{TT<:Real,
     Fplane  :: ParGrid{TT,AT}
 end
 
-
+struct MagneticField{BT<:Union{Function,Nothing},STATE,TT<:Real,AT<:Matrix{TT}}
+    B               :: BT
+    istimedependant :: Bool
+    Bp              :: AT
+end
 
 struct FieldLineIntercept{F<:Union{Function,Nothing}}
     Intercept :: F
@@ -31,7 +35,8 @@ end
 
 struct ParallelData{TT<:Real,
         DIM,
-        GT}
+        GT,
+        BT}
     PGrid       :: ParallelGrid{TT,DIM,Matrix{TT}}
     κ           :: TT
     τ           :: TT
@@ -46,7 +51,9 @@ struct ParallelData{TT<:Real,
     w_f         :: Matrix{TT}
     w_b         :: Matrix{TT}
 
-    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT};κ=TT(1),intercept=nothing,order=2) where {TT}
+    MagneticField   :: BT
+
+    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing) where {TT}
 
         intercept_fieldlines = FieldLineIntercept(intercept)
         # intercept_fieldlines = intercept
@@ -71,7 +78,14 @@ struct ParallelData{TT<:Real,
         w_f = zeros(TT,size(G))
         w_b = zeros(TT,size(G))
 
-        new{TT,2,typeof(gridx)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b)
+        Bp = zeros(TT,(3,3))
+        MF = MagneticField{typeof(B),:EQUILIBRIUM,TT,typeof(Bp)}(B,false,Bp)
+
+        if isnothing(B)
+            @warn "B not provided, perpendicular solve may not be performed correctly."
+        end
+
+        new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF)
     end
 end
 

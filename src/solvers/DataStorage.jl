@@ -1,6 +1,6 @@
 
 abstract type newDataBlockType{dtype,DIM} end
-abstract type newLocalDataBlockType{dtype,DIM} <: newDataBlockType{dtype,DIM} end
+abstract type newLocalDataBlockType{dtype,DIM,atype} <: newDataBlockType{dtype,DIM} end
 
 
 
@@ -303,33 +303,90 @@ _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann}
 
 
 
+function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CurvilinearMetric},Para::PT) where {TT,PT}
+    # Used to compute I-BB^T/|B|^2
+    function MagField(X)
+        if (PT <: Nothing)
+            return zeros(TT,3)
+        else
+            return Para.MagneticField.B(X,TT(0.0))
+        end
+    end
 
-function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {TT,MET}
+    cache = zeros(TT,size(G)) # Temporary storage
+    
     if typeof(P.Kx) <: Real
-        if MET == CartesianMetric
-            @. K[1] = P.Kx
-            @. K[2] = P.Ky
-        elseif MET == CurvilinearMetric
-            for i in eachindex(G)
-                K[1][i] = P.Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
-                K[2][i] = P.Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-                K[3][i] = P.Kx * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+        for i in eachindex(G)
+            B = MagField(G[I])
+            NB = norm(B,2)^2
+            if NB == TT(0)
+                NB = TT(1)
+            end
+            K[1][i] = P.Kx * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+            K[2][i] = P.Ky * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+
+            cache = P.Kx * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+
+            D₁!(K[3],cache,G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
+            D₁!(K[4],cache,G.ny,G.Δy,2,TT(0),2) # Cross derivative term in y
+        end
+    elseif typeof(P.Kx) <: Function
+        
+        # D₁!(K[3],K[1],G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
+        # D₁!(K[4],K[2],G.ny,G.Δy,2,TT(0),2) # Cross derivative term in y
+
+        for i in eachindex(G)
+            B = MagField(G[i])
+            NB = norm(B,2)^2
+            if NB == TT(0)
+                NB = TT(1)
+            end
+            K[1][i] = P.Kx(G[i]) * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+            K[2][i] = P.Ky(G[i]) * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+            K[3][i] = P.Kx(G[i]) * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+        end
+    end
+    K
+end
+
+function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetric},Para::PT) where {TT,PT}
+    function MagField(X)
+        if PT <: Nothing
+            return zeros(TT,3)
+        else
+            return Para.MagneticField.B(X,TT(0.0))
+        end
+    end
+    
+    if typeof(P.Kx) <: Real
+        for I in eachindex(G)
+            B = MagField(G[I])
+            NB = norm(B,2)^2
+            K[1][I] = P.Kx * (TT(1) - B[1]^2/NB)
+            K[2][I] = P.Ky * (TT(1) - B[2]^2/NB)
+            if NB == TT(0)
+                K[1][I] = P.Kx
+                K[2][I] = P.Ky
+            end
+            if !(PT<:Nothing)
+                K[3][I] = P.Kx * B[1]*B[2]/NB
             end
         end
     elseif typeof(P.Kx) <: Function
-        if MET == CartesianMetric
-            for i in eachindex(G)
-                K[1][i] = P.Kx(G[i])
-                K[2][i] = P.Ky(G[i])
-
-                D₁!(K[3],K[1],G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
-                D₁!(K[4],K[2],G.ny,G.Δy,2,TT(0),2) # Cross derivative term in y
+        tmp = zeros(eltype(G),size(G))
+        for I in eachindex(G)
+            B = MagField(G[I])
+            NB = norm(B,2)^2
+            if NB == TT(0)
+                NB = TT(1)
             end
-        elseif MET == CurvilinearMetric
-            for i in eachindex(G)
-                K[1][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
-                K[2][i] = P.Ky(G[i]) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-                K[3][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            K[1][I] = P.Kx(G[I]) * (TT(1) - B[1]^2/NB)
+            K[2][I] = P.Ky(G[I]) * (TT(1) - B[1]^2/NB)
+            if !(PT<:Nothing)
+                tmp = P.Kx * B[1]*B[2]/NB
+                D₁!(K[3],tmp,G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
+            else
+                D₁!(K[3],K[1],G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
             end
         end
     end
@@ -337,17 +394,20 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,MET}) where {T
 end
 
 
-function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET}) where {TT,DIM,MET}
+"""
+    _newLocalDataBlockBlocks build all necessary blocks for a local data block
+"""
+function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {TT,DIM,MET,PT}
     u       = zeros(TT,size(G))
     uₙ₊₁    = zeros(TT,size(G))
     if DIM == 1
         K       = zeros(TT,size(G))
         # K = (zeros(TT,G),)
     elseif DIM == 2
-        if MET == CartesianMetric
+        if (MET == CartesianMetric) && (PT<:Nothing)
             K       = [zeros(TT,size(G)), zeros(TT,size(G))]
-        elseif MET == CurvilinearMetric
-            K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+        elseif (MET == CurvilinearMetric) || !(PT<:Nothing)
+            K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
         end
         # K = (zeros(TT,size(G)),zeros(TT,size(G)))
     end
@@ -363,16 +423,16 @@ end
 Contains the data for a local block
 """
 mutable struct newLocalDataBlock{TT<:Real,
-        DIM,
+        DIM,    # Dimension
         AT  <: AbstractArray{TT},
-        KT,
-        DCT,
-        GT <: GridType,
-        BT,
-        DT  <: DerivativeOperator,
-        ST  <: SourceTerm,
+        KT,     # Coefficient storage
+        DCT,    # Diffusion coefficient type
+        GT <: GridType, # Grid type
+        BT,     # Boundary conditions
+        DT  <: DerivativeOperator,  # Derivative operator
+        ST  <: SourceTerm,          # Source term
         PT, # Parallel map or Nothing
-        } <: newLocalDataBlockType{TT,DIM}
+        } <: newLocalDataBlockType{TT,DIM,AT}
     u           :: AT
     uₙ₊₁        :: AT
     K           :: KT
@@ -454,9 +514,20 @@ Initialise a data block for a 2D problem with only 1 grid.
 """
 function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
-    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
+    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G,P.Parallel)
 
-    _setKoefficient!(K,P,G)
+    if typeof(P.Parallel) <: Nothing
+        _setKoefficient!(K,P,G,nothing)
+    else
+        if typeof(P.Parallel.MagneticField.B) <: Nothing
+            _setKoefficient!(K,P,G,nothing)
+        else
+            _setKoefficient!(K,P,G,P.Parallel)
+        end
+        # _setKoefficient!(K,P,G,P.Parallel)
+    end
+
+    # _setKoefficient!(K,P,G,P.Parallel)
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
@@ -542,12 +613,10 @@ end
     getarray(D::newLocalDataBlock,s::Symbol)
 Type stable getfield for arrays
 """
-@inline function getarray(D::newLocalDataBlock{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
+@inline function getarray(D::newLocalDataBlockType{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
     rt = getfield(D,s)
     return rt :: AT
 end
-
-@inline eachboundary(D::newLocalDataBlock{TT,DIM}) where {TT,DIM} = Base.OneTo(2DIM)
 
 """
     DataMultiBlock
@@ -565,27 +634,16 @@ struct DataMultiBlock{TT<:Real,
     parallel:: Bool
 
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
-        # DTA = [newLocalDataBlock(P,G)]
-
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = (newLocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)
     end
     function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT) where {TT,DIM}
-        # DTA = [newLocalDataBlock(P,G,I)]
-        # DTA = []
-        # for I in eachgrid(G)
-        #     push!(DTA, newLocalDataBlock(P,G,I))
-        # end
         DTA = map((x)->newLocalDataBlock(P,G,x),eachgrid(G))
         DTA = tuple(DTA...)
         SC = StepConfig{TT}(t,Δt)
         new{TT,DIM,length(DTA),typeof(DTA)}(DTA,SC,length(DTA),false)
     end
-    # function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM,MET},Δt::TT,t::TT) where {TT,DIM,MET}
-    #     DTA = [newLocalDataBlock(P,Grid,Δt) for Grid in G.Grids]
-    #     new{TT,DIM,typeof(DTA)}(DTA,StepConfig{TT}(t,Δt,TT(0),true),nothing,0.0)
-    # end
     function DataMultiBlock(D::newLocalDataBlock{TT,DIM}) where {TT,DIM} #== TESTING METHOD ==#
         DTA = (D,)
         new{TT,DIM,1,typeof(DTA)}(DTA,D.SC,length(DTA),false)
