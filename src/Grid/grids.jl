@@ -317,7 +317,8 @@ Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 """
     Base.eachindex(G::GridType)
 """
-Base.eachindex(G::GridType) = Base.OneTo(length(G))
+# Base.eachindex(G::GridType) = Base.OneTo(length(G))
+Base.eachindex(G::GridType) = eachindex(1:length(G))
 
 """
     Base.eachindex(G::GridMultiBlock)
