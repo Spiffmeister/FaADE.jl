@@ -12,7 +12,7 @@ Fields:
 mutable struct solution{TT,
         AT,
         GT<:GridType,
-        PT<:Union{PDEProblem,newPDEProblem}}
+        PT<:newPDEProblem}
     u       :: Vector{AT}
     grid    :: GT
     Δt      :: Union{TT,Vector{TT}}
@@ -24,31 +24,31 @@ end
     solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
     DEPRECATED
 """
-function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
-    if preallocate
-        N = ceil(Int64,t/Δt)
-        n = length(x)
-        u = [zeros(Float64,n) for _ in 1:N]
+# function solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
+#     if preallocate
+#         N = ceil(Int64,t/Δt)
+#         n = length(x)
+#         u = [zeros(Float64,n) for _ in 1:N]
 
-        u[1] = u₀
+#         u[1] = u₀
 
-        new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
-    else #If an adaptive time step is being used, preallocation is impossible
+#         new{TT,typeof(u),typeof(grid),typeof(PT)}(u,grid,Δt,collect(range(0.0,t,length=N)))
+#     else #If an adaptive time step is being used, preallocation is impossible
 
-        if typeof(grid) <: Grid1D
-            u = prob.InitialCondition.(grid.grid)
-        elseif typeof(grid) <: Grid2D
-            u = zeros(TT,size(grid))
-            for I in eachindex(grid)
-                u[I] = prob.InitialCondition(grid[I]...)
-            end
-        end
+#         if typeof(grid) <: Grid1D
+#             u = prob.InitialCondition.(grid.grid)
+#         elseif typeof(grid) <: Grid2D
+#             u = zeros(TT,size(grid))
+#             for I in eachindex(grid)
+#                 u[I] = prob.InitialCondition(grid[I]...)
+#             end
+#         end
 
 
-        return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
-    end
+#         return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+#     end
 
-end
+# end
 """
     solution{TT}(grid::LocalGridType,t::TT,Δt::TT,prob::newPDEProblem) where TT
 """

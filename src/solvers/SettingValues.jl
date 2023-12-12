@@ -6,9 +6,11 @@ Adds PDE forcing term
 """
 function addSource! end
 function addSource!(S::SourceTerm{Nothing},tmp...) end
-function addSource!(S::SourceTerm{F},u::AbstractArray{TT},grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,F<:Function}
+function addSource!(S::SourceTerm{FT},u::AT,grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,AT<:AbstractArray{TT},FT<:Function}
+    f = S.source
     for I in eachindex(grid)
-        u[I] += Δt*(1-θ)*S.source(grid[I]...,t) + Δt*θ*S.source(grid[I]...,t+Δt)
+        # u[I] = Δt*θ*f(grid[I]...,t+Δt)
+        u[I] = u[I] + Δt*(1-θ)*f(grid[I],t) + Δt*θ*f(grid[I],t+Δt)
     end
     u
 end
@@ -45,7 +47,6 @@ function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) end
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
-    # for I in eachboundary(D)
     setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t, D.SC.θ)
     setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t, D.SC.θ)
     if DIM == 2
@@ -136,6 +137,7 @@ end
 
 """
     applySAT!
+Applies SATs to the given data block.
 """
 function applySAT! end
 """
@@ -225,7 +227,6 @@ end
 
 
 
-
 """
     setDiffusionCoefficient!
 Sets the diffusion coefficient for real or functional diffusion coefficients
@@ -250,11 +251,14 @@ end
 2D functional diffusion coefficient
 """
 @inline function setDiffusionCoefficient!(κ::Function,K::AbstractArray,grid::Grid2D)
-    for i = 1:grid.nx
-        for j = 1:grid.ny
-            K[i,j] = κ(grid[i,j]...)
-        end
+    for I in eachindex(grid)
+        K[I] = κ(grid[I]...)
     end
+    # for i = 1:grid.nx
+    #     for j = 1:grid.ny
+    #         K[i,j] = κ(grid[i,j]...)
+    #     end
+    # end
 end
 """
     setDiffusionCoefficient!(D::newLocalDataBlock{TT,1})
@@ -408,7 +412,7 @@ end
 """
     applyParallelPenalty
 """
-applyParallelPenalty(D::newLocalDataBlock) = applyParallelPenalty!(D.uₙ₊₁,D.u,D.SC.Δt,D.PGrid)
+@inline applyParallelPenalty(D::newLocalDataBlock) = applyParallelPenalty!(D.uₙ₊₁,D.u,D.SC.Δt,D.PGrid)
 """
     applyParallelPenalties
 """
@@ -417,4 +421,26 @@ function applyParallelPenalties(DB::DataMultiBlock)
         applyParallelPenalty(DB[I])
     end
 end
+
+
+
+
+
+#=
+"""
+    kIminusB!
+Compute ``I-BBᵀ/||B||²`` for each point in the grid
+"""
+function IminusB!(MagField::Function,t::TT) where {TT,AT::AbstractArray{TT}}
+    for I in eachindex(G)
+        B = MagField(grid[I],t)
+        tmp = I - B*B'/norm(B)^2
+    end
+end
+=#
+
+
+# K[I] = κ(grid[I],t)
+# K[I] += IminusB(MagField,t,grid[I])
+
 

@@ -307,7 +307,7 @@ end
 """
     Base.length(G::GridType)
 """
-Base.length(G::GridType) = prod(size(G))
+Base.length(G::GridType) = prod(size(G)) :: Int
 
 """
     Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT}

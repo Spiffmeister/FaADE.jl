@@ -6,9 +6,9 @@ module Inputs
     using FaADE.Derivatives
     using FaADE.ParallelOperator
 
-    include("oldUserTypes.jl")
-    include("oldDataStorage.jl")
-    include("SAT_Interface.jl")
+    # include("oldUserTypes.jl")
+    # include("oldDataStorage.jl")
+    # include("SAT_Interface.jl")
     include("UserTypes.jl")
 
     export newPDEProblem
@@ -17,15 +17,15 @@ module Inputs
     export SATBoundaries
 
     # oldUserTypes
-    export BoundaryConditionData
-    export Boundary, PeriodicBoundary,
-    PDEProblem, VariableCoefficientPDE1D, VariableCoefficientPDE2D,BoundaryConditions
-    export SAT_Interface, SAT_Interface!
-    export DataBlockType, BoundaryStorage, 
-        DataBlock,
-        BoundaryData1D, BoundaryData2D, 
-        copyUtoSAT!, copySATtoU!, addSATtoU!,
-        addSource!, BoundaryConditions
+    # export BoundaryConditionData
+    # export Boundary, PeriodicBoundary,
+    # PDEProblem, VariableCoefficientPDE1D, VariableCoefficientPDE2D,BoundaryConditions
+    # export SAT_Interface, SAT_Interface!
+    # export DataBlockType, BoundaryStorage, 
+    #     DataBlock,
+    #     BoundaryData1D, BoundaryData2D, 
+    #     copyUtoSAT!, copySATtoU!, addSATtoU!,
+    #     addSource!, BoundaryConditions
 
 
 end

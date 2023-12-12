@@ -23,11 +23,7 @@ module solvers
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!, compute_parallel_operator
 
-    using FaADE.Inputs: newPDEProblem, newProblem1D, newProblem2D, 
-    BoundaryConditionData, Boundary, PeriodicBoundary,
-    PDEProblem, VariableCoefficientPDE1D, VariableCoefficientPDE2D,BoundaryConditions,
-    # old imports
-    DataBlockType, BoundaryStorage, DataBlock, BoundaryData1D, BoundaryData2D
+    using FaADE.Inputs: newPDEProblem, newProblem1D, newProblem2D#, 
 
     
     include("DataStorage.jl")

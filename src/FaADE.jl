@@ -33,9 +33,6 @@ module FaADE
     # Helpers export
     using FaADE.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
     using FaADE.Helpers: Left, Internal, Right, Up, Down
-    # using FaADE.Helpers: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric
-    # using FaADE.Helpers: Boundary, PeriodicBoundary
-    # using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
     using FaADE.Derivatives: D₁, D₂, D₁!, D₂!
 
@@ -51,13 +48,12 @@ module FaADE
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, GridMultiBlock, Joint
-    export Boundary, PeriodicBoundary, CartesianMetric, CurvilinearMetric
-    export VariableCoefficientPDE1D, VariableCoefficientPDE2D
+    export CartesianMetric, CurvilinearMetric
     export construct_grid, generate_parallel_penalty, ParallelData
 
     export D₁, D₂, D₂!, D₁!
 
-    export solve#, build_H
+    export solve
     
     export SimultanousApproximationTerm,
         SAT_Dirichlet,
@@ -66,9 +62,10 @@ module FaADE
         #SAT_Robin, 
         #Split_domain
 
-    using FaADE.Inputs: newProblem1D, newProblem2D,
-    #old using
-    Boundary,PeriodicBoundary, VariableCoefficientPDE1D, VariableCoefficientPDE2D
+    using FaADE.Inputs: newProblem1D, newProblem2D
+
+
+
     export newProblem1D, newProblem2D
     
 
