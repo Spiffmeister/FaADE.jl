@@ -341,9 +341,12 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CurvilinearMet
             if NB == TT(0)
                 NB = TT(1)
             end
-            K[1][i] = P.Kx(G[i]) * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
-            K[2][i] = P.Ky(G[i]) * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-            K[3][i] = P.Kx(G[i]) * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            K[1][i] = P.Kx(G[i]) * J[i] * (G.qx[i]^2 * (TT(1) - B[1]^2/NB)
+                    + G.qy[i]^2 * (TT(1) - B[2]^2/NB) + 2*G.qx[i]*G.qy[i]*B[1]*B[2]/NB)
+            K[2][i] = P.Ky(G[i]) * J[i] * (G.rx[i]^2 * (TT(1) - B[1]^2/NB)
+                    + G.ry[i]^2 * (TT(1) - B[2]^2/NB) + 2*G.rx[i]*G.ry[i]*B[1]*B[2]/NB)
+            K[3][i] = P.Kx(G[i]) * G.J[i] * (G.qx[i]*G.rx[i] * (TT(1) - B[1]^2/NB)
+                    + G.qy[i]*G.ry[i] * (TT(1) - B[2]^2/NB) + (G.qx[i]*G.ry[i] + G.qy[i]*G.rx[i])*B[1]*B[2]/NB)
         end
     end
     K
@@ -357,21 +360,27 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             return Para.MagneticField.B(X,TT(0.0))
         end
     end
-    
     if typeof(P.Kx) <: Real
         for I in eachindex(G)
             B = MagField(G[I])
             NB = norm(B,2)^2
+            if NB ≤ TT(2e-16)
+            # if NB == 0
+                NB = TT(1)
+                B[1] = B[2] = TT(0)
+            end
             K[1][I] = P.Kx * (TT(1) - B[1]^2/NB)
             K[2][I] = P.Ky * (TT(1) - B[2]^2/NB)
-            if NB == TT(0)
-                K[1][I] = P.Kx
-                K[2][I] = P.Ky
-            end
             if !(PT<:Nothing)
                 K[3][I] = P.Kx * B[1]*B[2]/NB
+                # if abs(K[3][I]) == 0.5
+                #     println(I," ",B[1]," ",B[2]," ",NB)
+                # end
             end
         end
+        # for r in eachrow(K[3])
+        #     println(r)
+        # end
     elseif typeof(P.Kx) <: Function
         tmp = zeros(eltype(G),size(G))
         for I in eachindex(G)
@@ -382,12 +391,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             end
             K[1][I] = P.Kx(G[I]) * (TT(1) - B[1]^2/NB)
             K[2][I] = P.Ky(G[I]) * (TT(1) - B[1]^2/NB)
-            if !(PT<:Nothing)
-                tmp = P.Kx * B[1]*B[2]/NB
-                D₁!(K[3],tmp,G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
-            else
-                D₁!(K[3],K[1],G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
-            end
+            K[3][I] = P.Ky(G[I]) * B[1]*B[2]/NB
         end
     end
     K
@@ -404,10 +408,10 @@ function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {
         K       = zeros(TT,size(G))
         # K = (zeros(TT,G),)
     elseif DIM == 2
-        if (MET == CartesianMetric) && (PT<:Nothing)
-            K       = [zeros(TT,size(G)), zeros(TT,size(G))]
-        elseif (MET == CurvilinearMetric) || !(PT<:Nothing)
+        if (MET == CurvilinearMetric) || !(typeof(Para.MagneticField).parameters[1] == Nothing)
             K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+        else
+            K       = [zeros(TT,size(G)), zeros(TT,size(G))]
         end
         # K = (zeros(TT,size(G)),zeros(TT,size(G)))
     end
@@ -429,7 +433,7 @@ mutable struct newLocalDataBlock{TT<:Real,
         DCT,    # Diffusion coefficient type
         GT <: GridType, # Grid type
         BT,     # Boundary conditions
-        DT  <: DerivativeOperator,  # Derivative operator
+        DT  <: DerivativeOperatorType,  # Derivative operator
         ST  <: SourceTerm,          # Source term
         PT, # Parallel map or Nothing
         } <: newLocalDataBlockType{TT,DIM,AT}
@@ -526,14 +530,22 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
         end
         # _setKoefficient!(K,P,G,P.Parallel)
     end
-
     # _setKoefficient!(K,P,G,P.Parallel)
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
-    D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
+
+    if length(K) == 3
+        difftype = :Variable
+    else
+        difftype = :Constant
+    end
+    # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
+    Dx = DiffusionOperator(G.nx,G.Δx,GetOrder(P.order),false,difftype)
+    Dy = DiffusionOperator(G.ny,G.Δy,GetOrder(P.order),false,difftype)
+    D = DiffusionOperatorND(Dx,Dy)
     PMap = P.Parallel
     source = P.source
     # source = SourceTerm{Nothing}(nothing)

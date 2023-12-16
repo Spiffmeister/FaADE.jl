@@ -87,16 +87,30 @@ end
 """
     Multidimensional version of variable coefficient
 """
-function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable},α) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO<:DerivativeOrder}
+function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable}) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO<:DerivativeOrder}
     cx = c[1]
     cy = c[2]
     cxy = c[3]
+    cache = D.cache
 
-    for (DEST,U,Kx,Kxy) in zip(eachcol(dest),eachcol(u),eachcol(cx),eachcol(cxy))
-        mul!(DEST,U,Kx,Kxy,D.DO[1],α)
+    for (TMP,U) in zip(eachrow(cache),eachrow(u))
+        FirstDerivativeInternal!(TMP,U,D.DO[2].Δx,D.DO[2].n,        D.DO[2].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Left,   D.DO[2].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Right,  D.DO[2].order,TT(0))
     end
-    for (DEST,U,Ky,Kxy) in zip(eachrow(dest),eachrow(u),eachrow(cy),eachrow(cxy))
-        mul!(DEST,U,Ky,Kxy,D.DO[2],TT(1))
+    cache .= cxy*cache
+    for (DEST,U,Kx,TMP) in zip(eachcol(dest),eachcol(u),eachcol(cx),eachcol(cache))
+        mul!(DEST,U,Kx,TMP,D.DO[1],TT(0))
+    end
+
+    for (TMP,U) in zip(eachcol(cache),eachcol(u))
+        FirstDerivativeInternal!(TMP,U,D.DO[1].Δx,D.DO[1].n,        D.DO[1].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Left,   D.DO[1].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Right,  D.DO[1].order,TT(0))
+    end
+    cache .= cxy*cache
+    for (DEST,U,Ky,TMP) in zip(eachrow(dest),eachrow(u),eachrow(cy),eachrow(cache))
+        mul!(DEST,U,Ky,TMP,D.DO[2],TT(1))
     end
     dest
 end

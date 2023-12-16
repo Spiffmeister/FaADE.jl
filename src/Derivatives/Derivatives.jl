@@ -20,6 +20,7 @@ module Derivatives
     include("Diff.jl")
 
     # export SecondDerivative
+    export DerivativeOperatorType, DiffusionOperator, DiffusionOperatorND
     export DerivativeOrder, GetOrder, DerivativeOperator
     export D₁, D₂
     export D₁!, D₂!

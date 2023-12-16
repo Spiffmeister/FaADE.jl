@@ -31,8 +31,20 @@ struct DiffusionOperator{TT<:Real,DO<:DerivativeOrder,COEFF} <: DerivativeOperat
         return new{TT,typeof(DO),coeff}(DO,n,Δx,periodic)
     end
 end
-struct DiffusionOperatorND{TT,DIM,DO,COEFF} <: DerivativeOperatorType{DIM}
-    DO :: NTuple{DIM,DiffusionOperator{TT,DO,COEFF}}
+struct DiffusionOperatorND{TT,DIM,DO,COEFF,AT<:AbstractArray{TT,DIM}} <: DerivativeOperatorType{DIM}
+    DO      :: NTuple{DIM,DiffusionOperator{TT,DO,COEFF}}
+    cache   :: AT
+    function DiffusionOperatorND(D::DiffusionOperator{TT,DO,COEFF}...) where {TT<:Real,DO,COEFF}
+        DIM = length(D)
+        # cache = zeros(AT,(DO[1].n,DO[2].n))
+        if COEFF == :Constant
+            cache = zeros(TT,(1,1))
+        elseif COEFF == :Variable
+            cache = zeros(TT,(D[1].n,D[2].n))
+        end
+        
+        new{TT,DIM,typeof(D[1].order),COEFF,typeof(cache)}(D,cache)
+    end
 end
 
 
