@@ -27,7 +27,7 @@ BoundaryDown    = FaADE.SATs.SAT_Dirichlet((x,t) -> cos(π*x)*cos(-0.5π)   , Do
 BC = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 # Source term
-F(x,y,t) = 2π^2*cos(π*x)*cos(π*y)
+F(x,t) = 2π^2*cos(π*x[1])*cos(π*x[2])
 # Magnetic field
 function B(X,x,p,t)
     X[1] = -π*cos(π*x[1])*sin(π*x[2])
@@ -111,3 +111,10 @@ end
 # @. u = 1.0/(1.0 - P.κ * ττ * Δt) * 
 # ( u - P.κ*Δt*ττ/2.0 * (P.w_f + P.w_b) )
 
+# @benchmark solve($P,$Dom,$Δt,$t_f,solver=:theta,    θ=$θ)
+
+
+# using ProfileView
+# using Cthulhu
+# @profview solve(P,Dom,Δt,t_f,solver=:theta,    θ=θ)
+# @profview solve(P,Dom,1e-3,t_f,solver=:theta,    θ=θ)

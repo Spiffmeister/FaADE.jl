@@ -162,7 +162,7 @@ function Base.getindex(H::DiagonalH{TT},i::Int,j::Int) where {TT}
         return H[i]*H.Δ
     end
 end
-function Base.getindex(H::CompositeH,i::Int,j::Int)
+function Base.getindex(H::CompositeH,i::Int,j::Int)# where TT
     return H.H[1][i]*H.H[2][j]
 end
 

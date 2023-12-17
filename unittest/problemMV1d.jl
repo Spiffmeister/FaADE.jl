@@ -10,7 +10,7 @@ using BenchmarkTools
 order = 2
 K = 1.0
 
-n = 41
+n = 321
 
 
 # Δt = 1.0e-1

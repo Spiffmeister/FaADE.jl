@@ -10,8 +10,8 @@ using BenchmarkTools
 order = 2
 K = 1.0
 
-Δt = 0.01
-t = 100.0
+Δt = 0.01/2/2
+t = 1.0
 # t = 0.03
 
 # Set initial condition
@@ -23,10 +23,8 @@ u₀(x,y) = exp.(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 
 
-
-
 # Original solver
-Dom1V = Grid2D([0.0,1.0],[0.0,1.0],41,41)
+Dom1V = Grid2D([-0.5,0.5],[-0.5,0.5],41,41)
 
 
 
@@ -41,8 +39,17 @@ function B(X,x,p,t)
     # X[3] = 0.0
 end
 
-gdata   = construct_grid(B,Dom,[-2.0π,2.0π],ymode=:stop)
-PData   = ParallelData(gdata,Dom,κ=κ_para)
+Ψ(x,y) = cos(π*x)*cos(π*y)
+
+# Exact solution for k_perp = 1
+T(x,y,t) = (1.0 - exp(-2.0*π^2*t) )*Ψ(x,y)
+
+
+
+
+
+gdata   = construct_grid(B,Dom1V,[-2.0π,2.0π],ymode=:stop)
+PData   = ParallelData(gdata,Dom1V,κ=1.0e10)
 
 
 
@@ -56,7 +63,7 @@ BoundaryUp      = Boundary(Dirichlet,(y,t)->0.0,Up,2)
 BoundaryDown    = Boundary(Dirichlet,(y,t)->0.0,Down,2)
 PO1V = VariableCoefficientPDE2D(u₀,(x,y)->1.0,(x,y)->1.0,order,BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 println("---Solving old---")
-solnO1V = solve(PO1V,Dom1V,Δt,100.0-Δt,:cgie,Pgrid=PData) #-Δt to ensure ends at the same time as new methods
+solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie,Pgrid=PData,source=F) #-Δt to ensure ends at the same time as new methods
 
 # @benchmark solve($PO1V,$Dom1V,$Δt,100.0-$Δt,:cgie)
 # @profview solnO1V = solve(PO1V,Dom1V,Δt,t,:cgie)
@@ -70,57 +77,38 @@ Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Up,2,order)
 Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,Dom1V.Δx,Down,2,order)
 BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
 
-P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V,nothing,PData)
+P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V,F,PData)
 
 println("---Solving 1 volume---")
-soln1V = solve(P1V,Dom1V,Δt,t)
-@benchmark solve($P1V,$Dom1V,$Δt,$t)
+soln1V = solve(P1V,Dom1V,Δt,t,solver=:theta,θ=0.5)
 
-@profview soln1V = solve(P1V,Dom1V,Δt,t)
-@profview soln1V = solve(P1V,Dom1V,Δt,t)
-
-
-
-# New solover 2 volume
-D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
-
-joints = (Joint(2,Up),Joint(1,Down))
-
-Dom2V = GridMultiBlock((D1,D2),joints)
-
-Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,2,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
-
-# BCs = [(1,Left,Dl),(1,Up,Du),(1,Down,Dd),(2,Right,Dr),(2,Up,Du),(2,Down,Dd)]
-
-P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
-
-println("---Solving 2 volume---")
-soln2V = solve(P2V,Dom2V,Δt,t)
-@benchmark solve($P2V,$Dom2V,$Δt,$t)
-
-
-
-
-
-println("Original solver ",norm(solnO1V.u[2]))
-println("New 1V solver ",norm(soln1V.u[2]))
-
+# @benchmark solve($P1V,$Dom1V,$Δt,$t)
+# @profview soln1V = solve(P1V,Dom1V,Δt,t)
+# @profview soln1V = solve(P1V,Dom1V,Δt,t)
 
 
 
 
 using Plots
+surface(Dom1V.gridx,Dom1V.gridy,solnO1V.u[2])
 surface(Dom1V.gridx,Dom1V.gridy,soln1V.u[2])
 
 
 
 
-
+T_exact = zeros(size(Dom1V));
+for j = 1:Dom1V.ny
+    for i = 1:Dom1V.nx
+        T_exact[i,j] = T(Dom1V.gridx[i],Dom1V.gridy[j],solnO1V.t[end])
+    end
+end
+println("Old error ",norm(solnO1V.u[2]-T_exact,Inf))
+for j = 1:Dom1V.ny
+    for i = 1:Dom1V.nx
+        T_exact[i,j] = T(Dom1V.gridx[i],Dom1V.gridy[j],soln1V.t[end])
+    end
+end
+println("CN error ",norm(soln1V.u[2]-T_exact,Inf))
 
 
 #=
