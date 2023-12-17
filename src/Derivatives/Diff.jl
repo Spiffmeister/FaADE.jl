@@ -54,17 +54,17 @@ function mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Constant},α) whe
     end
     dest
 end
-function mul!(dest::VT,u::VT,K::VT,Kxy::VT,D::DiffusionOperator{TT,DO,:Variable},α) where {TT<:Real,VT<:AbstractVector{TT},DO<:DerivativeOrder}
+function mul!(dest::VT,u::VT,K::VT,KDu::VT,D::DiffusionOperator{TT,DO,:Variable},α) where {TT<:Real,VT<:AbstractVector{TT},DO<:DerivativeOrder}
     if !D.periodic
-        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,D.order,α)
-        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,D.order,α)
-        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,D.order,α)
-        FirstDerivativeInternal!(dest,Kxy,u,D.Δx,D.n,D.order,TT(1))
-        FirstDerivativeBoundary!(dest,Kxy,u,D.Δx,Left,D.order,TT(1))
-        FirstDerivativeBoundary!(dest,Kxy,u,D.Δx,Right,D.order,TT(1))
+        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,    D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,   D.order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,  D.order,α)
+        FirstDerivativeInternal!(dest,KDu,D.Δx,D.n,     D.order,TT(1))
+        FirstDerivativeBoundary!(dest,KDu,D.Δx,Left,    D.order,TT(1))
+        FirstDerivativeBoundary!(dest,KDu,D.Δx,Right,   D.order,TT(1))
     elseif D.periodic
         SecondDerivativePeriodic!(dest,u,K,D.Δx,D.order,D.n,α)
-        FirstDerivativePeriodic!(dest,Kxy,u,D.Δx,D.order,D.n,TT(1))
+        FirstDerivativePeriodic!(dest,KDu,u,D.Δx,D.order,D.n,TT(1))
     end
     dest
 end
@@ -94,21 +94,45 @@ function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable}) wh
     cache = D.cache
 
     for (TMP,U) in zip(eachrow(cache),eachrow(u))
-        FirstDerivativeInternal!(TMP,U,D.DO[2].Δx,D.DO[2].n,        D.DO[2].order,TT(0))
-        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Left,   D.DO[2].order,TT(0))
-        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Right,  D.DO[2].order,TT(0))
+        FirstDerivativeInternal!(TMP,U,D.DO[2].Δx,D.DO[2].n,D.DO[2].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Left,     D.DO[2].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Right,    D.DO[2].order,TT(0))
     end
-    cache .= cxy*cache
+    @. cache = cxy*cache
+    # for I in eachindex(cache)
+    #     if isnan(cache[I])
+    #         println("cache")
+    #         @show I
+    #         @show u[I]
+    #         @show cx[I]
+    #         @show cy[I]
+    #         @show cxy[I]
+    #         @show cache[I]
+    #         error("NaN")
+    #     end
+    # end
     for (DEST,U,Kx,TMP) in zip(eachcol(dest),eachcol(u),eachcol(cx),eachcol(cache))
         mul!(DEST,U,Kx,TMP,D.DO[1],TT(0))
     end
+    # for I in eachindex(dest)
+    #     if isnan(dest[I])
+    #         println("dest")
+    #         @show I
+    #         @show u[I]
+    #         @show cx[I]
+    #         @show cy[I]
+    #         @show cxy[I]
+    #         @show cache[I]
+    #         error("NaN")
+    #     end
+    # end
 
     for (TMP,U) in zip(eachcol(cache),eachcol(u))
-        FirstDerivativeInternal!(TMP,U,D.DO[1].Δx,D.DO[1].n,        D.DO[1].order,TT(0))
-        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Left,   D.DO[1].order,TT(0))
-        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Right,  D.DO[1].order,TT(0))
+        FirstDerivativeInternal!(TMP,U,D.DO[1].Δx,D.DO[1].n,D.DO[1].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Left,     D.DO[1].order,TT(0))
+        FirstDerivativeBoundary!(TMP,U,D.DO[1].Δx,Right,    D.DO[1].order,TT(0))
     end
-    cache .= cxy*cache
+    @. cache = cxy*cache
     for (DEST,U,Ky,TMP) in zip(eachrow(dest),eachrow(u),eachrow(cy),eachrow(cache))
         mul!(DEST,U,Ky,TMP,D.DO[2],TT(1))
     end
