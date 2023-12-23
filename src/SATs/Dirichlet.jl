@@ -12,6 +12,12 @@ end
 """
     SAT_Dirichlet
 Storage of all objects needed for a Dirichlet SAT ``\\left. u\\right|_{x_i} = g(t)`` where ``i\\in\\{0,1\\}``.
+
+In Cartesian coordinates the SAT reads
+``\\tau H^{-1} E H^{-1} E (u - f) + \\alpha H^{-1} (K H D_1^T) H^{-1} E (u - f)``
+
+In Curivlinear coordinates cross derivatives appear in the first term
+``\\tau H^{-1} E H^{-1} E (u - f)  ``
 """
 struct SAT_Dirichlet{
         TN<:NodeType,
@@ -29,9 +35,11 @@ struct SAT_Dirichlet{
     α           :: TT
     τ           :: PT
     loopaxis    :: LAT
+    Δy          :: TT
+    coordinates :: Symbol
 
     ### CONSTRUCTOR ###
-    function SAT_Dirichlet(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;α=nothing,τ=nothing) where {TT,TN,F1}
+    function SAT_Dirichlet(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;α=nothing,τ=nothing,Δy=0.0,coord=:Cartesian) where {TT,TN,F1}
         # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H D₁ᵀ) H⁻¹ E (u-f)"
 
         check_boundary(side)
@@ -60,10 +68,10 @@ struct SAT_Dirichlet{
         H⁻¹D₁ᵀE     = Hinv.*D₁ᵀ.*E
 
         new{TN,TT,Vector{TT},typeof(RHS),typeof(τ),typeof(loopaxis)}(
-            side,axis,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,α,τ,loopaxis)
+            side,axis,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,α,τ,loopaxis,Δy,coord)
     end
 end
-SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order)
+SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order,Δy=0.0,coord=:Cartesian) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order,Δy=0.0,coord=:Cartesian)
 
 
 
@@ -104,6 +112,27 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) where {A
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
     end
+
+    
+    if SD.coordinates == :Curvilinear
+        n = size(dest,axis)
+        m = size(dest,mod1(axis+1))
+        
+        if SD.side == Left
+            DEST = view(dest,1,1:m)
+        elseif SD.side == Right
+            DEST = view(dest,n,1:m)
+        elseif SD.side == Up
+            DEST = view(dest,1:m,1)
+        else
+            DEST = view(dest,1:m,n)
+        end
+
+        @show dest
+        FirstDerivativeTranspose!(DEST,data,n,SD.Δy,SD.order,TT(1))
+        @show dest
+    end
+    dest
 end
 
 
@@ -122,6 +151,25 @@ function SAT_Dirichlet_solution!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) wher
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
+
+    
+    if SD.coordinates == :Curvilinear
+        n = size(dest,axis)
+        m = size(dest,mod1(axis+1))
+        
+        if SD.side == Left
+            DEST = view(dest,1,1:m)
+        elseif SD.side == Right
+            DEST = view(dest,n,1:m)
+        elseif SD.side == Up
+            DEST = view(dest,1:m,1)
+        else
+            DEST = view(dest,1:m,n)
+        end
+
+        FirstDerivativeTranspose!(DEST,data,n,SD.Δy,SD.order,TT(1))
+    end
+    dest
 end
 
 

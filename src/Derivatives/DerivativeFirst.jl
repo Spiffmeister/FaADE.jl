@@ -21,6 +21,18 @@ end
 end
 
 
+@inline function FirstDerivativeInternal(u::AT,Δx::T,::Val{2},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(u[i+1] - u[i-1])/(T(2)*Δx)
+end
+@inline function FirstDerivativeInternal(u::AT,Δx::T,::Val{4},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
+end
+@inline function FirstDerivativeInternal(u::AT,Δx::T,::Val{6},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+    @inbounds β*(-T(1/60)*u[i-3] + T(3/20)*u[i-2] - T(3/4)*u[i-1] + T(3/4)*u[i+1] - T(3/20)*u[i+2] + T(1/60)*u[i+3])/Δx
+end
+
+
+
 """
     FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::DerivativeOrder{O},α::T)
 In place first derivative function for internal nodes
@@ -128,7 +140,7 @@ end
 Single node 1D first derivative transpose function.
 """
 function FirstDerivativeTransposeBoundary! end
-function FirstDerivativeTransposeBoundary!(dest::VT,K::VT,u::VT,Δx::TT,NT::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,VT,TN}
+function FirstDerivativeTransposeBoundary!(dest::VT,K::VT,u::VT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
 
@@ -136,7 +148,7 @@ function FirstDerivativeTransposeBoundary!(dest::VT,K::VT,u::VT,Δx::TT,NT::Node
 
     dest
 end
-function  FirstDerivativeTransposeBoundary(dest::VT,K::VT,u::VT,Δx::TT,NT::NodeType{TN},::DerivativeOrder{4},α::TT) where {TT,VT,TN}
+function  FirstDerivativeTransposeBoundary!(dest::VT,u::VT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT) where {TT,VT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
 
@@ -151,4 +163,12 @@ function  FirstDerivativeTransposeBoundary(dest::VT,K::VT,u::VT,Δx::TT,NT::Node
 end
 
 
+function FirstDerivativeTranspose!(dest::VT,u::VT,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+    order == 2 ? m = 2 : m = 7
+    for i = m:n-m+1
+        @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,TT(1))
+    end
+    FirstDerivativeTransposeBoundary!(dest,u,Δx,Left,   Val(order),α)
+    FirstDerivativeTransposeBoundary!(dest,u,Δx,Right,  Val(order),α)
+end
 

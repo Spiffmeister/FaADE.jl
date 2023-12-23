@@ -325,10 +325,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CurvilinearMet
             K[1][i] = P.Kx * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
             K[2][i] = P.Ky * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
 
-            cache = P.Kx * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
-
-            D₁!(K[3],cache,G.nx,G.Δx,2,TT(0),1) # Cross derivative term in x
-            D₁!(K[4],cache,G.ny,G.Δy,2,TT(0),2) # Cross derivative term in y
+            K[3][i] = P.Kx * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
     elseif typeof(P.Kx) <: Function
         
@@ -368,19 +365,19 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             if NB == 0
                 NB = TT(1)
                 B[1] = B[2] = TT(0)
-                println(I)
+                # println(I)
             end
             K[1][I] = P.Kx * (TT(1) - B[1]^2/NB)
             K[2][I] = P.Ky * (TT(1) - B[2]^2/NB)
             if !(PT<:Nothing)
-                K[3][I] = P.Kx * B[1]*B[2]/NB
+                K[3][I] = -P.Kx * B[1]*B[2]/NB
                 # if abs(K[3][I]) == 0.5
                 #     println(I," ",B[1]," ",B[2]," ",NB)
                 # end
             end
-            if isnan(K[1][I]) || isnan(K[2][I]) || isnan(K[3][I])
-                println("NaN ",I," ",B[1]," ",B[2]," ",NB)
-            end
+            # if isnan(K[1][I]) || isnan(K[2][I]) || isnan(K[3][I])
+            #     println("NaN ",I," ",B[1]," ",B[2]," ",NB)
+            # end
         end
         # for r in eachrow(K[2])
         #     println(r)
@@ -395,7 +392,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             end
             K[1][I] = P.Kx(G[I]) * (TT(1) - B[1]^2/NB)
             K[2][I] = P.Ky(G[I]) * (TT(1) - B[1]^2/NB)
-            K[3][I] = P.Ky(G[I]) * B[1]*B[2]/NB
+            K[3][I] = -P.Ky(G[I]) * B[1]*B[2]/NB
         end
     end
     K

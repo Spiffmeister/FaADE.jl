@@ -88,3 +88,14 @@ function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Intege
     uₓ
 end
 
+
+function D₁ᵀ(dest::VT,u::VT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+    order == 2 ? m = 2 : m = 7
+
+    for i = m:n-m+1
+        @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
+    end
+    
+    FirstDerivativeBoundaryTranspose!(dest,u,Δx,Left,   Val(order),α)
+    FirstDerivativeBoundaryTranspose!(dest,u,Δx,Right,  Val(order),α)
+end

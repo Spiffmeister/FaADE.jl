@@ -99,33 +99,9 @@ function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable}) wh
         FirstDerivativeBoundary!(TMP,U,D.DO[2].Δx,Right,    D.DO[2].order,TT(0))
     end
     @. cache = cxy*cache
-    # for I in eachindex(cache)
-    #     if isnan(cache[I])
-    #         println("cache")
-    #         @show I
-    #         @show u[I]
-    #         @show cx[I]
-    #         @show cy[I]
-    #         @show cxy[I]
-    #         @show cache[I]
-    #         error("NaN")
-    #     end
-    # end
     for (DEST,U,Kx,TMP) in zip(eachcol(dest),eachcol(u),eachcol(cx),eachcol(cache))
         mul!(DEST,U,Kx,TMP,D.DO[1],TT(0))
     end
-    # for I in eachindex(dest)
-    #     if isnan(dest[I])
-    #         println("dest")
-    #         @show I
-    #         @show u[I]
-    #         @show cx[I]
-    #         @show cy[I]
-    #         @show cxy[I]
-    #         @show cache[I]
-    #         error("NaN")
-    #     end
-    # end
 
     for (TMP,U) in zip(eachcol(cache),eachcol(u))
         FirstDerivativeInternal!(TMP,U,D.DO[1].Δx,D.DO[1].n,D.DO[1].order,TT(0))
