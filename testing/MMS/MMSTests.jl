@@ -58,10 +58,10 @@ function comp_MMS(Dx,Dy,npts,
             By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
             ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
         elseif BX0Type == Dirichlet
-            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  1,order)
-            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, 1,order)
-            By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Up,    2,order)
-            ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Down,  2,order)
+            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order, 0.0, :Cartesian)
+            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order, 0.0, :Cartesian)
+            By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Up,    order, 0.0, :Cartesian)
+            ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Down,  order, 0.0, :Cartesian)
         elseif BX0Type == Neumann
             Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
             BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)

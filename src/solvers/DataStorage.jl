@@ -409,7 +409,14 @@ function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {
         K       = zeros(TT,size(G))
         # K = (zeros(TT,G),)
     elseif DIM == 2
-        if (MET == CurvilinearMetric) || !(typeof(Para.MagneticField).parameters[1] == Nothing)
+        existb = true
+        try 
+            existb = !(typeof(Para.MagneticField).parameters[1] == Nothing)
+        catch
+            existb = false
+        end
+
+        if (MET == CurvilinearMetric) || existb
             K       = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
         else
             K       = [zeros(TT,size(G)), zeros(TT,size(G))]
