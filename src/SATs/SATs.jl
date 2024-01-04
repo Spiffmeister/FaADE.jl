@@ -9,6 +9,7 @@ module SATs
     # import Base: +
     using LinearAlgebra: dot
     using FaADE.Helpers
+    using FaADE.Derivatives: FirstDerivativeTranspose!
     # using StaticArrays
 
     include("types.jl")
