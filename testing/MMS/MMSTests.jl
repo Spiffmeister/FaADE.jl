@@ -71,7 +71,7 @@ function comp_MMS(Dx,Dy,npts,
         BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
 
 
-        Δt = dt_scale*Dom.Δx
+        Δt = dt_scale*Dom.Δx^2
         nt = round(t_f/Δt)
         Δt = t_f/nt
 
@@ -144,7 +144,7 @@ if TestDirichlet
 
     analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
     BxLũ(y,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
     BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
@@ -198,7 +198,7 @@ if TestNeumann
 
     analytic(x,y,t) = ũ(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
     BxLũ(y,t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
     BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
@@ -250,7 +250,7 @@ if TestPeriodic
 
     analytic(x,y,t) = ũ(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
     order = 2
     O2_PeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,

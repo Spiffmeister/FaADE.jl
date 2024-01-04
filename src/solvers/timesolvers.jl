@@ -104,7 +104,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     # while t < t_f+Δt/2
     nt = round(t_f/Δt)
     # nt = 1;
-    for i = 0:nt
+    for i = 0:nt-1
         t = i*Δt
 
         theta_method(DBlock,t,Δt)

@@ -71,7 +71,7 @@ struct SAT_Dirichlet{
             side,axis,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,α,τ,loopaxis,Δy,coord)
     end
 end
-SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order,Δy=0.0,coord=:Cartesian) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order,Δy=0.0,coord=:Cartesian)
+SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order,Δy=0.0,coord=:Cartesian) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order,Δy=Δy,coord=coord)
 
 
 
@@ -108,29 +108,31 @@ function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) wher
     end
     dest
 end
-function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) where {AT<:AbstractMatrix}
+function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
     end
 
     
     if SD.coordinates == :Curvilinear
-        n = size(dest,axis)
-        m = size(dest,mod1(axis+1))
+        n = size(dest,SD.axis)
+        m = size(dest,mod1(SD.axis+1,2))
         
         if SD.side == Left
             DEST = view(dest,1,1:m)
+            SRC = view(data,1,1:m)
         elseif SD.side == Right
             DEST = view(dest,n,1:m)
+            SRC = view(data,1,1:m)
         elseif SD.side == Up
             DEST = view(dest,1:m,1)
+            SRC = view(data,1:m,1)
         else
             DEST = view(dest,1:m,n)
+            SRC = view(data,1:m,1)
         end
 
-        @show dest
-        FirstDerivativeTranspose!(DEST,data,n,SD.Δy,SD.order,TT(1))
-        @show dest
+        FirstDerivativeTranspose!(DEST,SRC,n,SD.Δy,SD.order,TT(1))
     end
     dest
 end
@@ -147,27 +149,29 @@ function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) 
     end
     dest
 end
-function SAT_Dirichlet_solution!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet) where {AT<:AbstractMatrix}
+function SAT_Dirichlet_solution!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
 
-    
     if SD.coordinates == :Curvilinear
-        n = size(dest,axis)
-        m = size(dest,mod1(axis+1))
+        n = size(dest,SD.axis)
+        m = size(dest,mod1(SD.axis+1,2))
         
         if SD.side == Left
             DEST = view(dest,1,1:m)
+            SRC = view(data,1,1:m)
         elseif SD.side == Right
             DEST = view(dest,n,1:m)
+            SRC = view(data,n,1:m)
         elseif SD.side == Up
             DEST = view(dest,1:m,1)
+            SRC = view(data,1:m,1)
         else
             DEST = view(dest,1:m,n)
+            SRC = view(data,1:m,n)
         end
-
-        FirstDerivativeTranspose!(DEST,data,n,SD.Δy,SD.order,TT(1))
+        FirstDerivativeTranspose!(DEST,SRC,n,SD.Δy,SD.order,TT(1))
     end
     dest
 end
