@@ -49,6 +49,7 @@ function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray
             tmp += u[i,j] * H[1][i] * H[2][j] * v[i,j]
         end
     end
+    return tmp
 end
 
 
