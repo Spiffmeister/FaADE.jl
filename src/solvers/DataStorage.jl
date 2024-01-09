@@ -362,6 +362,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             B = MagField(G[I])
             NB = norm(B,2)^2
             # if NB ≤ TT(2e-16)
+            # if NB ≤ 1e-14
             if NB == 0
                 NB = TT(1)
                 B[1] = B[2] = TT(0)
@@ -371,15 +372,27 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             K[2][I] = P.Ky * (TT(1) - B[2]^2/NB)
             if !(PT<:Nothing)
                 K[3][I] = -P.Kx * B[1]*B[2]/NB
-                # if abs(K[3][I]) == 0.5
-                #     println(I," ",B[1]," ",B[2]," ",NB)
-                # end
             end
             # if isnan(K[1][I]) || isnan(K[2][I]) || isnan(K[3][I])
             #     println("NaN ",I," ",B[1]," ",B[2]," ",NB)
             # end
+            x,y = G[I]
+            # if (abs(x) == 0.5) && (abs(y) == 0.5)
+                # K[1][I] = P.Kx * 0.5
+                # K[2][I] = P.Ky * 0.5
+                # if !(PT<:Nothing)
+                #     K[3][I] = -P.Kx*0.5
+                # end
+            # end
+            if (x==0) && (y==0) #SINGLE ISLAND TEST
+                K[1][I] = P.Kx
+                K[2][I] = P.Ky
+                if !(PT<:Nothing)
+                    K[3][I] = 0.0
+                end
+            end
         end
-        # for r in eachrow(K[2])
+        # for r in eachrow(K[1])
         #     println(r)
         # end
     elseif typeof(P.Kx) <: Function
