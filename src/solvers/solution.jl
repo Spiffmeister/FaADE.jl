@@ -19,6 +19,8 @@ mutable struct solution{TT,
     t       :: Vector{TT}
     problem :: PT
     Δu      :: TT
+
+    # τ_hist  :: Vector{TT}
 end
 """
     solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT

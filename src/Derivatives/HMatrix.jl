@@ -2,7 +2,7 @@
 
 abstract type MassMatrix{TYPE,TT,VT} end
 
-struct DiagonalH{TT<:Real,VT<:AbstractVector{TT},TYPE} <: MassMatrix{TYPE,TT,VT}
+struct DiagonalH{TT<:Real,VT<:AbstractVector{TT}} <: MassMatrix{:Diagonal,TT,VT}
     Boundary    :: VT
     Interior    :: TT
     Δ           :: TT
@@ -18,17 +18,17 @@ struct DiagonalH{TT<:Real,VT<:AbstractVector{TT},TYPE} <: MassMatrix{TYPE,TT,VT}
 
         interior = one(TT)
 
-        new{TT,Vector{TT},:Diagonal}(H,interior,Δx,n,length(H))
+        new{TT,Vector{TT}}(H,interior,Δx,n,length(H))
     end
 end
 
 
-struct CompositeH{DIM,TT<:Real,VT<:AbstractArray,TYPE}
-    H :: NTuple{DIM,MassMatrix{TYPE,TT,VT}}
+struct CompositeH{DIM,TT<:Real,VT<:AbstractArray,HTYPE}
+    H :: NTuple{DIM,HTYPE}
     sz :: Vector{Int}
     function CompositeH(H...)
         sz = [H[i].n for i in 1:length(H)]
-        new{length(H),eltype(H[1].Boundary),typeof(H[1].Boundary),:Diagonal}(H,sz)
+        new{length(H),eltype(H[1].Boundary),typeof(H[1].Boundary),typeof(H[1])}(H,sz)
     end
 end
 
@@ -144,6 +144,9 @@ Base.length(H::CompositeH) = prod(H.sz)
 
 Base.lastindex(H::CompositeH) = length(H)
 
+function getH(H::CompositeH{DIM,TT,VT,HTYPE},i::Int) where {DIM,TT,VT<:AbstractVector{TT},HTYPE}
+    
+end
 
 function Base.getindex(H::DiagonalH,i::Int)
     if i < 1 || i > H.n
@@ -163,7 +166,9 @@ function Base.getindex(H::DiagonalH{TT},i::Int,j::Int) where {TT}
         return H[i]*H.Δ
     end
 end
-function Base.getindex(H::CompositeH,i::Int,j::Int)# where TT
-    return H.H[1][i]*H.H[2][j]
+function Base.getindex(H::CompositeH{2,TT,VT,HTYPE},i::Int,j::Int) where {TT,VT<:Vector{TT},HTYPE}
+    Hx = H.H[1] :: HTYPE
+    Hy = H.H[2] :: HTYPE
+    return Hx[i]*Hy[j]
 end
 

@@ -46,12 +46,14 @@ struct ParallelData{TT<:Real,
     Δx          :: TT
     Δy          :: TT
 
-    H           :: CompositeH{2,TT,Vector{TT},:Diagonal}
+    H           :: CompositeH{2,TT,Vector{TT},DiagonalH{TT,Vector{TT}}}
 
     w_f         :: Matrix{TT}
     w_b         :: Matrix{TT}
 
     MagneticField   :: BT
+
+    # τ_i         :: Vector{TT}
 
     function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing) where {TT}
 
