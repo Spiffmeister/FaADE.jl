@@ -125,6 +125,8 @@ Move out of bounds points to the boundary
             end
         end
     elseif mode == :period
+        
+        
         if bound[end] ≤ 3π/2
             for i in eachindex(X)
                 X[i] = rem2pi(X[i],RoundNearest)
@@ -133,7 +135,7 @@ Move out of bounds points to the boundary
                     # println(X[i])
                 end
             end
-        elseif bound == 2π
+        else
             for i in eachindex(X)
                 X[i] = rem2pi(X[i],RoundDown)
             end

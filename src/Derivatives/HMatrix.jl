@@ -105,7 +105,7 @@ function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) :: T wher
     tmp = T(0)
     for j in eachindex(H.Hx)
         for i in eachindex(H.Hy)
-            @inbounds tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
+            @inbounds tmp += u[j,i] * H.Hx[j] * H.Hy[i] * v[j,i] * H.Δ
         end
     end
     return tmp

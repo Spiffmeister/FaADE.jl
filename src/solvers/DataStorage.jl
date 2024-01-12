@@ -53,10 +53,11 @@ struct newBoundaryData{
         if BC.side ∈ [Left,Right]
             n = G.ny
             BufferRHS = zeros(TT,(1,n))
+            # @show size(BufferRHS), size(G.gridx)
             if BC.side == Left
                 X = G.gridy[1,:]
             else
-                X = G.gridy[G.ny,:]
+                X = G.gridy[G.nx,:]
             end
         elseif BC.side ∈ [Up,Down]
             n = G.nx
@@ -64,7 +65,7 @@ struct newBoundaryData{
             if BC.side == Up
                 X = G.gridx[:,1]
             else
-                X = G.gridx[:,G.nx]
+                X = G.gridx[:,G.ny]
             end
         end
 
@@ -555,7 +556,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
-    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
+    # BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
+    BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
 
     if length(K) == 3
@@ -565,7 +567,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     end
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,GetOrder(P.order),false,difftype)
-    Dy = DiffusionOperator(G.ny,G.Δy,GetOrder(P.order),false,difftype)
+    Dy = DiffusionOperator(G.ny,G.Δy,GetOrder(P.order),true,difftype)
     D = DiffusionOperatorND(Dx,Dy)
     PMap = P.Parallel
     source = P.source

@@ -23,62 +23,77 @@ struct SAT_Periodic{
     τ₀          :: F1
     loopaxis    :: F2
 
-    function SAT_Periodic(Δx::TT,axis::Int,order::Int) where TT
+    Δy          :: TT
+    coordinates :: Symbol
 
-        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
-        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
-        E₀D₁ = BoundaryDerivative(Left,Δx,order)
-        EₙD₁ = BoundaryDerivative(Right,Δx,order)
-
-        α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
-
-        loopaxis = SelectLoopDirection(axis)
-
-        new{typeof(Internal),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
-            Periodic,Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
-    end
-    function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
-        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
-        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
-        E₀D₁ = BoundaryDerivative(Left,Δx,order)
-        EₙD₁ = BoundaryDerivative(Right,Δx,order)
-
-        α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
-
-
-        # E₀ = _BoundaryOperator(TT,Left)
-        # Eₙ = _BoundaryOperator(TT,Right)
-
-        # HinvL = _InverseMassMatrix(order,Δx,side)
-        # HinvR = _InverseMassMatrix(order,Δx,side)
-
-        # D₁ᵀ = _DerivativeTranspose(order,Δx,side)
-        # D₁ = _BoundaryDerivative(order,Δx,side)
-
-
-        # H⁻¹L₀ = HinvL[1].*[1,-1]
-
-        # H⁻¹ = HinvL
-        # H⁻¹ = HinvL
-
-        # D₁ᵀE₀ = _BoundaryDerivative(order,Δx,Left)
-        # D₁ᵀEₙ = _BoundaryDerivative(order,Δx,Right)
-
-
-        # α₀ = 1/2
-        # τ₁ = 1/2
-        # τ₀ = c -> -(1+1/c) * c/(2HinvL[1])
-
-
-
-        loopaxis = SelectLoopDirection(axis)
-
-        new{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
-            Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀)
-    end
+    
 end
+function SAT_Periodic(Δx::TT,axis::Int,order::Int) where TT
+
+    D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+    D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
+    E₀D₁ = BoundaryDerivative(Left,Δx,order)
+    EₙD₁ = BoundaryDerivative(Right,Δx,order)
+
+    α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
+
+    loopaxis = SelectLoopDirection(axis)
+
+    SAT_Periodic{typeof(Internal),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+        Periodic,Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,loopaxis,0.0,:Cartesian)
+end
+function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
+    D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+    D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
+    E₀D₁ = BoundaryDerivative(Left,Δx,order)
+    EₙD₁ = BoundaryDerivative(Right,Δx,order)
+
+    α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
 
 
+    # E₀ = _BoundaryOperator(TT,Left)
+    # Eₙ = _BoundaryOperator(TT,Right)
+
+    # HinvL = _InverseMassMatrix(order,Δx,side)
+    # HinvR = _InverseMassMatrix(order,Δx,side)
+
+    # D₁ᵀ = _DerivativeTranspose(order,Δx,side)
+    # D₁ = _BoundaryDerivative(order,Δx,side)
+
+
+    # H⁻¹L₀ = HinvL[1].*[1,-1]
+
+    # H⁻¹ = HinvL
+    # H⁻¹ = HinvL
+
+    # D₁ᵀE₀ = _BoundaryDerivative(order,Δx,Left)
+    # D₁ᵀEₙ = _BoundaryDerivative(order,Δx,Right)
+
+
+    # α₀ = 1/2
+    # τ₁ = 1/2
+    # τ₀ = c -> -(1+1/c) * c/(2HinvL[1])
+
+
+
+    loopaxis = SelectLoopDirection(axis)
+
+    SAT_Periodic{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+        Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,0.0,:Cartesian)
+end
+function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType,Δy::TT,coord::Symbol) where TT
+    D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
+    D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
+    E₀D₁ = BoundaryDerivative(Left,Δx,order)
+    EₙD₁ = BoundaryDerivative(Right,Δx,order)
+
+    α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
+
+    loopaxis = SelectLoopDirection(axis)
+
+    SAT_Periodic{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+        Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,Δy,coord)
+end
 
 
 """
@@ -197,11 +212,37 @@ function SAT_Periodic!(dest::VT,u::VT,c::VT,SP::SAT_Periodic{TN}) where {VT<:Abs
     # end
     dest
 end
-
-function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic) where {AT<:AbstractMatrix}
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
     for (DEST,U,C) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
         SAT_Periodic!(DEST,U,C,SP)
     end
+
+    if SP.coordinates == :Curvilinear
+        n = size(dest,SP.axis)
+        m = size(dest,mod1(SP.axis+1,2))
+
+        # @show n, m
+        # @show SP.side, SP.axis
+        # @show size(dest), size(u)
+    
+        if SP.side == Left
+            DEST = view(dest,   1,1:m)
+            SRC = view(u,       1,1:m)
+        elseif SP.side == Right
+            DEST = view(dest,   n,1:m)
+            SRC = view(u,       n,1:m)
+        elseif SP.side == Up
+            DEST = view(dest,   1:m,1)
+            SRC = view(u,       1:m,1)
+            # println("hi")
+        else
+            DEST = view(dest,   1:m,n)
+            SRC = view(u,       1:m,n)
+        end
+    # @show size(DEST),size(SRC)
+        FirstDerivativeTranspose!(DEST,SRC,m,SP.Δy,SP.order,TT(1))
+    end
+
     dest
 end
 
