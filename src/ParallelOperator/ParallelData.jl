@@ -53,7 +53,7 @@ struct ParallelData{TT<:Real,
 
     MagneticField   :: BT
 
-    # τ_i         :: Vector{TT}
+    τ_i         :: Vector{TT}
 
     function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing) where {TT}
 
@@ -87,7 +87,7 @@ struct ParallelData{TT<:Real,
             @warn "B not provided, perpendicular solve may not be performed correctly."
         end
 
-        new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF)
+        new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF,[TT(0)])
     end
 end
 

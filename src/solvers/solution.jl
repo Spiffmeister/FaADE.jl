@@ -20,7 +20,7 @@ mutable struct solution{TT,
     problem :: PT
     Δu      :: TT
 
-    # τ_hist  :: Vector{TT}
+    τ_hist  :: Vector{TT}
 end
 """
     solution{TT}(grid::GridType,t::TT,Δt::TT,prob::PDEProblem;preallocate=false) where TT
@@ -57,7 +57,7 @@ end
 function solution(grid::LocalGridType{TT},t::TT,Δt::TT,prob::newPDEProblem) where TT
     u = _setInitialCondition(prob.InitialCondition,grid)
 
-    return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0)
+    return solution{TT,typeof(u),typeof(grid),typeof(prob)}([u],grid,[Δt],[t],prob,0.0,Vector{TT}())
 end
 """
     solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT
@@ -66,7 +66,7 @@ end
 function solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT
     u = [prob.InitialCondition(G.Grids[I].grid) for I in eachgrid(G)]
     
-    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0)
+    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0,Vector{TT}())
 end
 """
     solution(G::GridMultiBlock{TT,2},t::TT,Δt::TT,prob::newPDEProblem) where TT
@@ -84,7 +84,7 @@ function solution(G::GridMultiBlock{TT,2},t::TT,Δt::TT,prob::newPDEProblem) whe
         end
     end
 
-    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0)
+    return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0,Vector{TT}())
 end
 
 

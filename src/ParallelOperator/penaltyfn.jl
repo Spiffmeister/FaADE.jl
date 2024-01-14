@@ -200,22 +200,31 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     H = P.H
 
     I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
+    # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
+
 
     # w_f ← P_f u + P_b u
     _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
 
     # Tune the parallel penalty
-    τ = P.τ*(norm(u - w_f,Inf)/norm(w_f,Inf))^3
+    τ = P.τ*(maximum(u - w_f)/maximum(w_f))^3
+    # τ = 1e7*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
     # τ = P.τ
+    P.τ_i[1] = τ
+    # τ = P.τ
+
 
     # u^{n+1} = (1+θ)Δt κ τ
     # @. u = 1/(1 + θ * Δt * κ * τ * 1/H) * (u + θ*Δt*κ*τ/H * w_f) + (1-θ)*Δt * τ * κ * 1/H * (u₀ - w_b)
+    # @show u[:,51]
     _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,P.gridx.len,P.gridy.len)
+    # @show u[:,51]
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
     @. w_b = u - w_f
 
+    # u = w_f
     u
 end
 

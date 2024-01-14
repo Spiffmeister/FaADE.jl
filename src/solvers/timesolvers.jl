@@ -135,7 +135,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             DBlock.SC.t += DBlock.SC.Δt
             t = DBlock.SC.t
 
-            # push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
+            push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
 
         else #If CG fails, reset and retry step
             # DBlock.uₙ₊₁ .= DBlock.u
