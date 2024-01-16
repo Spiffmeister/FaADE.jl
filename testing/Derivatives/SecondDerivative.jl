@@ -181,20 +181,15 @@ end
         @test norm(uxx .- ue) ≤ 1e-12
         
         #=
-        # u=sin(2πx), ∂ₓ(1 ∂ₓx) = -4π^2 sin(2πx)
         n = 41
         Dom = FaADE.Grid1D([0.0,1.0],n)
-        u, k, uelow = buildprob1D(Dom,x->sin(2π*x),x->1.0,x->-4π^2*sin(2π*x))
-        uxxlow = zeros(eltype(Dom),size(Dom))
-        D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
-        FaADE.Derivatives.mul!(uxxlow,u,k,D)
 
-        n = 81
-        Dom = FaADE.Grid1D([0.0,1.0],n)
-        u, k, uehigh = buildprob1D(Dom,x->sin(2π*x),x->1.0,x->-4π^2*sin(2π*x))
-        uxxhigh = zeros(eltype(Dom),size(Dom))
         D = FaADE.Derivatives.DiffusionOperator(Dom.n,Dom.Δx,order,true,:Constant)
-        FaADE.Derivatives.mul!(uxxhigh,u,k,D)
+
+        u,k,ue = buildprob1D(Dom, x->sin(2π*x), x-> 1.0, x-> -4π^2*sin(2π*x))
+
+        uxx = zeros(eltype(Dom),size(Dom))
+        FaADE.Derivatives.mul!(uxx,u,k,D,0.0)
 
         @test norm(uxx .- ue) ≤ 1e-12
         =#
@@ -215,55 +210,6 @@ end
 
 
 
-#=
-@testset "2D second derivative second order" begin
-    nx = 21
-    ny = 31
-    order = 4
-    Dom = FaADE.Grid2D([-1.0,1.0],[0.0,1.0],nx,ny)
-
-    @testset "constant coefficient" begin
-        # Linear Function u=x, ∇(1 ∇xy) = 0
-        u,kx,ky,ue = buildprob2D(Dom,(x,y)->x*y,(x,y)->1.0,(x,y)->1.0,(x,y)->0.0)
-        uxx = D₂(u,kx,ky,Dom.Δx,Dom.Δy,order)
-        @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1.0e-12
-        @test all(uxx[[1,Dom.nx],:] .≤ 1e-12) & all(uxx[:,[1,Dom.ny]] .≤ 1e-12)
-        
-        # Quadratic function, ∇(1 ∇x²y) = 2
-        u,kx,ky,ue = buildprob2D(Dom,(x,y)->x^2*y,(x,y)->1.0,(x,y)->1.0,(x,y)->2.0y)
-        uxx = D₂(u,kx,ky,Dom.Δx,Dom.Δy,order)
-        @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1.0e-12
-        @test all(uxx[[1,Dom.nx],:] .≤ 1e-12)
-        @test all(uxx[:,1] .≤ 1e-12) & (norm(uxx[2:end-1,end] .- 2) ≤ 1e-12)
-
-        # Cubic Function u=x, ∇(1 ∇x²y³) = 6y + 2y^3
-        u,kx,ky,ue = buildprob2D(Dom,(x,y)->x^2*y^3,(x,y)->1.0,(x,y)->1.0,(x,y)->6y*x^2+2y^3)
-        uxx = D₂(u,kx,ky,Dom.Δx,Dom.Δy,order)
-        @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1.0e-12 # CHECK THIS TEST
-    end
-
-    # @testset "variable coefficient" begin
-    # end
-
-end
-=#
-
-
-
-
-
-
-
-
-#=
-nx = ny = 21
-order = FaADE.Derivatives.DerivativeOrder{2}()
-Dom = FaADE.Grid2D([-1.0,1.0],[-1.0,1.0],nx,ny)
-D = FaADE.Derivatives.DerivativeOperator{Float64,2,typeof(order),:Constant}(order,nx,ny,Dom.Δx,Dom.Δy,true,true)
-
-uxx, u, kx, ky, ue = buildprob2D(Dom,(x,y)->sin(2π*x)*sin(2π*y),(x,y)->1.0,(x,y)->1.0,(x,y)->-8π^2*sin(2π*x)*sin(2π*y))
-FaADE.Derivatives.mul!(uxx,u,[kx,ky],D)
-=#
 
 
 

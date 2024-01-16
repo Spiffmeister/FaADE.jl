@@ -313,8 +313,8 @@ function copyUtoSAT!(Bound::BoundaryStorage{T,N,AT},u::AT,order::Int) where {T,N
         copyUtoSAT!(Bound.SAT_Down,u,Down,order)
     end
 end
-function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::DerivativeOrder) where {TT,DIM,DT<:newLocalDataBlockType}
-    copyUtoSAT!(D.Data.boundary,D.Data.u,GetOrder(order))
+function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::Int) where {TT,DIM,DT<:newLocalDataBlockType}
+    copyUtoSAT!(D.Data.boundary,D.Data.u,order)
 end
 
 

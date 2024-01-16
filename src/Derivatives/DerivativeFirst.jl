@@ -10,17 +10,6 @@
 Single node 1D first derivative function.
 """
 function FirstDerivativeInternal end
-@inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{2},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    @inbounds β*(u[i+1] - u[i-1])/(T(2)*Δx)
-end
-@inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{4},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    @inbounds β*(T(1/12)*u[i-2] - T(2/3)*u[i-1] + T(2/3)*u[i+1] - T(1/12)*u[i+2])/Δx
-end
-@inline function FirstDerivativeInternal(u::AT,Δx::T,::DerivativeOrder{6},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
-    @inbounds β*(-T(1/60)*u[i-3] + T(3/20)*u[i-2] - T(3/4)*u[i-1] + T(3/4)*u[i+1] - T(3/20)*u[i+2] + T(1/60)*u[i+3])/Δx
-end
-
-
 @inline function FirstDerivativeInternal(u::AT,Δx::T,::Val{2},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
     @inbounds β*(u[i+1] - u[i-1])/(T(2)*Δx)
 end
@@ -34,18 +23,18 @@ end
 
 
 """
-    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::DerivativeOrder{O},α::T)
+    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::Val{O},α::T)
 In place first derivative function for internal nodes
 """
 function FirstDerivativeInternal! end
-@inline function FirstDerivativeInternal!(dest::AT,u::AT,Δx::TT,n::Int,DO::DerivativeOrder{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,TT(1))
     end
     dest
 end
-@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Int,DO::DerivativeOrder{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     # m = floor(Int,(O+2)/2)
     for i = m:n-m+1
@@ -60,17 +49,25 @@ end
     FirstDerivativePeriodic
 Single node 1D first derivative periodic stencil
 """
-@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{2},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{2},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
     @inbounds β*(u[_prev(i,n)] - u[_next(i,n)])/(T(2)*Δx)
 end
-@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{4},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{4},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
     @inbounds β*(T(1/12)*u[_prev(i-1,n)] - T(2/3)*u[_prev(i,n)] + T(2/3)*u[_next(i,n)] - T(1/12)*u[_next(i+1,n)])/Δx
 end
-@inline function FirstDerivativePeriodic(u::AT,Δx::T,::DerivativeOrder{6},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
+@inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{6},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
     @inbounds β*(-T(1/60)*u[_prev(i-2,n)] + T(3/20)*u[_prev(i-1,n)] - T(3/4)*u[_prev(i,n)] + T(3/4)*u[_next(i,n)] - T(3/20)*u[_next(i+1,n)] + T(1/60)*u[_next(i+2,n)])/Δx
 end
 
-@inline function FirstDerivativePeriodic!(dest::VT,K::VT,u::VT,Δx::TT,DO::DerivativeOrder,n::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+@inline function FirstDerivativePeriodic!(dest::VT,K::VT,u::VT,Δx::TT,DO::Val,n::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+
+    # for i = 2:n-1
+    #     dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,K[i])
+    # end
+
+    # dest[1] = α*dest[1] + K[1]*(u[2] - u[n-1])/(TT(2)*Δx)
+    # dest[n] = α*dest[n] + K[n]*(u[2] - u[n-1])/(TT(2)*Δx)
+
     for i = 1:n
         @inbounds dest[i] = α*dest[i] + FirstDerivativePeriodic(u,Δx,DO,n,i,K[i])
     end
@@ -83,12 +80,12 @@ end
 1D in place function for first derivative on boundary nodes
 """
 function FirstDerivativeBoundary! end
-@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{2},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j] = α*uₓ[j] + TT(i)*(u[j+i] - u[j])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{4},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::Val{4},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j]       = α*uₓ[j]   + TT(i)*(TT(-24/17)*u[j] + TT(59/34)*u[j+i]   + TT(-4/17)*u[j+2i]   + TT(-3/34)*u[j+3i])/Δx
@@ -96,7 +93,7 @@ end
     uₓ[j+2i]    = α*uₓ[j+2i]+ TT(i)*(TT(4/43)*u[j]  + TT(-59/86)*u[j+i]   + TT(59/86)*u[j+3i]  + TT(-4/43)*u[j+4i])/Δx
     uₓ[j+3i]    = α*uₓ[j+3i]+ TT(i)*(TT(3/98)*u[j]  + TT(-59/98)*u[j+2i]  + TT(32/49)*u[j+4i]  + TT(-4/49)*u[j+5i])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{6},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::Val{6},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j]       = α*uₓ[j]   + TT(i)*( TT(-1.582533518939116)*u[j] + TT(2.033378678700676)*u[j+i] - TT(0.141512858744873)*u[j+2i] + TT(-0.450398306578272)*u[j+3i] + TT(0.104488069284042)*u[j+4i] + TT(0.036577936277544)*u[j+5i] )/Δx
@@ -110,12 +107,12 @@ end
 
 
 
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{2},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j] = α*uₓ[j] + K[j]*TT(i)*(u[j+i] - u[j])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{4},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{4},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j]       = α*uₓ[j]   + K[j]      *TT(i)*(TT(-24/17)*u[j] + TT(59/34)*u[j+i]   + TT(-4/17)*u[j+2i]   + TT(-3/34)*u[j+3i])/Δx
@@ -123,7 +120,7 @@ end
     uₓ[j+2i]    = α*uₓ[j+2i]+ K[j+2i]   *TT(i)*(TT(4/43)*u[j]  + TT(-59/86)*u[j+i]   + TT(59/86)*u[j+3i]  + TT(-4/43)*u[j+4i])/Δx
     uₓ[j+3i]    = α*uₓ[j+3i]+ K[j+3i]   *TT(i)*(TT(3/98)*u[j]  + TT(-59/98)*u[j+2i]  + TT(32/49)*u[j+4i]  + TT(-4/49)*u[j+5i])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::DerivativeOrder{6},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{6},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
     uₓ[j]       = α*uₓ[j]   + K[j]      *TT(i)*( TT(-1.582533518939116)*u[j] + TT(2.033378678700676)*u[j+i] - TT(0.141512858744873)*u[j+2i] + TT(-0.450398306578272)*u[j+3i] + TT(0.104488069284042)*u[j+4i] + TT(0.036577936277544)*u[j+5i] )/Δx

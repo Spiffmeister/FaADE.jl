@@ -15,7 +15,7 @@ Vector version of [`D₂`](@ref).
 """
 function D₂(u::VT,c::VT,Δx::TT,order::Int=2) where {TT,VT<:AbstractVector{TT}}
     uₓₓ = zeros(eltype(u),length(u))
-    DO = DerivativeOrder{order}()
+    DO = Val(order)
     D₂!(uₓₓ,u,c,length(u),Δx,DO,0.0)
     return uₓₓ
 end
@@ -25,7 +25,7 @@ Matrix version of [`D₂`](@ref).
 function D₂(u::AT,cx::AT,cy::AT,Δx::TT,Δy::TT,order::Int=2) where {TT,AT <: AbstractMatrix{TT}}
     n = size(u)
     uₓₓ = zeros(eltype(u),size(u))
-    DO = DerivativeOrder{order}()
+    DO = Val(order)
     D₂!(uₓₓ,u,cx,cy,n[1],n[2],Δx,Δy,DO,DO,TT(0))
     return uₓₓ
 end
@@ -39,7 +39,7 @@ Internally uses [`SecondDerivativeInternal`](@ref) and [`SecondDerivativeInterna
 """
 function D₂! end
 ### 1D second derviative function
-function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::DerivativeOrder,α::T) where T
+function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Val,α::T) where T
     SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,order,α)
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Left,order,α)
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Right,order,α)
@@ -47,7 +47,7 @@ function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector
 end
 
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
-function D₂!(uₓₓ::AT,u::AT,c::AT,n::Integer,Δ::T,order::DerivativeOrder,α::T,dim::Integer) where {T,AT<:AbstractArray{T}}
+function D₂!(uₓₓ::AT,u::AT,c::AT,n::Integer,Δ::T,order::Val,α::T,dim::Integer) where {T,AT<:AbstractArray{T}}
     loopdir = SelectLoopDirection(dim)    
     for (cache,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
         D₂!(cache,U,C,n,Δ,order,α)
@@ -57,8 +57,7 @@ end
 ### 2D second derviative function
 function D₂!(uₓₓ::AT,u::AT,cx::AT,cy::AT,
         nx::Integer,ny::Integer,Δx::T,Δy::T,
-        # order_x::DerivativeOrder,order_y::DerivativeOrder) where {T,AT}
-        order_x::DerivativeOrder,order_y::DerivativeOrder,α::T) where {T,AT<:AbstractMatrix{T}}
+        order_x::Val,order_y::Val,α::T) where {T,AT<:AbstractMatrix{T}}
     
     for (A,B,C) in zip(eachcol(uₓₓ),eachcol(u),eachcol(cx))
         D₂!(A,B,C,nx,Δx,order_x,α)

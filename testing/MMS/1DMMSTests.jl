@@ -7,9 +7,9 @@ using FaADE
 
 
 
-rundirichlet = false
+rundirichlet = true
 runneumann = true
-runperiodic = false
+runperiodic = true
 
 ###=== GLOBAL PROPS ===###
 𝒟x = [0.0,1.0]
@@ -53,8 +53,8 @@ function comp_MMS(Dx,npts,
             Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
             BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
         elseif BX0Type == Dirichlet
-            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,1,order)
-            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,1,order)
+            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left, order)
+            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,order)
         elseif BX0Type == Neumann
             Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,1,order)
             BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,1,order)

@@ -56,7 +56,7 @@ end
     cright(v) = [1.0,v]
     ctop(u) = [u,1.0]
     
-    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    Dom = Grid2D(cbottom,cleft,cright,ctop,31,31)
     
     u₀(x,y) = x^2
     kx(x,y) = 1.0
@@ -66,16 +66,29 @@ end
     
     setKoefficient!(K,kx,ky,Dom)
     
-    order = FaADE.Derivatives.DerivativeOrder{2}()
+    @testset "Second order" begin
+        order = 2
+        Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,order,false,:Variable)
+        Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,order,false,:Variable)
+    
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
+    
+        FaADE.Derivatives.mul!(uxx,u,K,D)
+    
+        @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+    end
 
-    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
-    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
-
-    D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
-
-    FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
-
-    @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+    @testset "Fourth order" begin
+        order = 4
+        Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,order,false,:Variable)
+        Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,order,false,:Variable)
+    
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
+    
+        FaADE.Derivatives.mul!(uxx,u,K,D)
+    
+        @test norm(uxx[7:end-6,7:end-6] .- ue[7:end-6,7:end-6]) ≤ 1e-10
+    end
 end    
 
 
@@ -88,7 +101,7 @@ end
     cright(v) = [2.0,v]
     ctop(u) = [2u,1.0]
     
-    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
+    Dom = Grid2D(cbottom,cleft,cright,ctop,31,31)
     
     u₀(x,y) = x^2
     kx(x,y) = 1.0
@@ -97,19 +110,37 @@ end
     uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
     
     setKoefficient!(K,kx,ky,Dom)
+
+    @testset "Second order" begin
+        order = 2
+
+        Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,order,false,:Variable)
+        Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,order,false,:Variable)
     
-    order = FaADE.Derivatives.DerivativeOrder{2}()
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
+    
+        FaADE.Derivatives.mul!(uxx,u,K,D)
+    
+        uxx_real = uxx./Dom.J
+    
+        @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
+    end
 
-    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
-    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
+    @testset "Fourth order" begin
+        order = 4
 
-    D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+        Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,order,false,:Variable)
+        Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,order,false,:Variable)
+    
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
+    
+        FaADE.Derivatives.mul!(uxx,u,K,D)
+    
+        uxx_real = uxx./Dom.J
+    
+        @test norm(uxx_real[7:end-6,7:end-6] .- ue[7:end-6,7:end-6]) ≤ 1e-10
+    end
 
-    FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
-
-    uxx_real = uxx./Dom.J
-
-    @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
 end    
 
 
@@ -123,12 +154,10 @@ end
     cright(v) = [0.0,-1.0] + v*[1,1]
     ctop(u) = [0.0,1.0] + u*[1,-1]
     
-    Dom = Grid2D(cbottom,cleft,cright,ctop,21,21)
-    
+    Dom = Grid2D(cbottom,cleft,cright,ctop,31,31)
+
     kx(x,y) = 1.0
     ky(x,y) = 1.0
-    
-    setKoefficient!(K,kx,ky,Dom)
 
     Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
     Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
@@ -138,9 +167,9 @@ end
         uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)->2.0)
         setKoefficient!(K,kx,ky,Dom)
         
-        D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
-        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+        FaADE.Derivatives.mul!(uxx,u,K,D)
 
         uxx_real = uxx./Dom.J
     
@@ -152,9 +181,9 @@ end
         uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> u₀(x,y) * 4.0*(-0.02 + x^2 + y^2)/0.02^2)
         setKoefficient!(K,kx,ky,Dom)
         
-        D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+        D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
-        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+        FaADE.Derivatives.mul!(uxx,u,K,D)
 
         uxx_real = uxx./Dom.J
     
@@ -165,6 +194,7 @@ end
 
 
 @testset "chevron" begin
+    println("chevron TEST NEEDS FIXING")
     function cbottom(u)
         x = u
         u ≤ 0.5 ? y = -u : y = u-1
@@ -181,16 +211,26 @@ end
 
     cright(v) = [1.0,v]
 
-    Dom = Grid2D(cbottom,cleft,cright,ctop,11,11)
+    kx(x,y) = 1.0
+    ky(x,y) = 1.0
+
+    Dom = Grid2D(cbottom,cleft,cright,ctop,31,31)
+    
+    Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
+    Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
 
     u₀(x,y) = y^2
 
-    uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> u₀(x,y) * 4.0*(-0.02 + x^2 + y^2)/0.02^2)
+    uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> 2.0)
     setKoefficient!(K,kx,ky,Dom)
 
+    D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
+
+    FaADE.Derivatives.mul!(uxx,u,K,D)
     
+    uxx_real = uxx./Dom.J
 
-
+    @test norm(uxx_real[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10 broken = true
 end
 
 

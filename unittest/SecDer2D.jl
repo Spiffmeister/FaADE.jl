@@ -16,7 +16,7 @@ end
 nx,x,Δx = buildgrid(100)
 ny,y,Δy = buildgrid(100)
 
-order = FaADE.Derivatives.DerivativeOrder{2}()
+order = Val(2)
 
 u = zeros(Float64,(nx,ny))
 for i = 1:nx; for j = 1:ny

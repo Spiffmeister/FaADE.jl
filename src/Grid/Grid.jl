@@ -6,7 +6,6 @@ Submodule containing the grid data structure and functions.
 module Grid
 
     using FaADE.Helpers
-    # using Derivatives: DerivativeOrder, D₁!
 
     include("DerivativeFirst.jl")
     include("toroidal.jl")

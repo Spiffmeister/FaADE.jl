@@ -34,24 +34,22 @@ struct newProblem1D{TT      <: Real,
     DIMS,
     DCT,
     ST      <: SourceTerm,
-    DO      <: DerivativeOrder,
     SATB    <: SATBoundaries,
     PART    # Parallel map, vector of parallel map, or nothing
         } <: newPDEProblem{TT,DIMS}
     InitialCondition    :: Function
     K                   :: DCT
     source              :: ST
-    order               :: DO
+    order               :: Int
     BoundaryConditions  :: SATB
     Parallel            :: PART
 
     function newProblem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs,S,Par) where {TT,DIMS}
 
         source = SourceTerm{typeof(S)}(S)
-        DiffOrd = DerivativeOrder{order}()
 
         # new{DIMS,TT}(u₀)
-        new{TT,DIMS,typeof(K),typeof(source),typeof(DiffOrd),typeof(BCs),typeof(Par)}(u₀,K,source,DiffOrd,BCs,Par)
+        new{TT,DIMS,typeof(K),typeof(source),typeof(BCs),typeof(Par)}(u₀,K,source,order,BCs,Par)
     end
 end
 newProblem1D(order,u₀,K,G,BCs) = newProblem1D(order,u₀,K,G,BCs,nothing,nothing)
@@ -62,7 +60,6 @@ struct newProblem2D{TT      <: Real,
         DIM,
         DCT,
         ST      <: SourceTerm,
-        DO      <: DerivativeOrder,
         SATB    <: SATBoundaries,
         PART    # Parallel map, vector of parallel map, or nothing
             } <: newPDEProblem{TT,DIM}
@@ -70,17 +67,15 @@ struct newProblem2D{TT      <: Real,
     Kx                  :: DCT
     Ky                  :: DCT
     source              :: ST
-    order               :: DO
+    order               :: Int
     BoundaryConditions  :: SATB
     Parallel            :: PART
     
     function newProblem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIM},BCs,S,Par) where {TT,DIM}
 
         source = SourceTerm{typeof(S)}(S)
-        DO = DerivativeOrder{order}()
 
-        # new(u₀,Kx,Ky,order,BoundaryConditions(Bounds))
-        new{TT,2,typeof(Kx),typeof(source),typeof(DO),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,DO,BCs,Par)
+        new{TT,2,typeof(Kx),typeof(source),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,order,BCs,Par)
     end
 end
 newProblem2D(order,u₀,Kx,Ky,G,BCs) = newProblem2D(order,u₀,Kx,Ky,G,BCs,nothing,nothing)

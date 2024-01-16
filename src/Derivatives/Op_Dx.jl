@@ -17,7 +17,7 @@ function D₁ end
 function D₁(u::AbstractVector{T},Δx::T;
         order::Integer=2) where T
     uₓ = zeros(T,length(u))
-    DO = DerivativeOrder{order}()
+    DO = Val(order)
     D₁!(uₓ,u,length(u),Δx,DO,0.0)
     return uₓ
 end
@@ -44,12 +44,12 @@ function D₁! end
     D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
 1D [`D₁!`](@ref).
 """
-function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
+function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::Val,α::T) where {T,AT<:AbstractVector{T}}
     FirstDerivativeBoundary!(uₓ,u,Δx,Left,order,α)
     FirstDerivativeInternal!(uₓ,u,Δx,n,order,α)
     FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
-function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::DerivativeOrder,α::T) where {T,AT<:AbstractVector{T}}
+function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Val,α::T) where {T,AT<:AbstractVector{T}}
     FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,order,α)
     FirstDerivativeInternal!(uₓ,c,u,Δx,n,order,α)
     FirstDerivativeBoundary!(uₓ,c,u,Δx,Right,order,α)
@@ -70,12 +70,14 @@ end
 2D [`D₁!`](@ref).
 """
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Integer,Δx::T,Δy::T,
-        order::DerivativeOrder,ordery::DerivativeOrder,α::T) where T
+        order::Int,ordery::Int,α::T) where T
     
     order == 2 ? ret = 1 : ret = order
     order == 2 ? nin = 2 : nin = order + halforder(order)
     order == 2 ? ein = 1 : ein = halforder(order)
 
+    order_x = Val(order)
+    order_y = Val(ordery)
     
     for (A,B,C) in zip(eachcol(uₓ),eachcol(u),eachcol(cx))
         D₁!(A,B,C,nx,Δx,order_x,α)
@@ -89,7 +91,7 @@ function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Intege
 end
 
 
-function D₁ᵀ(dest::VT,u::VT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+function D₁ᵀ!(dest::VT,u::VT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
 
     for i = m:n-m+1

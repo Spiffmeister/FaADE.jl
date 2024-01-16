@@ -4,34 +4,30 @@
 abstract type DerivativeOperatorType{DIM} end
 
 
-struct DerivativeOrder{O} end
+# struct DerivativeOperator{TT<:Real,
+#         DIM,
+#         ORDER,
+#         COEFF} <: DerivativeOperatorType{DIM}
+#     order       :: Int64
+#     nx          :: Int64
+#     ny          :: Int64
+#     Δx          :: TT
+#     Δy          :: TT
+#     xperiodic   :: Bool
+#     yperiodic   :: Bool
+# end
 
 
-struct DerivativeOperator{TT<:Real,
-        DIM,
-        DO<:DerivativeOrder,
-        COEFF} <: DerivativeOperatorType{DIM}
-    order       :: DO
-    nx          :: Int64
-    ny          :: Int64
-    Δx          :: TT
-    Δy          :: TT
-    xperiodic   :: Bool
-    yperiodic   :: Bool
-end
-
-
-struct DiffusionOperator{TT<:Real,DO<:DerivativeOrder,COEFF} <: DerivativeOperatorType{1}
-    order   :: DO
+struct DiffusionOperator{TT<:Real,DO,COEFF} <: DerivativeOperatorType{1}
+    order   :: Int64
     n       :: Int64
     Δx      :: TT
     periodic:: Bool
     function DiffusionOperator(n::Int64,Δx::TT,order::Int,periodic::Bool,coeff::Symbol) where {TT<:Real}
-        DO = DerivativeOrder{order}()
-        return new{TT,typeof(DO),coeff}(DO,n,Δx,periodic)
+        return new{TT,order,coeff}(order,n,Δx,periodic)
     end
 end
-struct DiffusionOperatorND{TT,DIM,DO,COEFF,AT<:AbstractArray{TT,DIM}} <: DerivativeOperatorType{DIM}
+struct DiffusionOperatorND{TT<:Real,DIM,DO,COEFF,AT<:AbstractArray{TT,DIM}} <: DerivativeOperatorType{DIM}
     DO      :: NTuple{DIM,DiffusionOperator{TT,DO,COEFF}}
     cache   :: AT
     function DiffusionOperatorND(D::DiffusionOperator{TT,DO,COEFF}...) where {TT<:Real,DO,COEFF}
@@ -43,15 +39,12 @@ struct DiffusionOperatorND{TT,DIM,DO,COEFF,AT<:AbstractArray{TT,DIM}} <: Derivat
             cache = zeros(TT,(D[1].n,D[2].n))
         end
         
-        new{TT,DIM,typeof(D[1].order),COEFF,typeof(cache)}(D,cache)
+        new{TT,DIM,D[1].order,COEFF,typeof(cache)}(D,cache)
     end
 end
 
-
-GetOrder(D::DerivativeOrder{O}) where {O} = O
-GetOrder(O::Int) = O
-
-Base.show(io::IO,DO::DerivativeOperator{TT,DIM,O}) where {TT,DIM,O} = print("Order ",GetOrder(DO.order)," ",DIM," dimensional diffusion SBP operator.")
+# Base.show(io::IO,DO::DerivativeOperator{TT,DIM,O}) where {TT,DIM,O} = print("Order ",O," ",DIM," dimensional diffusion SBP operator.")
+Base.show(io::IO,DO::DiffusionOperator{TT,O,COEFF}) where {TT,O,COEFF} = print("Order ",O," diffusion SBP operator.")
 
 
 

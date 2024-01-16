@@ -73,7 +73,18 @@ end
     end
 end
 
+@testset "Second order periodic" begin
+    n, x, Δx = buildgrid(40)
+    u = ones(n);
+    k = ones(n)
 
+    ∂ₓuₑ = zeros(n);
+    ∂ₓu = zeros(n);
+
+    FaADE.Derivatives.FirstDerivativePeriodic!(∂ₓuₑ,k,u,Δx,Val(2),n,0.0)
+
+    @test norm(∂ₓuₑ .- ∂ₓu) ≤ 1.0e-14
+end
 
 
 
@@ -84,7 +95,7 @@ end
 # In the interior we should be able to exactly compute the soln to a cubic
 # On the boundaries we should be able to compute to third order exactly
 
-@testset "Fourth order Dx linear" begin
+@testset "Fourth order Dx" begin
 
     @testset "Linear" begin
         # Linear function #1
@@ -145,70 +156,23 @@ end
 end
 
 
+@testset "Fourth order periodic" begin
+    n, x, Δx = buildgrid(40)
+    u = ones(n);
+    k = ones(n);
 
-#=
-##======##
-# SIXTH ORDER
-##======##
-# In the interior we should be able to exactly compute the soln to a hextic polynomial
-# 
+    ∂ₓuₑ = zeros(n);
+    ∂ₓu = zeros(n);
 
-# Linear function
-n, x, Δx = buildgrid(20)
-u = x
-∂ₓuₑ = ones(n)
-∂ₓu = D₁(u,n,Δx,order=6)
+    FaADE.Derivatives.FirstDerivativePeriodic!(∂ₓuₑ,k,u,Δx,Val(4),n,0.0)
 
-@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:end-6]) ≤ 1.0e-14
+    @test norm(∂ₓuₑ .- ∂ₓu) ≤ 1.0e-13
+end
 
-# Quadratic
-n, x, Δx = buildgrid(20)
-u = x.^2
-∂ₓuₑ = 2x
-∂ₓu = D₁(u,n,Δx,order=6)
 
-@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
-# Cubic
-n, x, Δx = buildgrid(20)
-u = x.^3
-∂ₓuₑ = 3x.^2
-∂ₓu = D₁(u,n,Δx,order=6)
 
-@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
 
-# Quartic
-n, x, Δx = buildgrid(20)
-u = x.^4
-∂ₓuₑ = 4x.^3
-∂ₓu = D₁(u,n,Δx,order=6)
-
-@test norm(∂ₓuₑ[7:end-6] .- ∂ₓu[7:n-6]) ≤ 1.0e-14
-
-# Quintic
-n, x, Δx = buildgrid(20)
-u = x.^5
-∂ₓuₑ = 5x.^4
-∂ₓu = D₁(u,n,Δx,order=6)
-
-@test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
-
-# Quintic - This test should return the Test Broken expression as it fails to be under the tolerance
-n, x, Δx = buildgrid(20)
-u = x.^6
-∂ₓuₑ = 6x.^5
-∂ₓu = D₁(u,n,Δx,order=6)
-
-@test norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
-
-# Hextic - This test should return the Test Broken expression as it fails to be under the tolerance
-n, x, Δx = buildgrid(20)
-u = x.^7
-∂ₓuₑ = 7x.^6
-∂ₓu = D₁(u,n,Δx,order=6)
-
-@test_broken norm(∂ₓuₑ[7:n-6] - ∂ₓu[7:n-6]) ≤ 1.0e-14
-=#
 
 
 

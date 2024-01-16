@@ -42,13 +42,13 @@ struct newBoundaryData{
     n           :: Int64        # Length of boundary
     DIM         :: Int64
 
-    function newBoundaryData(G::Grid1D{TT},BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newBoundaryData(G::Grid1D{TT},BC,Joint,order::Int) where {TT}
 
         BufferRHS = zeros(TT,1)
 
         new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
     end
-    function newBoundaryData(G::Grid2D{TT},BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newBoundaryData(G::Grid2D{TT},BC,Joint,order::Int) where {TT}
 
         if BC.side ∈ [Left,Right]
             n = G.ny
@@ -91,40 +91,40 @@ struct newInterfaceBoundaryData{
     DIM         :: Int64
     I           :: CartesianIndices
 
-    function newInterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newInterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
 
-        BufferIn    = zeros(TT,O)
-        BufferOut   = zeros(TT,O)
+        BufferIn    = zeros(TT,order)
+        BufferOut   = zeros(TT,order)
         if BC.side == Right
-            I = CartesianIndices((1:O,))
+            I = CartesianIndices((1:order,))
         elseif BC.side == Left
-            I = CartesianIndices((length(G2)-O+1:length(G2),))
+            I = CartesianIndices((length(G2)-order+1:length(G2),))
         end
 
         new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
     end
-    function newInterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::DerivativeOrder{O}) where {TT,O}
+    function newInterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) where {TT}
 
         if BC.side ∈ [Left,Right]
             n = G2.ny
-            BufferIn    = zeros(TT,(O,n))
-            BufferOut   = zeros(TT,(O,n))
+            BufferIn    = zeros(TT,(order,n))
+            BufferOut   = zeros(TT,(order,n))
 
             if BC.side == Left
-                I = CartesianIndices((1:O,1:n))
+                I = CartesianIndices((1:order,1:n))
             else
-                I = CartesianIndices((G2.nx-O+1:G2.nx,1:n))
+                I = CartesianIndices((G2.nx-order+1:G2.nx,1:n))
             end
 
         elseif BC.side ∈ [Up,Down]
             n = G2.nx
-            BufferIn    = zeros(TT,(n,O))
-            BufferOut   = zeros(TT,(n,O))
+            BufferIn    = zeros(TT,(n,order))
+            BufferOut   = zeros(TT,(n,order))
 
             if BC.side == Up
-                I = CartesianIndices((1:n,1:O))
+                I = CartesianIndices((1:n,1:order))
             else
-                I = CartesianIndices((1:n,G2.ny-O+1:G2.ny))
+                I = CartesianIndices((1:n,G2.ny-order+1:G2.ny))
             end
         end
 
@@ -413,6 +413,21 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
 end
 
 
+
+"""
+
+"""
+function _BuildGenericLocalDataBlocks(G::LocalGridType{TT,1,MET}) where {TT,MET}
+    u = zeros(TT,size(G))
+    uₙ₊₁ = zeros(TT,size(G))
+    cache = zeros(TT,size(G))
+    rₖ = zeros(TT,size(G))
+    dₖ = zeros(TT,size(G))
+    b = zeros(TT,size(G))
+
+    return u, uₙ₊₁, cache, rₖ, dₖ, b
+end
+
 """
     _newLocalDataBlockBlocks build all necessary blocks for a local data block
 """
@@ -491,43 +506,25 @@ Initialise a data block for a 1D problem with only 1 grid.
 """
 function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
 
-    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
+    u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
 
-    if typeof(P.K) <: Real
-        PK = P.K
+    K = zeros(TT,size(G))
+    PK = P.K
+    if typeof(PK) <: Real
         K .= P.K
-    elseif typeof(P.K) <: Function
-        PK = P.K
+    elseif typeof(PK) <: Function
         for i in eachindex(G)
-            K[i] .= P.K(G[i])
+            K[i] = P.K(G[i])
         end
     end
 
-    pbound = false
-    # if (typeof(P.BoundaryConditions.BoundaryLeft) <: SimultanousApproximationTerm{:Periodic}) & (GetOrder(P.order) == 2)
-    #     pbound = true
-    #     BS = (nothing,nothing)
-    # else
-        BStor = newBoundaryConditions(P,G)
-        BS = (BStor.BC_Left,BStor.BC_Right)
-    # end
+    BStor = newBoundaryConditions(P,G)
+    BS = (BStor.BC_Left,BStor.BC_Right)
 
-    IP = innerH(G.Δx,G.n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0),pbound,false)
-    PMap = P.Parallel
+    IP = innerH(G.Δx,G.n,P.order)
+    D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
+    PMap = nothing
     source = P.source
-    # SC = StepConfig{TT}()
-
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
-end
-function newLocalDataBlock(P::newPDEProblem{TT,1},G,SC,K::AT) where {TT,AT} ########### TESTING
-    u, uₙ₊₁, _ , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G)
-    PK = P.K
-
-    BS = (newBoundaryNull(), newBoundaryNull())
-    IP = innerH(G.n)
-    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.n,0,G.Δx,TT(0),false,false)
-    PMap = P.Parallel; source = P.source
 
     return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
@@ -556,9 +553,9 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
-    # BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-    BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing)
-    IP = innerH(G.Δx,G.Δy,G.nx,G.ny,GetOrder(P.order))
+    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
+    # BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing)
+    IP = innerH(G.Δx,G.Δy,G.nx,G.ny,P.order)
 
     if length(K) == 3
         difftype = :Variable
@@ -566,8 +563,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
         difftype = :Constant
     end
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
-    Dx = DiffusionOperator(G.nx,G.Δx,GetOrder(P.order),false,difftype)
-    Dy = DiffusionOperator(G.ny,G.Δy,GetOrder(P.order),true,difftype)
+    Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)
+    Dy = DiffusionOperator(G.ny,G.Δy,P.order,false,difftype)
     D = DiffusionOperatorND(Dx,Dy)
     PMap = P.Parallel
     source = P.source

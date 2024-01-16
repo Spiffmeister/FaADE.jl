@@ -99,7 +99,7 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) whe
     W = getarray(D,:cache)
     R = getarray(D,read)
 
-    mul!(W,R,D.K,D.Derivative) # W ← D(u)
+    mul!(W,R,D.K,D.Derivative,TT(0)) # W ← D(u)
     applySATs(W,R,D,SolutionMode) # W += SATu
     
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
@@ -119,7 +119,7 @@ function CGRHS!(D::newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT,PT}) where {TT,DI
     cache = getarray(D,:cache)
     b = getarray(D,:b)
     u = getarray(D,:u)
-    mul!(cache,u,D.K,D.Derivative)      # D₂u
+    mul!(cache,u,D.K,D.Derivative,TT(0))      # D₂u
     applySATs(cache,u,D,SolutionMode)   # D⟂ = D₂u + SATu
     @. b = u + (1-D.SC.θ)*D.SC.Δt*cache # u + (1-θ)ΔtD⟂u
     # setBoundaryConditions!(D)

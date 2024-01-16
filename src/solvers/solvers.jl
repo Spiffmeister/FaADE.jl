@@ -10,7 +10,7 @@ module solvers
 
     using FaADE.Helpers
 
-    using FaADE.Derivatives: DerivativeOrder, GetOrder, DerivativeOperator, mul!,
+    using FaADE.Derivatives: mul!,
     innerH,
     DerivativeOperatorType, DiffusionOperator, DiffusionOperatorND
 

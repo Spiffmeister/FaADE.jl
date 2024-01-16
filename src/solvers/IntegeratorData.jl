@@ -36,7 +36,7 @@ struct ConjGradBlock{TT,DIM,AT} <: IntegratorDataBlock{TT,DIM}
 
     innerprod   :: innerH{TT,DIM,Vector{TT}}
 
-    function ConjGradBlock{TT}(grid::GridType{TT,DIM},order::Union{Int,DerivativeOrder}) where {TT,DIM}
+    function ConjGradBlock{TT}(grid::GridType{TT,DIM},order::Int) where {TT,DIM}
 
         n = size(grid)
 
@@ -86,13 +86,13 @@ struct ConjGradMultiBlock{TT<:Real,
     nblock  :: Int64    # Number of data blocks
     SC      :: TID
 
-    function ConjGradMultiBlock(G::GridMultiBlock{TT,DIM},DO::DerivativeOrder) where {TT,DIM}
-        CGB = [ConjGradBlock{TT}(grid,GetOrder(DO)) for grid in G.Grids]
+    function ConjGradMultiBlock(G::GridMultiBlock{TT,DIM},DO::Int) where {TT,DIM}
+        CGB = [ConjGradBlock{TT}(grid,DO) for grid in G.Grids]
 
         new{TT,DIM,ConjugateGradientConfig}(CGB,length(CGB),ConjugateGradientConfig(true))
     end
-    function ConjGradMultiBlock(G::LocalGridType{TT,DIM},DO::DerivativeOrder) where {TT,DIM}
-        CGB = [ConjGradBlock{TT}(G,GetOrder(DO))]
+    function ConjGradMultiBlock(G::LocalGridType{TT,DIM},DO::Int) where {TT,DIM}
+        CGB = [ConjGradBlock{TT}(G,DO)]
         new{TT,DIM,ConjugateGradientConfig}(CGB,length(CGB),ConjugateGradientConfig(true))
     end
 end

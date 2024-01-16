@@ -22,21 +22,21 @@ See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
 """
 function SecondDerivativeInternal! end
 """
-    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT)
+    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::Val{2},α::TT)
 
 Second order 1D second derivative internal stencil
 """
-@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::DerivativeOrder{2},i::Int) where {T,AT<:AbstractVector{T}}
+@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::Val{2},i::Int) where {T,AT<:AbstractVector{T}}
     @inbounds (0.5*(c[i] + c[i-1])*u[i-1] - 0.5*(c[i+1] + 2c[i] + c[i-1])*u[i] + 0.5*(c[i] + c[i+1])*u[i+1])/Δx^2
 end
-@inline function SecondDerivativeInternal(u::AT,cx::AT,Δx::T,::DerivativeOrder{4},i::Int) where {T,AT<:AbstractVector{T}}
+@inline function SecondDerivativeInternal(u::AT,cx::AT,Δx::T,::Val{4},i::Int) where {T,AT<:AbstractVector{T}}
     @inbounds ((-cx[i-1]/0.6e1 + cx[i-2]/0.8e1 + cx[i]/0.8e1)*u[i-2] +
     (-cx[i-2]/0.6e1 - cx[i+1]/0.6e1 - cx[i-1]/0.2e1 - cx[i]/0.2e1)*u[i-1] +
     (cx[i-2]/0.24e2 + 0.5e1/0.6e1*cx[i-1] + 0.5e1/0.6e1*cx[i+1] + cx[i+2]/0.24e2 + 0.3e1/0.4e1*cx[i])*u[i] +
     (-cx[i-1]/0.6e1 - cx[i+2]/0.6e1 - cx[i]/0.2e1 - cx[i+1]/0.2e1)*u[i+1] +
     (-cx[i+1]/0.6e1 + cx[i]/0.8e1 + cx[i+2]/0.8e1)*u[i+2])/(-Δx^2)
 end
-@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::DerivativeOrder{6},i::Int) where {T,AT<:AbstractVector{T}}
+@inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::Val{6},i::Int) where {T,AT<:AbstractVector{T}}
     @inbounds -((c[i-2]/0.40e2 + c[i-1]/0.40e2 - 0.11e2/0.360e3*c[i-3] - 0.11e2/0.360e3*c[i])*u[i-3] +
         (c[i-3]/0.20e2 - 0.3e1/0.10e2*c[i-1] + c[i+1]/0.20e2 + 0.7e1/0.40e2*c[i] + 0.7e1/0.40e2*c[i-2])*u[i-2] + 
         (-c[i-3]/0.40e2 - 0.3e1/0.10e2*c[i-2] - 0.3e1/0.10e2*c[i+1] - c[i+2]/0.40e2 - 0.17e2/0.40e2*c[i] - 0.17e2/0.40e2*c[i-1])*u[i-1] + 
@@ -47,7 +47,7 @@ end
 end
 
 """
-    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::DerivativeOrder{2},α::TT)
+    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::Val{2},α::TT)
 
 
 Internal nodes affect nodes from `1.5*order+1` giving the following:
@@ -56,7 +56,7 @@ Internal nodes affect nodes from `1.5*order+1` giving the following:
     Order 6: `10:nx-9`
 """
 @inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
-        Δx::TT,nx::Integer,order::DerivativeOrder{O},α::TT) where {TT,VT<:AbstractVector{TT},O}
+        Δx::TT,nx::Integer,order::Val{O},α::TT) where {TT,VT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = floor(Int,(1.5O))+1
     for i = m:nx-m+1
         @inbounds uₓₓ[i] = α*uₓₓ[i] + SecondDerivativeInternal(u,cx,Δx,order,i)
@@ -72,10 +72,10 @@ end
 Pointwise stencil for a second derivative
 """
 function SecondDerivativePeriodic end
-@inline function SecondDerivativePeriodic(u::VT,c::VT,Δx::TT,::DerivativeOrder{2},n::Integer,i::Integer) where {TT,VT<:AbstractVector{TT}}
+@inline function SecondDerivativePeriodic(u::VT,c::VT,Δx::TT,::Val{2},n::Integer,i::Integer) where {TT,VT<:AbstractVector{TT}}
     @inbounds (0.5*(c[i] + c[_prev(i,n)])*u[_prev(i,n)] - 0.5*(c[_next(i,n)] + 2c[i] + c[_prev(i,n)])*u[i] + 0.5*(c[i] + c[_next(i,n)])*u[_next(i,n)])/Δx^2
 end
-@inline function SecondDerivativePeriodic(u::AT,cx::AT,Δx::T,::DerivativeOrder{4},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
+@inline function SecondDerivativePeriodic(u::AT,cx::AT,Δx::T,::Val{4},n::Integer,i::Integer) where {T,AT<:AbstractVector{T}}
     im = _prev(i,n); ip = _next(i,n)
     imm = _prev(i-1,n); ipp = _next(i+1,n)
 
@@ -86,7 +86,7 @@ end
     (-cx[ip]/0.6e1 + cx[i]/0.8e1 + cx[ipp]/0.8e1)*u[ipp])/(-Δx^2)
 end
 
-function SecondDerivativePeriodic!(dest::VT,u::VT,c::VT,Δx::TT,DO::DerivativeOrder,n::Integer,α::TT) where {TT,VT}
+function SecondDerivativePeriodic!(dest::VT,u::VT,c::VT,Δx::TT,DO::Val,n::Integer,α::TT) where {TT,VT}
     for i = 1:n
         dest[i] = α*dest[i] + SecondDerivativePeriodic(u,c,Δx,DO,n,i)
     end
@@ -112,14 +112,14 @@ function SecondDerivativeBoundary! end
 """
 @inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
-        Δx::TT,::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,TN}
+        Δx::TT,::NodeType{TN},::Val{2},α::TT) where {TT,TN}
     TN == :Left ? j = 1 : j = lastindex(uₓₓ)
     uₓₓ[j] = α*uₓₓ[j]
 end
 
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
-        Δx::TT,::NodeType{:Left},::DerivativeOrder{4},α::TT) where TT
+        Δx::TT,::NodeType{:Left},::Val{4},α::TT) where TT
 
     B₁Su = -1/Δx*c[1]*(-24/17*u[1] + 59/34*u[2] - 4/17*u[3] - 3/34*u[4]) #fully compatible
     # B₁Su = -1/Δx*c[1]*(-11/6*u[1] + 3*u[2] - 3/2*u[3] + 1/3*u[4])
@@ -206,7 +206,7 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
 end
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     u::AbstractVector{TT},c::AbstractVector{TT},
-    Δx::TT,::NodeType{:Right},::DerivativeOrder{4},α::TT) where TT
+    Δx::TT,::NodeType{:Right},::Val{4},α::TT) where TT
     
     n = lastindex(u)
     m = lastindex(uₓₓ)
@@ -297,12 +297,12 @@ end
 
 
 
-@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{2},α::TT) where {TT,AT<:AbstractVector{TT},TN}
+@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::Val{2},α::TT) where {TT,AT<:AbstractVector{TT},TN}
     TN == :Left ? n = 1 : n = lastindex(u)
     m = lastindex(u)
     @inbounds uₓₓ[n] = α*uₓₓ[n] + (0.5*(c[n] + c[m-1])*u[m-1] - 0.5*(c[2] + 2c[n] + c[m-1])*u[n] + 0.5*(c[n] + c[2])*u[2])/Δx^2
 end
-@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,cx::AT,Δx::TT,::NodeType{TN},::DerivativeOrder{4},α::TT) where {TT,AT<:AbstractVector{TT},TN}
+@inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,cx::AT,Δx::TT,::NodeType{TN},::Val{4},α::TT) where {TT,AT<:AbstractVector{TT},TN}
     TN == :Left ? n = 1 : n = lastindex(u)
     TN == :Left ? in = 1 : in = -1 #If on the left 1:6 if on right n-5:n
     # TN == :Left ? m = lastindex(u)-1 : m = lastindex(u)
