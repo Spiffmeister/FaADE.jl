@@ -414,9 +414,7 @@ end
 
 
 
-"""
 
-"""
 function _BuildGenericLocalDataBlocks(G::LocalGridType{TT,1,MET}) where {TT,MET}
     u = zeros(TT,size(G))
     uₙ₊₁ = zeros(TT,size(G))
@@ -427,6 +425,9 @@ function _BuildGenericLocalDataBlocks(G::LocalGridType{TT,1,MET}) where {TT,MET}
 
     return u, uₙ₊₁, cache, rₖ, dₖ, b
 end
+
+
+
 
 """
     _newLocalDataBlockBlocks build all necessary blocks for a local data block
@@ -537,7 +538,9 @@ Initialise a data block for a 2D problem with only 1 grid.
 """
 function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
-    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G,P.Parallel)
+    u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
+
+
 
     if typeof(P.Parallel) <: Nothing
         _setKoefficient!(K,P,G,nothing)
@@ -547,14 +550,12 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
         else
             _setKoefficient!(K,P,G,P.Parallel)
         end
-        # _setKoefficient!(K,P,G,P.Parallel)
     end
-    # _setKoefficient!(K,P,G,P.Parallel)
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
     BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-    # BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing)
+    # BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing); @warn "Using periodic stencil"
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,P.order)
 
     if length(K) == 3
@@ -568,8 +569,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     D = DiffusionOperatorND(Dx,Dy)
     PMap = P.Parallel
     source = P.source
-    # source = SourceTerm{Nothing}(nothing)
-    # SC = StepConfig{TT}()
 
     return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
@@ -580,7 +579,7 @@ end
 Initialise a data block for a 1D multiblock problem
 """
 function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
-    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(G.Grids[I])
+    u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G.Grids[I])
 
     if typeof(P.K) <: Real
         K .= P.K

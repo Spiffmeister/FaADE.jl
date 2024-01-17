@@ -120,7 +120,6 @@ struct VariableCoefficientPDE2D{FC,FX,FY} <: PDEProblem{2}
     Kx                  :: FX
     Ky                  :: FY
     order               :: Int
-    # DO               :: DerivativeOrder
     BoundaryConditions  :: NamedTuple
     function VariableCoefficientPDE2D(u₀,Kx::Function,Ky::Function,order::Int,BCs::BoundaryConditionData...)
 

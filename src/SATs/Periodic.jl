@@ -224,20 +224,19 @@ function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN,TT}) where {TT,A
         # @show n, m
         # @show SP.side, SP.axis
         # @show size(dest), size(u)
-    
+
         if SP.side == Left
             DEST = view(dest,   1,1:m)
-            SRC = view(u,       1,1:m)
+            SRC = view(u[1,1:m]-u[m,1:m], :,:)
         elseif SP.side == Right
             DEST = view(dest,   n,1:m)
             SRC = view(u,       n,1:m)
         elseif SP.side == Up
             DEST = view(dest,   1:m,1)
-            SRC = view(u,       1:m,1)
-            # println("hi")
+            SRC = view(u[:,1]-u[:,n], :,1)
         else
             DEST = view(dest,   1:m,n)
-            SRC = view(u,       1:m,n)
+            SRC = view(u[:,1]-u[:,n],:,1)
         end
     # @show size(DEST),size(SRC)
         FirstDerivativeTranspose!(DEST,SRC,m,SP.Δy,SP.order,TT(1))
@@ -280,77 +279,6 @@ end
 
 
 
-#=
-"""
-    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:SolutionMode}) where {AT}
-Periodic SAT for left boundary of a split domain
-"""
-function SAT_Periodic! end
-function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN}) where {AT,TN<:NodeType{SIDE}} where SIDE
-    SIDE == :Left ? j = 1 : j = lastindex(dest)
-    SIDE == :Left ? m = 0 : m = j-SP.order
-    SIDE == :Left ? k = 1 : k = 2
-
-    # Dirichlet terms
-    dest[j]  += SP.τ₀(c[j]) * SP.H⁻¹L₀ * (u[1] - u[end])
-    # Symmeteriser
-    L₁u = (u[1] - u[end])
-    for i = 1:order
-        dest[m+i]            += SP.τ₁ * SP.H⁻¹[m+i] * SP.c[j]*SP.D₁ᵀE₀[i]*L₁u
-        #Neumann terms
-        dest[j]  += SP.α₀ * SP.H⁻¹[1] * (c[1]*SP.E₀D₁[i]*u[i] - c[end]*SP.EₙD₁[i]*u[end-order+i])
-    end
-    dest
-end
-=#
-#=
-"""
-    SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:SolutionMode}) where {AT}
-Periodic SAT for right boundary of a split domain
-"""
-function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:SolutionMode}) where {AT}
-    for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
-        # Dirichlet terms
-        S[end]+= SP.τ₀(K) * (U[end] - U[1])
-        # Symmeteriser
-        L₁u = (U[1] - U[end])
-        for i = 1:order
-            S[end-order+i]  += SP.τ₁*SP.K[end]*SP.D₁ᵀEₙ[i]*SP.L₁u
-            #Neumann terms
-            S[end]+= SP.α₀ * (K[1]*SP.E₀D₁[i]*U[i] - K[end]*SP.EₙD₁[i]*U[end-order+i])
-        end
-    end
-    dest
-end
-=#
-# """
-#     SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:DataMode}) where {AT}
-# Periodic SAT for the left hand buffer
-# """
-# function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Left}},::SATMode{:DataMode}) where {AT}
-#     for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
-#         S[end] = U[end]
-#         S[end-1] = TT(0)
-#         for i = 1:SP.order
-#             S[end-1] += K[end]*SP.EₙD₁[i]*U[end-SP.order+i]
-#         end
-#     end
-#     dest
-# end
-# """
-#     SAT_Periodic!(cache::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:DataMode}) where {AT}
-# Periodic SAT for the right hand buffer
-# """
-# function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{NodeType{:Right}},::SATMode{:DataMode}) where {AT}
-#     for (S,U,K) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
-#         S[1] = U[1]
-#         S[2] = TT(0)
-#         for i = 1:SP.order
-#             S[2] += K[1]*SP.E₀D₁[i]*U[i]
-#         end
-#     end
-#     dest
-# end
 
 
 

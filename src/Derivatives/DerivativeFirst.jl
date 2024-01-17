@@ -27,14 +27,14 @@ end
 In place first derivative function for internal nodes
 """
 function FirstDerivativeInternal! end
-@inline function FirstDerivativeInternal!(dest::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::VT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,TT(1))
     end
     dest
 end
-@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::VT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     # m = floor(Int,(O+2)/2)
     for i = m:n-m+1
@@ -137,7 +137,7 @@ end
 Single node 1D first derivative transpose function.
 """
 function FirstDerivativeTransposeBoundary! end
-function FirstDerivativeTransposeBoundary!(dest::VT,u::VT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,TN}
+function FirstDerivativeTransposeBoundary!(dest::VT,u::AT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,AT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
 
@@ -145,7 +145,7 @@ function FirstDerivativeTransposeBoundary!(dest::VT,u::VT,Δx::TT,NT::NodeType{T
 
     dest
 end
-function  FirstDerivativeTransposeBoundary!(dest::VT,u::VT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT) where {TT,VT,TN}
+function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT) where {TT,VT,AT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
     
@@ -160,7 +160,7 @@ function  FirstDerivativeTransposeBoundary!(dest::VT,u::VT,Δx::TT,NT::NodeType{
 end
 
 
-function FirstDerivativeTranspose!(dest::VT,u::VT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
+function FirstDerivativeTranspose!(dest::VT,u::AT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
