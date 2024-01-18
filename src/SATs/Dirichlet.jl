@@ -109,6 +109,9 @@ function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) wher
     end
     dest
 end
+"""
+    2D caller for ``SAT_Dirichlet_data!``
+"""
 function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
@@ -116,8 +119,8 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Carte
 
     dest
 end
-function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
-    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
+function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,KT,TT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(cx))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
     end
 
@@ -131,22 +134,26 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Curvi
 
     if SD.side == Left
         # println("hi")
-        DEST = view(dest,   1,1:m)
-        SRC = view(data,    1,1:m)
+        DEST =  view(dest,  1,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   1,1:m)
     elseif SD.side == Right
-        DEST = view(dest,   n,1:m)
-        SRC = view(data,    1,1:m)
+        DEST =  view(dest,  n,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   n,1:m)
     elseif SD.side == Up
-        DEST = view(dest,   1:m,1)
-        SRC = view(data,    1:m,1)
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,1)
     else
-        DEST = view(dest,   1:m,n)
-        SRC = view(data,    1:m,1)
+        DEST =  view(dest,  1:m,n)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,n)
     end
     # @show size(DEST),size(SRC)
     # println("===")
 
-    FirstDerivativeTranspose!(DEST,SRC,m,SD.Δy,SD.order,TT(1))
+    FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
     dest
 end
 
@@ -162,37 +169,47 @@ function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) 
     end
     dest
 end
-function SAT_Dirichlet_solution!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,COORD,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,COORD}
+"""
+    2D caller for ``SAT_Dirichlet_solution!``
+"""
+function SAT_Dirichlet_solution!(dest::AT,data::AT,c::KT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
-
-    if SD.coordinates == :Curvilinear
-        n = size(dest,SD.axis)
-        m = size(dest,mod1(SD.axis+1,2))
-        
-        # @show n, m
-        # @show size(dest)
-        # @show SD.side, SD.axis
-
-        if SD.side == Left
-            # println("hi")
-            DEST = view(dest,   1,1:m)
-            SRC = view(data,    1,1:m)
-        elseif SD.side == Right
-            DEST = view(dest,   n,1:m)
-            SRC = view(data,    n,1:m)
-        elseif SD.side == Up
-            DEST = view(dest,   1:m,1)
-            SRC = view(data,    1:m,1)
-        else
-            DEST = view(dest,   1:m,n)
-            SRC = view(data,    1:m,n)
-        end
-        # @show size(DEST),size(SRC)
-
-        FirstDerivativeTranspose!(DEST,SRC,m,SD.Δy,SD.order,TT(1))
+    dest
+end
+function SAT_Dirichlet_solution!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(cx))
+        SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
+
+    n = size(dest,SD.axis)
+    m = size(dest,mod1(SD.axis+1,2))
+    
+    # @show n, m
+    # @show size(dest)
+    # @show SD.side, SD.axis
+
+    if SD.side == Left
+        DEST =  view(dest,  1,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   1,1:m)
+    elseif SD.side == Right
+        DEST =  view(dest,  n,1:m)
+        SRC =   view(data,  n,1:m)
+        C =     view(cxy,   n,1:m)
+    elseif SD.side == Up
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,1)
+    else
+        DEST = view(dest,   1:m,n)
+        SRC = view(data,    1:m,n)
+        C = view(cxy,       1:m,n)
+    end
+    # @show size(DEST),size(SRC)
+
+    FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
     dest
 end
 

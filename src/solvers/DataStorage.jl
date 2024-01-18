@@ -378,7 +378,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetri
             #     println("NaN ",I," ",B[1]," ",B[2]," ",NB)
             # end
             x,y = G[I]
-            # if (abs(x) == 0.5) && (abs(y) == 0.5)
+            # if (abs(x) == 0.5) && (abs(y) == 0.5) #NIMROD TEST
                 # K[1][I] = P.Kx * 0.5
                 # K[2][I] = P.Ky * 0.5
                 # if !(PT<:Nothing)
@@ -415,7 +415,7 @@ end
 
 
 
-function _BuildGenericLocalDataBlocks(G::LocalGridType{TT,1,MET}) where {TT,MET}
+function _BuildGenericLocalDataBlocks(G::LocalGridType{TT}) where {TT}
     u = zeros(TT,size(G))
     uₙ₊₁ = zeros(TT,size(G))
     cache = zeros(TT,size(G))
@@ -426,6 +426,106 @@ function _BuildGenericLocalDataBlocks(G::LocalGridType{TT,1,MET}) where {TT,MET}
     return u, uₙ₊₁, cache, rₖ, dₖ, b
 end
 
+function _BuildDiffusionMatrix end
+function _BuildDiffusionMatrix(G::LocalGridType{TT,1,MET},Para::PT) where {TT,MET,PT}
+    K = zeros(TT,size(G))
+    return K
+end
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::PT) where {TT,PT}
+
+    existb = true
+    try 
+        existb = !(typeof(Para.MagneticField).parameters[1] == Nothing)
+    catch 
+        existb = false
+    end
+
+    function MagField(X)
+        if existb
+            return Para.MagneticField.B(X,TT(0))
+        else
+            return zeros(TT,3)
+        end
+    end
+
+    K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+
+    if typeof(P.Kx) <: Real
+        for i in eachindex(G)
+            B = MagField(G[i])
+            NB = norm(B,2)^2
+            if NB == TT(0) # Ensure there are no divisions by zero
+                NB = TT(1)
+            end
+            K[1][i] = P.Kx * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+            K[2][i] = P.Ky * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+
+            K[3][i] = P.Kx * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+        end
+
+    end
+
+    return K
+end
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT) where {TT,PT}
+
+    existb = true
+    try 
+        existb = !(typeof(Para.MagneticField).parameters[1] == Nothing)
+    catch 
+        existb = false
+    end
+
+    function MagField(X)
+        if existb
+            return Para.MagneticField.B(X,TT(0))
+        else
+            return zeros(TT,3)
+        end
+    end
+
+    K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+
+    if typeof(P.Kx) <: Real
+        for i in eachindex(G)
+            B = MagField(G[i])
+            NB = norm(B,2)^2
+            if NB == TT(0) # Ensure there are no divisions by zero
+                NB = TT(1)
+                B[1] = B[2] = TT(0)
+            end
+
+            K[1][i] = P.Kx * (TT(1) - B[1]^2/NB)
+            K[2][i] = P.Ky * (TT(1) - B[2]^2/NB)
+            if existb
+                K[3][i] = -P.Kx * B[1]*B[2]/NB
+            end
+
+            x,y = G[i]
+            if abs(x) == 0.5 && abs(y) == 0.5
+                K[1][i] = P.Kx * 0.5
+                K[2][i] = P.Ky * 0.5
+                if existb
+                    K[3][i] = -P.Kx*0.5
+                end
+            end
+
+            if G[i] == (0.5,0.5)
+                println("Kx = ",K[1][i])
+                println("Ky = ",K[2][i])
+                println("Kxy = ",K[3][i])
+            end
+        end
+        # for I in eachrow(K[1])
+        #     println(I)
+        # end
+    elseif typeof(P.Kx) <: Function
+        error("Needs fixing")
+    end
+
+
+    return K
+end
 
 
 
@@ -540,7 +640,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
 
-
+    K = _BuildDiffusionMatrix(G,P,P.Parallel)
 
     if typeof(P.Parallel) <: Nothing
         _setKoefficient!(K,P,G,nothing)
@@ -611,7 +711,7 @@ Initialise a data block for a 2D multiblock problem
 function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer) where {TT,MET}
     LG = G.Grids[I]
 
-    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _newLocalDataBlockBlocks(LG)
+    u, uₙ₊₁, K , cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(LG)
     
     _setKoefficient!(K,P,LG)
     PK = (P.Kx,P.Ky)

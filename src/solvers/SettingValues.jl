@@ -143,13 +143,17 @@ function applySAT! end
 """
 Apply the SAT
 """
-@inline applySAT!(SAT::SimultanousApproximationTerm,dest::AT,K::AT,u::AT,mode::SATMode) where {AT} = SAT(dest,K,u,mode)
-@inline applySAT!(SAT::SimultanousApproximationTerm,dest::AT,K::AT,u::AT,buffer::AT,mode::SATMode) where {AT} = SAT(dest,K,u,buffer,mode)
+@inline applySAT!(SAT::SimultanousApproximationTerm,dest::AT,K::KT,u::AT,mode::SATMode) where {AT,KT} = SAT(dest,K,u,mode)
+@inline applySAT!(SAT::SimultanousApproximationTerm,dest::AT,K::KT,u::AT,buffer::AT,mode::SATMode) where {AT,KT} = SAT(dest,K,u,buffer,mode)
 """
 Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
-@inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end
+@inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
+
+"""
+Decide which SAT to apply
+"""
 @inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.Boundary)
@@ -159,6 +163,15 @@ Applying SATs in DataMode ignoring interface terms
         applySAT!(BC.Boundary,dest,K,mode)
     end
 end
+"""
+Decide which curvilinear SAT to apply
+"""
+function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,BCT,AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,BCT<:SAT_Dirichlet}
+    ax = GetAxis(BCT.types[1])
+    SAT_Dirichlet_data!(dest,BC.BufferRHS,K[ax],K[3],BC.Boundary)
+end
+
+
 """
 Applying SATs in SolutionMode
 """
@@ -179,6 +192,15 @@ function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,
         error("Not implemented")
     end
 end
+
+
+function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,BCT,AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,BCT<:SAT_Dirichlet}
+    ax = GetAxis(BCT.types[1])
+    SAT_Dirichlet_solution!(dest,source,K[ax],K[3],BC.Boundary)
+end
+
+
+
 
 function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
@@ -204,17 +226,29 @@ end
 applySATs for 2D local block
 """
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.boundary[1],    dest, D.K[1], mode)
-    applySAT!(D.boundary[2],    dest, D.K[1], mode)
-    applySAT!(D.boundary[3],    dest, D.K[2], mode)
-    applySAT!(D.boundary[4],    dest, D.K[2], mode)
+    applyCurvilinearSAT!(D.boundary[1],    dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[2],    dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[3],    dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[4],    dest, D.K, mode)
 end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
-    applySAT!(D.boundary[1],    dest, source, D.K[1], mode)
-    applySAT!(D.boundary[2],    dest, source, D.K[1], mode)
-    applySAT!(D.boundary[3],    dest, source, D.K[2], mode)
-    applySAT!(D.boundary[4],    dest, source, D.K[2], mode)
+    applyCurvilinearSAT!(D.boundary[1],    dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[2],    dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[3],    dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[4],    dest, source, D.K, mode)
 end
+
+
+
+
+function applyCurvilinearSATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
+    applySAT!(D.boundary[1],    dest,   source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[2],    dest,   source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[3],    dest,   source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[4],    dest,   source, D.K[2], D.K[3], mode)
+end
+
+
 """
 Multiblock version
 """

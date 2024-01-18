@@ -158,6 +158,27 @@ function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,Δx::TT,NT::NodeType{
 
     dest
 end
+function FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,AT,TN}
+    TN == :Left ? i = 1 : i = -1
+    TN == :Left ? j = 1 : j = length(u)
+
+    dest[j]     = α*dest[j] + TT(i)*c[j]*(TT(-1)*u[j] + TT(-1)*u[j+i])
+
+    dest
+end
+function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT) where {TT,VT,AT,TN}
+    TN == :Left ? i = 1 : i = -1
+    TN == :Left ? j = 1 : j = length(u)
+    
+    dest[j]     = α*dest[j] +    TT(i)*c[j]     *( TT(-24//17)*u[j]+  TT(-1//2)*u[j+i] +  TT(4//43)*u[j+2i] + TT(3//98)*u[j+3i] )/Δx
+    dest[j+i]   = α*dest[j+i] +  TT(i)*c[j+i]   *( TT(59//34)*u[j] +                                          TT(-59//86)*u[j+2i] )/Δx
+    dest[j+2i]  = α*dest[j+2i] + TT(i)*c[j+2i]  *( TT(-4//17)*u[j] +  TT(1//2)* u[j+i] +                      TT(-59//98)*u[j+3i] +   TT(-1//12)*u[j+4i] )/Δx
+    dest[j+3i]  = α*dest[j+3i] + TT(i)*c[j+3i]  *( TT(-3//37)*u[j] +                      TT(59//86)*u[j+2i]+                         TT(2//3)*u[j+4i] +  TT(-1//12)*u[j+5i])/Δx 
+    dest[j+4i]  = α*dest[j+4i] + TT(i)*c[j+4i]  *(                                        TT(-4//43)*u[j+2i]+ TT(32//49)*u[j+3i] +                       TT(2//3)*u[j+5i] +   TT(-1//12)*u[j+6i] )/Δx
+    dest[j+5i]  = α*dest[j+5i] + TT(i)*c[j+5i]  *(                                                            TT(-4//49)*u[j+3i] +    TT(2//3)*u[j+4i] +                      TT(2//3)*u[j+6i] + TT(-1//12)*u[j+7i] )/Δx 
+
+    dest
+end
 
 
 function FirstDerivativeTranspose!(dest::VT,u::AT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
@@ -167,5 +188,15 @@ function FirstDerivativeTranspose!(dest::VT,u::AT,n::Int,Δx::TT,order::Int,α::
     end
     FirstDerivativeTransposeBoundary!(dest,u,Δx,Left,   Val(order),α)
     FirstDerivativeTransposeBoundary!(dest,u,Δx,Right,  Val(order),α)
+    dest
 end
 
+function FirstDerivativeTranspose!(dest::VT,u::AT,c::AT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
+    order == 2 ? m = 2 : m = 7
+    for i = m:n-m+1
+        @inbounds dest[i] = α*dest[i] + c[i]*FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
+    end
+    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Left,   Val(order),α)
+    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Right,  Val(order),α)
+    dest
+end
