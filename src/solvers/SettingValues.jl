@@ -150,6 +150,7 @@ Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
 @inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
+@inline function applyCurvilinearSAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
 
 """
 Decide which SAT to apply
@@ -166,9 +167,8 @@ end
 """
 Decide which curvilinear SAT to apply
 """
-function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,BCT,AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,BCT<:SAT_Dirichlet}
-    ax = GetAxis(BCT.types[1])
-    SAT_Dirichlet_data!(dest,BC.BufferRHS,K[ax],K[3],BC.Boundary)
+function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,COORD,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},COORD,VT,FT1,PT,LAT} where {SIDE,AX}
+    SAT_Dirichlet_data!(dest,BC.BufferRHS,K[AX],K[3],BC.Boundary)
 end
 
 
@@ -194,11 +194,12 @@ function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,
 end
 
 
-function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,BCT,AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,BCT<:SAT_Dirichlet}
-    ax = GetAxis(BCT.types[1])
-    SAT_Dirichlet_solution!(dest,source,K[ax],K[3],BC.Boundary)
+function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,COORD,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},COORD,VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
+    SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-
+function applyCurvilinearSAT!(BC::newInterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+    SAT_Periodic!(dest,source,K[AXIS],K[3],BC.Boundary)
+end
 
 
 

@@ -502,7 +502,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
             end
 
             x,y = G[i]
-            if abs(x) == 0.5 && abs(y) == 0.5
+            if abs(x) == 0.5 && abs(y) == 0.5 #NIMROD TEST
                 K[1][i] = P.Kx * 0.5
                 K[2][i] = P.Ky * 0.5
                 if existb
@@ -510,11 +510,19 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
                 end
             end
 
-            if G[i] == (0.5,0.5)
-                println("Kx = ",K[1][i])
-                println("Ky = ",K[2][i])
-                println("Kxy = ",K[3][i])
-            end
+            # if (x==0) && (y==0) #SINGLE ISLAND TEST
+            #     K[1][I] = P.Kx
+            #     K[2][I] = P.Ky
+            #     if !(PT<:Nothing)
+            #         K[3][I] = 0.0
+            #     end
+            # end
+
+            # if G[i] == (0.5,0.5)
+            #     println("Kx = ",K[1][i])
+            #     println("Ky = ",K[2][i])
+            #     println("Kxy = ",K[3][i])
+            # end
         end
         # for I in eachrow(K[1])
         #     println(I)

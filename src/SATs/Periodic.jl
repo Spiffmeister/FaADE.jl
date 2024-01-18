@@ -6,6 +6,7 @@ Storage of all objects needed for a Periodic SAT ``u(x_0) = u(x_N)`` and ``\\lef
 """
 struct SAT_Periodic{
         TN<:NodeType,
+        COORD,
         TT<:Real,
         VT<:Vector{TT},
         F1<:Function,F2<:Function} <: SimultanousApproximationTerm{:Periodic}
@@ -29,7 +30,6 @@ struct SAT_Periodic{
     
 end
 function SAT_Periodic(Δx::TT,axis::Int,order::Int) where TT
-
     D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
     D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
     E₀D₁ = BoundaryDerivative(Left,Δx,order)
@@ -39,7 +39,7 @@ function SAT_Periodic(Δx::TT,axis::Int,order::Int) where TT
 
     loopaxis = SelectLoopDirection(axis)
 
-    SAT_Periodic{typeof(Internal),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+    SAT_Periodic{typeof(Internal),TT,:Cartesian,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
         Periodic,Internal,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,loopaxis,0.0,:Cartesian)
 end
 function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
@@ -49,7 +49,6 @@ function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
     EₙD₁ = BoundaryDerivative(Right,Δx,order)
 
     α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
-
 
     # E₀ = _BoundaryOperator(TT,Left)
     # Eₙ = _BoundaryOperator(TT,Right)
@@ -78,7 +77,7 @@ function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType) where TT
 
     loopaxis = SelectLoopDirection(axis)
 
-    SAT_Periodic{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+    SAT_Periodic{typeof(side),:Cartesian,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
         Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,0.0,:Cartesian)
 end
 function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType,Δy::TT,coord::Symbol) where TT
@@ -91,7 +90,7 @@ function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType,Δy::TT,coord:
 
     loopaxis = SelectLoopDirection(axis)
 
-    SAT_Periodic{typeof(side),TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
+    SAT_Periodic{typeof(side),coord,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
         Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,Δy,coord)
 end
 
@@ -212,38 +211,47 @@ function SAT_Periodic!(dest::VT,u::VT,c::VT,SP::SAT_Periodic{TN}) where {VT<:Abs
     # end
     dest
 end
-function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
+function SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN,:Cartesian,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
     for (DEST,U,C) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(c))
         SAT_Periodic!(DEST,U,C,SP)
     end
 
-    if SP.coordinates == :Curvilinear
-        n = size(dest,SP.axis)
-        m = size(dest,mod1(SP.axis+1,2))
-
-        # @show n, m
-        # @show SP.side, SP.axis
-        # @show size(dest), size(u)
-
-        if SP.side == Left
-            DEST = view(dest,   1,1:m)
-            SRC = view(u[1,1:m]-u[m,1:m], :,:)
-        elseif SP.side == Right
-            DEST = view(dest,   n,1:m)
-            SRC = view(u,       n,1:m)
-        elseif SP.side == Up
-            DEST = view(dest,   1:m,1)
-            SRC = view(u[:,1]-u[:,n], :,1)
-        else
-            DEST = view(dest,   1:m,n)
-            SRC = view(u[:,1]-u[:,n],:,1)
-        end
-    # @show size(DEST),size(SRC)
-        FirstDerivativeTranspose!(DEST,SRC,m,SP.Δy,SP.order,TT(1))
+    dest
+end
+function SAT_Periodic!(dest::AT,u::AT,cx::AT,cxy::AT,SP::SAT_Periodic{TN,:Curvilinear,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
+    for (DEST,U,C) in zip(SP.loopaxis(dest),SP.loopaxis(u),SP.loopaxis(cx))
+        SAT_Periodic!(DEST,U,C,SP)
     end
+
+    n = size(dest,SP.axis)
+    m = size(dest,mod1(SP.axis+1,2))
+
+    # @show n, m
+    # @show SP.side, SP.axis
+    # @show size(dest), size(u)
+
+    if SP.side == Left
+        DEST = view(dest,   1,1:m)
+        SRC = view(u[1,1:m]-u[n,1:m], :,:)
+        C = view(cxy[1,1:m]-cxy[n,1:m],:,:)
+    elseif SP.side == Right
+        DEST = view(dest,   n,1:m)
+        SRC = view(u,       n,1:m)
+    elseif SP.side == Up
+        DEST = view(dest,   1:m,1)
+        SRC = view(u[:,1]-u[:,n], :,1)
+        C = view(cxy[:,1]-cxy[:,n],:,1)
+    else
+        DEST = view(dest,   1:m,n)
+        SRC = view(-u[:,1]+u[:,n],:,1)
+        C = view(-cxy[:,1]+cxy[:,n],:,1)
+    end
+    FirstDerivativeTranspose!(DEST,SRC,m,SP.Δy,SP.order,TT(1))
 
     dest
 end
+
+
 
 
 """
