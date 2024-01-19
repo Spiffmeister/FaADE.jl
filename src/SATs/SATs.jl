@@ -14,7 +14,7 @@ module SATs
 
     include("types.jl")
 
-    include("SAT_Interface.jl")
+    # include("SAT_Interface.jl")
 
     include("Boundary_Operators.jl")
 

@@ -21,7 +21,7 @@ module Helpers
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     # export SATMode, DataMode, SolutionMode
     export SourceTerm, DiffusionCoefficient
-    export DataBlockType, BoundaryStorage
+    export BoundaryStorage
 
     # nifty import
     export check_order, check_boundary,

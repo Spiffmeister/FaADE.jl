@@ -97,10 +97,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     t = TT(0)
     Δt₀ = Δt
 
-# @show size(soln.u[1])
-
     copyto!(:uₙ₊₁,  :u, DBlock)
-    
+
     # while t < t_f+Δt/2
     nt = round(t_f/Δt)
     # nt = 1;

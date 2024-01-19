@@ -27,13 +27,13 @@ end
 Sets the value of the boundary.
 """
 function setBoundaryCondition! end
-function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,args...) where {TT,Fn<:Real}
+function setBoundaryCondition!(B::BoundaryData{TT,1,Fn},Δt::TT,args...) where {TT,Fn<:Real}
     @. B.BufferRHS = Δt*B.RHS
 end
-function setBoundaryCondition!(B::newBoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
+function setBoundaryCondition!(B::BoundaryData{TT,1,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     B.BufferRHS[1] = Δt*(1-θ)*B.RHS(t) + Δt*θ*B.RHS(t+Δt)
 end
-function setBoundaryCondition!(B::newBoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
+function setBoundaryCondition!(B::BoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) where {TT,Fn<:Function}
     for i = 1:B.n
         B.BufferRHS[i] = Δt*(1-θ)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
     end
@@ -42,11 +42,11 @@ end
 If no boundary condition set or the boundary condition is periodic or an interface, ignore this step
 """
 function setBoundaryCondition!(BC::Nothing,args...) end
-function setBoundaryCondition!(BC::newInterfaceBoundaryData,args...) end
+function setBoundaryCondition!(BC::InterfaceBoundaryData,args...) end
 """
 Calling boundaries for data blocks
 """
-function setBoundaryConditions!(D::newLocalDataBlockType{TT,DIM}) where {TT,DIM}
+function setBoundaryConditions!(D::LocalDataBlockType{TT,DIM}) where {TT,DIM}
     setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t, D.SC.θ)
     setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t, D.SC.θ)
     if DIM == 2
@@ -69,8 +69,8 @@ end
     fillBuffer!
 """
 function fillBuffer! end
-function fillBuffer!(source,B::newBoundaryData,args...) end
-function fillBuffer!(source::AT,B::newInterfaceBoundaryData,K::AT) where AT
+function fillBuffer!(source,B::BoundaryData,args...) end
+function fillBuffer!(source::AT,B::InterfaceBoundaryData,K::AT) where AT
     B.BufferIn .= source
 end
 """
@@ -78,8 +78,8 @@ fillBuffer
 """
 function fillBuffer end
 function fillBuffer(source,B::Nothing,args...) end # no boundary data
-function fillBuffer(source::Symbol,B::newBoundaryData,DB::DataMultiBlock) end
-function fillBuffer(source::Symbol,B::newInterfaceBoundaryData,DB::DataMultiBlock)
+function fillBuffer(source::Symbol,B::BoundaryData,DB::DataMultiBlock) end
+function fillBuffer(source::Symbol,B::InterfaceBoundaryData,DB::DataMultiBlock)
     cache = getproperty(DB[B.Joint],source)
     copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
 end
@@ -91,7 +91,7 @@ end
     fillBuffers
 """
 function fillBuffers end
-function fillBuffers(B::newBoundaryData,args...) end
+function fillBuffers(B::BoundaryData,args...) end
 function fillBuffers(source::Symbol,DB::newLocalDataBlock{TT,DIM}) where {TT,DIM}
     S = getproperty(DB,source)
     copyto!(DB.boundary.RHS_Left,   S)
@@ -149,13 +149,13 @@ Apply the SAT
 Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
-@inline function applySAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
-@inline function applyCurvilinearSAT!(BC::newInterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
+@inline function applySAT!(BC::InterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
+@inline function applyCurvilinearSAT!(BC::InterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
 
 """
 Decide which SAT to apply
 """
-@inline function applySAT!(BC::newBoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
+@inline function applySAT!(BC::BoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.Boundary)
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
@@ -164,10 +164,17 @@ Decide which SAT to apply
         applySAT!(BC.Boundary,dest,K,mode)
     end
 end
+
+"""
+Decide which Cartesian SAT to apply
+"""
+function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,PT,LAT} where {SIDE,AX}
+    SAT_Dirichlet_data!(dest,BC.BufferRHS,K[AX],BC.Boundary)
+end
 """
 Decide which curvilinear SAT to apply
 """
-function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,COORD,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},COORD,VT,FT1,PT,LAT} where {SIDE,AX}
+function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,PT,LAT} where {SIDE,AX}
     SAT_Dirichlet_data!(dest,BC.BufferRHS,K[AX],K[3],BC.Boundary)
 end
 
@@ -175,35 +182,45 @@ end
 """
 Applying SATs in SolutionMode
 """
-@inline function applySAT!(BC::newInterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
+@inline function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
     # applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
-    if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Interface}
-        SAT_Interface!(dest,source,K,BC.BufferIn,BC.Boundary,mode)
-    elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Periodic}
-        SAT_Periodic!(dest,source,K,BC.Boundary)
+    SAT = BC.Boundary
+    if typeof(SAT) <: SimultanousApproximationTerm{:Interface}
+        SAT_Interface!(dest,source,K[SAT.axis],BC.BufferIn,SAT,mode)
+    elseif typeof(SAT) <: SimultanousApproximationTerm{:Periodic}
+        SAT_Periodic!(dest,source,K[SAT.axis],SAT)
     end
 end
-function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
+function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
+    SAT = BC.Boundary
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
-        SAT_Dirichlet_solution!(dest,source,K,BC.Boundary)
+        SAT_Dirichlet_solution!(dest,source,K[SAT.axis],SAT)
     elseif BCT <: SimultanousApproximationTerm{:Neumann}
-        SAT_Neumann_solution!(dest,source,K,BC.Boundary)
+        SAT_Neumann_solution!(dest,source,K[SAT.axis],SAT)
     else
         error("Not implemented")
     end
 end
 
 
-function applyCurvilinearSAT!(BC::newBoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,COORD,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},COORD,VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
+
+# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
+#     SAT_Dirichlet_solution!(dest,source,K[AXIS],BC.Boundary)
+# end
+function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-function applyCurvilinearSAT!(BC::newInterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+
+# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Periodic{TN,:Cartesian,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+#     SAT_Periodic!(dest,source,K[AXIS],BC.Boundary)
+# end
+function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
 
 
 
-function applySAT!(BC::newBoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
+function applySAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_explicit!(dest,source,BC.BufferRHS,K,BC.Boundary,mode)
     end
@@ -226,23 +243,35 @@ end
     applySATs
 applySATs for 2D local block
 """
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
+function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT}
     applyCurvilinearSAT!(D.boundary[1],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[2],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[3],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[4],    dest, D.K, mode)
 end
-function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
+function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT}
     applyCurvilinearSAT!(D.boundary[1],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[2],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[3],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[4],    dest, source, D.K, mode)
 end
+function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
+    applyCartesianSAT!(D.boundary[1],    dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[2],    dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[3],    dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[4],    dest, D.K, mode)
+end
+function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
+    applyCartesianSAT!(D.boundary[1],    dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[2],    dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[3],    dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[4],    dest, source, D.K, mode)
+end
 
 
 
 
-function applyCurvilinearSATs(dest::AT,D::newLocalDataBlock{TT,2,AT},mode) where {TT,AT}
+function applyCurvilinearSATs(dest::AT,D::newLocalDataBlock{TT,2,COORD,AT},mode) where {TT,COORD,AT}
     applySAT!(D.boundary[1],    dest,   source, D.K[1], D.K[3], mode)
     applySAT!(D.boundary[2],    dest,   source, D.K[1], D.K[3], mode)
     applySAT!(D.boundary[3],    dest,   source, D.K[2], D.K[3], mode)
@@ -348,7 +377,7 @@ function copyUtoSAT!(Bound::BoundaryStorage{T,N,AT},u::AT,order::Int) where {T,N
         copyUtoSAT!(Bound.SAT_Down,u,Down,order)
     end
 end
-function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::Int) where {TT,DIM,DT<:newLocalDataBlockType}
+function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT},order::Int) where {TT,DIM,DT<:LocalDataBlockType}
     copyUtoSAT!(D.Data.boundary,D.Data.u,order)
 end
 

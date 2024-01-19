@@ -1,6 +1,6 @@
 
-abstract type IntegratorDataMultiBlock{dtype,DIM} <: newDataBlockType{dtype,DIM} end
-abstract type IntegratorDataBlock{dtype,DIM} <: newDataBlockType{dtype,DIM} end
+abstract type IntegratorDataMultiBlock{dtype,DIM} <: DataBlockType{dtype,DIM} end
+abstract type IntegratorDataBlock{dtype,DIM} <: DataBlockType{dtype,DIM} end
 abstract type IntegratorConfig end
 
 mutable struct ConjGradScalarBlock{TT}
@@ -111,34 +111,34 @@ Currently only Forward Euler and Runge-Kutta 4 are implemented for this solver.
 
 TODO: Improve construction
 """
-mutable struct ExplicitBlock{T,N,AT, O} <: DataBlockType{T,N, AT}
-    k1  :: AT
-    k2  :: AT
-    k3  :: AT
-    k4  :: AT
-    Δt  :: T
+# mutable struct ExplicitBlock{T,N,AT, O} <: DataBlockType{T,N, AT}
+#     k1  :: AT
+#     k2  :: AT
+#     k3  :: AT
+#     k4  :: AT
+#     Δt  :: T
 
-    function ExplicitBlock{T}(grid::GridType,Δt::T,integrator::Symbol=:RK4) where T
-        if typeof(grid) <: Grid1D
-            n = grid.n
-        elseif typeof(grid) <: Grid2D
-            n = (grid.nx,grid.ny)
-        end
+#     function ExplicitBlock{T}(grid::GridType,Δt::T,integrator::Symbol=:RK4) where T
+#         if typeof(grid) <: Grid1D
+#             n = grid.n
+#         elseif typeof(grid) <: Grid2D
+#             n = (grid.nx,grid.ny)
+#         end
 
-        dims = length(n)
+#         dims = length(n)
 
-        k1 = zeros(T,n)
-        if integrator == :RK4
-            k2 = zeros(T,n)
-            k3 = zeros(T,n)
-            k4 = zeros(T,n)
-            O = 4
-        elseif integrator == :euler
-            k2 = k3 = k4 = zeros(T,0)
-            O = 1
-        end
+#         k1 = zeros(T,n)
+#         if integrator == :RK4
+#             k2 = zeros(T,n)
+#             k3 = zeros(T,n)
+#             k4 = zeros(T,n)
+#             O = 4
+#         elseif integrator == :euler
+#             k2 = k3 = k4 = zeros(T,0)
+#             O = 1
+#         end
 
-        new{T,dims,typeof(k1),O}(k1,k2,k3,k4,Δt)
-    end
-end
+#         new{T,dims,typeof(k1),O}(k1,k2,k3,k4,Δt)
+#     end
+# end
 

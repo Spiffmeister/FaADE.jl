@@ -1,6 +1,6 @@
 
-abstract type newDataBlockType{dtype,DIM} end
-abstract type newLocalDataBlockType{dtype,DIM,atype} <: newDataBlockType{dtype,DIM} end
+abstract type DataBlockType{dtype,DIM} end
+abstract type LocalDataBlockType{dtype,DIM,atype} <: DataBlockType{dtype,DIM} end
 
 
 
@@ -22,13 +22,13 @@ end
 
 #========== NEW  DATA ==============#
 
-struct newBoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
+struct BoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
 
 """
-    newBoundaryData
+    BoundaryData
 Container for Dirichlet, Neumann and Robin boundary conditions.
 """
-struct newBoundaryData{
+struct BoundaryData{
         TT<:Real,
         DIM,
         F1<:Union{Real,Function},
@@ -42,13 +42,13 @@ struct newBoundaryData{
     n           :: Int64        # Length of boundary
     DIM         :: Int64
 
-    function newBoundaryData(G::Grid1D{TT},BC,Joint,order::Int) where {TT}
+    function BoundaryData(G::Grid1D{TT},BC,Joint,order::Int) where {TT}
 
         BufferRHS = zeros(TT,1)
 
         new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
     end
-    function newBoundaryData(G::Grid2D{TT},BC,Joint,order::Int) where {TT}
+    function BoundaryData(G::Grid2D{TT},BC,Joint,order::Int) where {TT}
 
         if BC.side ∈ [Left,Right]
             n = G.ny
@@ -75,10 +75,10 @@ end
 
 
 """
-    newInterfaceBoundaryData
+    InterfaceBoundaryData
 Container for Periodic and Interface boundary conditions.
 """
-struct newInterfaceBoundaryData{
+struct InterfaceBoundaryData{
         TT<:Real,
         DIM,
         BCT,
@@ -91,7 +91,7 @@ struct newInterfaceBoundaryData{
     DIM         :: Int64
     I           :: CartesianIndices
 
-    function newInterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
+    function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
 
         BufferIn    = zeros(TT,order)
         BufferOut   = zeros(TT,order)
@@ -103,7 +103,7 @@ struct newInterfaceBoundaryData{
 
         new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
     end
-    function newInterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) where {TT}
+    function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) where {TT}
 
         if BC.side ∈ [Left,Right]
             n = G2.ny
@@ -281,8 +281,8 @@ struct newBoundaryConditions{DIM,
 end
 
 
-function getjoint(BC::newBoundaryData) end
-getjoint(BC::newInterfaceBoundaryData) = BC.Joint
+function getjoint(BC::BoundaryData) end
+getjoint(BC::InterfaceBoundaryData) = BC.Joint
 
 
 
@@ -295,10 +295,10 @@ Base.getindex(B::newBoundaryConditions,N::NodeType{:Right}) = B.BC_Right
 Base.getindex(B::newBoundaryConditions,N::NodeType{:Up})    = B.BC_Up
 Base.getindex(B::newBoundaryConditions,N::NodeType{:Down})  = B.BC_Down
 
-_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Periodic},J,order) where TT  = newInterfaceBoundaryData{TT}(G1,G2,BC,J,order)
-_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},J,order) where TT = newInterfaceBoundaryData{TT}(G1,G2,BC,J,order)
-_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},J,order) where TT = newBoundaryData(G,BC,J,order)
-_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},J,order) where TT   = newBoundaryData(G,BC,J,order)
+_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Periodic},J,order) where TT  = InterfaceBoundaryData{TT}(G1,G2,BC,J,order)
+_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},J,order) where TT = InterfaceBoundaryData{TT}(G1,G2,BC,J,order)
+_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},J,order) where TT = BoundaryData(G,BC,J,order)
+_newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},J,order) where TT   = BoundaryData(G,BC,J,order)
 
 
 
@@ -455,6 +455,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
             B = MagField(G[i])
             NB = norm(B,2)^2
             if NB == TT(0) # Ensure there are no divisions by zero
+                @warn "The field is singular at $(G[i])"
                 NB = TT(1)
             end
             K[1][i] = P.Kx * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
@@ -493,6 +494,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
             if NB == TT(0) # Ensure there are no divisions by zero
                 NB = TT(1)
                 B[1] = B[2] = TT(0)
+                @warn "norm(B)=0 at $(G[i]), assuming isotropic diffusion at this point. Check _BuildDiffusionMatrix in DataStorage.jl for more info."
             end
 
             K[1][i] = P.Kx * (TT(1) - B[1]^2/NB)
@@ -511,11 +513,12 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
             end
 
             # if (x==0) && (y==0) #SINGLE ISLAND TEST
-            #     K[1][I] = P.Kx
-            #     K[2][I] = P.Ky
-            #     if !(PT<:Nothing)
-            #         K[3][I] = 0.0
-            #     end
+                # K[1][I] = P.Kx
+                # K[2][I] = P.Ky
+                # if !(PT<:Nothing)
+                #     K[3][I] = 0.0
+                # end
+                # println(K[1][i]," ",K[2][i]," ",K[3][i]," ",B[1]," ",B[2]," ",NB," ",G[i])
             # end
 
             # if G[i] == (0.5,0.5)
@@ -574,6 +577,7 @@ Contains the data for a local block
 """
 mutable struct newLocalDataBlock{TT<:Real,
         DIM,    # Dimension
+        COORD,  # Coordinate type
         AT  <: AbstractArray{TT},
         KT,     # Coefficient storage
         DCT,    # Diffusion coefficient type
@@ -582,7 +586,7 @@ mutable struct newLocalDataBlock{TT<:Real,
         DT  <: DerivativeOperatorType,  # Derivative operator
         ST  <: SourceTerm,          # Source term
         PT, # Parallel map or Nothing
-        } <: newLocalDataBlockType{TT,DIM,AT}
+        } <: LocalDataBlockType{TT,DIM,AT}
     u           :: AT
     uₙ₊₁        :: AT
     K           :: KT
@@ -635,7 +639,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     PMap = nothing
     source = P.source
 
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,:Cartesian,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
 
@@ -650,15 +654,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
 
     K = _BuildDiffusionMatrix(G,P,P.Parallel)
 
-    if typeof(P.Parallel) <: Nothing
-        _setKoefficient!(K,P,G,nothing)
-    else
-        if typeof(P.Parallel.MagneticField.B) <: Nothing
-            _setKoefficient!(K,P,G,nothing)
-        else
-            _setKoefficient!(K,P,G,P.Parallel)
-        end
-    end
     PK = (P.Kx,P.Ky)
 
     BStor = newBoundaryConditions(P,G)
@@ -678,7 +673,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     PMap = P.Parallel
     source = P.source
 
-    return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,2,difftype,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 
 
@@ -710,7 +705,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) 
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,1,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,:Cartesian,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
     newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer)
@@ -737,7 +732,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     source = SourceTerm{Nothing}(nothing)
     SC = StepConfig{TT}()
 
-    return newLocalDataBlock{TT,2,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,2,:Cartesian,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 
 
@@ -752,7 +747,7 @@ end
     getarray(D::newLocalDataBlock,s::Symbol)
 Type stable getfield for arrays
 """
-@inline function getarray(D::newLocalDataBlockType{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
+@inline function getarray(D::LocalDataBlockType{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
     rt = getfield(D,s)
     return rt :: AT
 end
@@ -764,8 +759,8 @@ Data structure for multiblock problems
 struct DataMultiBlock{TT<:Real,
         DIM,
         NB,
-        TDBLOCK <: NTuple{NB,newLocalDataBlockType}
-            } <: newDataBlockType{TT,DIM}
+        TDBLOCK <: NTuple{NB,LocalDataBlockType}
+            } <: DataBlockType{TT,DIM}
     
     Block   :: TDBLOCK
     SC      :: StepConfig{TT}
@@ -803,7 +798,7 @@ Base.length(DB::DataMultiBlock) = DB.nblock
 
 Base.ndims(DB::DataMultiBlock{TT,DIM}) where {TT,DIM} = DIM
 
-# @inline eachjoint(BB::newBoundaryData1D) = Base.OneTo(2)
+# @inline eachjoint(BB::BoundaryData1D) = Base.OneTo(2)
 
 
 

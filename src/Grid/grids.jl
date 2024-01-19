@@ -260,7 +260,10 @@ function GetMinΔ end
 GetMinΔ(grid::Grid1D) = grid.Δx
 GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
 
-
+"""
+    GetMetricType
+"""
+GetMetricType(G::GridType{TT,DIM,COORD}) where {TT,DIM,COORD} = COORD
 
 
 
