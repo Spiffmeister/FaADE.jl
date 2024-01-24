@@ -431,7 +431,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,1,MET},Para::PT) where {TT,ME
     K = zeros(TT,size(G))
     return K
 end
-function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::PT) where {TT,PT}
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::PT) where {TT,PT<:ParallelData}
 
     existb = true
     try 
@@ -468,7 +468,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
 
     return K
 end
-function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT) where {TT,PT}
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT) where {TT,PT<:ParallelData}
 
     existb = true
     try 
@@ -485,7 +485,12 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
         end
     end
 
-    K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+    if existb
+        K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+    else
+        K = [zeros(TT,size(G)), zeros(TT,size(G))]
+    end
+    # K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)
@@ -494,7 +499,9 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
             if NB == TT(0) # Ensure there are no divisions by zero
                 NB = TT(1)
                 B[1] = B[2] = TT(0)
-                @warn "norm(B)=0 at $(G[i]), assuming isotropic diffusion at this point. Check _BuildDiffusionMatrix in DataStorage.jl for more info."
+                if existb
+                    # @warn "norm(B)=0 at $(G[i]), assuming isotropic diffusion at this point. Check _BuildDiffusionMatrix in DataStorage.jl for more info."
+                end
             end
 
             K[1][i] = P.Kx * (TT(1) - B[1]^2/NB)
@@ -504,21 +511,32 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
             end
 
             x,y = G[i]
-            if abs(x) == 0.5 && abs(y) == 0.5 #NIMROD TEST
+            if (x == 0.5 && y == 0.5) | (x==-0.5 && y==-0.5) #NIMROD TEST
+                K[1][i] = P.Kx * 0.5
+                K[2][i] = P.Ky * 0.5
+                if existb
+                    K[3][i] = P.Kx*0.5
+                end
+            elseif (x==0.5 && y==-0.5) | (x==-0.5 && y==0.5)
                 K[1][i] = P.Kx * 0.5
                 K[2][i] = P.Ky * 0.5
                 if existb
                     K[3][i] = -P.Kx*0.5
                 end
+            elseif x==0 && y==0
+                K[1][i] = P.Kx*0.5
+                K[2][i] = P.Ky*0.5
+                if existb
+                    K[3][i] = P.Kx*0.5
+                end
             end
 
             # if (x==0) && (y==0) #SINGLE ISLAND TEST
-                # K[1][I] = P.Kx
-                # K[2][I] = P.Ky
-                # if !(PT<:Nothing)
-                #     K[3][I] = 0.0
-                # end
-                # println(K[1][i]," ",K[2][i]," ",K[3][i]," ",B[1]," ",B[2]," ",NB," ",G[i])
+            #     K[1][i] = P.Kx
+            #     K[2][i] = P.Ky
+            #     if !(PT<:Nothing)
+            #         K[3][i] = 0.0
+            #     end
             # end
 
             # if G[i] == (0.5,0.5)
@@ -535,6 +553,19 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
     end
 
 
+    return K
+end
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::Nothing) where {TT}
+    K = [zeros(TT,size(G)), zeros(TT,size(G))]
+
+    if typeof(P.Kx) <: Real
+        for i in eachindex(G)
+            K[1][i] = P.Kx
+            K[2][i] = P.Ky
+        end
+    elseif typeof(P.Kx) <: Function
+        error("Needs fixing")
+    end
     return K
 end
 
@@ -651,7 +682,7 @@ Initialise a data block for a 2D problem with only 1 grid.
 function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
-
+    
     K = _BuildDiffusionMatrix(G,P,P.Parallel)
 
     PK = (P.Kx,P.Ky)

@@ -31,8 +31,7 @@ end
 
 
 function comp_MMS(Dx,Dy,npts,
-        BoundaryX0,BX0Type,BoundaryXL,BXLType,
-        BoundaryY0,BY0Type,BoundaryYL,BYLType,
+        BoundaryX0,BoundaryXL,
         F,ũ,ũ₀,order;
         dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
@@ -46,8 +45,8 @@ function comp_MMS(Dx,Dy,npts,
         Dom = Grid2D(Dx,Dy,n,n)
 
         # X boundaries
-        Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  1,order)
-        BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, 1,order)
+        Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order, 0.0, :Cartesian)
+        BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order, 0.0, :Cartesian)
         By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
         ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
 
@@ -80,15 +79,24 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = [21,31,41,51,61,71,81,91,101]
+npts = collect(21:10:101)
 
-nameappend = "spatial"
+@show nameappend = "temporal"
 θ = 0.5
 cx=1.0
 cy=0.0
-ωx=7.5
-ωy=5.0
-ωt=1.0
+ωx=1.0
+ωy=1.0
+ωt=9.0
+
+
+# @show nameappend = "spatial"
+# θ = 0.5
+# cx=1.0
+# cy=0.0
+# ωx=7.5
+# ωy=5.0
+# ωt=1.0
 
 # Solution
 ũ(x,y,t;
@@ -124,7 +132,7 @@ println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
 analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
 IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-FD(x,y,t) = F(x,y,t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
 BxLũ(y,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
 BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
@@ -132,28 +140,19 @@ BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + 
 order = 2
 println("order=",order)
 O2_DirichletPeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    nothing,Periodic,nothing,Periodic,
+    BxLũ,BxRũ,
     FD,analytic,IC,order,
     kx=K,ky=K,θ=θ)
 
 order = 4
 println("order=",order)
 O4_DirichletPeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
-    BxLũ,Dirichlet,BxRũ,Dirichlet,
-    nothing,Periodic,nothing,Periodic,
+    BxLũ,BxRũ,
     FD,analytic,IC,order,
     kx=K,ky=K,θ=θ)
 
 println("Order 2 Dirichlet convergence rates=",O2_DirichletPeriodicMMS.conv_rate)
 println("Order 4 Dirichlet convergence rates=",O4_DirichletPeriodicMMS.conv_rate)
-
-# pD = plot(axis=:log,minorgrid=true)
-# plot!(pD,  O2_DirichletPeriodicMMS.npts,   O2_DirichletPeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-# plot!(pD,  O2_DirichletPeriodicMMS.npts,   O2_DirichletPeriodicMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-# plot!(pD,  O4_DirichletPeriodicMMS.npts,   O4_DirichletPeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-# plot!(pD,  O4_DirichletPeriodicMMS.npts,   O4_DirichletPeriodicMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)    
-# savefig(pD,"2DMMSDirichlet.png")
 
 
 println("=====")

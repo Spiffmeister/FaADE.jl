@@ -200,29 +200,35 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     H = P.H
 
     I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
+    Io = scale( interpolate(u₀,BSpline(Cubic())),(P.gridx,P.gridy) )
     # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
-
 
     # w_f ← P_f u + P_b u
     _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
-
+    _compute_w!(Io,w_b,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
+    # @show norm(w_b - u₀)
+    @. w_b = u₀ - w_b
+    
     # Tune the parallel penalty
-    τ = P.τ*(maximum(u - w_f)/maximum(w_f))^3
-    # τ = 1e7*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
+    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
+    # τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3 * sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
+    # τ = 1e9*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
     # τ = P.τ
     P.τ_i[1] = τ
     # τ = P.τ
-
+    
+    # @show norm(w_b), norm(u.-w_f), w_b[16,16], u[16,16]-w_f[16,16], τ
 
     # u^{n+1} = (1+θ)Δt κ τ
     # @. u = 1/(1 + θ * Δt * κ * τ * 1/H) * (u + θ*Δt*κ*τ/H * w_f) + (1-θ)*Δt * τ * κ * 1/H * (u₀ - w_b)
-    # @show u[:,51]
+    # println()
+    # @show u[46:56,51]
     _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,P.gridx.len,P.gridy.len)
-    # @show u[:,51]
+    # @show u[46:56,51]
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
-    @. w_b = u - w_f
+    # @. w_b = u - w_f
 
     # u = w_f
     u
@@ -232,10 +238,27 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
     # println(norm(u))
     for j in 1:ny
         for i in 1:nx
-            u[i,j] = 1/(1 + θ * Δt * κ * τ / H[i,j]) * (
-                (u[i,j] + θ * Δt * κ * τ / H[i,j] * w_f[i,j]) + 
-                (1-θ)*Δt * κ * τ / H[i,j] * w_b[i,j] 
-                )
+            ### CURRENTLY IN THE PAPER
+            # u[i,j] = 1/(1 + θ * Δt * κ * τ / H[i,j]) * (
+            #     u[i,j] + 
+            #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
+            #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
+
+            u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
+                u[i,j] + 
+                +Δt*κ*τ*w_f[i,j]/H[i,j])
+
+            # u[i,j] = 1/(1 + θ * Δt * κ * τ) * (
+            #     u[i,j] + 
+            #     +θ*Δt*κ*τ*w_f[i,j] +  
+            #     -z*Δt*κ*τ*w_b[i,j] )
+
+            # u[i,j] = 1/(1+Δt*κ*τ/H[i,j]) * (
+            #         u[i,j] + θ*Δt*κ*τ/H[i,j] * w_f[i,j] +
+            #         +(1-θ)*Δt*κ*τ/H[i,j] * w_b[i,j]
+            #     )
+
+            # u[i,j] = u[i,j] - θ*Δt*κ*τ*(u[i,j] - w_f[i,j]/2)/H[i,j] - (1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j]
         end
     end
     # println(norm(u))
@@ -261,6 +284,8 @@ end
 """
 function compute_parallel_operator(dest::AT,u::AT,P::ParallelData) where {AT}
     I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
+    # I = scale( interpolate(u,BSpline(Quadratic())),(P.gridx,P.gridy) )
+    # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
     _compute_w!(I,dest,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
     @. dest = u - dest
 end

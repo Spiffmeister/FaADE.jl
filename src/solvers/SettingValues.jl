@@ -150,12 +150,13 @@ Applying SATs in DataMode ignoring interface terms
 """
 @inline function applySAT!(BC::Nothing,tmp...) end # Do not apply and boundary conditions
 @inline function applySAT!(BC::InterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
+@inline function applyCartesianSAT!(BC::InterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
 @inline function applyCurvilinearSAT!(BC::InterfaceBoundaryData,dest,K,mode::SATMode{:DataMode}) end # Do nothing
 
 """
 Decide which SAT to apply
 """
-@inline function applySAT!(BC::BoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
+@inline function applyCartesianSAT!(BC::BoundaryData,dest::AT,K::AT,mode::SATMode{:DataMode}) where {AT}
     if typeof(BC.Boundary) <: SimultanousApproximationTerm{:Dirichlet}
         SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.Boundary)
     elseif typeof(BC.Boundary) <: SimultanousApproximationTerm{:Neumann}
@@ -168,9 +169,9 @@ end
 """
 Decide which Cartesian SAT to apply
 """
-function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,PT,LAT} where {SIDE,AX}
-    SAT_Dirichlet_data!(dest,BC.BufferRHS,K[AX],BC.Boundary)
-end
+# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,PT,LAT} where {SIDE,AX}
+#     SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.Boundary)
+# end
 """
 Decide which curvilinear SAT to apply
 """
@@ -186,17 +187,17 @@ Applying SATs in SolutionMode
     # applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
     SAT = BC.Boundary
     if typeof(SAT) <: SimultanousApproximationTerm{:Interface}
-        SAT_Interface!(dest,source,K[SAT.axis],BC.BufferIn,SAT,mode)
+        SAT_Interface!(dest,source,K,BC.BufferIn,SAT,mode)
     elseif typeof(SAT) <: SimultanousApproximationTerm{:Periodic}
-        SAT_Periodic!(dest,source,K[SAT.axis],SAT)
+        SAT_Periodic!(dest,source,K,SAT)
     end
 end
 function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
     SAT = BC.Boundary
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
-        SAT_Dirichlet_solution!(dest,source,K[SAT.axis],SAT)
+        SAT_Dirichlet_solution!(dest,source,K,SAT)
     elseif BCT <: SimultanousApproximationTerm{:Neumann}
-        SAT_Neumann_solution!(dest,source,K[SAT.axis],SAT)
+        SAT_Neumann_solution!(dest,source,K,SAT)
     else
         error("Not implemented")
     end
@@ -255,17 +256,18 @@ function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Variable,AT},m
     applyCurvilinearSAT!(D.boundary[3],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[4],    dest, source, D.K, mode)
 end
+
 function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
-    applyCartesianSAT!(D.boundary[1],    dest, D.K, mode)
-    applyCartesianSAT!(D.boundary[2],    dest, D.K, mode)
-    applyCartesianSAT!(D.boundary[3],    dest, D.K, mode)
-    applyCartesianSAT!(D.boundary[4],    dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[1],    dest, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[2],    dest, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[3],    dest, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[4],    dest, D.K[2], mode)
 end
 function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
-    applyCartesianSAT!(D.boundary[1],    dest, source, D.K, mode)
-    applyCartesianSAT!(D.boundary[2],    dest, source, D.K, mode)
-    applyCartesianSAT!(D.boundary[3],    dest, source, D.K, mode)
-    applyCartesianSAT!(D.boundary[4],    dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[1],    dest, source, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[2],    dest, source, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[3],    dest, source, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[4],    dest, source, D.K[2], mode)
 end
 
 

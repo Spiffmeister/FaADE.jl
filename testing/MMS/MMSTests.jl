@@ -16,8 +16,8 @@ using FaADE
 ###=== MMS ===###
 
 
-TestDirichlet   = true
-TestNeumann     = true
+TestDirichlet   = false
+TestNeumann     = false
 TestPeriodic    = true
 
 
@@ -100,7 +100,7 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = [21,31,41,51,61,71,81,91,101]
+npts = collect(21:10:101)
 
 θ = 0.5
 
@@ -136,9 +136,9 @@ if TestDirichlet
     println("Dirichlet")
     cx=1.0
     cy=0.0
-    ωx=1.0
-    ωy=1.0
-    ωt=9.0
+    ωx=7.5
+    ωy=5.0
+    ωt=1.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
@@ -190,9 +190,9 @@ if TestNeumann
 
     cx=1.0
     cy=0.0
-    ωx=1.0
-    ωy=1.0
-    ωt=9.0
+    ωx=7.5
+    ωy=6.0
+    ωt=1.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
@@ -239,6 +239,12 @@ end
 if TestPeriodic
     println("=====")
     println("Periodic")
+
+    # cx=1.0
+    # cy=0.0
+    # ωx=7.0
+    # ωy=6.0
+    # ωt=1.0
 
     cx=0.0
     cy=0.0
@@ -305,7 +311,7 @@ if TestDirichlet == TestNeumann == TestPeriodic
 
     using DelimitedFiles
 
-    nameappend=string("K=",K)
+    nameappend=string("timeconv")
 
     open(string("testing/MMS/MMS_Tests_O2",nameappend,".csv"),"w") do io
         writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
