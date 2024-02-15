@@ -16,7 +16,7 @@ module FaADE
     using Distributed
     using SharedArrays
     using LinearAlgebra
-    using JLD2
+    # using JLD2
 
 
     # Includes

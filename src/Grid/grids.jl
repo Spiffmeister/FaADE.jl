@@ -97,12 +97,30 @@ end
 """
     Grid2D(𝒟x::Vector,𝒟y::Vector)
 Construct a 2D grid from vectors in ``x`` and ``y`` for curvilinear ``x,y``.
+
+Inputs:
+- Grid in ``x``
+- Grid in ``y``
+Optional:
+- ``order=nothing``: Order of the derivative, will use highest order not specified
+- ``periodicx=false``: Domain is periodic in ``x``
+- ``periodicy=false``: Domain is periodic in ``y``
+- ``xmap=true``: Map the grid in ``x`` to the computational domain, set false if the grid is already in logical coordinates
+- ``ymap=true``: Map the grid in ``y`` to the computational domain, set false if the grid is already in logical coordinates
 """
-function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT};order=nothing,periodicx=false,periodicy=false) where TT
+function Grid2D(𝒟x::Matrix{TT},𝒟y::Matrix{TT};order=nothing,periodicx=false,periodicy=false,xmap=true,ymap=true) where TT
     
     nx, ny = size(𝒟x)
-    Δx = TT(1)/TT(nx-1)
-    Δy = TT(1)/TT(ny-1)
+    if xmap
+        Δx = TT(1)/TT(nx-1)
+    else
+        Δx = (𝒟x[end,1]-𝒟x[1,1])/TT(nx-1)
+    end
+    if ymap
+        Δy = TT(1)/TT(ny-1)
+    else
+        Δy = (𝒟y[1,end]-𝒟y[1,1])/TT(ny-1)
+    end
     
     if isnothing(order)
         if (nx ≥ 16) & (ny ≥ 16)

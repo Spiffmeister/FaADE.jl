@@ -452,16 +452,25 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)
-            B = MagField(G[i])
-            NB = norm(B,2)^2
-            if NB == TT(0) # Ensure there are no divisions by zero
-                @warn "The field is singular at $(G[i])"
-                NB = TT(1)
+            if existb
+                B = MagField(G[i])
+                NB = norm(B,2)^2
+                if NB == TT(0) # Ensure there are no divisions by zero
+                    @warn "The field is singular at $(G[i])"
+                    NB = TT(1)
+                end
+                Kx = P.Kx * (TT(1) - B[1]^2/NB)
+                Ky = P.Ky * (TT(1) - B[2]^2/NB)
+                Kxy = -P.Kxy * B[1]*B[2]/NB
+            else
+                Kx = P.Kx
+                Ky = P.Ky
+                Kxy = 0.0
             end
-            K[1][i] = P.Kx * (TT(1) - B[1]^2/NB) * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
-            K[2][i] = P.Ky * (TT(1) - B[2]^2/NB) * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+            K[1][i] = Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+            K[2][i] = Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
 
-            K[3][i] = P.Kx * B[1]*B[2]/NB * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
+            K[3][i] = Kxy * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
 
     end
@@ -562,6 +571,20 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::No
         for i in eachindex(G)
             K[1][i] = P.Kx
             K[2][i] = P.Ky
+        end
+    elseif typeof(P.Kx) <: Function
+        error("Needs fixing")
+    end
+    return K
+end
+function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::Nothing) where {TT}
+    K = [zeros(TT,size(G)), zeros(TT,size(G)),zeros(TT,size(G))]
+
+    if typeof(P.Kx) <: Real
+        for i in eachindex(G)
+            K[1][i] = P.Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
+            K[2][i] = P.Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
+            K[3][i] = P.Kx * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
     elseif typeof(P.Kx) <: Function
         error("Needs fixing")
