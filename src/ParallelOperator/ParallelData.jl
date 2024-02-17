@@ -74,8 +74,11 @@ struct ParallelData{TT<:Real,
         H = CompositeH(Hx,Hy)
 
 
-        gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
-        gridy = LinRange(G.gridy[1],G.gridy[end],G.ny)
+        # gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
+        # gridy = LinRange(G.gridy[1],G.gridy[end],G.ny)
+
+        gridx = G.gridx[1:end,1]
+        gridy = G.gridy[1,1:end]
 
         w_f = zeros(TT,size(G))
         w_b = zeros(TT,size(G))
@@ -84,7 +87,7 @@ struct ParallelData{TT<:Real,
         MF = MagneticField{typeof(B),:EQUILIBRIUM,TT,typeof(Bp)}(B,false,Bp)
 
         if isnothing(B)
-            @warn "B not provided, perpendicular solve may not be performed correctly."
+            # @warn "B not provided, perpendicular solve may not be performed correctly."
         end
 
         new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF,[TT(0)])

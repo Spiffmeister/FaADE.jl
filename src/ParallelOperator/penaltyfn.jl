@@ -199,14 +199,16 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     w_f = P.w_f
     H = P.H
 
-    I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
-    Io = scale( interpolate(u₀,BSpline(Cubic())),(P.gridx,P.gridy) )
+    # I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
+    # Io = scale( interpolate(u₀,BSpline(Cubic())),(P.gridx,P.gridy) )
     # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
 
+    I   = BicubicInterpolator(P.gridx,P.gridy,u)
+    Io  = BicubicInterpolator(P.gridx,P.gridy,u₀)
+
     # w_f ← P_f u + P_b u
-    _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
-    _compute_w!(Io,w_b,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
-    # @show norm(w_b - u₀)
+    _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
+    _compute_w!(Io,w_b,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
     @. w_b = u₀ - w_b
     
     # Tune the parallel penalty
@@ -217,14 +219,12 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     P.τ_i[1] = τ * κ * 1/(P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
     # τ = P.τ
     
+    
     # @show norm(w_b), norm(u.-w_f), w_b[16,16], u[16,16]-w_f[16,16], τ
 
     # u^{n+1} = (1+θ)Δt κ τ
     # @. u = 1/(1 + θ * Δt * κ * τ * 1/H) * (u + θ*Δt*κ*τ/H * w_f) + (1-θ)*Δt * τ * κ * 1/H * (u₀ - w_b)
-    # println()
-    # @show u[46:56,51]
-    _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,P.gridx.len,P.gridy.len)
-    # @show u[46:56,51]
+    _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy))
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
@@ -283,10 +283,12 @@ end
     compute_parallel_operator
 """
 function compute_parallel_operator(dest::AT,u::AT,P::ParallelData) where {AT}
-    I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
+    # I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
     # I = scale( interpolate(u,BSpline(Quadratic())),(P.gridx,P.gridy) )
     # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
-    _compute_w!(I,dest,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
+    I = BicubicInterpolator(P.gridx,P.gridy,u)
+    # _compute_w!(I,dest,P.PGrid.Fplane,P.PGrid.Bplane,P.gridx.len,P.gridy.len)
+    _compute_w!(I,dest,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
     @. dest = u - dest
 end
 
