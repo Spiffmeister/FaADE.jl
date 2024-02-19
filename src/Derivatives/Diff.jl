@@ -55,16 +55,17 @@ function mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Constant},α) whe
     dest
 end
 function mul!(dest::VT,u::VT,K::VT,KDu::VT,D::DiffusionOperator{TT,DO,:Variable},α) where {TT<:Real,VT<:AbstractVector{TT},DO}
+    order = Val(DO)
     if !D.periodic
-        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,    Val(DO),α)
-        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,   Val(DO),α)
-        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,  Val(DO),α)
-        FirstDerivativeInternal!(dest,KDu,D.Δx,D.n,     Val(DO),TT(1))
-        FirstDerivativeBoundary!(dest,KDu,D.Δx,Left,    Val(DO),TT(1))
-        FirstDerivativeBoundary!(dest,KDu,D.Δx,Right,   Val(DO),TT(1))
+        SecondDerivativeInternal!(dest,u,K,D.Δx,D.n,    order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Left,   order,α)
+        SecondDerivativeBoundary!(dest,u,K,D.Δx,Right,  order,α)
+        FirstDerivativeInternal!(dest,KDu,D.Δx,D.n,     order,TT(1))
+        FirstDerivativeBoundary!(dest,KDu,D.Δx,Left,    order,TT(1))
+        FirstDerivativeBoundary!(dest,KDu,D.Δx,Right,   order,TT(1))
     elseif D.periodic
-        SecondDerivativePeriodic!(dest,u,K,D.Δx,        Val(DO),D.n,α)
-        FirstDerivativePeriodic!(dest,KDu,u,D.Δx,       Val(DO),D.n,TT(1))
+        SecondDerivativePeriodic!(dest,u,K,D.Δx,        order,D.n,α)
+        FirstDerivativePeriodic!(dest,KDu,u,D.Δx,       order,D.n,TT(1))
     end
     dest
 end
