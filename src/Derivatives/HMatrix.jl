@@ -51,7 +51,15 @@ function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray
     end
     return tmp
 end
-
+function mul!(u::AT,J::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
+    tmp = TT(0)
+    for j = 1:H.sz[2]
+        for i = 1:H.sz[1]
+            tmp += u[i,j] * J[i,j] * H[1][i] * H[2][j] * v[i,j]
+        end
+    end
+    return tmp
+end
 
 
 """
@@ -110,7 +118,16 @@ function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) :: T wher
     end
     return tmp
 end
-
+function (H::innerH{T,2})(u::AbstractArray{T,2},J::AT,v::AbstractArray{T,2}) :: T where {T,AT<:AbstractArray{T}}
+    local tmp::T
+    tmp = T(0)
+    for j in eachindex(H.Hx)
+        for i in eachindex(H.Hy)
+            @inbounds tmp += u[j,i] * J[i,j] * H.Hx[j] * H.Hy[i] * v[j,i] * H.Δ
+        end
+    end
+    return tmp
+end
 
 
 """

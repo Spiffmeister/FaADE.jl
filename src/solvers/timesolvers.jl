@@ -110,7 +110,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
                 # println("b4",norm(DBlock[1].uₙ₊₁))
-                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel)
+                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
                 # println("afta",norm(DBlock[1].uₙ₊₁))
             end
 

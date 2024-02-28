@@ -151,7 +151,7 @@ end
 # function ParallelData()
 # end
 function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,θ::TT,
-    P::ParallelData{TT,2}) where {TT}
+    P::ParallelData{TT,2},grid::Grid2D) where {TT}
 
     
     #= OLD METHOD =#
@@ -198,6 +198,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     w_b = P.w_b
     w_f = P.w_f
     H = P.H
+    J = grid.J
 
     # I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
     # Io = scale( interpolate(u₀,BSpline(Cubic())),(P.gridx,P.gridy) )
@@ -212,7 +213,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     @. w_b = u₀ - w_b
     
     # Tune the parallel penalty
-    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3.5
+    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^5
     # τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3 * sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
     # τ = 1e9*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
     # τ = P.τ
@@ -224,7 +225,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
 
     # u^{n+1} = (1+θ)Δt κ τ
     # @. u = 1/(1 + θ * Δt * κ * τ * 1/H) * (u + θ*Δt*κ*τ/H * w_f) + (1-θ)*Δt * τ * κ * 1/H * (u₀ - w_b)
-    _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy))
+    _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy),J)
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
@@ -234,7 +235,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     u
 end
 
-function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int) where {TT,AT}
+function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int,J::AT) where {TT,AT}
     # println(norm(u))
     for j in 1:ny
         for i in 1:nx
@@ -244,9 +245,16 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
             #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
             #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
 
-            u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
+            u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
                 u[i,j] + 
-                +Δt*κ*τ*w_f[i,j]/H[i,j])
+                +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
+                )
+
+            # u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+            #     u[i,j] + 
+            #     +Δt*κ*τ*w_f[i,j]/(H[i,j])
+            #         )
+    
 
             # u[i,j] = 1/(1 + θ * Δt * κ * τ) * (
             #     u[i,j] + 
