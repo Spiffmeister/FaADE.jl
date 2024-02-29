@@ -213,7 +213,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     @. w_b = u₀ - w_b
     
     # Tune the parallel penalty
-    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^5
+    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3.5
     # τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3 * sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
     # τ = 1e9*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
     # τ = P.τ

@@ -111,9 +111,9 @@ end
 function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) :: T where T
     local tmp::T
     tmp = T(0)
-    for j in eachindex(H.Hx)
-        for i in eachindex(H.Hy)
-            @inbounds tmp += u[j,i] * H.Hx[j] * H.Hy[i] * v[j,i] * H.Δ
+    for j in eachindex(H.Hy)
+        for i in eachindex(H.Hx)
+            @inbounds tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
         end
     end
     return tmp
@@ -121,9 +121,9 @@ end
 function (H::innerH{T,2})(u::AbstractArray{T,2},J::AT,v::AbstractArray{T,2}) :: T where {T,AT<:AbstractArray{T}}
     local tmp::T
     tmp = T(0)
-    for j in eachindex(H.Hx)
-        for i in eachindex(H.Hy)
-            @inbounds tmp += u[j,i] * J[i,j] * H.Hx[j] * H.Hy[i] * v[j,i] * H.Δ
+    for j in eachindex(H.Hy)
+        for i in eachindex(H.Hx)
+            @inbounds tmp += u[i,j] * J[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
         end
     end
     return tmp
