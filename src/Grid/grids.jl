@@ -89,7 +89,7 @@ function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) whe
     X = repeat(gx.grid,1,ny)
     Y = repeat(gy.grid',nx,1)
 
-    J = qx = qy = rx = ry = zeros(eltype(gx.grid),(1,1))
+    J = qx = qy = rx = ry = ones(eltype(gx.grid),(1,1))
 
     return Grid2D{TT,CartesianMetric,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
         J, qx, qy, rx, ry)

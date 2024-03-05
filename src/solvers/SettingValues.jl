@@ -428,13 +428,19 @@ end
 """
 innerprod(u::AT,v::AT,IP::innerH{TT}) where {TT,AT<:AbstractArray{TT}} = IP(u,v)
 innerprod(u::AT,J::AT,v::AT,IP::innerH{TT}) where {TT,AT<:AbstractArray{TT}} = IP(u,J,v)
-function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT}) :: TT where {TT}
+function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT,DIM,:Constant}) :: TT where {TT,DIM}
+    V = getarray(D,v)
+    U = getarray(D,u)
+    IP = getproperty(D,:innerprod)
+    ret = innerprod(U,V,IP)
+    return ret
+end
+function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT,DIM,:Variable}) :: TT where {TT,DIM}
     V = getarray(D,v)
     U = getarray(D,u)
     IP = getproperty(D,:innerprod)
     J = D.grid.J
     ret = innerprod(U,J,V,IP)
-    # ret = innerprod(U,V,IP)
     return ret
 end
 function innerprod(u::Symbol,v::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}

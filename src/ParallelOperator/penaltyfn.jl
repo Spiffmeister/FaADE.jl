@@ -148,61 +148,14 @@ end
 """
     For multiblock
 """
-# function ParallelData()
-# end
 function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,θ::TT,
-    P::ParallelData{TT,2},grid::Grid2D) where {TT}
+    P::ParallelData{TT,2},grid::Grid2D{TT,MET}) where {TT,MET}
 
-    
-    #= OLD METHOD =#
-    #=
-    local wf :: TT
-    local wb :: TT
-
-    I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
-    # I = scale( interpolate(u,BSpline(Quadratic())),(P.gridx,P.gridy) )
-    # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
-
-    # τ = -sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
-    for j = 1:P.gridy.len
-        for i = 1:P.gridx.len
-            P.w_f[i,j] = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
-            P.w_b[i,j] = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
-        end
-    end
-
-    ττ = P.τ*norm(u - (P.w_f + P.w_b)/2,Inf)/norm((P.w_f + P.w_b)/2,Inf)^3
-
-    @. u = 1.0/(1.0 - P.κ * ττ * Δt) * 
-        ( u - P.κ*Δt*ττ/2.0 * (P.w_f + P.w_b) )
-    =#
-
-
-    # for j = 1:P.gridy.len
-    #     for i = 1:P.gridx.len
-
-    #         # wf = I(P.PGrid.Fplane.x[i,j],P.PGrid.Fplane.y[i,j])
-    #         # wb = I(P.PGrid.Bplane.x[i,j],P.PGrid.Bplane.y[i,j])
-    #         u[i,j] = 1.0/(1.0 - P.κ * ττ * Δt) * 
-    #             ( u[i,j] -  P.κ*Δt*ττ/2.0 * (wf + wb) )
-            
-    #     end
-    # end
-    
-
-    # w_f = getarray(P.w_f)
-    # w_b = getarray(P.w_b)
-    # println("parallel")
-    #= NEW METHOD =#
     κ = P.κ
     w_b = P.w_b
     w_f = P.w_f
     H = P.H
     J = grid.J
-
-    # I = scale( interpolate(u,BSpline(Cubic())),(P.gridx,P.gridy) )
-    # Io = scale( interpolate(u₀,BSpline(Cubic())),(P.gridx,P.gridy) )
-    # I = scale( interpolate(u,BSpline(Linear())),(P.gridx,P.gridy) )
 
     I   = BicubicInterpolator(P.gridx,P.gridy,u)
     Io  = BicubicInterpolator(P.gridx,P.gridy,u₀)
@@ -210,21 +163,32 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     # w_f ← P_f u + P_b u
     _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
     _compute_w!(Io,w_b,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
-    @. w_b = u₀ - w_b
+    # @. w_b = u₀ - w_b
+
+    # _compute_w!(I,w_f,P.PGrid.Fplane,length(P.gridx),length(P.gridy))
+    # _compute_w!(I,w_b,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
+
+    um = maximum(abs.(u .- w_f))
+    for i in 1:length(P.gridx)
+        for j in 1:length(P.gridy)
+            w_b[i,j] = abs(u[i,j] - w_f[i,j]) / um
+        end
+    end
     
     # Tune the parallel penalty
-    τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3.5
-    # τ = P.τ*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3 * sqrt((P.gridx[end]-P.gridx[1])*(P.gridy[end]-P.gridy[1])/(P.Δx*P.Δy))
-    # τ = 1e9*(maximum(abs.(u - w_f))/maximum(abs.(w_f)))^3
+    τ = P.τ*(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^3.5
+    # τ = P.τ * exp(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))
+    # τ = P.τ*( maximum(abs.(u - w_f)) )^3.5
+    # τ = P.τ*(maximum(abs.(u - 0.5(w_f + w_b)))/ maximum(abs.(w_f + w_b)))^3.5
+    # τ = P.τ*( maximum(abs.(w_b.-u₀))/maximum(abs.(w_b)) + maximum(abs.(u - w_f))/maximum(abs.(w_f)) )^3.5
+    # P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
+    # P.τ_i[1] = ( maximum(abs.(u .- w_f))/maximum(abs.(w_f)) +  maximum(abs.(w_b.-u₀))/maximum(abs.(w_b)) )
+    # P.τ_i[1] = ( maximum(abs.(u .- w_f)) )
+    # P.τ_i[1] = maximum(abs.(w_b.-u₀))/maximum(abs.(w_b))
+    P.τ_i[1] = minimum(w_b)
     # τ = P.τ
-    P.τ_i[1] = τ * κ * 1/(P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
-    # τ = P.τ
-    
-    
-    # @show norm(w_b), norm(u.-w_f), w_b[16,16], u[16,16]-w_f[16,16], τ
 
     # u^{n+1} = (1+θ)Δt κ τ
-    # @. u = 1/(1 + θ * Δt * κ * τ * 1/H) * (u + θ*Δt*κ*τ/H * w_f) + (1-θ)*Δt * τ * κ * 1/H * (u₀ - w_b)
     _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy),J)
 
     # Replace the old parallel diffusion with the new one
@@ -237,6 +201,7 @@ end
 
 function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int,J::AT) where {TT,AT}
     # println(norm(u))
+    # um = maximum(abs.(u .- w_f))
     for j in 1:ny
         for i in 1:nx
             ### CURRENTLY IN THE PAPER
@@ -245,31 +210,40 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
             #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
             #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
 
+            # u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
+            #     u[i,j] + 
+            #     +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
+            #     )
+
+            u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+                u[i,j] + 
+                +Δt*κ*τ*w_f[i,j]/(H[i,j])
+                    )
+
+            # w = w_f[i,j]
+            # ττ = (abs.(u[i,j] - w)/um)^3.5
+            # ττ = w_b[i,j]^3.5
+            # u[i,j] = 1/(1 + Δt * κ * ττ / (H[i,j])) * (
+            #     u[i,j] + 
+            #     +Δt*κ*ττ*w/(H[i,j])
+            #         )
+
+        end
+    end
+    u
+end
+
+function _compute_u_curvilinear!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int,J::AT) where {TT,AT}
+    for j in 1:ny
+        for i in 1:nx
+
             u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
                 u[i,j] + 
                 +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
                 )
 
-            # u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
-            #     u[i,j] + 
-            #     +Δt*κ*τ*w_f[i,j]/(H[i,j])
-            #         )
-    
-
-            # u[i,j] = 1/(1 + θ * Δt * κ * τ) * (
-            #     u[i,j] + 
-            #     +θ*Δt*κ*τ*w_f[i,j] +  
-            #     -z*Δt*κ*τ*w_b[i,j] )
-
-            # u[i,j] = 1/(1+Δt*κ*τ/H[i,j]) * (
-            #         u[i,j] + θ*Δt*κ*τ/H[i,j] * w_f[i,j] +
-            #         +(1-θ)*Δt*κ*τ/H[i,j] * w_b[i,j]
-            #     )
-
-            # u[i,j] = u[i,j] - θ*Δt*κ*τ*(u[i,j] - w_f[i,j]/2)/H[i,j] - (1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j]
         end
     end
-    # println(norm(u))
     u
 end
 
@@ -282,6 +256,14 @@ function _compute_w!(itp,dest::AT,Fplane::ParGrid,Bplane::ParGrid,nx::Int,ny::In
         for i in 1:nx
             dest[i,j] = itp(Fplane.x[i,j],Fplane.y[i,j]) + itp(Bplane.x[i,j],Bplane.y[i,j])
             dest[i,j] = dest[i,j]/2
+        end
+    end
+    dest
+end
+function _compute_w!(itp,dest::AT,plane::ParGrid,nx::Int,ny::Int) where {AT}
+    for j in 1:ny
+        for i in 1:nx
+            dest[i,j] = itp(plane.x[i,j],plane.y[i,j])
         end
     end
     dest
