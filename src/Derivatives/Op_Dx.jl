@@ -28,7 +28,7 @@ end
 function D₁(u::AbstractMatrix{T},nx::Integer,ny::Integer,Δx::T,Δy::T;
         order::Integer=2) where T
     uₓ = zeros(T,size(u))
-    D₁!(uₓ,u,nx,ny,Δx,Δy,order)
+    D₁!(uₓ,u,nx,ny,Δx,Δy,order,order,0.0)
     return uₓ
 end
 

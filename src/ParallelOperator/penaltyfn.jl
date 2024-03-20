@@ -168,28 +168,32 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
     # _compute_w!(I,w_f,P.PGrid.Fplane,length(P.gridx),length(P.gridy))
     # _compute_w!(I,w_b,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
 
-    um = maximum(abs.(u .- w_f))
-    for i in 1:length(P.gridx)
-        for j in 1:length(P.gridy)
-            w_b[i,j] = abs(u[i,j] - w_f[i,j]) / um
-        end
-    end
+    # um = maximum(abs.(u .- w_f))
+    # for i in 1:length(P.gridx)
+    #     for j in 1:length(P.gridy)
+    #         w_b[i,j] = abs(u[i,j] - w_f[i,j]) / um
+    #     end
+    # end
     
     # Tune the parallel penalty
-    τ = P.τ*(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^3.5
+    τ = P.τ*0.1*(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
     # τ = P.τ * exp(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))
     # τ = P.τ*( maximum(abs.(u - w_f)) )^3.5
     # τ = P.τ*(maximum(abs.(u - 0.5(w_f + w_b)))/ maximum(abs.(w_f + w_b)))^3.5
     # τ = P.τ*( maximum(abs.(w_b.-u₀))/maximum(abs.(w_b)) + maximum(abs.(u - w_f))/maximum(abs.(w_f)) )^3.5
-    # P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
+    P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
     # P.τ_i[1] = ( maximum(abs.(u .- w_f))/maximum(abs.(w_f)) +  maximum(abs.(w_b.-u₀))/maximum(abs.(w_b)) )
     # P.τ_i[1] = ( maximum(abs.(u .- w_f)) )
     # P.τ_i[1] = maximum(abs.(w_b.-u₀))/maximum(abs.(w_b))
-    P.τ_i[1] = minimum(w_b)
+    # P.τ_i[1] = minimum(w_b)
     # τ = P.τ
 
     # u^{n+1} = (1+θ)Δt κ τ
-    _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy),J)
+    if MET == CartesianMetric
+        _compute_u!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy),J)
+    elseif MET == CurvilinearMetric
+        _compute_u_curvilinear!(u,w_f,w_b,κ,τ,θ,Δt,H,length(P.gridx),length(P.gridy),J)
+    end
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
@@ -210,15 +214,15 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
             #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
             #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
 
-            # u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
-            #     u[i,j] + 
-            #     +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
-            #     )
-
-            u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+            u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
                 u[i,j] + 
-                +Δt*κ*τ*w_f[i,j]/(H[i,j])
-                    )
+                +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
+                )
+
+            # u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+            #     u[i,j] + 
+            #     +Δt*κ*τ*w_f[i,j]/(H[i,j])
+            #         )
 
             # w = w_f[i,j]
             # ττ = (abs.(u[i,j] - w)/um)^3.5
