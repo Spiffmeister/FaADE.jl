@@ -49,7 +49,7 @@ TODO: Heavy optimisation required
 """
 function solve end
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
-        solver::Symbol=:cgie,adaptive::Bool=false,θ=TT(1)) where {TT,DIM}
+        solver::Symbol=:cgie,adaptive::Bool=false,θ=TT(1),target=TT(0)) where {TT,DIM}
 
     P.Parallel === nothing ? parallel = false : parallel = true 
     if solver ∈ [:cgie,:cn,:theta]
@@ -60,7 +60,7 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         elseif solver == :theta
             θ = θ
         end
-        SD = SolverData{TT}(adaptive=adaptive,method=solver,parallel=parallel)
+        SD = SolverData{TT}(adaptive=adaptive,method=solver,parallel=parallel,target=target)
         DBlock = DataMultiBlock(P,G,Δt,0.0,θ=θ)
         soln = solution(G,0.0,Δt,P)
 
@@ -92,7 +92,7 @@ end
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
-    target_state = TT(1)
+    target_state = solverconfig.target
 
     t = TT(0)
     Δt₀ = Δt
@@ -107,9 +107,10 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         theta_method(DBlock,t,Δt)
 
-        if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
+        if DBlock.SC.converged #| !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
                 # println("b4",norm(DBlock[1].uₙ₊₁))
+                # @show norm(DBlock[1].u)
                 applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
                 # println("afta",norm(DBlock[1].uₙ₊₁))
             end
@@ -121,22 +122,27 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                 relerr(DBlock[i])
             end
             collectΔu(DBlock)
+            soln.Δu = norm(DBlock[1].u .- DBlock[1].uₙ₊₁)/norm(DBlock[1].u)
+            DBlock.SC.Δu = soln.Δu
 
             # DBlock.Δu = norm(DBlock.u .- DBlock.uₙ₊₁)/norm(DBlock.u)
             if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t
             end
+            # @show t, DBlock.SC.Δu, maximum(DBlock[1].u .- DBlock[1].uₙ₊₁), maximum(DBlock[1].uₙ₊₁)
+            # @show maximum(abs.(DBlock[1].u .- DBlock[1].uₙ₊₁))
+            
             copyto!(:u,:uₙ₊₁,DBlock)
             if solverconfig.adaptive & (Δt<300Δt₀)
-                Δt *= 1.05
+                DBlock.SC.Δt = min(DBlock.SC.Δt*1.05,300Δt₀)
             end
             DBlock.SC.t += DBlock.SC.Δt
-            t = DBlock.SC.t
+            Δt = DBlock.SC.Δt
+            t += Δt
 
             if !isnothing(DBlock[1].Parallel)
                 push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
             end
-
         else #If CG fails, reset and retry step
             # DBlock.uₙ₊₁ .= DBlock.u
             setValue(DBlock,DBlock,:uₙ₊₁,:u)
@@ -145,14 +151,16 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if DBlock.SC.Δt < Δt₀/10.0
                 error("CG could not converge, aborting at t=",t," with Δt=",Δt)
             end
-            # t += Δt
+            t = DBlock.SC.t
+            Δt = DBlock.SC.Δt
+            t += Δt
         end
         # if sample < t
         #     sample += sample
         #     UpdateSolution!(soln,DBlock.u,t,Δt)
         # end 
-    end
 
+    end
     if typeof(G) <: LocalGridType
         push!(soln.u,DBlock[1].uₙ₊₁)
     else

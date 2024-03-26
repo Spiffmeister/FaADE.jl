@@ -55,8 +55,8 @@ Rout = [6e-1]; Zout=[6e-1]
 inner = FaADE.Grid.Torus(Rin,Zin,[1],[0])
 outer = FaADE.Grid.Torus(Rout,Zout,[1],[0])
 
-nx = 101
-ny = 201
+nx = 51
+ny = 51
 
 X,Y = FaADE.Grid.meshgrid(inner,outer,0.0,nx,ny)
 
@@ -78,24 +78,25 @@ for I in eachindex(Dom)
 end
 
 
-Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,4,false,:Variable)
-Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,4,true,:Variable)
+Dx = FaADE.Derivatives.DiffusionOperator(Dom.nx,Dom.Δx,2,false,:Variable)
+Dy = FaADE.Derivatives.DiffusionOperator(Dom.ny,Dom.Δy,2,false,:Variable)
 
-D = FaADE.Derivatives.DiffusionOperatorND((Dx,Dy))
+D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
 kx(x,y) = 1.0
 ky(x,y) = 1.0
 
-uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> 0.0)
-setKoefficient!(K,(x,y) -> 1.0, (x,y) -> 1.0,Dom)
+uxx, u, K, ue = buildprob2D(Dom,u₀,kx,ky,(x,y)-> 0.0);
+setKoefficient!(K,(x,y) -> 1.0, (x,y) -> 1.0,Dom);
 
 
 
-FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
+FaADE.Derivatives.mul!(uxx,u,K,D,0.0);
 
 # || (u/J - e)√(JrΔxΔy) ||
 
-println( norm((uxx./Dom.J .- e).*sqrt.(sqrt.(Dom.gridx.^2 + Dom.gridy.^2).*Dom.J*Dom.Δx*Dom.Δy) ) )
+# println( norm((uxx./Dom.J .- e).*sqrt.(sqrt.(Dom.gridx.^2 + Dom.gridy.^2).*Dom.J*Dom.Δx*Dom.Δy) ) )
+println(norm((uxx./Dom.J .- e)/norm(e)))
 
 
 
@@ -107,4 +108,9 @@ if plot
     ax2 = GLMakie.Axis3(f[1,2])#,aspect=DataAspect())
     GLMakie.surface!(ax1,Dom.gridx,Dom.gridy,uxx./Dom.J)
     GLMakie.surface!(ax2,Dom.gridx,Dom.gridy,e)
+    
 end
+
+u0 = zeros(eltype(Dom.gridx),size(Dom));
+for I in eachindex(Dom); u0[I] = u₀(Dom[I]...); end
+f = GLMakie.Figure(); ax = GLMakie.Axis3(f[1,1]); surface!(ax,Dom.gridx,Dom.gridy,uxx./Dom.J .- e)

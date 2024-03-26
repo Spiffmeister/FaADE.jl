@@ -73,7 +73,7 @@ end
     
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
     
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
     
         @test norm(uxx[2:end-1,2:end-1] .- ue[2:end-1,2:end-1]) ≤ 1e-10
     end
@@ -85,7 +85,7 @@ end
     
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
     
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
     
         @test norm(uxx[7:end-6,7:end-6] .- ue[7:end-6,7:end-6]) ≤ 1e-10
     end
@@ -119,7 +119,7 @@ end
     
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
     
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
     
         uxx_real = uxx./Dom.J
     
@@ -134,7 +134,7 @@ end
     
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
     
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
     
         uxx_real = uxx./Dom.J
     
@@ -169,7 +169,7 @@ end
         
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
 
         uxx_real = uxx./Dom.J
     
@@ -183,7 +183,7 @@ end
         
         D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
-        FaADE.Derivatives.mul!(uxx,u,K,D)
+        FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
 
         uxx_real = uxx./Dom.J
     
@@ -226,7 +226,7 @@ end
 
     D = FaADE.Derivatives.DiffusionOperatorND(Dx,Dy)
 
-    FaADE.Derivatives.mul!(uxx,u,K,D)
+    FaADE.Derivatives.mul!(uxx,u,K,D,0.0)
     
     uxx_real = uxx./Dom.J
 
