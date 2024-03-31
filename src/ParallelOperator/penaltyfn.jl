@@ -214,15 +214,15 @@ function _compute_u!(u::AT,w_f::AT,w_b::AT,κ::TT,τ::TT,θ::TT,Δt::TT,H::Compo
             #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
             #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
 
-            u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
-                u[i,j] + 
-                +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
-                )
-
-            # u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+            # u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
             #     u[i,j] + 
-            #     +Δt*κ*τ*w_f[i,j]/(H[i,j])
-            #         )
+            #     +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
+            #     )
+
+            u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
+                u[i,j] + 
+                +Δt*κ*τ*w_f[i,j]/(H[i,j])
+                    )
 
             # w = w_f[i,j]
             # ττ = (abs.(u[i,j] - w)/um)^3.5

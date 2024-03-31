@@ -1,7 +1,9 @@
 
 
 
-
+"""
+    mul!
+"""
 function mul! end
 
 
@@ -42,7 +44,7 @@ function mul! end
 
 
 """
-    mul! for Diffusion problems
+    mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Constant},α) where {TT<:Real,VT<:AbstractVector{TT},DO}
 """
 function mul!(dest::VT,u::VT,K::VT,D::DiffusionOperator{TT,DO,:Constant},α) where {TT<:Real,VT<:AbstractVector{TT},DO}
     if !D.periodic
@@ -71,7 +73,8 @@ function mul!(dest::VT,u::VT,K::VT,KDu::VT,D::DiffusionOperator{TT,DO,:Variable}
 end
 
 """
-    Multidimensional version of constant coefficient
+    mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Constant},α::TT) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO}
+Multidimensional version of constant coefficient
 """
 function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Constant},α::TT) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO}
     cx = c[1]
@@ -86,7 +89,8 @@ function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Constant},α:
     dest
 end
 """
-    Multidimensional version of variable coefficient
+    mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable},α::TT) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO}
+Multidimensional version of variable coefficient
 """
 function mul!(dest::AT,u::AT,c::KT,D::DiffusionOperatorND{TT,2,DO,:Variable},α::TT) where {TT,AT<:AbstractMatrix{TT},KT<:AbstractVector{AT},DO}
     cx = c[1]

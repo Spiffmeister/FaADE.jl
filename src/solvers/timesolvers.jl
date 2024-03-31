@@ -27,14 +27,12 @@ end
     solve
 Solve the 1D or 2D PDE on the given grid.
 
-Calls:
 ```julia
-solve(Prob::VariableCoefficientPDE1D{T},grid::GridType{T,1},Δt::T,t_f::T,solver::Symbol;...)
-solve(Prob::VariableCoefficientPDE2D{T},grid::GridType{T,2},Δt::T,t_f::T,solver::Symbol;...)
+solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;solver::Symbol=:cn,adaptive::Bool=false,θ=TT(1),target=TT(0))
 ```
 
 Inputs:
-- Prob: [`VariableCoefficientPDE1D`](@ref) or [`VariableCoefficientPDE2D`](@ref)
+- Prob: [`Problem1D`](@ref) or [`Problem2D`](@ref)
 - grid: [`Grid1D`](@ref) or [`Grid2D`](@ref)
 - `Δt` - the time step
 - `t_f` - the final time
@@ -42,14 +40,10 @@ Inputs:
 
 Optional inputs:
 - `adaptive::Bool=false` `true` or `false` - Adaptive time stepping
-- `source::Union{Nothing,Function}=nothing` - Include a source term
-- `penalty_func::Union{Nothing,Function}=nothing` - penalty function for mapping points along field lines
-
-TODO: Heavy optimisation required
 """
 function solve end
 function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
-        solver::Symbol=:cgie,adaptive::Bool=false,θ=TT(1),target=TT(0)) where {TT,DIM}
+        solver::Symbol=:cn,adaptive::Bool=false,θ=TT(1),target=TT(0)) where {TT,DIM}
 
     P.Parallel === nothing ? parallel = false : parallel = true 
     if solver ∈ [:cgie,:cn,:theta]

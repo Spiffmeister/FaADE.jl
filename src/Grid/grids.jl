@@ -9,15 +9,16 @@ abstract type MetricType{MType} end
 
 struct CartesianMetric <: MetricType{:cartesian} end
 struct CurvilinearMetric <: MetricType{:curvilinear} end
+struct StretchedMetric <: MetricType{:stretched} end
 
-Base.show(M::CartesianMetric) = print("Cartesian Metric")
-Base.show(M::CurvilinearMetric) = print("Curvilinear Metric")
+Base.show(M::CartesianMetric) = print("Cartesian metric")
+Base.show(M::CurvilinearMetric) = print("Curvilinear metric")
+Base.show(M::StretchedMetric) = print("Stretched grid metric")
 
 """
     Grid1D
 Grid data structure for 1 dimensional problems.
     
-    `Grid1D{T}(𝒟::Vector,n::Integer)`
 Inputs:
 - Vector of domain boundaries `[x_0,x_N]`
 - Number of grid points.
@@ -51,7 +52,6 @@ end
     Grid2D
 Grid data structure for 2 dimensional problems.
 
-    `Grid2D{T}(𝒟x::Vector,𝒟y::Vector,nx::Integer,ny::Integer)`
 Inputs:
 - Domain boundaries in ``x``
 - Domain boundaries in ``y``

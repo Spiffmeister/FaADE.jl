@@ -30,7 +30,7 @@ ky = 1.0e-6
 
 
 Δt = 0.1
-t_f = 500.0
+t_f = 10.0
 
 u₀(x,y) = x
 
@@ -66,7 +66,7 @@ println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final
 
 
 # P = VariableCoefficientPDE2D(u₀,ky,kx,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
-P = newProblem2D(order,u₀,ky,kx,Dom,BC,nothing,PData)
+P = Problem2D(order,u₀,ky,kx,Dom,BC,nothing,PData)
 
 
 # using Profile

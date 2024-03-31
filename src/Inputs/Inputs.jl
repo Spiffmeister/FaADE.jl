@@ -12,7 +12,7 @@ module Inputs
     include("UserTypes.jl")
 
     export newPDEProblem
-    export newProblem1D, newProblem2D
+    export Problem1D, Problem2D
 
     export SATBoundaries
 

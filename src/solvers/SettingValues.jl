@@ -204,17 +204,10 @@ function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,
 end
 
 
-
-# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
-#     SAT_Dirichlet_solution!(dest,source,K[AXIS],BC.Boundary)
-# end
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
 
-# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Periodic{TN,:Cartesian,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
-#     SAT_Periodic!(dest,source,K[AXIS],BC.Boundary)
-# end
 function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
@@ -232,13 +225,13 @@ end
 Solution and Data modes
 """
 function applySATs end
-function applySATs(dest::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT} #data mode
-    applySAT!(D.boundary[1],  dest, D.K, mode)
-    applySAT!(D.boundary[2],  dest, D.K, mode)
+function applySATs(dest::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #data mode
+    applyCartesianSAT!(D.boundary[1],  dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[2],  dest, D.K, mode)
 end
-function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,VT},mode) where {TT,VT} #solution mode
-    applySAT!(D.boundary[1],  dest, source, D.K, mode)
-    applySAT!(D.boundary[2],  dest, source, D.K, mode)
+function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #solution mode
+    applyCartesianSAT!(D.boundary[1],  dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[2],  dest, source, D.K, mode)
 end
 """
     applySATs

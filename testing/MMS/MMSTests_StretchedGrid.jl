@@ -49,7 +49,14 @@ function comp_MMS(Dx,Dy,npts,
 
     # Loop
     for n in npts
-        Dom = Grid2D(Dx,Dy,n,n)
+
+        grid_fn_x(x) = 0.05x
+        grid_fn_y(y) = y
+
+        𝒟x,𝒟y= FaADE.Grid.meshgrid(grid_fn_x.(LinRange(Dx[1],Dx[2],n)),grid_fn_y.(LinRange(Dy[1],Dy[2],n)))
+        Dom = Grid2D(𝒟x,𝒟y,ymap=false)
+
+        # Dom = Grid2D(Dx,Dy,n,n)
 
         # X boundaries
         if BX0Type == Periodic
@@ -170,14 +177,6 @@ if TestDirichlet
     println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
     println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-    # pD = plot(axis=:log,minorgrid=true)
-    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)    
-    # savefig(pD,"2DMMSDirichlet.png")
-
-
     println("=====")
 end
 
@@ -224,13 +223,6 @@ if TestNeumann
     println("Order 2 Neumann convergence rates=",O2_NeumannMMS.conv_rate)
     println("Order 4 Neumann convergence rates=",O4_NeumannMMS.conv_rate)
 
-    # pN = plot(axis=:log,minorgrid=true)
-    # plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pN,  O2_NeumannMMS.npts,   O2_NeumannMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pN,  O4_NeumannMMS.npts,   O4_NeumannMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
-    # savefig(pN,"2DMMSNeumann.png")
-
     println("=====")
 end
 
@@ -239,12 +231,6 @@ end
 if TestPeriodic
     println("=====")
     println("Periodic")
-
-    # cx=1.0
-    # cy=0.0
-    # ωx=7.0
-    # ωy=6.0
-    # ωt=1.0
 
     cx=0.0
     cy=0.0
@@ -275,13 +261,6 @@ if TestPeriodic
     println("Order 2 Periodic convergence rates=",O2_PeriodicMMS.conv_rate)
     println("Order 4 Periodic convergence rates=",O4_PeriodicMMS.conv_rate)
 
-    # pP = plot(axis=:log,minorgrid=true)
-    # plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pP,  O2_PeriodicMMS.npts,   O2_PeriodicMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
-    # plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-    # plot!(pP,  O4_PeriodicMMS.npts,   O4_PeriodicMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)
-    # savefig(pP,"2DMMSPeriodic.png")
-
     println("=====")
 end
 
@@ -306,24 +285,24 @@ if TestDirichlet == TestNeumann == TestPeriodic
         )
 
     using JLD2
-    jldsave("testing/MMS/FullMMS.jld2";O2Conv,O4Conv)
+    jldsave("testing/MMS/FullMMS_stretchgrid.jld2";O2Conv,O4Conv)
 
 
     using DelimitedFiles
 
     nameappend=string("timeconv")
 
-    open(string("testing/MMS/MMS_Tests_O2",nameappend,".csv"),"w") do io
+    open(string("testing/MMS/MMS_Tests_O2_stretchgrid",nameappend,".csv"),"w") do io
         writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
     end
-    open(string("testing/MMS/MMS_Rates_O2",nameappend,".csv"),"w") do io
+    open(string("testing/MMS/MMS_Rates_O2_stretchgrid",nameappend,".csv"),"w") do io
         writedlm(io,[O2_DirichletMMS.conv_rate O2_NeumannMMS.conv_rate O2_PeriodicMMS.conv_rate])
     end
 
-    open(string("testing/MMS/MMS_Tests_O4",nameappend,".csv"),"w") do io
+    open(string("testing/MMS/MMS_Tests_O4_stretchgrid",nameappend,".csv"),"w") do io
         writedlm(io,[npts O4_DirichletMMS.relerr O4_NeumannMMS.relerr O4_PeriodicMMS.relerr])
     end
-    open(string("testing/MMS/MMS_Rates_O4",nameappend,".csv"),"w") do io
+    open(string("testing/MMS/MMS_Rates_O4_stretchgrid",nameappend,".csv"),"w") do io
         writedlm(io,[O4_DirichletMMS.conv_rate O4_NeumannMMS.conv_rate O4_PeriodicMMS.conv_rate])
     end
 end
@@ -332,70 +311,5 @@ end
 
 
 
-
-# using Plots
-# p = plot(O2_DirichletMMS.npts,     O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle,axis=:log)
-# plot!(p,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
-
-
-
-# plot(O4_DirichletMMS.comp_soln[10].u[2],label="comp")
-# plot!(O4_DirichletMMS.MMS_soln[10],label="exact")
-
-# surface(O2_DirichletMMS.comp_soln[1].u[2] .- O2_DirichletMMS.MMS_soln[1],label="err")
-# surface(O2_DirichletMMS.comp_soln[2].u[2] .- O2_DirichletMMS.MMS_soln[2],label="err")
-
-
-#=
-plot!(pO2,    (O2_NeumannMMS.npts),       (O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$", markershape=:square)
-plot!(pO2,    (O2_PeriodicMMS.npts),      (O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:x)
-
-plot!(pO2,    O4_DirichletMMS.npts,     O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
-plot!(pO2,    O4_NeumannMMS.npts,       O4_NeumannMMS.relerr,       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:square)
-plot!(pO2,    O4_PeriodicMMS.npts,      O4_PeriodicMMS.relerr,      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
-
-
-
-plot!(pO2,    log.(O2_DirichletMMS.npts),     log.(O2_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
-plot!(pO2,    log.(O2_NeumannMMS.npts),       log.(O2_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^2)$"), markershape=:circle
-plot!(pO2,    log.(O2_PeriodicMMS.npts),      log.(O2_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^2)$", markershape=:circle)
-
-plot!(pO2, log.([npts[2],npts[end-1]]), -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2) .+ log(sum(O2_DirichletMMS.relerr[1:2]/2)),
-    linestyle=:dash, linecolor=:black,label=L"$\mathcal{O}(h^2)$")
-
-savefig(pO2,".//testing//MMS//MMSTests_order2.eps")
-savefig(pO2,".//testing//MMS//MMSTests_order2.png")
-
-
-pO4 = plot()
-plot!(pO4,    log.(O4_DirichletMMS.npts),     log.(O4_DirichletMMS.relerr),     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:x)
-plot!(pO4,    log.(O4_NeumannMMS.npts),       log.(O4_NeumannMMS.relerr),       label=L"Neumann $\mathcal{O}(h^4)$", markershape=:x)
-plot!(pO4,    log.(O4_PeriodicMMS.npts),      log.(O4_PeriodicMMS.relerr),      label=L"Dirichlet/Periodic $\mathcal{O}(h^4)$", markershape=:x)
-
-plot!(pO4, log.([npts[2],npts[end-1]]), 
-    -log.([npts[2],npts[end-1]].^2) .+ log(npts[2]^2) .+ log(sum(O4_DirichletMMS.relerr[1:2]/2)),
-    linestyle=:dash, linecolor=:black, label=L"$\mathcal{O}(h^2)$")
-plot!(pO4, log.([npts[2],npts[end-1]]), 
-    -log.([npts[2],npts[end-1]].^4) .+ log(npts[2]^4) .+ log(sum(O4_DirichletMMS.relerr[1:2]/2)),
-    linestyle=:dashdot, linecolor=:black, label=L"$\mathcal{O}(h^4)$")
-
-savefig(pO4,".//testing//MMS//MMSTests_order4.eps")
-savefig(pO4,".//testing//MMS//MMSTests_order4.png")
-
-surface(O4_PeriodicMMS.comp_soln[end].u[2] .- O4_PeriodicMMS.MMS_soln[end])
-
-
-surface(O4_PeriodicMMS.grids[4].gridx,O4_PeriodicMMS.grids[4].gridy,O4_PeriodicMMS.comp_soln[4].u[2] .- O4_PeriodicMMS.MMS_soln[4],xlabel="x",ylabel="y")
-surface(O4_PeriodicMMS.grids[end].gridx,O4_PeriodicMMS.grids[end].gridy,O4_PeriodicMMS.comp_soln[end].u[2] .- O4_PeriodicMMS.MMS_soln[end],xlabel="x",ylabel="y")
-
-surface(O2_PeriodicMMS.grids[4].gridx,O2_PeriodicMMS.grids[4].gridy,O2_PeriodicMMS.comp_soln[4].u[2] .- O2_PeriodicMMS.MMS_soln[4],xlabel="x",ylabel="y")
-surface(O2_PeriodicMMS.grids[end].gridx,O2_PeriodicMMS.grids[end].gridy,O2_PeriodicMMS.comp_soln[end].u[2] .- O2_PeriodicMMS.MMS_soln[end],xlabel="x",ylabel="y")
-
-
-
-surface(O4_DirichletMMS.grids[end].gridx,O4_DirichletMMS.grids[end].gridy,O4_DirichletMMS.comp_soln[end].u[2] .- O4_DirichletMMS.MMS_soln[end],xlabel="x",ylabel="y")
-surface(O2_DirichletMMS.grids[end].gridx,O2_DirichletMMS.grids[end].gridy,O2_DirichletMMS.comp_soln[end].u[2] .- O2_DirichletMMS.MMS_soln[end],xlabel="x",ylabel="y")
-
-=#
 
 

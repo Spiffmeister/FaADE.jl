@@ -1,12 +1,6 @@
 # Simultaneous Approximation Terms
 
 
-Users can create a generic SBP operator with the function,
-```@docs
-FaADE.SATs.SAT
-```
-Note that this requires users to first create a boundary condition with [boundary conditions](@ref User_interaction)
-
 ## Boundary operators
 
 The following are for boundary conditions
@@ -24,8 +18,11 @@ If a domain is split along some boundary then the following matches the values a
 
 
 
+---
 
 ## Boundary derivatives and penalties
+
+The following are all internally accessed when setting up the SATs
 
 The `D_x^T B` and `B D_x` operators are given by,
 ```@docs
@@ -38,4 +35,13 @@ Penalties are constructed with the following,
 FaADE.SATs.SATpenalties
 FaADE.SATs.hval
 ```
+
+
+---
+
+## Internal functions
+
+
+
+
 

@@ -51,7 +51,7 @@ struct SAT_Neumann{
         new{TN,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA)
     end
 end
-
+SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS} = SAT_Neumann(RHS,Δx,side,AXIS,order)
 
 
 

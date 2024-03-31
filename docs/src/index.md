@@ -7,25 +7,28 @@ _A Summation by Parts code for solving the field aligned Anisotropic Diffusion E
 
 `FaADE.jl` is a code for solving the field aligned anisotropic diffusion equation
 
-$$\frac{\partial u}{\partial t} = \nabla\cdot(k_\perp \nabla_\perp) u + \nabla\cdot(k_\parallel\nabla_\parallel)u,$$
+$$\frac{\partial u}{\partial t} = \nabla\cdot(\mathbf{K} \nabla ) u$$
 
-where $\nabla_\parallel = \mathbf{B} (\mathbf{B}\cdot\nabla)/\|\mathbf{B}\|^2$ and $\nabla_\perp = \nabla-\nabla_\parallel$.
+where
+
+$$\mathbf{K} = k_\perp\mathbf{I} + (k_\parallel - k_\perp)\frac{\mathbf{B}\mathbf{B}^T}{\|\mathbf{B}\|^2}.$$
+
 
 - Uses the Summation by Parts formulation with Simultaneous Approximation Terms (SBP-SAT) for boundary conditions [[1](https://doi.org/10.1007/s10915-011-9525-z)].
-- Parallel operator used to apply diffusion along vector field lines.
+- Parallel penalty operator used to apply diffusion along vector field lines.
 - Currently arbitrary parallel mappings can be provided in Cartesian geometry or an ODE for mapping grid points along field lines.
 - Provides solutions in 1D for:
-    - 1D problems
-    - solution in 1D with a parallel map in the second dimension
+    - diffusion problems
+    - with a parallel map in the second dimension
 - and solutions in 2D for:
-    - 2D problems
-    - solution in 2D with a parallel map in the third dimension
+    - diffusion problems
+    - with a parallel map in the third dimension
 
 
 
 ## Examples
 
-The best place to start is in the Examples section in the navigation bar to the left. The code can operate in 1D,
+The best place to start is in the Examples section in the navigation bar to the left.
 
 ## Modules
 

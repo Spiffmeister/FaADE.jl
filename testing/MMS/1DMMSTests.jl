@@ -65,7 +65,7 @@ function comp_MMS(Dx,npts,
 
         K = k
 
-        P = newProblem1D(order,ũ₀,K,Dom,BD,F,nothing)
+        P = Problem1D(order,ũ₀,K,Dom,BD,F,nothing)
 
         println("Solving n=",Dom.n," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)

@@ -4,7 +4,7 @@ push!(LOAD_PATH,".")
 using FaADE
 
 
-_plot = true
+_plot = false
 
 ###
 𝒟 = [0.0,1.0]
@@ -20,13 +20,13 @@ u₀(x) = sin.(2π*x*2 .+ 1.0)
 
 order = 2
 
-BoundaryLeft =  FaADE.SATs.SAT_Dirichlet(t->sin(1.0),       Dom.Δx, Left, order)
-BoundaryRight = FaADE.SATs.SAT_Dirichlet(t->sin(4π + 1.0),  Dom.Δx, Right, order)
+BoundaryLeft =  SAT_Dirichlet(t->sin(1.0),       Dom.Δx, Left, order)
+BoundaryRight = SAT_Dirichlet(t->sin(4π + 1.0),  Dom.Δx, Right, order)
 
-BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight)
+BD = SATBoundaries(BoundaryLeft,BoundaryRight)
 
 
-P = newProblem1D(order,u₀,K,Dom,BD)
+P = Problem1D(order,u₀,K,Dom,BD)
 
 println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f,"   order=",order)
 

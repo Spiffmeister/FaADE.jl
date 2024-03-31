@@ -81,7 +81,7 @@ BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 # Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
 # BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
 
-P = newProblem1D(order,u₀,K,Dom,BD,F,nothing)
+P = Problem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
 soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
 # soln1V = solve(P1V,Dom1V,Δt,t)
@@ -166,7 +166,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1,2)
 Dr = FaADE.SATs.SAT_Dirichlet(x->1.0,sG1.Δx,Right,1,2)
 B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
 
-P1 = newProblem1D(order,u₀,K,G,B1)
+P1 = Problem1D(order,u₀,K,G,B1)
 
 DBlock = FaADE.solvers.DataMultiBlock(P1,G,0.1,0.0)
 
@@ -179,7 +179,7 @@ B = FaADE.SATs.SATBoundaries(Dl,Dr)
 
 
 
-P = newProblem1D(order,u₀,K,G,B)
+P = Problem1D(order,u₀,K,G,B)
 
 
 
@@ -203,7 +203,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D2.Δx,Right,1,order)
 BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 println("---Solving 2 volume---")
-P2V = newProblem1D(order,u₀,K,Dom2V,BD)
+P2V = Problem1D(order,u₀,K,Dom2V,BD)
 
 soln2V = solve(P2V,Dom2V,Δt,t)
 =#
@@ -241,7 +241,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
 BD = FaADE.SATs.SATBoundaries(Dl,Dr)
 
-P3V = newProblem1D(order,u₀,K,Dom3V,BD)
+P3V = Problem1D(order,u₀,K,Dom3V,BD)
 
 println("Solving")
 soln3V = solve(P3V,Dom3V,Δt,t)

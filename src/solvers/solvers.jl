@@ -24,7 +24,7 @@ module solvers
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!, compute_parallel_operator
 
-    using FaADE.Inputs: newPDEProblem, newProblem1D, newProblem2D#, 
+    using FaADE.Inputs: newPDEProblem, Problem1D, Problem2D#, 
 
     
     include("DataStorage.jl")

@@ -1,6 +1,8 @@
 
 
-
+"""
+    DerivativeOperatorType{DIM}
+"""
 abstract type DerivativeOperatorType{DIM} end
 
 
@@ -17,7 +19,9 @@ abstract type DerivativeOperatorType{DIM} end
 #     yperiodic   :: Bool
 # end
 
-
+"""
+    DiffusionOperator{TT<:Real,DO,COEFF}
+"""
 struct DiffusionOperator{TT<:Real,DO,COEFF} <: DerivativeOperatorType{1}
     order   :: Int64
     n       :: Int64
@@ -27,6 +31,10 @@ struct DiffusionOperator{TT<:Real,DO,COEFF} <: DerivativeOperatorType{1}
         return new{TT,order,coeff}(order,n,Δx,periodic)
     end
 end
+"""
+    DiffusionOperator{TT<:Real,DO,COEFF}
+N-dimensional diffusion operator
+"""
 struct DiffusionOperatorND{TT<:Real,DIM,DO,COEFF,AT<:AbstractArray{TT,DIM}} <: DerivativeOperatorType{DIM}
     DO      :: NTuple{DIM,DiffusionOperator{TT,DO,COEFF}}
     cache   :: AT

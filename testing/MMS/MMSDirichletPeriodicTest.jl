@@ -57,7 +57,7 @@ function comp_MMS(Dx,Dy,npts,
         nt = round(t_f/Δt)
         Δt = t_f/nt
 
-        P = newProblem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
+        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)

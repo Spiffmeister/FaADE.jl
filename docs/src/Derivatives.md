@@ -1,6 +1,6 @@
 # Summation by Parts operators
 
-Below are the first and second derivative summation by parts operators.
+Below are the first and second derivative summation by parts operators. All stencils are written in 1D and then extended to two dimensions by looping over the required axis.
 
 
 ## First Derivative operators
@@ -11,20 +11,27 @@ The below operators are for first derivatives
 FaADE.Derivatives.D₁
 ```
 
-### As iterators
+
+
+### In place
 ```@docs
 FaADE.Derivatives.D₁!
+FaADE.Derivatives.D₁ᵀ!
 ```
 
 
 
 ## Second Derivative operators
 
+
 ```@docs
 FaADE.Derivatives.D₂
 ```
 
-### As iterators
+
+---
+
+### In place
 
 The following functions are also available as iterators
 
@@ -37,18 +44,11 @@ FaADE.Derivatives.D₂!
 
 ## Internal Functions
 
+The following are all used internally for the various stencils.
 
 
-
-```@docs
-FaADE.Derivatives.FirstDerivative
-FaADE.Derivatives.FirstDerivativeInternal
-FaADE.Derivatives.FirstDerivativeInternal!
-FaADE.Derivatives.FirstDerivativeBoundary!
-FaADE.Derivatives.FirstDerivativeBoundaryStencil!
-
+```@autodocs
+Modules = [FaADE.Derivatives]
+Pages = ["DerivativeFirst.jl","DerivativeSecond.jl"]
 ```
 
-```@docs
-FaADE.Derivatives.SecondDerivative
-```

@@ -7,7 +7,7 @@
 
 """
     FirstDerivativeInternal
-Single node 1D first derivative function.
+Single node 1D first derivative function. Includes 2nd, 4th and 6th order stencils.
 """
 function FirstDerivativeInternal end
 @inline function FirstDerivativeInternal(u::AT,Δx::T,::Val{2},i::Integer,β::T) where {T,AT<:AbstractVector{T}}
@@ -24,7 +24,7 @@ end
 
 """
     FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::Val{O},α::T)
-In place first derivative function for internal nodes
+In place first derivative function for internal nodes.
 """
 function FirstDerivativeInternal! end
 @inline function FirstDerivativeInternal!(dest::VT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
@@ -58,7 +58,6 @@ end
 @inline function FirstDerivativePeriodic(u::AT,Δx::T,::Val{6},n::Integer,i::Integer,β::T) where {T,AT<:AbstractVector{T}}
     @inbounds β*(-T(1/60)*u[_prev(i-2,n)] + T(3/20)*u[_prev(i-1,n)] - T(3/4)*u[_prev(i,n)] + T(3/4)*u[_next(i,n)] - T(3/20)*u[_next(i+1,n)] + T(1/60)*u[_next(i+2,n)])/Δx
 end
-
 @inline function FirstDerivativePeriodic!(dest::VT,K::VT,u::VT,Δx::TT,DO::Val,n::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
 
     # for i = 2:n-1
@@ -80,6 +79,10 @@ end
 1D in place function for first derivative on boundary nodes
 """
 function FirstDerivativeBoundary! end
+"""
+    FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT}}
+``u_x \\leftarrow \\alpha u_x + d_x u``
+"""
 @inline function FirstDerivativeBoundary!(uₓ::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
@@ -103,10 +106,10 @@ end
     uₓ[j+4i]    = α*uₓ[j+4i]+ TT(i)*( TT(-0.036210680656541)*u[j] + TT(0.105400944933782)*u[j+i] + TT(0.015764336127392)*u[j+2i] + TT(-0.707905442575989)*u[j+3i] + TT(0.769199413962647)*u[j+5i] - TT(0.164529643265203)*u[j+6i] + T(0.018281071473911)*u[j+7i] )/Δx
     uₓ[j+5i]    = α*uₓ[j+5i]+ TT(i)*( TT(-0.011398193015050)*u[j] + TT(0.020437334208704)*u[j+i] + TT(0.011220896474665)*u[j+2i] + TT( 0.063183694641876)*u[j+3i] - TT(0.691649024426814)*u[j+4i] + TT(0.739709139060752)*u[j+6i] + TT(-0.147941827812150)*u[j+7i] + TT(0.016437980868017)*u[j+8i] )/Δx
 end
-
-
-
-
+"""
+    FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT}}
+``u_x \\leftarrow \\alpha u_x + K d_x u``
+"""
 @inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
@@ -133,8 +136,8 @@ end
 
 
 """
-    FirstDerivativeTransposeInternal
-Single node 1D first derivative transpose function.
+    FirstDerivativeTransposeBoundary!
+In place 1D first derivative stencil for boundary nodes
 """
 function FirstDerivativeTransposeBoundary! end
 function FirstDerivativeTransposeBoundary!(dest::VT,u::AT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,AT,TN}
@@ -180,7 +183,13 @@ function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::Nod
     dest
 end
 
+"""
+    FirstDerivativeTranspose!
+In place 1D first derivative function
 
+TODO: Check sign on internal nodes
+"""
+function FirstDerivativeTranspose! end
 function FirstDerivativeTranspose!(dest::VT,u::AT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
     for i = m:n-m+1

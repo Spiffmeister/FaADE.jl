@@ -90,7 +90,10 @@ function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},nx::Integer,ny::Intege
     uₓ
 end
 
-
+"""
+    D₁ᵀ!
+1D and 2D in place first derivative transpose operator.
+"""
 function D₁ᵀ!(dest::VT,u::VT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
 

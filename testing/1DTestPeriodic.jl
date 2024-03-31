@@ -26,7 +26,7 @@ BoundaryRight = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
 
 BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight)
 
-P = newProblem1D(order,u₀,K,Dom,BD)
+P = Problem1D(order,u₀,K,Dom,BD)
 
 
 println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)

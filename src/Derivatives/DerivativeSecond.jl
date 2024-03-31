@@ -21,11 +21,6 @@ Single node 1D second derivative function.
 See also [`FirstDerivativeInternal!`](@ref) for in place multi-node functions
 """
 function SecondDerivativeInternal! end
-"""
-    SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::Val{2},α::TT)
-
-Second order 1D second derivative internal stencil
-"""
 @inline function SecondDerivativeInternal(u::AT,c::AT,Δx::T,::Val{2},i::Int) where {T,AT<:AbstractVector{T}}
     @inbounds (0.5*(c[i] + c[i-1])*u[i-1] - 0.5*(c[i+1] + 2c[i] + c[i-1])*u[i] + 0.5*(c[i] + c[i+1])*u[i+1])/Δx^2
 end
@@ -48,12 +43,7 @@ end
 
 """
     SecondDerivativeInternal!(uₓₓ::AbstractVector{TT},u::AbstractVector{TT},cx::AbstractVector{TT},Δx::TT,nx::Integer,::Val{2},α::TT)
-
-
-Internal nodes affect nodes from `1.5*order+1` giving the following:
-    Order 2: `2:nx-1`
-    Order 4: `7:nx-6`
-    Order 6: `10:nx-9`
+In place second derivative function for internal nodes.
 """
 @inline function SecondDerivativeInternal!(uₓₓ::VT,u::VT,cx::VT,
         Δx::TT,nx::Integer,order::Val{O},α::TT) where {TT,VT<:AbstractVector{TT},O}
@@ -65,11 +55,9 @@ Internal nodes affect nodes from `1.5*order+1` giving the following:
 end
 
 
-
-
 """
     SecondDerivativePeriodic
-Pointwise stencil for a second derivative
+Pointwise 1D second derivative periodic stencils.
 """
 function SecondDerivativePeriodic end
 @inline function SecondDerivativePeriodic(u::VT,c::VT,Δx::TT,::Val{2},n::Integer,i::Integer) where {TT,VT<:AbstractVector{TT}}
@@ -85,7 +73,10 @@ end
     (-cx[im]/0.6e1 - cx[ipp]/0.6e1 - cx[i]/0.2e1 - cx[ip]/0.2e1)*u[ip] +
     (-cx[ip]/0.6e1 + cx[i]/0.8e1 + cx[ipp]/0.8e1)*u[ipp])/(-Δx^2)
 end
-
+"""
+    SecondDerivativePeriodic!(dest::VT,u::VT,c::VT,Δx::TT,DO::Val,n::Integer,α::TT) where {TT,VT}
+In place periodic second derivative stencil.
+"""
 function SecondDerivativePeriodic!(dest::VT,u::VT,c::VT,Δx::TT,DO::Val,n::Integer,α::TT) where {TT,VT}
     for i = 1:n
         dest[i] = α*dest[i] + SecondDerivativePeriodic(u,c,Δx,DO,n,i)
@@ -102,21 +93,15 @@ end
 #====== BOUNDARY OPERATORS ======#
 """
     SecondDerivativeBoundary!
-
 Since boundary stencils for the second derivative are not symmetric, Left and Right nodes are separate functions
 """
 function SecondDerivativeBoundary! end
-"""
-    SecondDerivativeBoundary!
-1D in place function for second derivative on boundary nodes
-"""
 @inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
         Δx::TT,::NodeType{TN},::Val{2},α::TT) where {TT,TN}
     TN == :Left ? j = 1 : j = lastindex(uₓₓ)
     uₓₓ[j] = α*uₓₓ[j]
 end
-
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
         Δx::TT,::NodeType{:Left},::Val{4},α::TT) where TT
@@ -296,7 +281,10 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
 end
 
 
-
+"""
+    SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},TN}
+Second derivative periodic stencil for boundary nodes only.
+"""
 @inline function SecondDerivativeBoundaryPeriodic!(uₓₓ::AT,u::AT,c::AT,Δx::TT,::NodeType{TN},::Val{2},α::TT) where {TT,AT<:AbstractVector{TT},TN}
     TN == :Left ? n = 1 : n = lastindex(u)
     m = lastindex(u)

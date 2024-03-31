@@ -30,7 +30,7 @@ BoundaryDown    = FaADE.SATs.SAT_Periodic(Dom.Δy,1,order,Down)
 
 BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
-P = newProblem2D(order,u₀,kx,ky,Dom,BD)
+P = Problem2D(order,u₀,kx,ky,Dom,BD)
 
 soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=1.0)
 

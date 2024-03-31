@@ -41,7 +41,7 @@ B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
 # B1 = FaADE.SATs.SATBoundaries(PL,PR)
 
 
-P1 = newProblem1D(order,u₀,K,sG1,B1)
+P1 = Problem1D(order,u₀,K,sG1,B1)
 
 # DBlock = FaADE.solvers.DataMultiBlock(P1,sG1,0.1,0.0)
 # DBlock = FaADE.solvers.MultiDataBlock(P1,sG1)
@@ -80,7 +80,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1,2)
 Dr = FaADE.SATs.SAT_Dirichlet(x->1.0,sG1.Δx,Right,1,2)
 B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
 
-P1 = newProblem1D(order,u₀,K,G,B1)
+P1 = Problem1D(order,u₀,K,G,B1)
 
 DBlock = FaADE.solvers.DataMultiBlock(P1,G,0.1,0.0)
 
@@ -93,7 +93,7 @@ B = FaADE.SATs.SATBoundaries(Dl,Dr)
 
 
 
-P = newProblem1D(order,u₀,K,G,B)
+P = Problem1D(order,u₀,K,G,B)
 
 
 

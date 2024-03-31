@@ -41,7 +41,7 @@ Pu = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Up)
 Pd = FaADE.SATs.SAT_Periodic(Dom1V.Δx,2,order,Down)
 BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr,Pu,Pd)
 
-P1V = newProblem2D(order,u₀,K,K,Dom1V,BD1V)
+P1V = Problem2D(order,u₀,K,K,Dom1V,BD1V)
 
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t)
@@ -65,7 +65,7 @@ BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Pu,Pd)
 
 BCs = [(1,Left,Dl),(1,Up,Pu),(1,Down,Pd),(2,Right,Dr),(2,Up,Pu),(2,Down,Pd)]
 
-P2V = newProblem2D(order,u₀,K,K,Dom2V,BD)
+P2V = Problem2D(order,u₀,K,K,Dom2V,BD)
 
 println("---Solving 2 volume---")
 soln2V = solve(P2V,Dom2V,Δt,t)
@@ -102,7 +102,7 @@ dH(X,x,p,t) = χ_h!(X,x,t)
 PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
 Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
 
-P2VP = newProblem2D(order,u₀,K,K,Dom2V,BD,Pfn)
+P2VP = Problem2D(order,u₀,K,K,Dom2V,BD,Pfn)
 soln = solve(P2VP,Dom2V,Δt,t)
 @benchmark solve($P2VP,$Dom2V,$Δt,$t)
 =#
@@ -130,7 +130,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,D1.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,D3.Δx,Right,1,order)
 BD = FaADE.SATs.SATBoundaries(Dl,Dr)
 
-P3V = newProblem1D(order,u₀,K,Dom3V,BD)
+P3V = Problem1D(order,u₀,K,Dom3V,BD)
 
 
 println("Solving")
@@ -174,7 +174,7 @@ Dl = FaADE.SATs.SAT_Dirichlet(x->0.0,sG1.Δx,Left,1,2)
 Dr = FaADE.SATs.SAT_Dirichlet(x->1.0,sG1.Δx,Right,1,2)
 B1 = FaADE.SATs.SATBoundaries(Dl,Dr)
 
-P1 = newProblem1D(order,u₀,K,G,B1)
+P1 = Problem1D(order,u₀,K,G,B1)
 
 DBlock = FaADE.solvers.DataMultiBlock(P1,G,0.1,0.0)
 
@@ -187,7 +187,7 @@ B = FaADE.SATs.SATBoundaries(Dl,Dr)
 
 
 
-P = newProblem1D(order,u₀,K,G,B)
+P = Problem1D(order,u₀,K,G,B)
 
 
 

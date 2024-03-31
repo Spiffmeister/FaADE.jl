@@ -304,7 +304,7 @@ _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann}
 
 
 
-function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CurvilinearMetric},Para::PT) where {TT,PT}
+function _setKoefficient!(K,P::Problem2D,G::LocalGridType{TT,2,CurvilinearMetric},Para::PT) where {TT,PT}
     # Used to compute I-BB^T/|B|^2
     function MagField(X)
         if (PT <: Nothing)
@@ -350,7 +350,7 @@ function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CurvilinearMet
     K
 end
 
-function _setKoefficient!(K,P::newProblem2D,G::LocalGridType{TT,2,CartesianMetric},Para::PT) where {TT,PT}
+function _setKoefficient!(K,P::Problem2D,G::LocalGridType{TT,2,CartesianMetric},Para::PT) where {TT,PT}
     function MagField(X)
         if PT <: Nothing
             return zeros(TT,3)
@@ -693,7 +693,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     PMap = nothing
     source = P.source
 
-    return newLocalDataBlock{TT,1,:Cartesian,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
 
@@ -721,7 +721,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
         difftype = :Constant
     end
 
-    sattype = :Constant
+    typeof(P.BoundaryConditions.BoundaryLeft).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    # sattype = :Constant
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(G.ny,G.Δy,P.order,false,difftype)

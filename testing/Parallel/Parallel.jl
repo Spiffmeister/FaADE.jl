@@ -61,7 +61,7 @@ PData   = ParallelData(gdata,Dom,κ=κ_para)
 
 
 # Build PDE problem
-P = newProblem2D(order,u₀,k,k,Dom,BC,F,PData)
+P = Problem2D(order,u₀,k,k,Dom,BC,F,PData)
 
 # Time domain
 # Δt = Dom.Δx

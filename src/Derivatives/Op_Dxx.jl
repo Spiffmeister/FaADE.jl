@@ -45,7 +45,6 @@ function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Right,order,α)
     uₓₓ
 end
-
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
 function D₂!(uₓₓ::AT,u::AT,c::AT,n::Integer,Δ::T,order::Val,α::T,dim::Integer) where {T,AT<:AbstractArray{T}}
     loopdir = SelectLoopDirection(dim)    

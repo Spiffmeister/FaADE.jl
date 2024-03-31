@@ -1,7 +1,13 @@
 
-
+"""
+    MassMatrix{TYPE,TT,VT}
+"""
 abstract type MassMatrix{TYPE,TT,VT} end
 
+"""
+    DiagonalH{TT,VT}
+Storage for diagonal mass matrix.
+"""
 struct DiagonalH{TT<:Real,VT<:AbstractVector{TT}} <: MassMatrix{:Diagonal,TT,VT}
     Boundary    :: VT
     Interior    :: TT
@@ -22,7 +28,10 @@ struct DiagonalH{TT<:Real,VT<:AbstractVector{TT}} <: MassMatrix{:Diagonal,TT,VT}
     end
 end
 
-
+"""
+    CompositeH{DIM,TT,VT,HTYPE}
+Storage for multidimensional mass matrix.
+"""
 struct CompositeH{DIM,TT<:Real,VT<:AbstractArray,HTYPE}
     H :: NTuple{DIM,HTYPE}
     sz :: Vector{Int}
@@ -33,8 +42,9 @@ struct CompositeH{DIM,TT<:Real,VT<:AbstractArray,HTYPE}
 end
 
 
-
-
+"""
+    mul!(u::VT,H::DiagonalH{TT},v::VT)
+"""
 function mul!(u::VT,H::DiagonalH{TT},v::VT) where {TT,VT<:AbstractVector{TT}}
     tmp = TT(0)
     for i = 1:B.n
@@ -42,6 +52,9 @@ function mul!(u::VT,H::DiagonalH{TT},v::VT) where {TT,VT<:AbstractVector{TT}}
     end
     return tmp
 end
+"""
+    mul!(u::VT,H::DiagonalH{TT},v::VT)
+"""
 function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
     tmp = TT(0)
     for j = 1:H.sz[2]
@@ -51,6 +64,9 @@ function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray
     end
     return tmp
 end
+"""
+    mul!(u::VT,H::DiagonalH{TT},v::VT)
+"""
 function mul!(u::AT,J::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
     tmp = TT(0)
     for j = 1:H.sz[2]
@@ -152,7 +168,6 @@ end
 
 
 
-
 Base.size(H::DiagonalH) = (H.n,H.n)
 Base.size(H::CompositeH) = (H.sz[1],H.sz[2])
 
@@ -161,9 +176,8 @@ Base.length(H::CompositeH) = prod(H.sz)
 
 Base.lastindex(H::CompositeH) = length(H)
 
-function getH(H::CompositeH{DIM,TT,VT,HTYPE},i::Int) where {DIM,TT,VT<:AbstractVector{TT},HTYPE}
-    
-end
+# function getH(H::CompositeH{DIM,TT,VT,HTYPE},i::Int) where {DIM,TT,VT<:AbstractVector{TT},HTYPE}
+# end
 
 function Base.getindex(H::DiagonalH,i::Int)
     if i < 1 || i > H.n
