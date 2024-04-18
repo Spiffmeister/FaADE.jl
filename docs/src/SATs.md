@@ -1,5 +1,15 @@
 # Simultaneous Approximation Terms
 
+```@docs
+FaADE.SATs
+```
+
+All `SATs` belong to the `abstract type`
+
+```@docs
+FaADE.SATs.SimultanousApproximationTerm
+```
+
 
 ## Boundary operators
 
@@ -9,12 +19,14 @@ FaADE.SATs.SAT_Dirichlet
 FaADE.SATs.SAT_Neumann
 ```
 
+Robin (mixed) boundary conditions are to be implemented still.
+
 If periodic boundaries are applied
 ```@docs
 FaADE.SATs.SAT_Periodic
 ```
 
-If a domain is split along some boundary then the following matches the values at the interface.
+Interface conditions are not currently implemented.
 
 
 
@@ -35,13 +47,5 @@ Penalties are constructed with the following,
 FaADE.SATs.SATpenalties
 FaADE.SATs.hval
 ```
-
-
----
-
-## Internal functions
-
-
-
 
 

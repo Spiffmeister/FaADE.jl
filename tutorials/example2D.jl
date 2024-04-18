@@ -32,28 +32,28 @@ grid = Grid2D(𝒟x,𝒟y,nx,ny)
 # The initial condition
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
+
+# Set the FD order to 2,
+
+order = 2
+
 # The boundary conditions are defined by creating [`Boundary`](@ref FaADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
-BoundaryLeft = Boundary(Dirichlet,(y,t)->0.0,Left)
-BoundaryRight = Boundary(Neumann,(y,t)->0.0,Right)
-BoundaryUpDown = PeriodicBoundary(2)
+BoundaryLeft = SAT_Dirichlet((y,t)->0.0,grid.Δx, Left, order)
+BoundaryRight = SAT_Neumann((y,t)->0.0, grid.Δx, Right, order)
+BoundaryUp = SAT_Periodic(grid.Δy, 2, order, Up)
+BoundaryDown = SAT_Periodic(grid.Δy, 2, order, Down)
+
+BCs = SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 # The `2` input to the periodic boundary ensures it is along the y-axis.
 #
-# Set the FD order to 2 and use the conjugate gradient implicit euler (`:cgie`) solver,
-
-order = 2
-method = :cgie
-
-# Forward Euler and RK4 are also available.
-#
 # Set the diffusion in $x$ and $y$ directions to 1
 
-Kx(x,y) = 1.0
-Ky(x,y) = 1.0
+Kx = Ky = 1.0
 
 # Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref FaADE.Helpers.VariableCoefficientPDE2D),
 
-P = VariableCoefficientPDE2D(u₀,Kx,Ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+P = Problem2D(order,u₀,Kx,Ky,grid,BCs)
 
 # Lastly before solving we define our time step and simulation time,
 
@@ -62,7 +62,7 @@ t_f = 100Δt;
 
 # Finally we call the solver (currently not working with `Documenter.jl`)
 # 
-soln = solve(P,grid,Δt,t_f,method)
+soln = solve(P,grid,Δt,t_f)
 
 #
 # The solver ourputs a [`solution`](@ref FaADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct

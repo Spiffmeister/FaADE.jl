@@ -49,8 +49,9 @@ end
 """
     Torus{TT}
 Represents a torus in boundary using Fourier series in `R` and `Z` coordinates as,
-``R(θ,ζ) = ∑ᵢⱼ Rᵢⱼ cos(mⱼθ - nᵢζ)``
-``Z(θ,ζ) = ∑ᵢⱼ Zᵢⱼ sin(mⱼθ - nᵢζ)``
+
+``R(\\theta,\\zeta) = \\sum_{i,j} R_{i,j} cos(m_j\\theta - n_i\\zeta), \\qquad Z(\\theta,\\zeta) = \\sum_{i,j} Z_{i,j} sin(m_j\\theta - n_i\\zeta)``
+
 where `Rᵢⱼ` and `Zᵢⱼ` are the Fourier coefficients and `mⱼ` and `nᵢ` are the Fourier modes.
 
 Example:
@@ -63,6 +64,11 @@ outer = Torus(Rout,Zout,[1],[0])
 
 meshgrid(inner,outer,0.0,11,21)
 ```
+
+Coordinates at a given ``\\theta\\in[0,R]`` and ``\\zeta\\in[0,2\\pi)`` can be computed using the call syntax
+```julia
+inner(θ,ζ)
+```
 """
 struct Torus{TT}
     R::Array{TT}
@@ -70,8 +76,10 @@ struct Torus{TT}
     m::Vector{Int}
     n::Vector{Int}
 end
-
-
+"""
+    (T::Torus)(θ::TT,ζ::TT) where TT
+Compute the coordinates of the torus at the given `θ` and `ζ` values.
+"""
 function (T::Torus)(θ::TT,ζ::TT) where TT
     return [cosinespace(T.R,θ,ζ,T.m,T.n), sinusespace(T.Z,θ,ζ,T.m,T.n)]
 end

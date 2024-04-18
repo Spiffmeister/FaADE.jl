@@ -16,9 +16,21 @@ Base.show(M::CurvilinearMetric) = print("Curvilinear metric")
 Base.show(M::StretchedMetric) = print("Stretched grid metric")
 
 """
-    Grid1D
+    Grid1D{TT<:Real,MET<:MetricType,GT<:Vector{TT},DT<:Union{Real,Vector{TT}}} <: LocalGridType{TT,1,MET}
 Grid data structure for 1 dimensional problems.
-    
+
+Constructors:
+```
+Grid1D(𝒟::Vector{TT},n::Integer) where TT
+Grid1D(𝒟::Vector{TT}) where TT
+```
+
+Grid points can be accessed as if the grid object is an array;
+```julia
+G = Grid2D([0.0,0.5],[0.0,1.0],5,5)
+G[1]
+```
+
 Inputs:
 - Vector of domain boundaries `[x_0,x_N]`
 - Number of grid points.
@@ -49,8 +61,14 @@ end
 
 
 """
-    Grid2D
+    Grid2D{TT,MET<:MetricType,GT<:AbstractArray{TT}} <: LocalGridType{TT,2,MET}
 Grid data structure for 2 dimensional problems.
+
+Grid points can be accessed as if the grid object is an array;
+```julia
+G = Grid2D([0.0,0.5],[0.0,1.0],5,5)
+G[1,1]
+```
 
 Inputs:
 - Domain boundaries in ``x``
@@ -202,7 +220,7 @@ Indexing can be performed by ``G[i]`` for 1D or ``G[i,j]`` for 2D multiblock pro
 `GridMultiBlock.Joint` contains the information on how to connect grids. If periodic boundary conditions are being used, do not specify the joint across that boundary.
 
 Example grid creation,
-```
+```julia
     D1  = Grid2D([0.0,0.5],[0.0,1.0],5,5)
     D2  = Grid2D([0.5,1.0],[0.0,1.0],5,5)
     D3  = Grid2D([1.0,1.5],[0.0,1.0],5,5)

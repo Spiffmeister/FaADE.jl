@@ -42,15 +42,13 @@ function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Fu
     return X,Y
 end
 """
-    meshgrid(S,nx,ny)
+    meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
+Construct a grid of `nx` by `ny` points in a domain bounded by the functions `cbottom`, `cleft`, `cright`, and `ctop`.
 """
 meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int) = meshgrid(Float64,cbottom,cleft,cright,ctop,nx,ny)
-
-
-
 """
     meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
-Generate matrix of coordinates from vectors of coordinates
+Generate matrix of coordinates from vectors of coordinates this is useful for packed grids.
 """
 function meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
     nx = length(𝒟x)
@@ -65,16 +63,12 @@ function meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
     end
     return X,Y
 end
-
-
 """
     meshgrid(cinner::Function,couter::Function,nx,ny)
 Meshgrid for annular domains where the inner and outer boundaries are parameterised boundaries
 """
 function meshgrid(cbottom::Function,cleft::Function,nx::Int,ny::Int)
     S(u,v) = coordinate(cbottom,cleft,cright,ctop,u,v)
-
-    
     
     X = zeros(nx,ny)
     Y = zeros(nx,ny)
@@ -87,12 +81,11 @@ function meshgrid(cbottom::Function,cleft::Function,nx::Int,ny::Int)
     end
     return X,Y
 end
-
-
-
 """
     meshgrid(inner::Torus,outer::Torus,ζ,nr,nθ)
 Take two tori and generate a meshgrid between them at a given toroidal angle `ζ` with `nr` radial points and `nθ` poloidal points.
+
+See also: [`Torus`](@ref)
 """
 function meshgrid(inner::Torus,outer::Torus,ζ,nr,nθ)
 

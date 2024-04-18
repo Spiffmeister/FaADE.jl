@@ -83,6 +83,45 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
     end
 end
 
+function restart(S::solution{TT,GT,PT};adaptive=false,Δt=TT(0),t_f=TT(0),K=(TT(0),TT(0)),K_para=TT(0),θ=TT(0.5)) where {TT,GT,PT}
+
+    S.problem.Parallel == nothing ? parallel = false : parallel = true
+
+    P = S.problem
+
+    
+    if K_para == TT(0)
+        K_para = P.Parallel.κ
+    end
+    nParallel = ParallelData(P.Parallel.PGrid,S.grid,P.order,κ=K_para)
+    
+    if K[1] == TT(0)
+        K = (P.Kx,P.Ky)
+    end
+    nP = Problem2D(P.order,P.InitialCondition,K[1],K[2],S.grid,P.BoundaryConditions,P.source.source,nParallel)
+
+    if t_f == TT(0)
+        t_f = S.t[end]
+    end
+    if Δt == TT(0)
+        Δt = S.Δt[end]
+    end
+    
+
+    SD = SolverData{TT}(adaptive=adaptive,method=:cn,parallel=parallel,target=TT(0))
+    DBlock = DataMultiBlock(nP,S.grid,Δt,t_f,θ=θ)
+    soln = solution(S.grid,0.0,Δt,nP)
+
+    DBlock[1].u .= S.u[end]
+    soln.u[1] .= S.u[end]
+
+
+    
+
+
+    implicitsolve(soln,DBlock,S.grid,Δt,t_f,SD)
+end
+
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
@@ -101,7 +140,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         theta_method(DBlock,t,Δt)
 
-        if DBlock.SC.converged #| !solverconfig.adaptive #If CG converges
+        if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
                 # println("b4",norm(DBlock[1].uₙ₊₁))
                 # @show norm(DBlock[1].u)
