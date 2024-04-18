@@ -17,7 +17,7 @@ In Cartesian coordinates the SAT reads
 ``\\tau H^{-1} E H^{-1} E (u - f) + \\alpha H^{-1} (K H D_1^T) H^{-1} E (u - f)``
 
 In Curivlinear coordinates cross derivatives appear in the first term
-``\\tau H^{-1} E H^{-1} E (u - f)  ``
+``\\tau H^{-1} E H^{-1} E (u - f)``
 """
 struct SAT_Dirichlet{
         TN<:NodeType,

@@ -16,6 +16,7 @@ module Grid
     export GridType, LocalGridType
     export CartesianMetric, CurvilinearMetric
     export coordtype
+    export GetMetricType
 
     export Joint
 
