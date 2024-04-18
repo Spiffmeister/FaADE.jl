@@ -196,7 +196,7 @@ function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
     n = lastindex(u)
     m = lastindex(uₓₓ)
 
-    BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n]) #full compatible
+    BₙSu = 1/Δx*c[n]*(3/34*u[n-3] + 4/17*u[n-2] - 59/34*u[n-1] + 24/17*u[n]) #fully compatible
     # BₙSu = 1/Δx*c[n]*(-1/3*u[n-3] + 3/2*u[n-2] - 3*u[n-1] + 11/6*u[n])
     
     # uₓₓ[m-5]    = 
