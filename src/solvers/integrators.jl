@@ -35,7 +35,7 @@ In-place conjugate gradient method. Designed for multiblock problems
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-12,maxIT::Int=50,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-5,maxIT::Int=2500,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -51,8 +51,9 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
-    unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
-    while (rnorm ≥ rtol*unorm) & (i < maxIT)
+    # unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
+    bnorm = max(sqrt(innerprod(:b,:b,DBlock)),1e-14) #√(b,b)ₕ
+    while (rnorm ≥ rtol*bnorm) & (i < maxIT)
         # testA!(:dₖ,DBlock[1]) # cache ← Adₖ
         A!(:dₖ,DBlock[1]) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #αₖ = (dₖ,Ddₖ)
@@ -77,11 +78,13 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
         # println(rnorm)
         i += 1
     end
-    if (rnorm>rtol*unorm) & warnings
+    if (rnorm>rtol*bnorm) & warnings
         DBlock.SC.converged = false
-        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/unorm,", rel tolerance=",rtol,".")
+        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
         @warn warnstr
-    end
+    end 
+    # warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
+    # @warn warnstr
 end
 
 """
