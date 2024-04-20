@@ -715,14 +715,17 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     # BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing); @warn "Using periodic stencil"
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,P.order)
 
-    if length(K) == 3
+    # @show GetMetricType(G)
+
+    # if length(K) == 3
+    if GetMetricType(G) == CurvilinearMetric
         difftype = :Variable
     else
         difftype = :Constant
     end
 
     typeof(P.BoundaryConditions.BoundaryLeft).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
-    # sattype = :Constant
+    sattype = :Variable
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(G.ny,G.Δy,P.order,false,difftype)
