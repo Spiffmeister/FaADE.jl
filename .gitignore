@@ -12,5 +12,4 @@
 !/docs/src/example*D.md
 *.jld2
 *.csv
-*/Manifest.toml
-Manifest.toml
+*/Manifest.*
