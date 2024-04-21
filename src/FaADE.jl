@@ -16,14 +16,16 @@ module FaADE
     using Distributed
     using SharedArrays
     using LinearAlgebra
-    using JLD2
+    # using JLD2
 
 
     # Includes
     include("Helpers/Helpers.jl")
     include("Derivatives/Derivatives.jl")
+    include("Grid/Grid.jl")
     include("SATs/SATs.jl")
-    include("Parallel/Parallel.jl")
+    include("ParallelOperator/ParallelOperator.jl")
+    include("Inputs/Inputs.jl")
     include("solvers/solvers.jl")
 
 
@@ -31,28 +33,27 @@ module FaADE
     # Helpers export
     using FaADE.Helpers: Dirichlet, Neumann, Robin, Periodic, Interface
     using FaADE.Helpers: Left, Internal, Right, Up, Down
-    using FaADE.Helpers: Grid1D, Grid2D
-    using FaADE.Helpers: Boundary, PeriodicBoundary
-    using FaADE.Helpers: VariableCoefficientPDE1D, VariableCoefficientPDE2D
 
-    using FaADE.Derivatives: D₁, D₂, D₂!
+    using FaADE.Derivatives: D₁, D₂, D₁!, D₂!
+
+    using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     
     using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
 
-    using FaADE.solvers: solve, build_H
+    using FaADE.solvers: solve
 
-    using FaADE.Parallel: construct_grid, generate_parallel_penalty
+    using FaADE.ParallelOperator: construct_grid, generate_parallel_penalty, ParallelData
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
-    export Grid1D, Grid2D, Boundary, PeriodicBoundary
-    export VariableCoefficientPDE1D, VariableCoefficientPDE2D
-    export construct_grid, generate_parallel_penalty
+    export Grid1D, Grid2D, GridMultiBlock, Joint
+    export CartesianMetric, CurvilinearMetric
+    export construct_grid, generate_parallel_penalty, ParallelData
 
-    export D₁, D₂, D₂!
+    export D₁, D₂, D₂!, D₁!
 
-    export solve, build_H
+    export solve
     
     export SimultanousApproximationTerm,
         SAT_Dirichlet,
@@ -60,5 +61,13 @@ module FaADE
         SAT_Periodic
         #SAT_Robin, 
         #Split_domain
+
+    using FaADE.Inputs: Problem1D, Problem2D, SATBoundaries
+
+
+
+    export Problem1D, Problem2D, SATBoundaries
+    
+
 
 end # module

@@ -1,14 +1,16 @@
 using LinearAlgebra
-using Printf
-using Plots
-using JLD2
+# using Printf
+# using Plots
+using Revise
+using GLMakie
+# using JLD2
 
-using BenchmarkTools
-using Profile
+# using BenchmarkTools
+# using Profile
 # using PProf
 
-using Interpolations
-push!(LOAD_PATH,"..")
+# using Interpolations
+# push!(LOAD_PATH,"..")
 using FaADE
 
 
@@ -17,29 +19,29 @@ using FaADE
 ###
 𝒟x = [0.0,1.0]
 𝒟y = [-π,π]
-nx = 21
-ny = 21
+nx = 81
+ny = 81
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-kx(x,y) = 1.0
-ky(x,y) = 1.0
+order = 2
+
+kx = 1.0e-6
+ky = 1.0e-6
 
 
-Δt = 1.0 * min(Dom.Δx^2,Dom.Δy^2)
+Δt = 0.1
 t_f = 10.0
 
 u₀(x,y) = x
 
 
-BoundaryLeft = Boundary(Dirichlet,(y,t) -> 0.0,Left,1)
-BoundaryRight = Boundary(Dirichlet,(y,t) -> 1.0,Right,1)
-BoundaryUpDown = PeriodicBoundary(2)
+BoundaryLeft    = FaADE.SATs.SAT_Dirichlet((y,t) -> 0.0 ,Dom.Δx, FaADE.Left,  order, Dom.Δy, :Cartesian)
+BoundaryRight   = FaADE.SATs.SAT_Dirichlet((y,t) -> 1.0 ,Dom.Δx, FaADE.Right, order, Dom.Δy, :Cartesian)
+BoundaryUp      = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,FaADE.Up,    Dom.Δx,:Cartesian)
+BoundaryDown    = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,FaADE.Down,  Dom.Δx,:Cartesian)
 
+BC = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
-order = 2
-method = :cgie
-
-P = VariableCoefficientPDE2D(u₀,(x,y)->1e-8,(x,y)->1e-8,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
 
 
 
@@ -55,20 +57,33 @@ end
 
 dH(X,x,p,t) = χ_h!(X,x,params,t)
 PGrid = FaADE.construct_grid(dH,Dom,[-2π,2π])
-Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
+# Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2,κ=1e8)
+PData = FaADE.ParallelData(PGrid,Dom,order,κ=1.0)
 
 
 println("(Δx,Δy)=(",Dom.Δx,",",Dom.Δy,")      ","Δt=",Δt,"        ","final time=",t_f)
 
 
+
+# P = VariableCoefficientPDE2D(u₀,ky,kx,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+P = Problem2D(order,u₀,ky,kx,Dom,BC,nothing,PData)
+
+
 # using Profile
 
-Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
-@time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+# Pfn = FaADE.generate_parallel_penalty(PGrid,Dom,2)
+# @time soln = solve(P,Dom,Δt,t_f,:cgie,adaptive=true,penalty_func=Pfn)
+@time soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=1.0)
 
-surface(soln.u[2])
+f = Figure(); 
+ax_f = Axis3(f[1,1]);
+surface!(ax_f,soln.u[2])
 
-contour(soln.u[2])
+# include("../../paper_JCP2023/FieldLines.jl")
+
+# poindata = FieldLines.construct_poincare(dH,[0.0,1.0],[-π,π])
+# scatter(poindata.θ,poindata.ψ,markercolor=:black,markersize=0.7,ylims=𝒟x,xlims=𝒟y)
+# contour!(Dom.gridy,Dom.gridx,soln.u[2],linewidth=3)
 
 #=
 println("Plotting")

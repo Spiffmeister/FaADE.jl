@@ -10,16 +10,27 @@ module solvers
 
     using FaADE.Helpers
 
-    using FaADE.Derivatives: generate_SecondDerivative
-    
-    using FaADE.SATs: SAT, construct_SAT, 
-    SAT_Periodic, SAT_Periodic!, SAT_Dirichlet_implicit!, SATpenalties, SAT_Dirichlet_implicit_data!
+    using FaADE.Derivatives: mul!,
+    innerH,
+    DerivativeOperatorType, DiffusionOperator, DiffusionOperatorND
 
-    using FaADE.Parallel: ParallelGrid, generate_parallel_penalty
+    using FaADE.Grid
     
+    using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
+    SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_solution!, SAT_Dirichlet_data!,
+    SAT_Neumann, SAT_Neumann_data!, SAT_Neumann_solution!,
+    SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, 
+    SATMode, DataMode, SolutionMode, ExplicitMode
 
-    include("solution.jl")
+    using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!, compute_parallel_operator
+
+    using FaADE.Inputs: newPDEProblem, Problem1D, Problem2D#, 
+
+    
+    include("DataStorage.jl")
     include("IntegeratorData.jl")
+    include("SettingValues.jl")
+    include("solution.jl")
     include("integrators.jl")
     include("timesolvers.jl")
 

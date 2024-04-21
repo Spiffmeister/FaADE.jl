@@ -26,6 +26,57 @@ function BoundaryDerivativeTranspose(::NodeType{:Right},order::Int,Δx::Float64)
 end
 
 
+function _DerivativeTranspose(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
+    if order == 2
+        return [-1,1]/Δx
+    elseif order == 4
+        DT = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+        return DT
+    elseif order == 6
+        error("order 6 not set")
+    end
+
+    # if TN == :Left
+    #     return DT
+    # else
+    #     return reverse(DT)
+    # end
+end
+function _InverseMassMatrix(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
+    if order == 2
+        Hinv = inv.([1/2, 1]*Δx) 
+    elseif order == 4
+        Hinv = inv.([17/48, 59/48, 43/48, 49/48]*Δx)
+    elseif order == 6
+        error("order 6 not set")
+    end
+    
+    if TN == :Left
+        return Hinv
+    else
+        return reverse(Hinv)
+    end
+end
+_BoundaryOperator(TT,::NodeType{:Left}) = TT(-1)
+_BoundaryOperator(TT,::NodeType{:Right}) = TT(1)
+
+
+function _BoundaryDerivative(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
+    if order == 2
+        return [-1.0,1.0]/Δx
+    elseif order == 4
+        D = [-24.0/17.0, 59.0/34.0, -4.0/17.0, -3.0/34.0]/Δx
+    elseif order == 6
+        D = [-1.582533518939116, 2.033378678700676, -0.141512858744873, -0.450398306578272, 0.104488069284042, 0.036577936277544]/Δx
+    end
+
+    if TN == :Left
+        return D
+    elseif TN == :Right
+        return reverse(-D)
+    end
+end
+
 """
     BoundaryDerivative
 
@@ -53,6 +104,8 @@ end
 
 
 
+
+
 """
     SATpenalties
 
@@ -61,23 +114,6 @@ Determines the penatly parameters for the given boundary conditions.
 TODO: Remove inlineing
 """
 function SATpenalties end
-@inline function SATpenalties(::BoundaryConditionType{:Dirichlet},Δx::T,order::Int64) where T
-    # For reading in penalty parameters for Dirichlet SATs
-    h = hval(order)
-
-    α = 1.0/Δx # α/Δx -- #1/h accounted for in BoundaryDerivativeTranspose
-
-    # τ₁(c) = 1.0/c
-    τ₀(c) = -(1.0 + 1.0/max(c,eps(T)))/(h*Δx)^2 # τ*H^{-1}H^{-1} #TODO FIX IF C=0
-    return α, τ₀
-end
-@inline function SATpenalties(::BoundaryConditionType{:Neumann},Δx::Float64,order::Int64)
-    # For reading in penalty parameters for Neumann SATs
-    h = hval(order)
-
-    τ = 1.0/(h * Δx) # τ*H^{-1}
-    return τ
-end
 @inline function SATpenalties(::BoundaryConditionType{:Robin},a,Δx::Float64,order::Int64)
     h = hval(order)
 
@@ -98,12 +134,16 @@ end
     h⁻ = hval(order⁻)
     h⁺ = hval(order⁺)
 
-    α₀ = -0.5
-    τ₁ = 0.5
-    τ₀(c) = max(c[end]/2(h⁻*Δx⁻),c[1]/2(h⁺*Δx⁺))
+    α₀ = -0.5/(h⁻*Δx⁻)
+    τ₁ = 0.5/(Δx⁺)
+    τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
 
     return α₀,τ₁,τ₀
 end
+
+
+
+
 
 
 """

@@ -19,37 +19,34 @@ struct innerH{T<:Real,
     Hx  :: VT
     Hy  :: VT
     Δ   :: T
-
-    function innerH(grid::GridType{T,N},order::Int) where {T,N}
-        if typeof(grid) <: Grid1D
-            H = build_H(order,grid.n)
-            new{T,N,typeof(H)}(H,[1.0], grid.Δx)
-            
-        elseif typeof(grid) <: Grid2D
-            Hx = build_H(order,grid.nx)
-            Hy = build_H(order,grid.ny)
-            new{T,N,typeof(Hx)}(Hx,Hy, grid.Δx*grid.Δy)
-        end
-    end
+end
+function innerH(Δx::T,n,order::Int) where {T}
+    H = build_H(order,n)
+    new{T,1,typeof(H)}(H,[1.0], Δx)
+end
+function innerH(Δx::T,Δy::T,nx,ny,order::Int) where {T} 
+    Hx = build_H(order,nx)
+    Hy = build_H(order,ny)
+    return innerH{T,2,typeof(Hx)}(Hx,Hy, Δx*Δy)
 end
 
 """
     (H::InnerH)
 1D or 2D H-inner product constructed from [`innerH`](@ref)
 """
-function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) where T
-    tmp = 0.0
+function (H::innerH{T,1})(u::AbstractArray{T},v::AbstractArray{T}) :: T where T
+    local tmp = T(0)
     for i in eachindex(H.Hx)
         tmp += u[i] * H.Hx[i] * v[i] * H.Δ
     end
     return tmp
 end
-function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) where T
+function (H::innerH{T,2})(u::AbstractArray{T,2},v::AbstractArray{T,2}) :: T where T
     local tmp::T
     tmp = T(0)
-@inbounds    for j in eachindex(H.Hx)
+    for j in eachindex(H.Hx)
         for i in eachindex(H.Hy)
-            tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
+            @inbounds tmp += u[i,j] * H.Hx[i] * H.Hy[j] * v[i,j] * H.Δ
         end
     end
     return tmp

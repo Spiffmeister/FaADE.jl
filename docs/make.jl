@@ -22,9 +22,10 @@ makedocs(sitename="SBP Operators Documentation",
         "Modules" => [
             "Derivative Operators" => "Derivatives.md",
             "SATs" => "SATs.md",
+            "Grids" => "Grid.md",
             "Solvers" => "solvers.md",
-            "Helpers" => "Helpers.md"
-        ]
+            "Helpers" => "UserInteraction.md"
+        ],
     ],
     format=Documenter.HTML(prettyurls=false),
     modules = [FaADE,FaADE.Derivatives,FaADE.Helpers,FaADE.SATs,FaADE.solvers]

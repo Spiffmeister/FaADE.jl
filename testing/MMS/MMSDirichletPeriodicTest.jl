@@ -1,13 +1,7 @@
 using LinearAlgebra
-using Printf
-# using GLMakie
-# pyplot()
 
-using BenchmarkTools
-using Profile
+using Plots
 
-using Pkg
-Pkg.activate(".")
 using FaADE
 
 
@@ -15,117 +9,180 @@ using FaADE
 
 
 
-#=== MMS ===#
-# Setting up the manufactured solution
+###=== GLOBAL PROPS ===###
+𝒟x = [0.0,1.0]
+𝒟y = [0.0,1.0]
 
-cx = 1.0
-cy = 0.0
-ωx = 7.5
-ωy = 6.0 #MUST BE INTEGER FOR PERIODIC
-K = 1.0
+###=== MMS ===###
 
-
-ũ(x,y,t) = cos(2π*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy) #Solution
-
-ũ₀(x,y) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy) #Initial condition
-
-BxLũ(y,t) = cos(2π*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t;Lx=1.0) = cos(2π*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-
-
-
-
-F(x,y,t) = -2π*sin(2π*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-    K * 4π^2 * (ωx^2 + ωy^2) * cos(2π*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) #F = ∂ₜũ - K∇ũ 
-
-
-
-
-#=== Define a function to generate the MMS solution ===#
-function generate_MMS(MMS::Function,grid::FaADE.Helpers.Grid2D,t::Float64)
+# Generates the exact MMS solution
+function generate_MMS(MMS::Function,grid::Grid2D,t::Float64)
     u_MMS = zeros(grid.nx,grid.ny)
     for j = 1:grid.ny
         for i = 1:grid.nx
-            u_MMS[i,j] = MMS(grid.gridx[i],grid.gridy[j],t)
+            u_MMS[i,j] = MMS(grid.gridx[i,j],grid.gridy[i,j],t)
         end
     end
     return u_MMS
 end
 
 
-#=== Problem setup ===#
-𝒟x = [0.0,1.0]
-𝒟y = [0.0,1.0]
-# Boundary conditions from the MMS
-BoundaryLeft = Boundary(Dirichlet,BxLũ,Left,1)
-BoundaryRight = Boundary(Dirichlet,(y,t) -> BxRũ(y,t,Lx=𝒟x[2]),Right,1)
-BoundaryUpDown = PeriodicBoundary(2)
 
-order = 4
-method = :cgie
 
-npts = [51,61,71,81,91]
-comp_soln = []
-MMS_soln = []
-grids = []
-relerr = []
-for n in npts
-    Dom = Grid2D(𝒟x,𝒟y,n,n)
-    
-    Δt = 0.01*Dom.Δx^2
-    t_f = 0.01
 
-    # Diffusion coefficients
-    kx = ky = zeros(Float64,n,n) .+ 1.0;
+function comp_MMS(Dx,Dy,npts,
+        BoundaryX0,BoundaryXL,
+        F,ũ,ũ₀,order;
+        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
-    P = VariableCoefficientPDE2D(ũ₀,kx,ky,order,BoundaryLeft,BoundaryRight,BoundaryUpDown)
+    comp_soln = []
+    MMS_soln = []
+    grids = []
+    relerr = []
 
-    println("Solving n=",Dom.nx," case with Δt=",Δt)
-    soln = solve(P,Dom,Δt,t_f,:cgie,source=F)
-    
-    u_MMS = generate_MMS(ũ,Dom,t_f)
+    # Loop
+    for n in npts
+        Dom = Grid2D(Dx,Dy,n,n)
 
-    push!(comp_soln,soln)
-    push!(grids,Dom)
-    push!(MMS_soln,u_MMS)
-    push!(relerr, norm(u_MMS .- soln.u[2])/norm(MMS_soln))
+        # X boundaries
+        Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order, 0.0, :Cartesian)
+        BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order, 0.0, :Cartesian)
+        By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
+        ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
+
+        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
+
+
+        Δt = dt_scale*Dom.Δx
+        nt = round(t_f/Δt)
+        Δt = t_f/nt
+
+        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
+
+        println("Solving n=",Dom.nx," case with Δt=",Δt)
+        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
+
+        u_MMS = generate_MMS(ũ,Dom,soln.t[2])
+
+        push!(comp_soln,soln)
+        push!(grids,Dom)
+        push!(MMS_soln,u_MMS)
+        push!(relerr, norm(u_MMS .- soln.u[2])/norm(u_MMS))
+    end
+
+    conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
+
+    return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
 end
 
-conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
-
-println("The convergence rate of this MMS setup is: ",conv_rate," for order ",order," SBP operators.")
-println("relative error(s) are: ",relerr,".")
-
-#=
-# println("plotting")
-using Plots
-
-# l = @layout [a b c]
-p = surface(grids[end].gridy,grids[end].gridx,comp_soln[end].u[2],
-    #layout=l,
-    reuse=false,
-    xlabel="y",ylabel="x",zlabel="Solution",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
-
-surface(#p[2],
-    grids[end].gridy,grids[end].gridx,MMS_soln[end],
-    reuse=false,
-    xlabel="y",ylabel="x",zlabel="MMS Solution",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
-
-surface(#p[3],
-    grids[end].gridy,grids[end].gridx,(comp_soln[end].u[2].-MMS_soln[end]),
-    xlabel="y",ylabel="x",zlabel="Relative error",
-    xlims=(grids[end].gridx[1],grids[end].gridx[end]), ylims=(grids[end].gridy[1],grids[end].gridy[end]))
 
 
-# surface(soln.grid.gridy,soln.grid.gridx,u_MMS)
-# surface(soln.grid.gridy,soln.grid.gridx,soln.u[2])
 
-# scatter(1:Dom.nx,soln.u[2][:,1:end],legend=false)
+###=== MMS TESTS ===###
+npts = collect(21:10:101)
 
-# @time solve(P,Dom,Δt,t_f,:cgie)
-# Profile.clear_malloc_data()
-# @time solve(P,Dom,Δt,t_f,:cgie)
+@show nameappend = "temporal"
+θ = 0.5
+cx=1.0
+cy=0.0
+ωx=1.0
+ωy=1.0
+ωt=9.0
 
-=#
+
+# @show nameappend = "spatial"
+# θ = 0.5
+# cx=1.0
+# cy=0.0
+# ωx=7.5
+# ωy=5.0
+# ωt=1.0
+
+# Solution
+ũ(x,y,t;
+    ωt=1.0,
+    ωx=1.0,cx=0.0,
+    ωy=1.0,cy=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+
+# Initial condition
+ũ₀(x,y;
+    ωx=1.0,cx=0.0,
+    ωy=1.0,cy=0.0) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy)
+
+
+K = 1.0
+
+F(x,y,t;
+    ωt=1.0,
+    ωx=1.0,cx=0.0,
+    ωy=1.0,cy=0.0,
+    K = 1.0) = 
+        -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+            K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+            K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+            
+    
+println("=== K=",K," ===")
+
+println("=====")
+println("Dirichlet")
+
+
+println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+
+analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+
+BxLũ(y,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
+BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+
+order = 2
+println("order=",order)
+O2_DirichletPeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
+    BxLũ,BxRũ,
+    FD,analytic,IC,order,
+    kx=K,ky=K,θ=θ)
+
+order = 4
+println("order=",order)
+O4_DirichletPeriodicMMS = comp_MMS(𝒟x,𝒟y,npts,
+    BxLũ,BxRũ,
+    FD,analytic,IC,order,
+    kx=K,ky=K,θ=θ)
+
+println("Order 2 Dirichlet convergence rates=",O2_DirichletPeriodicMMS.conv_rate)
+println("Order 4 Dirichlet convergence rates=",O4_DirichletPeriodicMMS.conv_rate)
+
+
+println("=====")
+
+
+
+
+
+O2Conv = (n=npts,
+    conv_DP = O2_DirichletPeriodicMMS.conv_rate,
+    relerr_DP = O2_DirichletPeriodicMMS.relerr,
+    )
+
+O4Conv = (n=npts,
+    conv_DP = O4_DirichletPeriodicMMS.conv_rate,
+    relerr_DP = O4_DirichletPeriodicMMS.relerr,
+    )
+
+using JLD2
+jldsave("testing/MMS/DirichletPeriodicMMS.jld2";O2Conv,O4Conv)
+
+
+using DelimitedFiles
+
+open(string("testing/MMS/MMS_DP_",nameappend,"_Tests_theta",θ,".csv"),"w") do io
+    writedlm(io,[npts O2_DirichletPeriodicMMS.relerr O4_DirichletPeriodicMMS.relerr])
+end
+open(string("testing/MMS/MMS_DP_",nameappend,"_Rates_theta",θ,".csv"),"w") do io
+    writedlm(io,[O2_DirichletPeriodicMMS.conv_rate O4_DirichletPeriodicMMS.conv_rate])
+end
+
+
+

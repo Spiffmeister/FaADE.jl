@@ -1,11 +1,15 @@
 # Simultaneous Approximation Terms
 
-
-Users can create a generic SBP operator with the function,
 ```@docs
-FaADE.SATs.SAT
+FaADE.SATs
 ```
-Note that this requires users to first create a boundary condition with [boundary conditions](@ref User_interaction)
+
+All `SATs` belong to the `abstract type`
+
+```@docs
+FaADE.SATs.SimultanousApproximationTerm
+```
+
 
 ## Boundary operators
 
@@ -15,17 +19,22 @@ FaADE.SATs.SAT_Dirichlet
 FaADE.SATs.SAT_Neumann
 ```
 
+Robin (mixed) boundary conditions are to be implemented still.
+
 If periodic boundaries are applied
 ```@docs
 FaADE.SATs.SAT_Periodic
 ```
 
-If a domain is split along some boundary then the following matches the values at the interface.
+Interface conditions are not currently implemented.
 
 
 
+---
 
 ## Boundary derivatives and penalties
+
+The following are all internally accessed when setting up the SATs
 
 The `D_x^T B` and `B D_x` operators are given by,
 ```@docs
@@ -38,4 +47,5 @@ Penalties are constructed with the following,
 FaADE.SATs.SATpenalties
 FaADE.SATs.hval
 ```
+
 

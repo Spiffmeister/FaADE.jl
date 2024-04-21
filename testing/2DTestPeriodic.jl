@@ -1,16 +1,9 @@
-using LinearAlgebra
-using Printf
-# using GLMakie
-# pyplot()
+using Revise
 
-using BenchmarkTools
-using Profile
-
-using Pkg
-Pkg.activate(".")
+push!(LOAD_PATH,".")
 using FaADE
 
-
+_plot = true
 
 
 ###
@@ -20,42 +13,36 @@ nx = 41
 ny = 31
 Dom = Grid2D(𝒟x,𝒟y,nx,ny)
 
-kx = zeros(Float64,nx,ny) .+ 1.0;
-ky = zeros(Float64,nx,ny) .+ 1.0;
+kx = 1.0;
+ky = 1.0;
 
-Δt = 0.01* min(Dom.Δx^2,Dom.Δy^2)
-t_f = 100Δt
+Δt = 0.01
+t_f = 100.0
 
 u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
-
-BoundaryLeftRight = PeriodicBoundary(1)
-BoundaryUpDown = PeriodicBoundary(2)
-
-
 order = 2
-method = :cgie
 
-P = VariableCoefficientPDE2D(u₀,kx,ky,order,BoundaryLeftRight,BoundaryUpDown)
+BoundaryLeft    =  FaADE.SATs.SAT_Dirichlet((y,t) -> 0.0, Dom.Δx, Left, order)
+BoundaryRight   = FaADE.SATs.SAT_Dirichlet((y,t) -> 0.0, Dom.Δx, Right, order)
+BoundaryUp      = FaADE.SATs.SAT_Periodic(Dom.Δy,1,order,Up)
+BoundaryDown    = FaADE.SATs.SAT_Periodic(Dom.Δy,1,order,Down)
 
-println(method)
-println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
+BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
+P = Problem2D(order,u₀,kx,ky,Dom,BD)
 
-###
-@benchmark solve($P,$Dom,$Δt,$t_f,$method)
-
-
-
-# soln = solve(P,Dom,Δt,t_f,:cgie)
-# using GLMakie
-# using Plots
-# surface(soln.grid.gridy,soln.grid.gridx,soln.u[2],
-#     xlabel="y",ylabel="x",zlabel="Temp",
-#     xlims=(0.0,1.0), ylims=(0.0,1.0), zlims=(0.0,1.0))
+soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=1.0)
 
 
+if _plot
+    using GLMakie
+    f = Figure()
+    ax = Axis3(f[1,1]);
+    ax2 = Axis3(f[1,2]);
 
-# @time solve(P,Dom,Δt,t_f,:cgie)
-# Profile.clear_malloc_data()
-# @time solve(P,Dom,Δt,t_f,:cgie)
+    surface!(ax,    Dom.gridx,Dom.gridy,soln.u[1])
+    surface!(ax2,   Dom.gridx,Dom.gridy,soln.u[2])
+end
+
+

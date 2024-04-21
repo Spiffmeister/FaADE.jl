@@ -20,6 +20,20 @@ const Up = NodeType{:Left,2}()
 const Down = NodeType{:Right,2}()
 
 
+function _flip(NT)
+    if NT == Left
+        return Right
+    elseif NT == Right
+        return Left
+    elseif NT == Up
+        return Down
+    elseif NT == Down
+        return Up
+    else
+        return NT
+    end
+end
+
 
 """
     BoundaryCondition
@@ -48,11 +62,23 @@ Used when the conjugate gradient solver is being used so the solver knows which 
 struct SATMode{T} end
 const DataMode = SATMode{:DataMode}()
 const SolutionMode = SATMode{:SolutionMode}()
+const ExplicitMode = SATMode{:Explicit}()
 
 
+struct DerivativeOrder{InternalOrder,BoundarySize} end
 
 
 abstract type DataBlockType{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
 abstract type BoundaryStorage{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
-abstract type GridType{dtype<:AbstractFloat,N} end
+# abstract type GridType{dtype<:AbstractFloat,N} end
 abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
+
+
+
+struct SourceTerm{F<:Union{Function,Nothing}}
+    source :: F
+end
+
+
+Base.show(io::IO,S::SourceTerm{TT}) where TT = S.source
+

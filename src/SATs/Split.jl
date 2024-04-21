@@ -6,11 +6,7 @@
 
 TODO: Write functinos and struct for split domain SATs
 """
-struct SAT_Split{T} <: SimultanousApproximationTerm
-
-    function SAT_Split(Δx,axis,order) where T
-    end
-end
+struct SAT_Split <: SimultanousApproximationTerm{:Interface} end
 
 
 
@@ -80,4 +76,97 @@ function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float6
 
 end
 
+
+
+struct SAT_Interface{
+        TN<:NodeType,
+        TT<:Real,
+        TV<:Vector{TT},
+        F1<:Function,
+        F2<:Function} <: SimultanousApproximationTerm{:Interface}
+
+    side    :: TN
+    axis    :: Int
+    order   :: Int
+    D₁ᵀE₀   :: TV
+    D₁ᵀEₙ   :: TV
+    D₁E₀    :: TV
+    D₁Eₙ    :: TV
+    τ₀      :: F1
+    α₀      :: TT
+    τ₁      :: TT
+    loopaxis :: F2
+
+    function SAT_Interface(Δxₗ::TT,Δxᵣ,side::TN,axis::Int,order::Int) where {TT,TN}
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
+        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ)
+        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
+        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
+
+        α₀, τ₁, τ₀ = SATpenalties(Interface,Δxₗ,Δxᵣ,order,order)
+
+        loopaxis = SelectLoopDirection(axis)
+
+        new{TN,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
+            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,α₀,τ₁,loopaxis)
+    end
+
+end
+
+
+
+
+function (SI::SAT_Interface{NodeType{:Left,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    # rhs = u⁻ - u⁺
+    # println("Left ",u," ",buffer)
+    for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(cache),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
+            S⁺[i] += SI.τ₁*K⁺[1]*SI.D₁ᵀE₀[i]*(U⁻[end] - U⁺[1])
+            S⁺[1] += SI.α₀ * K⁺[1] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+        # S⁺[1] += -τ₀(K⁺[1]) * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
+    end
+end
+function (SI::SAT_Interface{NodeType{:Right,DIM},TT})(cache::AT,c::AT,u::AT,buffer::AT,::SATMode{:SolutionMode}) where {TT,DIM,AT}
+    # println("Right ",u," ",buffer)
+    for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(cache),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            S⁻[end-SI.order+i] += SI.τ₁ * K⁻[end] * SI.D₁ᵀE₀[i] * (U⁻[end] - U⁺[1])
+            S⁻[end] += SI.α₀ * K⁻[end] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+        # S⁻[end] += SI.τ₀ * U⁻[end]
+    end
+end
+
+#######
+
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
+            S⁺[i] += SI.τ₁ * K⁺[1] * SI.D₁ᵀE₀[i]*(U⁻[end] - U⁺[1])
+            S⁺[1] += SI.α₀ * K⁺[1] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+        # S⁺[1] += -τ₀(K⁺[1]) * (U⁻[1] - S⁺[1]) # L₀u = u⁻ - u⁺
+    end
+    dest
+end
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        # println(U⁻[end-SI.order+1:end]," ",U⁺)
+        S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
+        for i = 1:SI.order
+            S⁻[end-SI.order+i] +=   SI.τ₁ * K⁻[end] * SI.D₁ᵀE₀[i] * (U⁻[end] - U⁺[1])
+            S⁻[end] +=              SI.α₀ * K⁻[end] * (SI.D₁E₀[i]*U⁻[end-SI.order+i] - SI.D₁Eₙ[i]*U⁺[i])
+        end
+    end
+    dest
+end
+
+
+#######
 

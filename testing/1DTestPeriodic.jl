@@ -1,12 +1,9 @@
-using LinearAlgebra
-using Printf
-using Plots
+using Revise
 
-using BenchmarkTools
 push!(LOAD_PATH,".")
 using FaADE
 
-
+_plot = true
 
 
 ###
@@ -14,42 +11,34 @@ using FaADE
 n = 41
 Dom = Grid1D(𝒟,n)
 
-Δt = 0.05*Dom.Δx^2
 
-K = zeros(Float64,n) .+ 1.0
+K = 1.0
 
-t_f = 1000Δt
+Δt = 0.01
+t_f = 100.0
 
 u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 
-Boundary = PeriodicBoundary(1)
-
 order = 2
-method = :cgie
 
-P = VariableCoefficientPDE1D(u₀,K,order,Boundary)
+BoundaryLeft = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+BoundaryRight = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+
+BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight)
+
+P = Problem1D(order,u₀,K,Dom,BD)
 
 
-println(method)
 println("Δx=",Dom.Δx,"      ","Δt=",Δt,"        ","final time=",t_f)
 
 
-###
-# @benchmark solve($P,$Dom,$Δt,$t_f,:cgie)
 
-soln = solve(P,Dom,Δt,t_f,:cgie)
-plot(soln.grid.grid,soln.u[2],xlims=(0.0,1.0),ylims=(0.0,1.0))
-
-# println("Plotting")
-
-# N = length(soln.t)
-
-# ###
-# anim = @animate for i=1:N
-#     plot(soln.x,soln.u[i],label="t=$(@sprintf("%.5f",i*Δt))",ylims=(-0.05,1.1))
-# end
-# gif(anim,"yes.gif",fps=50)
+soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=1.0)
 
 
+if _plot
+    using Plots
+    plot(Dom.grid,soln.u[1])
+    plot!(Dom.grid,soln.u[2])
+end
 
-# @benchmark FaADE.time_solver(rate,u₀,n,x,Δx,t_f,Δt,k,g,Dirichlet,method=method,order=order)

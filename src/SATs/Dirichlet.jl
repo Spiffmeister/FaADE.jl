@@ -1,183 +1,242 @@
 
 
+struct Injection_Dirichlet{
+        TN<:NodeType,
+        F1<:Function}
+    side    :: TN
+    RHS     :: F1
+end
+
+
+
 """
-    SAT_Dirichlet
-Storage of all objects needed for a Dirichlet SAT ``\\left. u\\right|_{x_i} = g(t)`` where ``i\\in\\{0,1\\}``.
+    SAT_Dirichlet{TN<:NodeType,COORD,TT<:Real,VT<:Vector{TT},F1<:Function, PT<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
+Storage of all objects needed for a Dirichlet SAT ``\\left. u\\right|_{x_i} = g(t) \\iff u(x_i) - g(t) = 0``.
+
+In Cartesian coordinates the SAT reads
+
+``\\tau H^{-1} E H^{-1} E (u - g) + \\alpha H^{-1} (K H D_1^T) H^{-1} E (u - g)``
+
+In Curivlinear coordinates cross derivatives are included giving
+
+``\\tau H_x^{-1} E H_x^{-1} E (u - g) + \\alpha H^{-1} (K_x H_x D_x^T) H_x^{-1} E (u - g) + \\alpha H^{-1} (K_{xy} H_y D_y^T) H_y^{-1} E (u - g)``
 """
 struct SAT_Dirichlet{
         TN<:NodeType,
+        COORD,
         TT<:Real,
         VT<:Vector{TT},
-        F1<:Function, F2<:Function, F3<:Function} <: SimultanousApproximationTerm
+        F1<:Function, PT<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
 
-    type        :: BoundaryConditionType
     side        :: TN
     axis        :: Int
     order       :: Int
-    ED₁ᵀ        :: VT
     RHS         :: F1
+    H⁻¹EH⁻¹E    :: TT
+    H⁻¹D₁ᵀE     :: VT
     Δx          :: TT
     α           :: TT
-    τ           :: F2
-    loopaxis    :: F3
+    τ           :: PT
+    loopaxis    :: LAT
+    Δy          :: TT
+    coordinates :: Symbol
 
     ### CONSTRUCTOR ###
-    function SAT_Dirichlet(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN,F1}
+    function SAT_Dirichlet(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;α=nothing,τ=nothing,Δy=0.0,coord=:Cartesian) where {TT,TN,F1}
+        # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H D₁ᵀ) H⁻¹ E (u-f)"
 
         check_boundary(side)
 
-        ED = BoundaryDerivativeTranspose(side,order,Δx)
-        α,τ = SATpenalties(Dirichlet,Δx,order)
-
         loopaxis = SelectLoopDirection(axis)
 
-        # fullsat = "τH⁻¹ E H⁻¹E(u-f) + α H⁻¹ (K H D₁ᵀ) H⁻¹ E (u-f)"
-
-        new{TN,TT,Vector{TT},F1,typeof(τ),typeof(loopaxis)}(
-            Dirichlet,side,axis,order,ED,RHS,Δx,α,τ,loopaxis)
-    end
-end
-
-
-
-
-
-
-
-"""
-    generate_Dirichlet
-
-Generates mutating functions required for Dirichlet boundary conditions.
-
-If `solver == :cgie` then two methods are generated, one for the boundary data and another for updating the solution.
-#TODO: If `solver ∈ [:euler]` then only one method is generated
-"""
-function generate_Dirichlet(SATD::SAT_Dirichlet,solver)
-    # Choose the axis to loop over
-    loopdirection = SelectLoopDirection(SATD.axis)
-
-    let α = SATD.α, 
-        τ = SATD.τ,
-        BD = SATD.ED₁ᵀ,
-        side = SATD.side,
-        order = SATD.order
-
-        if solver == :cgie
-            # Defines 2 methods
-            CGTerm!(cache::Array,u::Array,c::Array,::SATMode{:SolutionMode}) = 
-                SAT_Dirichlet_implicit!(cache,side,u,c,α,τ,BD,order,loopdirection)
-            CGTerm!(cache::Array,data::Array,c::Array,::SATMode{:DataMode}) = 
-                    SAT_Dirichlet_implicit_data!(cache,side,data,c,α,τ,BD,order,loopdirection)
-
-                return CGTerm!
-        elseif solver ∈ [:euler,:RK4]
-            Term!(cache::Array,u::Array,c::Array,t::Float64) = SAT_Dirichlet_explicit!(SATD.RHS,cache,side,u,c,t,α,τ,BD,order,loopdirection)
-
-            return Term!
+        if α === nothing
+            α = TT(1)
         end
+        if τ === nothing
+            τ = t -> -TT(1 + 1/max(t,eps(TT)))
+        end
+
+        Hinv = _InverseMassMatrix(order,Δx,side)
+        D₁ᵀ = _DerivativeTranspose(order,Δx,side)
+        E = _BoundaryOperator(TT,side)
+        
+        # τ * H⁻¹ * E * SD.H⁻¹ * E * (u-f)
+        if typeof(side) <: NodeType{:Left}
+            H⁻¹EH⁻¹E    = Hinv[1]*E*Hinv[1]*E
+        elseif typeof(side) <: NodeType{:Right}
+            H⁻¹EH⁻¹E    = Hinv[end]*E*Hinv[end]*E
+        end
+        
+        # α H⁻¹ * (K H D₁ᵀ) * H⁻¹ * E * (u-f)
+        H⁻¹D₁ᵀE     = Hinv.*D₁ᵀ.*E
+
+        new{TN,coord,TT,Vector{TT},typeof(RHS),typeof(τ),typeof(loopaxis)}(
+            side,axis,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,α,τ,loopaxis,Δy,coord)
     end
 end
+"""
+    SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order,Δy=0.0,coord=:Cartesian) where {SIDE,AX}
+"""
+SAT_Dirichlet(RHS,Δx,side::NodeType{SIDE,AX},order,Δy=0.0,coord=:Cartesian) where {SIDE,AX} = SAT_Dirichlet(RHS,Δx,side,AX,order,Δy=Δy,coord=coord)
 
 
-#=== Explicit methods ===#
+
+
+
+###
 """
     SAT_Dirichlet_explicit!
-Dirichlet boundary SAT for explicit solvers.
+
+Dirichlet SAT for explicit solvers. Currently no explicit solvers are implemented so these haven't been tested and are not used anywhere.
 """
 function SAT_Dirichlet_explicit! end
-function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Left},u::AbstractArray,c::AbstractArray,t::Float64,
-        α::Float64,τ::Function,BD::AbstractVector,
-        order::Int,loopaxis::Function)
+function SAT_Dirichlet_explicit!(dest::VT,u::VT,RHS::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Left},NodeType{:Up}}}
+    for i = 1:SD.order
+        dest[i] += SD.α*c[1]*SD.H⁻¹D₁ᵀE[i]*(u[1] - RHS[1])
+    end
+    S[1] += SD.τ(c[1])*SD.H⁻¹EH⁻¹E*(u[1] - RHS[1])
+end
+function SAT_Dirichlet_explicit!(dest::VT,u::VT,RHS::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:Union{NodeType{:Right},NodeType{:Down}}}
+    j = lastindex(dest)
+    for i = 1:SD.order
+        dest[j-SD.order+i] += SD.α*C[j]*SD.H⁻¹D₁ᵀE[i]*(u[j] - RHS[j]) #D₁ᵀE₀
+    end
+    S[j] += SD.τ(c[j])*c[j]SD.H⁻¹EH⁻¹E*(u[j] - RHS[j])
+end
+
+
+
+
+# Operation along vector
+"""
+    SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{SIDE}} where SIDE
+
+Dirichlet SAT method for implicit solvers. Applys boundary data.
+"""
+function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{SIDE}} where SIDE
+
+    SIDE == :Left ? j = 1 : j = lastindex(dest)
+    SIDE == :Left ? m = 0 : m = j-SD.order
+    SIDE == :Left ? o = 1 : o = lastindex(data)
+
+    dest[j] -= SD.τ(c[j])*SD.H⁻¹EH⁻¹E*c[j]*data[o]
+    for i = 1:SD.order #nodes SD.nodes
+        dest[m+i] -= SD.α*c[j]*SD.H⁻¹D₁ᵀE[i]*data[o] #u[Left]
+    end
+    dest
+end
+"""
+    2D caller for [`SAT_Dirichlet_data!`](@ref)
+"""
+function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
+        SAT_Dirichlet_data!(DEST,DATA,C,SD)
+    end
+
+    dest
+end
+"""
+    Curivlinear caller for [`SAT_Dirichlet_data!`](@ref)
+"""
+function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,KT,TT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(cx))
+        SAT_Dirichlet_data!(DEST,DATA,C,SD)
+    end
+
+    n = size(dest,SD.axis)
+    m = size(dest,mod1(SD.axis+1,2))
         
-    for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        S[1:order] .+= α*C[1]*(BD*U[1] .- BD*RHS(t))
-        S[1] += τ(C[1])*(U[1] - RHS(t))
-    end
-end
-function SAT_Dirichlet_explicit!(RHS::Function,SAT::AbstractArray,::NodeType{:Right},u::AbstractArray,c::AbstractArray,t::Float64,
-        α::Float64,τ::Function,BD::AbstractVector,
-        order::Int,loopaxis::Function)
+    # println("===")
+    # @show n, m
+    # @show SD.side, SD.axis
+    # @show size(dest), size(data)
 
-    for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        S[end-order+1:end] .+= α*C[end]*(BD*U[end] .- BD*RHS(t))
-        S[end] += τ(C[end])*(U[end] - RHS(t))
+    if SD.side == Left
+        # println("hi")
+        DEST =  view(dest,  1,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   1,1:m)
+    elseif SD.side == Right
+        DEST =  view(dest,  n,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   n,1:m)
+    elseif SD.side == Up
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,1)
+    else
+        DEST =  view(dest,  1:m,n)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,n)
     end
+    # @show size(DEST),size(SRC)
+    # println("===")
+
+    FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
+    dest
 end
 
-#=== Implicit methods ===#
 """
-    SAT_Dirichlet_implicit!
-Solution term for the Dirichlet boundary conditions for SATs for implicit methods. See [`SAT_Dirichlet_implicit_data!`](@ref) for the data term.
-"""
-function SAT_Dirichlet_implicit! end
-function SAT_Dirichlet_implicit!(SAT::AT,::NodeType{:Left},u::AT,c::AT,
-        α::T,τ::Function,BD::AbstractVector,
-        order::Int,loopaxis::Function) where {T,AT}
+    SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{SIDE}} where SIDE
 
-    for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        for i = 1:order
-            S[i] += -α*C[1]*BD[i]*U[1] #D₁ᵀE₀
-        end
-        S[1] += τ(C[1])*C[1]*U[1]
+Dirichlet SAT method for implicit solvers. Applys portion of SAT related to the solution.
+"""
+function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) where {VT<:AbstractVector,TN<:NodeType{SIDE}} where SIDE
+
+    SIDE == :Left ? j = 1 : j = lastindex(dest)
+    SIDE == :Left ? m = 0 : m = j-SD.order
+
+    dest[j] += SD.τ(c[j])*SD.H⁻¹EH⁻¹E*c[j]*data[j]
+    for i = 1:SD.order #nodes SD.nodes
+        dest[m+i] += SD.α*c[j]*SD.H⁻¹D₁ᵀE[i]*data[j] #u[Right]
     end
-    SAT
-end
-function SAT_Dirichlet_implicit!(SAT::AT,::NodeType{:Right},u::AT,c::AT,
-        α::T,τ::Function,BD::AbstractVector,
-        order::Int,loopaxis::Function) where {T,AT}
-    for (S,C,U) in zip(loopaxis(SAT),loopaxis(c),loopaxis(u))
-        for i = 1:order
-            S[end-order+i] += α*C[end]*BD[i]*U[end] #D₁ᵀEₙ
-        end
-        # S[end-order+1:end] .+= α*C[end]*BD*U[end]
-        S[end] += τ(C[end])*C[end]*U[end]
-    end
-    SAT
+    dest
 end
 """
-    SAT_Dirichlet_implicit_data!
-Data term for the Dirichlet boundary conditions for SATs for implicit methods. See [`SAT_Dirichlet_implicit!`](@ref) for the solution term.
+    2D caller for [`SAT_Dirichlet_solution!`](@ref)
 """
-function SAT_Dirichlet_implicit_data! end
-function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Left},DATA::AT,c::AT,
-        α::T,τ::Function,BD::AbstractVector,order::Int,loopaxis::Function) where {T,AT}
-
-    for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
-        for i = 1:order
-            # S[i] += Δt * α*C[1]*BD[i]*RHS(t)
-            S[i] += α*C[1]*BD[i]*U[1] #D₁ᵀE₀
-        end
-        # S[1] -= Δt* τ*C[1]*RHS(t)#U[1]
-        S[1] -= τ(C[1])*C[1]*U[1]
+function SAT_Dirichlet_solution!(dest::AT,data::AT,c::KT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
+        SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
-    # println("BD ",BD)
-    # println("α ",α)
-    # println("C ",τ(c[1]))
-    SAT
+    dest
 end
-function SAT_Dirichlet_implicit_data!(SAT::AT,::NodeType{:Right},DATA::AT,c::AT,
-        α::T,τ::Function,BD::AbstractVector,order::Int,loopaxis::Function) where {T,AT}
-    for (S,U,C) in zip(loopaxis(SAT),loopaxis(DATA),loopaxis(c))
-        for i = 1:order
-            # S[end-order+i] -= Δt* α*C[end]*BD[i]*RHS(t) #D₁ᵀEₙ
-            S[end-order+i] -= α*C[end]*BD[i]*U[end] #D₁ᵀEₙ
-        end
-        # S[end] -= Δt* τ*C[end]*RHS(t)
-        S[end] -= τ(C[end])*C[end]*U[end]
+"""
+    Curivlinear caller for [`SAT_Dirichlet_solution!`](@ref)
+"""
+function SAT_Dirichlet_solution!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
+    for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(cx))
+        SAT_Dirichlet_solution!(DEST,DATA,C,SD)
     end
-    SAT
+
+    n = size(dest,SD.axis)
+    m = size(dest,mod1(SD.axis+1,2))
+    
+    # @show n, m
+    # @show size(dest)
+    # @show SD.side, SD.axis
+
+    if SD.side == Left
+        DEST =  view(dest,  1,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(cxy,   1,1:m)
+    elseif SD.side == Right
+        DEST =  view(dest,  n,1:m)
+        SRC =   view(data,  n,1:m)
+        C =     view(cxy,   n,1:m)
+    elseif SD.side == Up
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(cxy,   1:m,1)
+    else
+        DEST = view(dest,   1:m,n)
+        SRC = view(data,    1:m,n)
+        C = view(cxy,       1:m,n)
+    end
+    # @show size(DEST),size(SRC)
+
+    FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
+    dest
 end
-
-
-
-
-
-
-
-
-
-
-
-
 
 
