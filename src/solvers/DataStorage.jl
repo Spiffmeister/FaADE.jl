@@ -38,7 +38,7 @@ struct BoundaryData{
     Boundary    :: BCT
     RHS         :: F1
     BufferRHS   :: AT
-    X           :: Vector{TT}   # Grid points along boundary
+    X           :: Union{Vector{TT},Vector{NTuple{2,TT}}}   # Grid points along boundary
     n           :: Int64        # Length of boundary
     DIM         :: Int64
 
@@ -48,7 +48,7 @@ struct BoundaryData{
 
         new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
     end
-    function BoundaryData(G::Grid2D{TT},BC,Joint,order::Int) where {TT}
+    function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,Joint,order::Int) where {TT}
 
         if BC.side ∈ [Left,Right]
             n = G.ny
@@ -71,6 +71,29 @@ struct BoundaryData{
 
         new{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
     end
+end
+function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,Joint,order::Int) where {TT}
+
+    if BC.side ∈ [Left,Right]
+        n = G.ny
+        BufferRHS = zeros(TT,(1,n))
+        # @show size(BufferRHS), size(G.gridx)
+        if BC.side == Left
+            X = [(G.gridx[1,i],G.gridy[1,i]) for i in 1:G.ny]
+        else
+            X = [(G.gridx[G.nx,i],G.gridy[G.nx,i]) for i in 1:G.ny]
+        end
+    elseif BC.side ∈ [Up,Down]
+        n = G.nx
+        BufferRHS = zeros(TT,(n,1))
+        if BC.side == Up
+            X = [(G.gridx[i,1],G.gridy[i,1]) for i in 1:G.nx]
+        else
+            X = [(G.gridx[i,G.ny],G.gridy[i,G.ny]) for i in 1:G.nx]
+        end
+    end
+
+    BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
 
 
