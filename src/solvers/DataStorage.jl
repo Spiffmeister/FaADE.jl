@@ -41,36 +41,35 @@ struct BoundaryData{
     X           :: Union{Vector{TT},Vector{NTuple{2,TT}}}   # Grid points along boundary
     n           :: Int64        # Length of boundary
     DIM         :: Int64
+end
+function BoundaryData(G::Grid1D{TT},BC,Joint,order::Int) where {TT}
 
-    function BoundaryData(G::Grid1D{TT},BC,Joint,order::Int) where {TT}
+    BufferRHS = zeros(TT,1)
 
-        BufferRHS = zeros(TT,1)
+    BoundaryData{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
+end
+function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,Joint,order::Int) where {TT}
 
-        new{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
-    end
-    function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,Joint,order::Int) where {TT}
-
-        if BC.side ∈ [Left,Right]
-            n = G.ny
-            BufferRHS = zeros(TT,(1,n))
-            # @show size(BufferRHS), size(G.gridx)
-            if BC.side == Left
-                X = G.gridy[1,:]
-            else
-                X = G.gridy[G.nx,:]
-            end
-        elseif BC.side ∈ [Up,Down]
-            n = G.nx
-            BufferRHS = zeros(TT,(n,1))
-            if BC.side == Up
-                X = G.gridx[:,1]
-            else
-                X = G.gridx[:,G.ny]
-            end
+    if BC.side ∈ [Left,Right]
+        n = G.ny
+        BufferRHS = zeros(TT,(1,n))
+        # @show size(BufferRHS), size(G.gridx)
+        if BC.side == Left
+            X = G.gridy[1,:]
+        else
+            X = G.gridy[G.nx,:]
         end
-
-        new{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
+    elseif BC.side ∈ [Up,Down]
+        n = G.nx
+        BufferRHS = zeros(TT,(n,1))
+        if BC.side == Up
+            X = G.gridx[:,1]
+        else
+            X = G.gridx[:,G.ny]
+        end
     end
+
+    BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
 function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,Joint,order::Int) where {TT}
 
@@ -92,7 +91,9 @@ function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,Joint,order::Int) where
             X = [(G.gridx[i,G.ny],G.gridy[i,G.ny]) for i in 1:G.nx]
         end
     end
-
+    # @show X
+    # println("")
+    # println("")
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
 
@@ -748,7 +749,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     end
 
     typeof(P.BoundaryConditions.BoundaryLeft).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
-    sattype = :Variable
+    # sattype = :Variable
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(G.ny,G.Δy,P.order,false,difftype)

@@ -2,7 +2,7 @@ using LinearAlgebra
 
 using FaADE
 
-
+inspect = true
 
 
 
@@ -101,7 +101,7 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = collect(21:10:101)
+npts = collect(21:10:151)
 
 θ = 0.5
 
@@ -137,8 +137,8 @@ if TestDirichlet
     println("Dirichlet")
     cx=0.0
     cy=0.0
-    ωx=2.0
-    ωy=2.0
+    ωx=5.0
+    ωy=5.0
     ωt=1.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
@@ -147,8 +147,8 @@ if TestDirichlet
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-    BxLũ(y,t)           = cos(2π*ωt*t) * sin(ωx*x*cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+    BxLũ(X,t)           = cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    BxRũ(X,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=Lx
 
     order = 2
     println("order=",order)
@@ -168,6 +168,9 @@ if TestDirichlet
 
     println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
     println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
+
+    println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.relerr)
+    println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.relerr)
 
     # pD = plot(axis=:log,minorgrid=true)
     # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
@@ -227,3 +230,24 @@ end
 
 
 
+if inspect
+    using GLMakie
+
+    f = Figure()
+
+    Ax = Axis3(f[1,1])
+    menu1 = Menu(f[2,1], options = ["MMS","Computed","Error"], default="MMS")
+
+    on(menu1.selection) do s
+        empty!(Ax)
+        if s == "MMS"
+            pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end])
+        elseif s == "Computed"
+            pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.comp_soln[end].u[2])
+        elseif s == "Error"
+            pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end] .- O2_DirichletMMS.comp_soln[end].u[2])
+        end
+    end
+    notify(menu1.selection)
+    f
+end
