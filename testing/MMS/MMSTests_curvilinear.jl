@@ -72,7 +72,7 @@ function comp_MMS(Dx,Dy,npts,
 
 
         Δt = dt_scale*min(Dom.Δx,Dom.Δy)^2
-        t_f = 2Δt
+        t_f = 1e-2
         nt = round(t_f/Δt)
         Δt = t_f/nt
 
@@ -101,7 +101,7 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = collect(21:10:151)
+npts = collect(21:10:101)
 
 θ = 0.5
 
@@ -169,8 +169,8 @@ if TestDirichlet
     println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.conv_rate)
     println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.conv_rate)
 
-    println("Order 2 Dirichlet convergence rates=",O2_DirichletMMS.relerr)
-    println("Order 4 Dirichlet convergence rates=",O4_DirichletMMS.relerr)
+    println("Order 2 relative error=",O2_DirichletMMS.relerr)
+    println("Order 4 relative error=",O4_DirichletMMS.relerr)
 
     # pD = plot(axis=:log,minorgrid=true)
     # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
