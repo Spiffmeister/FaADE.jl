@@ -209,20 +209,20 @@ struct newBoundaryConditions{DIM,
         J = G.Joint[I]
         if typeof(J) <: Joint
             if J.side == Left
-                BCLt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,1,GetOrder(P.order))
+                BCLt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,1,P.order)
                 BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCLt,J.index,P.order)
 
-                if P.BoundaryConditions.BoundaryRight.type != Periodic
+                if !(typeof(P.BoundaryConditions.BoundaryRight) <: SAT_Periodic)
                     BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,J.index,P.order)
                 else
                     BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryRight,J.index,P.order)
                 end
 
             elseif J.side == Right
-                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J.index].Δx,J.side,1,GetOrder(P.order))
+                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J.index].Δx,J.side,1,P.order)
                 BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCRt,J.index,P.order)
 
-                if P.BoundaryConditions.BoundaryLeft.type != Periodic
+                if !(typeof(P.BoundaryConditions.BoundaryLeft) <: SAT_Periodic)
                     BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
                 else
                     BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
@@ -720,6 +720,38 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
+    newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
+Initialise a data block for a 1D multiblock problem
+"""
+function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::StepConfig) where {TT}
+    u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G.Grids[I])
+
+    K = zeros(TT,size(G.Grids[I]))
+
+    if typeof(P.K) <: Real
+        K .= P.K
+    elseif typeof(P.K) <: Function
+        for i in eachindex(G)
+            K[i] .= P.K(G[i])
+        end
+    end
+    
+    if typeof(P.Parallel) <: Vector
+        PMap = P.Parallel[I]
+    else
+        PMap = P.Parallel
+    end
+
+    BStor = newBoundaryConditions(P,G,I)
+    BS = (BStor.BC_Left,BStor.BC_Right)
+    IP = innerH(G.Grids[I].Δx,G.Grids[I].n,P.order)
+    # D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
+    D = DiffusionOperator(G.Grids[I].n,G.Grids[I].Δx,P.order,false,:Constant)
+    source = SourceTerm{Nothing}(nothing)
+
+    return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
+end
+"""
 
     newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
 Initialise a data block for a 2D problem with only 1 grid.
@@ -758,38 +790,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     source = P.source
 
     return newLocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
-end
-
-
-"""
-    newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
-Initialise a data block for a 1D multiblock problem
-"""
-function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
-    u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G.Grids[I])
-
-    if typeof(P.K) <: Real
-        K .= P.K
-    elseif typeof(P.K) <: Function
-        for i in eachindex(G)
-            K[i] .= P.K(G[i])
-        end
-    end
-    
-    if typeof(P.Parallel) <: Vector
-        PMap = P.Parallel[I]
-    else
-        PMap = P.Parallel
-    end
-
-    BStor = newBoundaryConditions(P,G,I)
-    BS = (BStor.BC_Left,BStor.BC_Right)
-    IP = innerH(G.Grids[I].Δx,G.Grids[I].n,GetOrder(P.order))
-    D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
-    source = SourceTerm{Nothing}(nothing)
-    SC = StepConfig{TT}()
-
-    return newLocalDataBlock{TT,1,:Cartesian,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
     newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer)
@@ -856,10 +856,10 @@ struct DataMultiBlock{TT<:Real,
         DTA = (newLocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)
     end
-    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT) where {TT,DIM}
-        DTA = map((x)->newLocalDataBlock(P,G,x),eachgrid(G))
+    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
+        SC = StepConfig{TT}(t,Δt,θ)
+        DTA = map((x)->newLocalDataBlock(P,G,x,SC),eachgrid(G))
         DTA = tuple(DTA...)
-        SC = StepConfig{TT}(t,Δt)
         new{TT,DIM,length(DTA),typeof(DTA)}(DTA,SC,length(DTA),false)
     end
     function DataMultiBlock(D::newLocalDataBlock{TT,DIM}) where {TT,DIM} #== TESTING METHOD ==#

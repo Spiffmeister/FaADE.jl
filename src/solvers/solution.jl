@@ -64,7 +64,7 @@ end
 1 dimensional multiblock problems
 """
 function solution(G::GridMultiBlock{TT,1},t::TT,Δt::TT,prob::newPDEProblem) where TT
-    u = [prob.InitialCondition(G.Grids[I].grid) for I in eachgrid(G)]
+    u = [prob.InitialCondition.(G.Grids[I].grid) for I in eachgrid(G)]
     
     return solution{TT,typeof(u),typeof(G),typeof(prob)}([u],G,[Δt],[t],prob,0.0,Vector{TT}())
 end
