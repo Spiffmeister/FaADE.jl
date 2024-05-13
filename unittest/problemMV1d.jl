@@ -3,10 +3,8 @@ using Revise
 
 using FaADE
 
-# using BenchmarkTools
-
-# using ProfileView
-# using Cthulhu
+using ProfileView
+using Cthulhu
 # using Profile
 
 
@@ -57,12 +55,10 @@ BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 P = Problem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
 soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
-# soln1V = solve(P1V,Dom1V,Δt,t)
-
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
 
 
 #====== New solver 2 volume ======#
+println("2 volume")
 D1 = Grid1D([0.0,0.5],51)
 D2 = Grid1D([0.5,1.0],51)
 
@@ -70,11 +66,14 @@ Dom2V = GridMultiBlock(D1,D2)
 
 Dl = FaADE.SATs.SAT_Dirichlet(BxL,D1.Δx,Left, order)
 Dr = FaADE.SATs.SAT_Dirichlet(BxR,D2.Δx,Right,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
-println("---Solving 2 volume---")
-P2V = Problem1D(order,u₀,K,Dom2V,BD)
 
-soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
+BD2 = Dict(1 => (Dl,), 2 => (Dr,))
+
+# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+println("---Solving 2 volume---")
+P2V = Problem1D(order,u₀,K,Dom2V,BD2)
+
+oln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
 
 
 
@@ -92,6 +91,7 @@ soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
 
 
 #====== New solver 2 volume ======#
+println("3 volume")
 D1 = Grid1D([0.0,0.35],35)
 D2 = Grid1D([0.35,0.65],31)
 D3 = Grid1D([0.65,1.0],35)
@@ -101,12 +101,14 @@ Dom3V = GridMultiBlock(D1,D2,D3)
 
 Dl = FaADE.SATs.SAT_Dirichlet(BxL,D1.Δx,Left,    order)
 Dr = FaADE.SATs.SAT_Dirichlet(BxR,D3.Δx,Right,   order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 
-P3V = Problem1D(order,u₀,K,Dom3V,BD)
+BD3 = Dict(1 => (Dl,), 3 => (Dr,))
 
-println("---Solving 2 volume---")
-soln3V = solve(P3V,Dom3V,Δt,t)
+P3V = Problem1D(order,u₀,K,Dom3V,BD3)
+
+println("---Solving 3 volume---")
+@profview solve(P3V,Dom3V,Δt,t)
 
 
 

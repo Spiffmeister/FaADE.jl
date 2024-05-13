@@ -1,7 +1,6 @@
-
-using FaADE
 using LinearAlgebra
-using Plots
+using Revise
+using FaADE
 # using BenchmarkTools
 # using ProfileView
 # using Cthulhu
@@ -11,14 +10,10 @@ using Plots
 order = 2
 K = 1.0
 
+nx = ny = 41
 
-nx = ny = 21
-
-# Δt = 1e-3
-t = 0.5
-Δt = 1/(nx-1) * 1/(ny-1) * 0.1
-nt = round(t/Δt)
-Δt = t/nt
+Δt = 1e-3
+t = 1.0
 
 ωt = 1.0
 ωx = 1.0
@@ -35,115 +30,93 @@ Ky = 1.0
 # Solution
 exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
 u₀(x,y) = exact(x,y,0.0)
-F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+F(X,t) = begin
+    x,y = X
+    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
     K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+end
 # DIRICHLET
-# BxL(y,t) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
-# BxR(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
-# ByL(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
-# ByR(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
+BxL(y,t) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
+BxR(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
+ByL(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
+ByR(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
 # NEUMANN
-BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-BxRũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(2π*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-ByLũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-ByRũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*ωy + cy) #Boundary condition y=Ly
-
-
-# exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
-# u₀(x,y) = exact(0.0,x,y)
-# F(x,y,t) = -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
-#     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
-
-#=
-exact(x,y,t) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
-u₀(x,y) = exact(0.0,x,y)
-BxL(y,t) = 0.0
-BxR(y,t) = 0.0
-ByL(x,t) = 0.0
-ByR(x,t) = 0.0
-=#
+# BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
+# BxRũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(2π*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
+# ByLũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
+# ByRũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*ωy + cy) #Boundary condition y=Ly
 
 
 
-# Original solver
+
+#====== New solver 1 volume ======#
 Dom = Grid2D([0.0,1.0],[0.0,1.0],nx,ny)
 
 # New solver 1 volume
-# Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,1,order)
-# Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right,1,order)
-# Du = FaADE.SATs.SAT_Dirichlet(ByL,Dom.Δx,Up,2,order)
-# Dd = FaADE.SATs.SAT_Dirichlet(ByR,Dom.Δx,Down,2,order)
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,order)
+Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right,order)
+Du = FaADE.SATs.SAT_Dirichlet(ByL,Dom.Δx,Up,order)
+Dd = FaADE.SATs.SAT_Dirichlet(ByR,Dom.Δx,Down,order)
+BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
 
-Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-Pu = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
-Pd = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
-BD = FaADE.Inputs.SATBoundaries(Pl,Pr,Pu,Pd)
+# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+# Pu = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
+# Pd = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
+# BD = FaADE.Inputs.SATBoundaries(Pl,Pr,Pu,Pd)
 
 P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
-
 println("---Solving 1 volume---")
 soln = solve(P,Dom,Δt,Δt)
-soln = solve(P,Dom,Δt,t)
-
-# @benchmark solve($P1V,$Dom1V,$Δt,$t)
-
-# @profview soln1V = solve(P1V,Dom1V,Δt,t)
-# @profview soln1V = solve(P1V,Dom1V,Δt,t)
 
 
-
-#=
+#====== New solver 1 volume ======#
+println("2 volume")
 # New solover 2 volume
 D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
 D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
 
-joints = (Joint(2,Up),Joint(1,Down))
+joints = ((Joint(2,Right),),
+            (Joint(1,Left),))
 
 Dom2V = GridMultiBlock((D1,D2),joints)
 
-Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,1,order)
-Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Right,1,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Up,2,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,2,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,order)
+Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Right,order)
+Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Up,order)
+Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,order)
 
-# BCs = [(1,Left,Dl),(1,Up,Du),(1,Down,Dd),(2,Right,Dr),(2,Up,Du),(2,Down,Dd)]
+BD2 = Dict(1 => (Dl,Du,Dd), 2 => (Dr,Du,Dd))
 
-P2V = Problem2D(order,u₀,K,K,Dom2V,BD)
+# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
+# BD2 = Dict(1 => (Pl,Du,Dd), 2 => (Pr,Du,Dd))
+
+
+P2V = Problem2D(order,u₀,K,K,Dom2V,BD2)
 
 println("---Solving 2 volume---")
-soln2V = solve(P2V,Dom2V,Δt,t)
-@benchmark solve($P2V,$Dom2V,$Δt,$t)
-=#
+soln2V = solve(P2V,Dom2V,Δt,Δt)
 
 
 
+using GLMakie
 
-
-
-e = [exact(soln.t[2],Dom.gridx[i,j],Dom.gridy[i,j]) for i in 1:Dom.nx, j in 1:Dom.ny]
-
-E = zeros(size(Dom))
+e = zeros(size(soln.u[2]))
 for I in eachindex(Dom)
-    E[I] = exact(soln.t[2]+Δt,Dom[I]...)
+    e[I] = exact(Dom[I]...,t)
 end
-u0 = [u₀(Dom.gridx[i,j],Dom.gridy[i,j]) for i in 1:Dom.nx, j in 1:Dom.ny]
+u0 = [u₀(Dom[i]...) for i in eachindex(Dom)]
 
 
+f = Figure()
+ax1 = Axis3(f[1,1])
+# surface!(ax1,Dom.gridx,Dom.gridy,e,colorbar=false)
+# surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
+# surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2].-e,colorbar=false)
 
-println("n=",nx," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx*Dom.Δy))
-surface(Dom.gridx,Dom.gridy,soln.u[2])
-
-
-l = @layout[a b]
-
-p1 = surface(Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
-p2 = surface(Dom.gridx,Dom.gridy,e,colorbar=false)
-p12 = plot(p1,p2)
-
+surface!(ax1,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[2][1],colorbar=false)
 
 # p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 

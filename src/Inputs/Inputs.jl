@@ -9,7 +9,9 @@ module Inputs
     # include("oldUserTypes.jl")
     # include("oldDataStorage.jl")
     # include("SAT_Interface.jl")
+    include("parsing.jl")
     include("UserTypes.jl")
+    
 
     export newPDEProblem
     export Problem1D, Problem2D

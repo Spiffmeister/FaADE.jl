@@ -251,12 +251,10 @@ Multiblock grid for 1D grids, assumes the grids are stacked one after the other 
 """
 function GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
     if length(grids) == 2
-        J = (Joint(2,Right),Joint(1,Left))
+        J = ((Joint(2,Right),),(Joint(1,Left),))
     elseif length(grids) > 2
-        for i = 2:length(grids)-1
-            J = [(Joint(i-1,Right),Joint(i+1,Left))...]
-        end
-        J = tuple(Joint(2,Right),J...,Joint(length(grids)-1,Left))
+        J = [(Joint(i-1,Left),Joint(i+1,Right)) for i = 2:length(grids)-1]
+        J = tuple((Joint(2,Right),),J...,(Joint(length(grids)-1,Left),))
     end
     inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
     return GridMultiBlock{TT,1,MET,typeof(grids),typeof(J),typeof(inds)}(grids,J,inds,length(inds))
@@ -271,9 +269,9 @@ For a stacked grid (i.e. a series of grids in a row) one can run,
     D2  = Grid2D([0.5,1.0],[0.0,1.0],5,5)
     D3  = Grid2D([1.0,1.5],[0.0,1.0],5,5)
 
-    glayout = ([(2,Right)],
-                [(1,Left),(3,Right)],
-                [(2,Left)])
+    glayout = (((2,Right),),
+                ((1,Left),(3,Right)),
+                ((2,Left),))
 
     G = GridMultiBlock((D1,D2,D3),glayout)
 ```
@@ -334,7 +332,19 @@ end
 """
 Base.size(G::Grid1D) = (G.n,)
 Base.size(G::Grid2D) = (G.nx,G.ny)
-function Base.size(G::GridMultiBlock{TT}) where {TT}
+
+"""
+    size(G::GridMultiBlock{TT,1})
+"""
+function Base.size(G::GridMultiBlock{TT,1}) where {TT}
+    sz = (0,)
+    for i = 1:G.ngrids
+        sz = sz .+ size(G.Grids[i])
+    end
+    return sz
+end
+
+function Base.size(G::GridMultiBlock{TT,2}) where {TT}
     sz = (0,0)
     for i = 1:G.ngrids
         sz = sz .+ size(G.Grids[i])
@@ -360,9 +370,14 @@ Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 Base.eachindex(G::GridType) = eachindex(1:length(G))
 
 """
-    Base.eachindex(G::GridMultiBlock)
+    eachgrid(G::GridMultiBlock)
 """
 eachgrid(G::GridMultiBlock) = Base.OneTo(length(G.Grids))
+
+"""
+    eachjoint(G::GridMultiBlock)
+"""
+eachjoint(G::GridMultiBlock) = Base.OneTo(length(G.Joint))
 
 """
     Base.lastindex(G::GridType)

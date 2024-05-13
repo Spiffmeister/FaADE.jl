@@ -54,6 +54,17 @@ struct SATBoundaries{SATL<:SimultanousApproximationTerm,
 end
 
 
+
+
+
+
+
+
+
+
+
+
+
 """
     Problem1D
 """
@@ -61,7 +72,7 @@ struct Problem1D{TT      <: Real,
     DIMS,
     DCT,
     ST      <: SourceTerm,
-    SATB    <: SATBoundaries,
+    SATB    <: Union{SATBoundaries,Dict},
     PART    # Parallel map, vector of parallel map, or nothing
         } <: newPDEProblem{TT,DIMS}
     InitialCondition    :: Function
@@ -74,6 +85,11 @@ struct Problem1D{TT      <: Real,
     function Problem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs,S,Par) where {TT,DIMS}
 
         source = SourceTerm{typeof(S)}(S)
+
+        if typeof(G) <: GridMultiBlock
+            typeof(BCs) <: Dict ? nothing : error("Boundary conditions must be a dictionary for multiblock problems")
+            parse_boundaries(BCs,G)
+        end
 
         # new{DIMS,TT}(u₀)
         new{TT,DIMS,typeof(K),typeof(source),typeof(BCs),typeof(Par)}(u₀,K,source,order,BCs,Par)
@@ -89,7 +105,7 @@ struct Problem2D{TT      <: Real,
         DIM,
         DCT,
         ST      <: SourceTerm,
-        SATB    <: SATBoundaries,
+        SATB    <: Union{SATBoundaries,Dict},
         PART    # Parallel map, vector of parallel map, or nothing
             } <: newPDEProblem{TT,DIM}
     InitialCondition    :: Function
@@ -103,6 +119,11 @@ struct Problem2D{TT      <: Real,
     function Problem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIM},BCs,S,Par) where {TT,DIM}
 
         source = SourceTerm{typeof(S)}(S)
+
+        if typeof(G) <: GridMultiBlock
+            typeof(BCs) <: Dict ? nothing : error("Boundary conditions must be a dictionary for multiblock problems")
+            parse_boundaries(BCs,G)
+        end
 
         new{TT,2,typeof(Kx),typeof(source),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,order,BCs,Par)
     end
