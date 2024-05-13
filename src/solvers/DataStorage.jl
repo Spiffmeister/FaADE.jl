@@ -134,9 +134,9 @@ struct InterfaceBoundaryData{
             BufferIn    = zeros(TT,(order,n))
             BufferOut   = zeros(TT,(order,n))
 
-            if BC.side == Left
+            if BC.side == Right
                 I = CartesianIndices((1:order,1:n))
-            else
+            elseif BC.side == Left
                 I = CartesianIndices((G2.nx-order+1:G2.nx,1:n))
             end
 
@@ -147,7 +147,7 @@ struct InterfaceBoundaryData{
 
             if BC.side == Up
                 I = CartesianIndices((1:n,1:order))
-            else
+            elseif BC.side == Down
                 I = CartesianIndices((1:n,G2.ny-order+1:G2.ny))
             end
         end
@@ -806,7 +806,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,S
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
-
     newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
 Initialise a data block for a 2D problem with only 1 grid.
 
