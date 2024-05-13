@@ -68,26 +68,39 @@ BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
 
 P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
-soln = solve(P,Dom,Δt,Δt)
+# soln = solve(P,Dom,Δt,Δt)
 
 
 #====== New solver 1 volume ======#
 println("2 volume")
+
+exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
+u₀(x,y) = exact(x,y,0.0)
+F(X,t) = begin
+    x,y = X
+    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
+    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
+end
+
+
 # New solover 2 volume
-D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
-D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
+D1 = Grid2D([0.0,0.5],[0.0,1.0],21,51)
+D2 = Grid2D([0.5,1.0],[0.0,1.0],21,51)
 
 joints = ((Joint(2,Right),),
             (Joint(1,Left),))
 
 Dom2V = GridMultiBlock((D1,D2),joints)
 
-Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,order)
-Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Right,order)
-Du = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Up,order)
-Dd = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Down,order)
+Dl = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D1.Δx,Left,    order)
+Dr = FaADE.SATs.SAT_Dirichlet((x,t)->0.0,D2.Δx,Right,   order)
 
-BD2 = Dict(1 => (Dl,Du,Dd), 2 => (Dr,Du,Dd))
+Du1 = FaADE.SATs.SAT_Dirichlet((x,t)->cos(2π*ωt*t)*sin(2π*x*ωx),D1.Δx,Up,      order)
+Dd1 = FaADE.SATs.SAT_Dirichlet((x,t)->cos(2π*ωt*t)*sin(2π*x*ωx),D1.Δx,Down,    order)
+Du2 = FaADE.SATs.SAT_Dirichlet((x,t)->cos(2π*ωt*t)*sin(2π*x*ωx),D2.Δx,Up,      order)
+Dd2 = FaADE.SATs.SAT_Dirichlet((x,t)->cos(2π*ωt*t)*sin(2π*x*ωx),D2.Δx,Down,    order)
+
+BD2 = Dict(1 => (Dl,Du2,Dd2), 2 => (Dr,Du2,Dd2))
 
 # Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
 # Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
@@ -116,7 +129,15 @@ ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
 # surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2].-e,colorbar=false)
 
+# surface!(ax1,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[1][1],colorbar=false)
+# surface!(ax1,Dom2V.Grids[2].gridx,Dom2V.Grids[2].gridy,soln2V.u[1][2],colorbar=false)
+
 surface!(ax1,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[2][1],colorbar=false)
+surface!(ax1,Dom2V.Grids[2].gridx,Dom2V.Grids[2].gridy,soln2V.u[2][2],colorbar=false)
+
+
+
+
 
 # p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 
