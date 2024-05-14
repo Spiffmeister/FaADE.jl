@@ -3,8 +3,8 @@ using Revise
 
 using FaADE
 
-using ProfileView
-using Cthulhu
+# using ProfileView
+# using Cthulhu
 # using Profile
 
 
@@ -22,7 +22,7 @@ t = 1.0
 # Δt = t/nt
 
 
-ωx = 9.0
+ωx = 1.0
 ωt = 1.0
 cx = 0.0
 
@@ -73,7 +73,7 @@ BD2 = Dict(1 => (Dl,), 2 => (Dr,))
 println("---Solving 2 volume---")
 P2V = Problem1D(order,u₀,K,Dom2V,BD2)
 
-oln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
+soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
 
 
 
@@ -108,7 +108,7 @@ BD3 = Dict(1 => (Dl,), 3 => (Dr,))
 P3V = Problem1D(order,u₀,K,Dom3V,BD3)
 
 println("---Solving 3 volume---")
-@profview solve(P3V,Dom3V,Δt,t)
+soln3V = solve(P3V,Dom3V,Δt,t)
 
 
 
