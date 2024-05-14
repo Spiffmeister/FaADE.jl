@@ -801,7 +801,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,S
     IP = innerH(G.Grids[I].Δx,G.Grids[I].n,P.order)
     # D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
     D = DiffusionOperator(G.Grids[I].n,G.Grids[I].Δx,P.order,false,:Constant)
-    source = SourceTerm{Nothing}(nothing)
+    # source = SourceTerm{Nothing}(nothing)
+    source = P.source
 
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end

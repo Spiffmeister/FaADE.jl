@@ -13,7 +13,7 @@ K = 1.0
 nx = ny = 41
 
 Δt = 1e-3
-t = 1.0
+t = Δt
 
 ωt = 1.0
 ωx = 1.0
@@ -126,7 +126,7 @@ BD2 = Dict(1 => (Dl,Du1,Dd1), 2 => (Dr,Du2,Dd2))
 # BD2 = Dict(1 => (Pl,Du,Dd), 2 => (Pr,Du,Dd))
 
 
-P2V = Problem2D(order,u₀,K,K,Dom2V,BD2)
+P2V = Problem2D(order,u₀,K,K,Dom2V,BD2,F,nothing)
 
 println("---Solving 2 volume---")
 soln2V = solve(P2V,Dom2V,Δt,t)

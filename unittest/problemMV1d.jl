@@ -11,15 +11,12 @@ using FaADE
 order = 2
 K = 1.0
 
-n = 101
+n = 41
 
 
 Δt = 1.0e-3
-# t = 1.0
-t = 1.0
-# Δt = 1/(n-1)
-# nt = round(t/Δt)
-# Δt = t/nt
+# t = 0.76
+t = Δt
 
 
 ωx = 1.0
@@ -56,11 +53,11 @@ P = Problem1D(order,u₀,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")
 soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
 
-
+#=
 #====== New solver 2 volume ======#
 println("2 volume")
-D1 = Grid1D([0.0,0.5],51)
-D2 = Grid1D([0.5,1.0],51)
+D1 = Grid1D([0.0,0.5],floor(Int,n/2)+1)
+D2 = Grid1D([0.5,1.0],floor(Int,n/2)+1)
 
 Dom2V = GridMultiBlock(D1,D2)
 
@@ -71,10 +68,10 @@ BD2 = Dict(1 => (Dl,), 2 => (Dr,))
 
 # BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
 println("---Solving 2 volume---")
-P2V = Problem1D(order,u₀,K,Dom2V,BD2)
+P2V = Problem1D(order,u₀,K,Dom2V,BD2,F,nothing)
 
 soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
-
+=#
 
 
 
@@ -90,11 +87,12 @@ soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
 # println("n=",n," error ",norm(e .- soln.u[2])*sqrt(Dom.Δx))
 
 
-#====== New solver 2 volume ======#
+
+#====== New solver 3 volume ======#
 println("3 volume")
-D1 = Grid1D([0.0,0.35],35)
-D2 = Grid1D([0.35,0.65],31)
-D3 = Grid1D([0.65,1.0],35)
+D1 = Grid1D([0.0,0.40],17)
+D2 = Grid1D([0.40,0.60],9)
+D3 = Grid1D([0.60,1.0],17)
 
 
 Dom3V = GridMultiBlock(D1,D2,D3)
@@ -124,9 +122,11 @@ using Plots
 p1 = plot()
 plot!(p1, Dom.grid,e,label="exact")
 plot!(p1, Dom.grid,soln.u[2],label="1 vol")
-plot!(p1, Dom.grid,u0,label="u₀",linestyle=:dash)
-plot!(p1, vcat([Dom.grid[1:51], Dom.grid[51:end]]...),vcat(soln2V.u[2]...),label="new")
-plot!(p1, vcat([Dom.grid[1:35], Dom.grid[35:65], Dom.grid[65:end]]...),vcat(soln3V.u[2]...),label="3 vol")
+# plot!(p1, Dom.grid,u0,label="u₀",linestyle=:dash)
+# plot!(p1, vcat([Dom.grid[1:floor(Int,n/2)+1], Dom.grid[floor(Int,n/2)+1:end]]...),vcat(soln2V.u[2]...),label="2 vol")
+plot!(p1, vcat([Dom3V.Grids[1].grid, Dom3V.Grids[2].grid, Dom3V.Grids[3].grid]...),vcat(soln3V.u[2]...),label="3 vol")
+
+p1
 
 # l = @layout[a; b]
 # plot!(p1, Dom1V.grid[prng],[u₀(Dom1V.grid[i]) for i in prng],label="u₀",legend=true,linestyle=:dash)

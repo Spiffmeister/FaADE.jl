@@ -55,7 +55,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     bnorm = max(sqrt(innerprod(:b,:b,DBlock)),1e-14) #√(b,b)ₕ
     while (rnorm ≥ rtol*bnorm) & (i < maxIT)
         # testA!(:dₖ,DBlock[1]) # cache ← Adₖ
-        A!(:dₖ,DBlock[1]) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
+        A!(:dₖ,DBlock) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #αₖ = (dₖ,Ddₖ)
         αₖ = rnorm^2 / dₖAdₖ
 
