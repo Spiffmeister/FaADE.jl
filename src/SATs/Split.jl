@@ -97,11 +97,24 @@ struct SAT_Interface{
     τ₁      :: TT
     loopaxis :: F2
 
-    function SAT_Interface(Δxₗ::TT,Δxᵣ,side::TN,axis::Int,order::Int) where {TT,TN}
+    function SAT_Interface(Δx₁::TT,Δx₂,side::TN,axis::Int,order::Int) where {TT,TN}
+        # Δxₗ = Δx₁
+        # Δxᵣ = Δx₂
+        if TN <: NodeType{:Left}
+            Δxₗ = Δx₁
+            Δxᵣ = Δx₂
+        else
+            Δxₗ = Δx₂
+            Δxᵣ = Δx₁
+        end
+
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
         D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ)
         E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
         EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
+
+
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
 
         α₀, τ₁, τ₀ = SATpenalties(Interface,Δxₗ,Δxᵣ,order,order)
 

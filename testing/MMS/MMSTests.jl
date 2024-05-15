@@ -57,8 +57,8 @@ function comp_MMS(Dx,Dy,npts,
         elseif BX0Type == Dirichlet
             Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order)
             BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order)
-            By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Up,    order)
-            ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Down,  order)
+            By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Down,    order)
+            ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Up,  order)
         elseif BX0Type == Neumann
             Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
             BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
@@ -131,8 +131,8 @@ println("=== K=",K," ===")
 if TestDirichlet
     println("=====")
     println("Dirichlet")
-    cx=1.0
-    cy=0.0
+    cx=0.0
+    cy=1.0
     ωx=7.5
     ωy=5.0
     ωt=1.0

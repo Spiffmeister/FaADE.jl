@@ -135,8 +135,9 @@ end
     h⁺ = hval(order⁺)
 
     α₀ = -0.5/(h⁻*Δx⁻)
-    τ₁ = 0.5/(Δx⁺)
-    τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
+    τ₁ = 0.5/Δx⁻ #1/h accounted for in BoundaryDerivativeTranspose
+    # τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
+    τ₀(c) = c * 1/max(2h⁻,2h⁺)
 
     return α₀,τ₁,τ₀
 end

@@ -35,7 +35,7 @@ In-place conjugate gradient method. Designed for multiblock problems
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-12,maxIT::Int=1000,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-12,maxIT::Int=100,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
@@ -48,7 +48,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     setValue(:rₖ,:cache,DBlock) # r ← cache
     muladd!(:rₖ,:b,DBlock,α=TT(-1)) # r = b - cache
     setValue(:dₖ,:rₖ,DBlock) # d = r
-    
+    # @show "CG-------------------"
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     # unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
@@ -110,12 +110,12 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST
     end
     
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
-
     W
 end
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(source,DB)
     for i in eachblock(DB)
+        # @show i
         A!(source,DB[i])
     end
 end
@@ -139,12 +139,12 @@ function CGRHS!(D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) whe
     if COORD == :Variable
         @. b = b/D.grid.J
     end
-    
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(:u,DB)
     for i in eachblock(DB)
+        # @show i
         CGRHS!(DB[i])
     end
 end

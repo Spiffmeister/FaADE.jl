@@ -16,8 +16,8 @@ struct NodeType{T,D} end
 const Left = NodeType{:Left,1}()
 const Internal = NodeType{:Internal,0}()
 const Right = NodeType{:Right,1}()
-const Up = NodeType{:Left,2}()
-const Down = NodeType{:Right,2}()
+const Up = NodeType{:Right,2}()
+const Down = NodeType{:Left,2}()
 
 
 function _flip(NT)

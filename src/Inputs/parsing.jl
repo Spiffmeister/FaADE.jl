@@ -25,11 +25,15 @@ function parse_boundaries(B::Dict,G::GridMultiBlock{TT,2}) where TT
             if length(G.Joint[J]) + length(B[J]) - 4 != 0
                 error("There are insufficient boundary conditions for grid $(J).")
             end
-            for BC in B[J]
-                if typeof(BC) <: SAT_Periodic
-                    error("Periodic boundary conditions are not allowed for multiblock problems. You should join the boudaries instead.")
-                end
+            # i = 0
+            if mod(sum(typeof.(B[J]) .<: SAT_Periodic),2) != 0
+                error("For multiblock problems periodic boundaries are only allowed for the same block. For periodicity between blocks use a grid joint.")
             end
+            # for BC in B[J]
+            #     if typeof(BC) <: SAT_Periodic
+            #         error("Periodic boundary conditions are not allowed for multiblock problems. You should join the boudaries instead.")
+            #     end
+            # end
         end
     end
     # error("abort")
