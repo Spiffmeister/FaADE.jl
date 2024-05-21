@@ -14,10 +14,11 @@ nx = ny = 41
 
 Δt = 1e-3
 t = 0.76
+# t = 10Δt
 
 ωt = 1.0
-ωx = 1.0
-ωy = 1.0
+ωx = 5.0
+ωy = 3.0
 cx = 1.0
 cy = 0.5
 
@@ -43,16 +44,14 @@ Bxl(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary 
 By0(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
 Byl(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
 
-Bxh(y,t) = cos(2π*ωt*t) * sin(2π*0.5*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=0.5
-Byh(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*0.5*ωy + cy) #Boundary condition y=0.5
+Bxh(y,t) = cos(2π*ωt*t) * sin(π*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=0.5
+Byh(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(π*ωy + cy) #Boundary condition y=0.5
 
 #====== New solver 4 volume ======#
 #   -----
 #   | 3 |
-#   |   |
 #   ---------
 #   | 1 | 2 |
-#   |   |   |
 #   ---------   
 #
 D1 = Grid2D([0.0,0.5],[0.0,0.5],21,21)
@@ -102,17 +101,26 @@ using GLMakie
 # end
 # u0 = [u₀(Dom[i]...) for i in eachindex(Dom)]
 
+colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
+
 
 f = Figure()
 # ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.gridx,Dom.gridy,e,colorbar=false)
 
 ax = Axis3(f[1,1])
-surface!(ax,Dom.Grids[1].gridx,Dom.Grids[1].gridy,soln.u[2][1],colorbar=false)
-surface!(ax,Dom.Grids[2].gridx,Dom.Grids[2].gridy,soln.u[2][2],colorbar=false)
-surface!(ax,Dom.Grids[3].gridx,Dom.Grids[3].gridy,soln.u[2][3],colorbar=false)
+surface!(ax,Dom.Grids[1].gridx,Dom.Grids[1].gridy,soln.u[2][1],colorbar=false,colorrange=colourrange)
+surface!(ax,Dom.Grids[2].gridx,Dom.Grids[2].gridy,soln.u[2][2],colorbar=false,colorrange=colourrange)
+surface!(ax,Dom.Grids[3].gridx,Dom.Grids[3].gridy,soln.u[2][3],colorbar=false,colorrange=colourrange)
 
 f
 
 # p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 
+
+
+
+g = Figure()
+gax = Axis(g[1,1])
+lines!(gax,Dom.Grids[1].gridx[:,end],soln.u[2][1][end,:],label="Block 1")
+lines!(gax,Dom.Grids[1].gridx[:,1],soln.u[2][2][1,:],label="Block 2")

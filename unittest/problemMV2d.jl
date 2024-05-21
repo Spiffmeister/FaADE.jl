@@ -13,11 +13,12 @@ K = 1.0
 nx = ny = 41
 
 Δt = 1e-3
-t = 0.76
+# t = 0.76
+t = Δt
 
 ωt = 1.0
-ωx = 1.0
-ωy = 1.0
+ωx = 5.0
+ωy = 3.0
 cx = 1.0
 cy = 0.5
 
@@ -159,7 +160,6 @@ soln2V = solve(P2V,Dom2V,Δt,t)
 #====== New solver 1 volume ======#
 println("3 volume")
 
-# New solover 2 volume
 D1 = Grid2D([0.0,0.4],[0.0,1.0],21,41)
 D2 = Grid2D([0.4,0.6],[0.0,1.0],21,41)
 D3 = Grid2D([0.6,1.0],[0.0,1.0],21,41)
@@ -244,28 +244,45 @@ end
 u0 = [u₀(Dom[i]...) for i in eachindex(Dom)]
 
 
+
+colourrange = (minimum(soln.u[2]),maximum(soln.u[2]))
+
 f = Figure()
 ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.gridx,Dom.gridy,e,colorbar=false)
-surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
+surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2],colorbar=false,colorrange=colourrange)
 # surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2].-e,colorbar=false)
 
 ax2 = Axis3(f[1,2])
-surface!(ax2,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[2][1],colorbar=false)
-surface!(ax2,Dom2V.Grids[2].gridx,Dom2V.Grids[2].gridy,soln2V.u[2][2],colorbar=false)
+surface!(ax2,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[2][1],colorbar=false,colorrange=colourrange)
+surface!(ax2,Dom2V.Grids[2].gridx,Dom2V.Grids[2].gridy,soln2V.u[2][2],colorbar=false,colorrange=colourrange)
 
 ax3 = Axis3(f[2,1])
-surface!(ax3,Dom3V.Grids[1].gridx,Dom3V.Grids[1].gridy,soln3V.u[2][1],colorbar=false)
-surface!(ax3,Dom3V.Grids[2].gridx,Dom3V.Grids[2].gridy,soln3V.u[2][2],colorbar=false)
-surface!(ax3,Dom3V.Grids[3].gridx,Dom3V.Grids[3].gridy,soln3V.u[2][3],colorbar=false)
+surface!(ax3,Dom3V.Grids[1].gridx,Dom3V.Grids[1].gridy,soln3V.u[2][1],colorbar=false,colorrange=colourrange)
+surface!(ax3,Dom3V.Grids[2].gridx,Dom3V.Grids[2].gridy,soln3V.u[2][2],colorbar=false,colorrange=colourrange)
+surface!(ax3,Dom3V.Grids[3].gridx,Dom3V.Grids[3].gridy,soln3V.u[2][3],colorbar=false,colorrange=colourrange)
 
 ax4 = Axis3(f[2,2])
-surface!(ax4,Dom4V.Grids[1].gridx,Dom4V.Grids[1].gridy,soln4V.u[2][1],colorbar=false)
-surface!(ax4,Dom4V.Grids[2].gridx,Dom4V.Grids[2].gridy,soln4V.u[2][2],colorbar=false)
-surface!(ax4,Dom4V.Grids[3].gridx,Dom4V.Grids[3].gridy,soln4V.u[2][3],colorbar=false)
-surface!(ax4,Dom4V.Grids[4].gridx,Dom4V.Grids[4].gridy,soln4V.u[2][4],colorbar=false)
+surface!(ax4,Dom4V.Grids[1].gridx,Dom4V.Grids[1].gridy,soln4V.u[2][1],colorbar=false,colorrange=colourrange)
+surface!(ax4,Dom4V.Grids[2].gridx,Dom4V.Grids[2].gridy,soln4V.u[2][2],colorbar=false,colorrange=colourrange)
+surface!(ax4,Dom4V.Grids[3].gridx,Dom4V.Grids[3].gridy,soln4V.u[2][3],colorbar=false,colorrange=colourrange)
+surface!(ax4,Dom4V.Grids[4].gridx,Dom4V.Grids[4].gridy,soln4V.u[2][4],colorbar=false,colorrange=colourrange)
 
 f
 
 # p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
+
+
+
+
+
+g = Figure()
+gax1 = Axis3(g[1,1])
+
+wireframe!(gax1,Dom3V.Grids[1].gridx,Dom3V.Grids[1].gridy,soln3V.u[2][1])
+wireframe!(gax1,Dom3V.Grids[2].gridx,Dom3V.Grids[2].gridy,soln3V.u[2][2])
+wireframe!(gax1,Dom3V.Grids[3].gridx,Dom3V.Grids[3].gridy,soln3V.u[2][3])
+
+
+
 

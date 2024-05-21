@@ -76,8 +76,8 @@ soln2V = solve(P2V,Dom2V,Δt,t,solver=:theta,θ=θ)
 #====== New solver 3 volume ======#
 println("3 volume")
 D1 = Grid1D([0.0,0.40],51)
-D2 = Grid1D([0.40,0.60],18)
-D3 = Grid1D([0.60,1.0],21)
+D2 = Grid1D([0.40,0.60],41)
+D3 = Grid1D([0.60,1.0],51)
 
 
 Dom3V = GridMultiBlock(D1,D2,D3)
@@ -157,7 +157,7 @@ plot!(p1, Dom.grid,soln.u[2],label="1 vol")
 plot!(p1, vcat([Dom2V.Grids[1].grid, Dom2V.Grids[2].grid]...),vcat(soln2V.u[2]...),label="2 vol")
 plot!(p1, vcat([Dom3V.Grids[1].grid, Dom3V.Grids[2].grid, Dom3V.Grids[3].grid]...),vcat(soln3V.u[2]...),label="3 vol")
 # plot!(p1, vcat([Dom4V.Grids[1].grid, Dom4V.Grids[2].grid, Dom4V.Grids[3].grid, Dom4V.Grids[4].grid]...),vcat(soln4V.u[2]...),label="4 vol")
-# vline!(p1,[0.6])
+vline!(p1,[0.4,0.6])
 p1
 
 # l = @layout[a; b]
