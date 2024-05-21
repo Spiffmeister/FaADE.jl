@@ -129,14 +129,15 @@ end
 
     return α₀,τ₁,τ₀
 end
-@inline function SATpenalties(::BoundaryConditionType{:Interface},Δx,order)
+@inline function SATpenalties(::BoundaryConditionType{:Interface},Δx₁,Δx₂,order)
 
     h = hval(order)
 
     τ₁ = -0.5/h
+    # τ₁ = -0.0
     τ₂ = 0.5 #1/h accounted for in BoundaryDerivativeTranspose
     # τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
-    τ₀(c) = -c * 1/2min(h,h) / (h * Δx^2) # L_0 term
+    τ₀(c) = -c * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
 
     return τ₀,τ₁,τ₂
 end

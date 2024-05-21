@@ -15,8 +15,8 @@ n = 41
 
 
 Δt = 1.0e-3
-t = 0.76
-# t = Δt
+# t = 0.76
+t = Δt
 
 
 ωx = 1.0
@@ -56,8 +56,10 @@ soln = solve(P,Dom,Δt,t,solver=:theta,θ=θ)
 
 #====== New solver 2 volume ======#
 println("2 volume")
-D1 = Grid1D([0.0,0.5],floor(Int,n/2)+1)
-D2 = Grid1D([0.5,1.0],floor(Int,n/2)+1)
+# D1 = Grid1D([0.0,0.5],floor(Int,n/2)+1)
+# D2 = Grid1D([0.5,1.0],floor(Int,n/2)+1)
+D1 = Grid1D([0.0,0.5],61)
+D2 = Grid1D([0.5,1.0],31)
 
 Dom2V = GridMultiBlock(D1,D2)
 
@@ -155,9 +157,9 @@ plot!(p1, Dom.grid,e,label="exact")
 plot!(p1, Dom.grid,soln.u[2],label="1 vol")
 # plot!(p1, Dom.grid,u0,label="u₀",linestyle=:dash)
 plot!(p1, vcat([Dom2V.Grids[1].grid, Dom2V.Grids[2].grid]...),vcat(soln2V.u[2]...),label="2 vol")
-plot!(p1, vcat([Dom3V.Grids[1].grid, Dom3V.Grids[2].grid, Dom3V.Grids[3].grid]...),vcat(soln3V.u[2]...),label="3 vol")
+# plot!(p1, vcat([Dom3V.Grids[1].grid, Dom3V.Grids[2].grid, Dom3V.Grids[3].grid]...),vcat(soln3V.u[2]...),label="3 vol")
 # plot!(p1, vcat([Dom4V.Grids[1].grid, Dom4V.Grids[2].grid, Dom4V.Grids[3].grid, Dom4V.Grids[4].grid]...),vcat(soln4V.u[2]...),label="4 vol")
-vline!(p1,[0.4,0.6])
+# vline!(p1,[0.4,0.6])
 p1
 
 # l = @layout[a; b]

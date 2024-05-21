@@ -80,6 +80,7 @@ end
 
 struct SAT_Interface{
         TN<:NodeType,
+        COORD,
         TT<:Real,
         TV<:Vector{TT},
         F1<:Function,
@@ -108,23 +109,22 @@ struct SAT_Interface{
             Δxᵣ = Δx₁
         end
 
-        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
-        D₁ᵀE₀ .= D₁ᵀE₀/Δxₗ
-        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ)
-        D₁ᵀEₙ .= D₁ᵀEₙ/Δxᵣ
-        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
-        E₀D₁ .= E₀D₁/Δxₗ
-        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
-        EₙD₁ .= EₙD₁/Δxᵣ
+        # τ₂ penalties
+        D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
+        # D₁ᵀE₀ .= D₁ᵀE₀/Δxₗ
+        D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ^2) # H⁻¹D₁ᵀEₙ
+        # D₁ᵀEₙ .= D₁ᵀEₙ/Δxᵣ
+        # τ₁ penalties
+        E₀D₁ = BoundaryDerivative(Left,Δxₗ^2,order)
+        # E₀D₁ .= E₀D₁/Δxₗ
+        EₙD₁ = BoundaryDerivative(Right,Δxᵣ^2,order)
+        # EₙD₁ .= EₙD₁/Δxᵣ
 
-
-        # D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ)
-
-        τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,order)
+        τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
         loopaxis = SelectLoopDirection(axis)
 
-        new{TN,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
+        new{TN,:Cartesian,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
             D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis)
     end
 
@@ -166,7 +166,7 @@ end
 function SAT_Interface! end
 """
     SAT_Interface!
-Left handed SAT for interface conditions. Correspon to block 2 in the setup
+Left handed SAT for interface conditions. Correspond to block 2 in the setup
 
 |---|---|
 | 1 | 2 |
@@ -187,7 +187,7 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
 end
 """
     SAT_Interface!
-Right handed SAT for interface conditions. Correspon to block 1 in the setup
+Right handed SAT for interface conditions. Correspond to block 1 in the setup
 
 |---|---|
 | 1 | 2 |
@@ -200,11 +200,16 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
         # println(U⁻[end-SI.order+1:end]," ",U⁺)
         S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
         for i = 1:SI.order
-            S⁻[end-SI.order+i] +=   SI.τ₂ * K⁻[end] * SI.D₁ᵀEₙ[i] * (U⁻[end] - U⁺[1])
-            S⁻[end] +=              SI.τ₁ * K⁻[end] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
+            S⁻[end-SI.order+i]  += SI.τ₂ * K⁻[end] * SI.D₁ᵀEₙ[i] * (U⁻[end] - U⁺[1])
+            S⁻[end]             += SI.τ₁ * K⁻[end] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
         end
     end
     dest
+end
+
+
+function SAT_Interface_Curvilinear!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface,::SATMode{:SolutionMode}) where {AT}
+    SAT_Interface!(dest,u,c,buffer,SI,SolutionMode)
 end
 
 
@@ -219,12 +224,12 @@ function SAT_Interface_cache! end
     SAT_Interface_cache!
 Computes the required values from the RIGHT handed block for sending to the buffer for LEFT handed interface conditions
 """
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,TT},::SATMode{:SolutionMode}) where {TT,AT,TN<:Union{NodeType{:Left},NodeType{:Down}}}
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT},::SATMode{:SolutionMode}) where {TT,AT,COORD,TN<:Union{NodeType{:Left},NodeType{:Down}}}
     for (S⁻,U⁻,K⁻) in zip(SI.loopaxis(dest),loopaxis(u),loopaxis(c))
         S⁻[1] = U⁻[end]
         S⁻[2] = TT(0)
         for i = 1:SI.order
-            S⁻[2] += SI.D₁Eₙ[i] * U⁻[end-SI.order+i]
+            S⁻[2] += K⁻[end-SI.order+i] * SI.D₁Eₙ[i] * U⁻[end-SI.order+i]
         end
     end
     dest
@@ -233,13 +238,22 @@ end
     SAT_Interface_cache!
 Computes the required values from the LEFT handed block for sending to the buffer for RIGHT handed interface conditions
 """
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,TT},::SATMode{:SolutionMode}) where {TT,AT,TN<:Union{NodeType{:Right},NodeType{:Up}}}
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT},::SATMode{:SolutionMode}) where {TT,AT,COORD,TN<:Union{NodeType{:Right},NodeType{:Up}}}
     for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),loopaxis(u),loopaxis(c))
         S⁺[1] = U⁺[1]
         S⁺[2] = TT(0)
         for i = 1:SI.order
-            S⁺[2] += SI.D₁E₀[i] * U⁺[i]
+            S⁺[2] += K⁺[i] * SI.D₁E₀[i] * U⁺[i]
         end
     end
     dest
 end
+
+
+
+
+
+
+
+
+
