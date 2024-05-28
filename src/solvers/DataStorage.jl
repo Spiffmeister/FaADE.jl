@@ -50,10 +50,10 @@ function BoundaryData(G::Grid1D{TT},BC,order::Int64) where {TT}
 end
 function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,order::Int64) where {TT}
 
+    # Store the boundary points and generate buffers for storing RHS
     if BC.side ∈ [Left,Right]
         n = G.ny
         BufferRHS = zeros(TT,(1,n))
-        # @show size(BufferRHS), size(G.gridx)
         if BC.side == Left
             X = G.gridy[1,:]
         else
@@ -73,10 +73,10 @@ function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,order::Int64) where {TT}
 end
 function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT}
 
+    # Store the boundary points and generate buffers for storing RHS
     if BC.side ∈ [Left,Right]
         n = G.ny
         BufferRHS = zeros(TT,(1,n))
-        # @show size(BufferRHS), size(G.gridx)
         if BC.side == Left
             X = [(G.gridx[1,i],G.gridy[1,i]) for i in 1:G.ny]
         else
@@ -91,9 +91,6 @@ function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT
             X = [(G.gridx[i,G.ny],G.gridy[i,G.ny]) for i in 1:G.nx]
         end
     end
-    # @show X
-    # println("")
-    # println("")
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
 
@@ -115,212 +112,66 @@ struct InterfaceBoundaryData{
     DIM         :: Int64
     I           :: CartesianIndices
 
-    function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
+end
+function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
 
-        BufferIn    = zeros(TT,order)
-        BufferOut   = zeros(TT,order)
+    BufferIn    = zeros(TT,order)
+    BufferOut   = zeros(TT,order)
+    if BC.side == Right
+        I = CartesianIndices((1:order,))
+    elseif BC.side == Left
+        I = CartesianIndices((length(G2)-order+1:length(G2),))
+    end
+
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
+end
+function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) where {TT}
+
+    if BC.side ∈ [Left,Right]
+        n = G2.ny
+        BufferIn    = zeros(TT,(order,n))
+        BufferOut   = zeros(TT,(order,n))
+
         if BC.side == Right
-            I = CartesianIndices((1:order,))
+            I = CartesianIndices((1:order,1:n))
         elseif BC.side == Left
-            I = CartesianIndices((length(G2)-order+1:length(G2),))
+            I = CartesianIndices((G2.nx-order+1:G2.nx,1:n))
         end
 
-        new{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,1,I)
-    end
-    function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) where {TT}
+    elseif BC.side ∈ [Up,Down]
+        n = G2.nx
+        BufferIn    = zeros(TT,(n,order))
+        BufferOut   = zeros(TT,(n,order))
 
-        if BC.side ∈ [Left,Right]
-            n = G2.ny
-            BufferIn    = zeros(TT,(order,n))
-            BufferOut   = zeros(TT,(order,n))
-
-            if BC.side == Right
-                I = CartesianIndices((1:order,1:n))
-            elseif BC.side == Left
-                I = CartesianIndices((G2.nx-order+1:G2.nx,1:n))
-            end
-
-        elseif BC.side ∈ [Up,Down]
-            n = G2.nx
-            BufferIn    = zeros(TT,(n,order))
-            BufferOut   = zeros(TT,(n,order))
-
-            if BC.side == Up
-                I = CartesianIndices((1:n,1:order))
-            elseif BC.side == Down
-                I = CartesianIndices((1:n,G2.ny-order+1:G2.ny))
-            end
+        if BC.side == Up
+            I = CartesianIndices((1:n,1:order))
+        elseif BC.side == Down
+            I = CartesianIndices((1:n,G2.ny-order+1:G2.ny))
         end
-
-        new{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,2,I)
     end
+
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint,2,I)
 end
-"""
-    newBoundaryConditions
-Container for all boundary conditions
-"""
-struct newBoundaryConditions{DIM,
-        BCLT,
-        BCRT,
-        BCUT,
-        BCDT}
-    
-    BC_Left     :: BCLT
-    BC_Right    :: BCRT
-    BC_Up       :: BCUT
-    BC_Down     :: BCDT
 
-    # BC      :: NTuple{DIM-1,BoundaryStorage}
 
-    """
-        newBoundaryConditions(P::newPDEProblem{TT,1},G::LocalGridType)
-    """
-    function newBoundaryConditions(P::newPDEProblem{TT,DIM},G::LocalGridType) where {TT,DIM}
-        if !(typeof(P.BoundaryConditions.BoundaryLeft) <: SimultanousApproximationTerm{:Periodic})
-            BCL = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryLeft,P.order)
-            BCR = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryRight,P.order)
-        else
-            BCL = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryLeft,1,P.order)
-            BCR = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryRight,1,P.order)
-        end
-        if DIM == 1
-            # NB = 2
-            BCU = nothing
-            BCD = nothing
-            # BC = (BCL,BCR)
-        elseif DIM ==2
-            # NB = 4
-            if !(typeof(P.BoundaryConditions.BoundaryUp) <: SimultanousApproximationTerm{:Periodic})
-                BCU = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryUp,P.order)
-                BCD = _newBoundaryCondition(G,P.BoundaryConditions.BoundaryDown,P.order)
-            else
-                BCU = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryUp,1,P.order)
-                BCD = _newBoundaryCondition(G,G,P.BoundaryConditions.BoundaryDown,1,P.order)
-            end
-            # BC = (BCL,BCR,BCU,BCD)
-        end
-        new{1,typeof(BCL),typeof(BCR),typeof(BCU),typeof(BCD)}(BCL,BCR,BCU,BCD)
-    end
-    """
-        newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64)
-    """
-    function newBoundaryConditions(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Int64) where {TT}
-
-        J = G.Joint[I]
-        @show J
-        if typeof(J) <: Joint
-            if J.side == Left
-                BCLt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,1,P.order)
-                BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCLt,J.index,P.order)
-
-                if !(typeof(P.BoundaryConditions.BoundaryRight) <: SAT_Periodic)
-                    BCR = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryRight,P.order)
-                else
-                    BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryRight,J.index,P.order)
-                end
-
-            elseif J.side == Right
-                BCRt = SAT_Interface(G.Grids[I].Δx,G.Grids[J.index].Δx,J.side,1,P.order)
-                BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCRt,J.index,P.order)
-
-                if !(typeof(P.BoundaryConditions.BoundaryLeft) <: SAT_Periodic)
-                    BCL = _newBoundaryCondition(G.Grids[I],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
-                else
-                    BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],P.BoundaryConditions.BoundaryLeft,J.index,P.order)
-                end
-            end
-        elseif length(J) == 2 #TODO
-
-            JL = G.Joint[J[1].index]
-            JR = G.Joint[J[2].index][1]
-            length(JL) == 1 ? JL = JL[1] : JL = JL[2] # Correct for second node where `JL = ((1,Right),)`
-
-            # println(J)
-            # println(JL)
-            # println(JR)
-
-            BCLt = SAT_Interface(G.Grids[J[1].index].Δx,G.Grids[JL.index].Δx,Left,1,GetOrder(P.order))
-            BCRt = SAT_Interface(G.Grids[J[2].index].Δx,G.Grids[JR.index].Δx,Right,1,GetOrder(P.order))
-
-            BCL = _newBoundaryCondition(G.Grids[I],G.Grids[J[1].index],BCLt,J[1].index,P.order)
-            BCR = _newBoundaryCondition(G.Grids[I],G.Grids[J[2].index],BCRt,J[2].index,P.order)
-        end
-
-        BCU = nothing
-        BCD = nothing
-
-        new{1,typeof(BCL),typeof(BCR),Nothing,Nothing}(BCL,BCR,BCU,BCD)
-    end
-    function newBoundaryConditions(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Int64) where {TT}
-        J = G.Joint[I]
-
-        faces = [Left,Right,Up,Down]
-        Pfaces = [:BoundaryLeft,:BoundaryRight,:BoundaryUp,:BoundaryDown]
-
-        BCS = []
-
-        # Loop over joints
-        if typeof(J) <: Joint
-            # If there is a single joint
-            for i in 1:length(faces)
-                if J.side == faces[i]
-                    BCt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,GetAxis(J.side),GetOrder(P.order))
-                    BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
-                else
-
-                    BCt = getfield(P.BoundaryConditions,Pfaces[i])
-                    if BCt.type != Periodic
-                        BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
-                    else
-                        BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
-                    end
-
-                    # BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
-                end
-                push!(BCS,BC)
-            end
-        else
-            for j in 1:length(J)
-                # If there are multiple joints
-                JC = J[j]
-                for i in 1:length(faces)
-                    if JC.side == faces[i]
-                        BCt = SAT_Interface(G.Grids[J.index].Δx,G.Grids[I].Δx,J.side,GetAxis(J.side),GetOrder(P.order))
-                        BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
-                        push!(BCS,BC)
-                    else
-                        BCt = getfield(P.BoundaryConditions,Pfaces[i])
-                        if BCt.type != Periodic
-                            BC = _newBoundaryCondition(G.Grids[I],BCt,P.order)
-                        else
-                            BC = _newBoundaryCondition(G.Grids[I],G.Grids[J.index],BCt,J.index,P.order)
-                        end
-                        # BC = _newBoundaryCondition(G.Grids[I],BCt,J.index,P.order)
-                        push!(BCS,BC)
-                    end
-                end
-            end
-        end
-        new{2,typeof(BCS[1]),typeof(BCS[2]),typeof(BCS[3]),typeof(BCS[4])}(BCS[1],BCS[2],BCS[3],BCS[4])
-    end
-end
 
 
 function getjoint(BC::BoundaryData) end
 getjoint(BC::InterfaceBoundaryData) = BC.Joint
 
 
+function GenerateBoundaries(P::Problem1D,G::LocalGridType{TT,1}) where TT
+    tmpDict = Dict()
+    for BC in P.BoundaryConditions
+        if typeof(BC) <: SAT_Periodic
+            tmpDict[BC.side] = _newBoundaryCondition(G,G,BC,1,P.order)
+        else
+            tmpDict[BC.side] = BoundaryData(G,BC,P.order)
+        end
+    end
 
-function Base.iterate(B::newBoundaryConditions{DIM,BCLT,BCRT,BCUT,BCDT},state=0) where {DIM,BCLT,BCRT,BCUT,BCDT}
-    state >= 2DIM && return
-    return Base.getfield(B,state+1), state+1
+    return (tmpDict[Left],tmpDict[Right])
 end
-Base.getindex(B::newBoundaryConditions,N::NodeType{:Left})  = B.BC_Left
-Base.getindex(B::newBoundaryConditions,N::NodeType{:Right}) = B.BC_Right
-Base.getindex(B::newBoundaryConditions,N::NodeType{:Up})    = B.BC_Up
-Base.getindex(B::newBoundaryConditions,N::NodeType{:Down})  = B.BC_Down
-
-
 function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where TT
     jts = G.Joint[I]
 
@@ -346,10 +197,24 @@ function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where
 
     return (tmpDict[Left],tmpDict[Right])
 end
+function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2}) where TT
+    tmpDict = Dict()
+    for BC in P.BoundaryConditions
+        if typeof(BC) <: SAT_Periodic
+            tmpDict[BC.side] = _newBoundaryCondition(G,G,BC,1,P.order)
+        else
+            tmpDict[BC.side] = BoundaryData(G,BC,P.order)
+        end
+    end
+
+    return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
+end
 function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where TT
     jts = G.Joint[I]
 
     tmpDict = Dict()
+
+    GetMetricType(G[I]) == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
 
     for Joint in jts
         BC = SAT_Interface(G.Grids[Joint.index].Δx,G.Grids[I].Δx,Joint.side,GetAxis(Joint.side),P.order)
@@ -762,8 +627,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
         end
     end
 
-    BStor = newBoundaryConditions(P,G)
-    BS = (BStor.BC_Left,BStor.BC_Right)
+    BS = GenerateBoundaries(P,G)
 
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
@@ -795,13 +659,10 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,S
         PMap = P.Parallel
     end
 
-    # BStor = newBoundaryConditions(P,G,I)
-    # BS = (BStor.BC_Left,BStor.BC_Right)
     BS = GenerateBoundaries(P,G,I)
     IP = innerH(G.Grids[I].Δx,G.Grids[I].n,P.order)
     # D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
     D = DiffusionOperator(G.Grids[I].n,G.Grids[I].Δx,P.order,false,:Constant)
-    # source = SourceTerm{Nothing}(nothing)
     source = P.source
 
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
@@ -820,12 +681,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
 
     PK = (P.Kx,P.Ky)
 
-    BStor = newBoundaryConditions(P,G)
-    BS = (BStor.BC_Left,BStor.BC_Right,BStor.BC_Up,BStor.BC_Down)
-    # BS = (BStor.BC_Left,BStor.BC_Right,nothing,nothing); @warn "Using periodic stencil"
+    BS = GenerateBoundaries(P,G)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,P.order)
-
-    # @show GetMetricType(G)
 
     # if length(K) == 3
     if GetMetricType(G) == CurvilinearMetric
@@ -834,7 +691,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
         difftype = :Constant
     end
 
-    typeof(P.BoundaryConditions.BoundaryLeft).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    typeof(P.BoundaryConditions[1]).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     # sattype = :Variable
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)

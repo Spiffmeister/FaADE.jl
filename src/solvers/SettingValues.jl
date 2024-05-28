@@ -79,9 +79,20 @@ fillBuffer
 function fillBuffer end
 function fillBuffer(source,B::Nothing,args...) end # no boundary data
 function fillBuffer(source::Symbol,B::BoundaryData,DB::DataMultiBlock) end
-function fillBuffer(source::Symbol,B::InterfaceBoundaryData,DB::DataMultiBlock)
+function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::DataMultiBlock) where {TT,DIM,BCT<:SAT_Periodic}
     cache = getproperty(DB[B.Joint],source)
     copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
+end
+function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::DataMultiBlock) where {TT,DIM,BCT<:SAT_Interface}
+    cache = getproperty(DB[B.Joint],source)
+    K = getproperty(DB[B.Joint],:K)
+    SAT = B.Boundary
+
+    if DIM == 1
+        SAT_Interface_cache!(B.BufferIn,cache,K,SAT)
+    elseif DIM == 2
+        SAT_Interface_cache!(B.BufferIn,cache,K[1],SAT)
+    end
 end
 function fillBuffer(source::Symbol,DB::DataMultiBlock,I::Int64,side::NodeType)
     BC = DB[I].boundary[side]
@@ -92,23 +103,23 @@ end
 """
 function fillBuffers end
 function fillBuffers(B::BoundaryData,args...) end
-function fillBuffers(source::Symbol,DB::newLocalDataBlock{TT,DIM}) where {TT,DIM}
-    S = getproperty(DB,source)
-    copyto!(DB.boundary.RHS_Left,   S)
-    copyto!(DB.boundary.RHS_Right,  S)
-    if DIM == 2
-        copyto!(DB.boundary.RHS_Up,     S)
-        copyto!(DB.boundary.RHS_Down,   S)
-    end
-end
-function fillBuffers(source::Symbol,BC::NTuple{NB,BoundaryStorage},DB::DataMultiBlock{TT}) where {TT,NB}
-    fillBuffer(source,BC[1],DB)
-    fillBuffer(source,BC[2],DB)
-    if NB == 4
-        fillBuffer(source,BC[3], DB)
-        fillBuffer(source,BC[4], DB)
-    end
-end
+# function fillBuffers(source::Symbol,DB::newLocalDataBlock{TT,DIM}) where {TT,DIM}
+#     S = getproperty(DB,source)
+#     copyto!(DB.boundary.RHS_Left,   S)
+#     copyto!(DB.boundary.RHS_Right,  S)
+#     if DIM == 2
+#         copyto!(DB.boundary.RHS_Up,     S)
+#         copyto!(DB.boundary.RHS_Down,   S)
+#     end
+# end
+# function fillBuffers(source::Symbol,BC::NTuple{NB,BoundaryStorage},DB::DataMultiBlock{TT}) where {TT,NB}
+#     fillBuffer(source,BC[1],DB)
+#     fillBuffer(source,BC[2],DB)
+#     if NB == 4
+#         fillBuffer(source,BC[3], DB)
+#         fillBuffer(source,BC[4], DB)
+#     end
+# end
 function fillBuffer(source::Symbol,DB::DataMultiBlock{TT,DIM},I::Int64) where {TT,DIM}
     D = DB[I]
     fillBuffer(source,D.boundary[1],DB)
@@ -123,15 +134,6 @@ function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
         fillBuffer(source,DB,I)
     end
 end
-
-# @generated function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
-#     quote
-#         for I in eachblock(DB)
-#             fillBuffers(source,DB[I].boundary,DB)
-#         end
-#     end
-# end
-
 
 
 
@@ -183,7 +185,7 @@ end
 """
 Applying SATs in SolutionMode
 """
-@inline function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
+function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
     # applySAT!(BC.Boundary,dest,K,source,BC.BufferIn,mode)
     SAT = BC.Boundary
     if typeof(SAT) <: SimultanousApproximationTerm{:Interface}
@@ -204,14 +206,20 @@ function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,
 end
 
 
+"""
+    applyCurvilinearSAT!
+Apply SATs for curvilinear grids
+"""
+function applyCurvilinearSAT! end
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-
 function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-
+function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+    SAT_Interface!(dest,source,K[AXIS],K[3],BC.BufferIn,BC.Boundary,mode)
+end
 
 
 function applySAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:ExplicitMode}) where {TT,AT,DIM,FT,BCT}
@@ -237,26 +245,26 @@ end
     applySATs
 applySATs for 2D local block
 """
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT}
+function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #data mode
     applyCurvilinearSAT!(D.boundary[1],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[2],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[3],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[4],    dest, D.K, mode)
 end
-function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT}
+function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #solution mode
     applyCurvilinearSAT!(D.boundary[1],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[2],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[3],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[4],    dest, source, D.K, mode)
 end
 
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
+function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #data mode
     applyCartesianSAT!(D.boundary[1],    dest, D.K[1], mode)
     applyCartesianSAT!(D.boundary[2],    dest, D.K[1], mode)
     applyCartesianSAT!(D.boundary[3],    dest, D.K[2], mode)
     applyCartesianSAT!(D.boundary[4],    dest, D.K[2], mode)
 end
-function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT}
+function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #solution mode
     applyCartesianSAT!(D.boundary[1],    dest, source, D.K[1], mode)
     applyCartesianSAT!(D.boundary[2],    dest, source, D.K[1], mode)
     applyCartesianSAT!(D.boundary[3],    dest, source, D.K[2], mode)

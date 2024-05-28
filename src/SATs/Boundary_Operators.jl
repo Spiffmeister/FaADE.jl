@@ -133,7 +133,7 @@ end
 
     h = hval(order)
 
-    τ₁ = -0.5/h
+    τ₁ = -0.5/(h*Δx₁)
     # τ₁ = -0.0
     τ₂ = 0.5 #1/h accounted for in BoundaryDerivativeTranspose
     # τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))

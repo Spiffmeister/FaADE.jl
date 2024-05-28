@@ -1,82 +1,6 @@
 
 
 
-"""
-    SAT_Split
-
-TODO: Write functinos and struct for split domain SATs
-"""
-struct SAT_Split <: SimultanousApproximationTerm{:Interface} end
-
-
-
-
-"""
-Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
-    order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
-Simulatenous approximation term for a split domain
-TODO: Fix for when `order⁺ != order⁻`
-"""
-function Split_domain(u⁻::Vector{Float64},u⁺::Vector{Float64},Δx⁻::Float64,Δx⁺::Float64,c⁻,c⁺;
-        order::Int64=2,order⁻::Int64=2,order⁺::Int64=2,separate_forcing::Bool=false)
-
-    h⁻ = hval(order⁻)
-    h⁺ = hval(order⁺)
-
-    # Left side
-    α₀ = -0.5
-    τ₁ = 0.5
-    τ₀ = max(c⁻[end]/(2*h⁻*Δx⁻), c⁺[1]/(2*h⁺*Δx⁺))
-
-    SAT₀ = zeros(Float64,order⁻+order⁺)
-    SAT₁ = zeros(Float64,order⁻+order⁺)
-    SAT₂ = zeros(Float64,order⁻+order⁺)
-
-    F = zeros(Float64,order⁻+order⁺)
-
-    # Function condition
-    L₀u = zeros(Float64,order⁻+order⁺)
-    L₀u[order⁻] += u⁻[end]
-    L₀u[order⁻+1] += u⁻[end]
-
-    SAT₀[1:order⁻] = τ₀/(h⁻ * Δx⁻) * L₀u[1:order⁻]
-    SAT₀[order⁻+1:end] = τ₀/(h⁺ * Δx⁺) * L₀u[order⁻+1:end]
-
-    F[1:order⁻] = -τ₀/(h⁻ * Δx⁻) * u⁺[1]
-    F[order⁻+1:end] = τ₀/(h⁺ * Δx⁺) * u⁻[end]
-
-
-    # Symmeteriser
-    D₁ᵀL₀u⁻ = boundary_D₁ᵀ(L₀u[1:order⁻],Δx⁻,order⁻)
-    D₁ᵀL₀u⁺ = boundary_D₁ᵀ(L₀u[order⁻+1:end],Δx⁺,order⁺)
-
-    SAT₁[1:order⁻] = τ₁/(h⁻ * Δx⁻) * c⁻[end] * D₁ᵀL₀u⁻[order⁻+1:end]
-    SAT₁[order⁻+1:end] = -τ₁/(h⁺ * Δx⁺) * c⁺[1] * D₁ᵀL₀u⁺[1:order⁺]
-
-    # Derivative condition
-    D₁u⁻ = boundary_D₁(u⁻,Δx⁻,order⁻)
-    D₁u⁺ = boundary_D₁(u⁺,Δx⁺,order⁺)
-
-    SAT₂[1:order⁻] = α₀/(h⁻ * Δx⁻) * c⁻[end] * D₁u⁻[order⁻+1:end]
-    SAT₂[order⁻+1:end] = α₀/(h⁺ * Δx⁺) * c⁺[1] * D₁u⁺[1:order⁺]
-
-    SAT = SAT₀ + SAT₁ + SAT₂
-
-    SAT⁻ = SAT[1:order⁻]
-    SAT⁺ = SAT[order⁻+1:end]
-
-
-    if !separate_forcing
-        SAT⁻ += F[1:order⁻]
-        SAT⁺ += F[order⁻+1:end]
-        return SAT⁻, SAT⁺
-    else
-        return SAT⁻, SAT⁺, F[1:order⁻], F[order⁻+1:end]
-    end
-
-end
-
-
 
 struct SAT_Interface{
         TN<:NodeType,
@@ -98,34 +22,40 @@ struct SAT_Interface{
     τ₂      :: TT
     loopaxis :: F2
 
-    function SAT_Interface(Δx₁::TT,Δx₂,side::TN,axis::Int,order::Int) where {TT,TN}
+    Δy      :: TT
+    coordinates :: Symbol
+
+    function SAT_Interface(Δx₁::TT,Δx₂,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian) where {TT,TN}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
         if TN <: NodeType{:Left} #If the left boundary it should be this way around
-            Δxₗ = Δx₁
-            Δxᵣ = Δx₂
-        else
             Δxₗ = Δx₂
             Δxᵣ = Δx₁
+
+            τ₀, τ₁, τ₂ = SATpenalties(Interface,Δxᵣ,Δxₗ,order)
+        else
+            Δxₗ = Δx₁
+            Δxᵣ = Δx₂
+    
+            τ₀, τ₁, τ₂ = SATpenalties(Interface,Δxₗ,Δxᵣ,order)
         end
+
+        # τ₁ = -TT(1//2) / h
+        # τ₂ = TT(1//2)
 
         # τ₂ penalties
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
-        # D₁ᵀE₀ .= D₁ᵀE₀/Δxₗ
         D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ^2) # H⁻¹D₁ᵀEₙ
-        # D₁ᵀEₙ .= D₁ᵀEₙ/Δxᵣ
         # τ₁ penalties
-        E₀D₁ = BoundaryDerivative(Left,Δxₗ^2,order)
-        # E₀D₁ .= E₀D₁/Δxₗ
-        EₙD₁ = BoundaryDerivative(Right,Δxᵣ^2,order)
-        # EₙD₁ .= EₙD₁/Δxᵣ
+        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
+        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
 
         τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
         loopaxis = SelectLoopDirection(axis)
 
         new{TN,:Cartesian,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
-            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis)
+            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates)
     end
 
 end
@@ -176,12 +106,14 @@ Superscript + is the current block - is the joining block
 """
 function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Down}}}
     for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
-        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁺[1] - U⁻[end])
+        S⁺[1] += SI.τ₀(K⁺[1]) * (U⁺[1] - U⁻[1])
         for i = 1:SI.order
             # τ₁ K D₁ᵀL₀ u + αL₀KD₁u
-            S⁺[i] += SI.τ₂ * K⁺[1] * SI.D₁ᵀE₀[i]*(U⁻[end] - U⁺[1])
-            S⁺[1] += SI.τ₁ * K⁺[1] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
+            S⁺[i] += SI.τ₂ * K⁺[1] * SI.D₁ᵀE₀[i]*(U⁻[1] - U⁺[1])
+            # S⁺[1] += SI.τ₁ * K⁺[1] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
+            S⁺[1] += SI.τ₁ * K⁺[1] * -SI.D₁E₀[i]*U⁺[i]
         end
+        S⁺[1] += SI.τ₁ * U⁻[2]
     end
     dest
 end
@@ -201,15 +133,41 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
         S⁻[end] += SI.τ₀(K⁻[end]) * (U⁻[end] - U⁺[1])
         for i = 1:SI.order
             S⁻[end-SI.order+i]  += SI.τ₂ * K⁻[end] * SI.D₁ᵀEₙ[i] * (U⁻[end] - U⁺[1])
-            S⁻[end]             += SI.τ₁ * K⁻[end] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
+            # S⁻[end]             += SI.τ₁ * K⁻[end] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
+            S⁻[end]             += SI.τ₁ * K⁻[end] * SI.D₁Eₙ[i]*U⁻[end-SI.order+i]
         end
+        S⁻[end] += -SI.τ₁ * U⁺[2]
     end
     dest
 end
 
 
-function SAT_Interface_Curvilinear!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface,::SATMode{:SolutionMode}) where {AT}
-    SAT_Interface!(dest,u,c,buffer,SI,SolutionMode)
+function SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT},::SATMode{:SolutionMode}) where {AT,TN,TT}
+    SAT_Interface!(dest,u,cx,buffer,SI,SolutionMode)
+
+    n = size(dest,SI.axis)
+    m = size(dest,mod1(SI.axis+1,2))
+
+    if SI.side == Left
+        DEST = view(dest,   1,1:m)
+        SRC = view(u[1,1:m] - buffer[1,1:m], :,:)
+        C = view(cxy[1,1:m]-cxy[n,1:m],:,:) # needs to be fixed, should pull from both regions
+    elseif SI.side == Right
+        DEST = view(dest,   n,1:m)
+        SRC = view(buffer[1,1:m] - u[n,1:m],:,:)
+        C = view(cxy[n,1:m]-cxy[1,1:m],:,:) # needs to be fixed, should pull from both regions
+    elseif SI.side == Up
+        DEST = view(dest,   1:m,1)
+        SRC = view(buffer[:,1] - u[:,n], :,1)
+        C = view(cxy[:,1] - cxy[:,n],:,1) # needs to be fixed, should pull from both regions
+    else
+        DEST = view(dest,   1:m,n)
+        SRC = view(-u[:,1] + buffer[:,1],:,1)
+        C = view(-cxy[:,1] + cxy[:,n],:,1) # needs to be fixed, should pull from both regions
+    end
+    FirstDerivativeTranspose!(DEST,SRC,m,SI.Δy,SI.order,TT(1))
+
+    dest
 end
 
 
@@ -224,8 +182,8 @@ function SAT_Interface_cache! end
     SAT_Interface_cache!
 Computes the required values from the RIGHT handed block for sending to the buffer for LEFT handed interface conditions
 """
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT},::SATMode{:SolutionMode}) where {TT,AT,COORD,TN<:Union{NodeType{:Left},NodeType{:Down}}}
-    for (S⁻,U⁻,K⁻) in zip(SI.loopaxis(dest),loopaxis(u),loopaxis(c))
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:Union{NodeType{:Left},NodeType{:Down}}}
+    for (S⁻,U⁻,K⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
         S⁻[1] = U⁻[end]
         S⁻[2] = TT(0)
         for i = 1:SI.order
@@ -238,8 +196,8 @@ end
     SAT_Interface_cache!
 Computes the required values from the LEFT handed block for sending to the buffer for RIGHT handed interface conditions
 """
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT},::SATMode{:SolutionMode}) where {TT,AT,COORD,TN<:Union{NodeType{:Right},NodeType{:Up}}}
-    for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),loopaxis(u),loopaxis(c))
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:Union{NodeType{:Right},NodeType{:Up}}}
+    for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
         S⁺[1] = U⁺[1]
         S⁺[2] = TT(0)
         for i = 1:SI.order

@@ -47,7 +47,7 @@ Byl(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary 
 Bxh(y,t) = cos(2π*ωt*t) * sin(π*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=0.5
 Byh(x,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(π*ωy + cy) #Boundary condition y=0.5
 
-#====== New solver 4 volume ======#
+#====== New solver 3 volume ======#
 #   -----
 #   | 3 |
 #   ---------

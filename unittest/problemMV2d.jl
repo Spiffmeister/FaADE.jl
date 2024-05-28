@@ -17,8 +17,8 @@ nx = ny = 41
 t = Δt
 
 ωt = 1.0
-ωx = 1.0
-ωy = 1.0
+ωx = 4.0
+ωy = 3.0
 cx = 1.0
 cy = 0.5
 
@@ -88,13 +88,13 @@ Dl = FaADE.SATs.SAT_Dirichlet(Bx0,Dom.Δx,Left,order)
 Dr = FaADE.SATs.SAT_Dirichlet(Bxl,Dom.Δx,Right,order)
 Dd = FaADE.SATs.SAT_Dirichlet(By0,Dom.Δy,Down,order)
 Du = FaADE.SATs.SAT_Dirichlet(Byl,Dom.Δy,Up,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
+BD = (Dl,Dr,Du,Dd)
 
 # Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
 # Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
 # Pu = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
 # Pd = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
-# BD = FaADE.Inputs.SATBoundaries(Pl,Pr,Pu,Pd)
+# BD = (Pl,Pr,Pu,Pd)
 
 P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
 println("---Solving 1 volume---")

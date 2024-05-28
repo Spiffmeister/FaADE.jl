@@ -19,7 +19,7 @@ module solvers
     using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
     SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_solution!, SAT_Dirichlet_data!,
     SAT_Neumann, SAT_Neumann_data!, SAT_Neumann_solution!,
-    SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, 
+    SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, SAT_Interface_cache!,
     SATMode, DataMode, SolutionMode, ExplicitMode
 
     using FaADE.ParallelOperator: ParallelGrid, generate_parallel_penalty, ParallelData, applyParallelPenalty!, compute_parallel_operator

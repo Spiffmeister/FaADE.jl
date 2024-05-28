@@ -72,7 +72,7 @@ struct Problem1D{TT      <: Real,
     DIMS,
     DCT,
     ST      <: SourceTerm,
-    SATB    <: Union{SATBoundaries,Dict},
+    SATB    <: Union{Dict,Tuple},
     PART    # Parallel map, vector of parallel map, or nothing
         } <: newPDEProblem{TT,DIMS}
     InitialCondition    :: Function
@@ -105,7 +105,7 @@ struct Problem2D{TT      <: Real,
         DIM,
         DCT,
         ST      <: SourceTerm,
-        SATB    <: Union{SATBoundaries,Dict},
+        SATB    <: Union{Dict,Tuple},
         PART    # Parallel map, vector of parallel map, or nothing
             } <: newPDEProblem{TT,DIM}
     InitialCondition    :: Function

@@ -100,16 +100,21 @@ end
     Grid2D(𝒟x::Vector,𝒟y::Vector,nx::Integer,ny::Integer)
 Construct a 2D grid from the domain boundaries in ``x`` and ``y`` and the number of nodes in ``x`` and ``y``.
 """
-function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) where TT
+function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer;coord=CartesianMetric) where TT
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
 
     X = repeat(gx.grid,1,ny)
     Y = repeat(gy.grid',nx,1)
 
-    J = qx = qy = rx = ry = ones(eltype(gx.grid),(1,1))
+    if coord == CartesianMetric
+        J = qx = qy = rx = ry = ones(eltype(gx.grid),(1,1))
+    else
+        J = qx = ry = ones(TT,size(X))
+        qy = rx = zeros(TT,size(X))
+    end
 
-    return Grid2D{TT,CartesianMetric,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
+    return Grid2D{TT,coord,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
         J, qx, qy, rx, ry)
 end
 """
