@@ -91,7 +91,11 @@ function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::Data
     if DIM == 1
         SAT_Interface_cache!(B.BufferIn,cache,K,SAT)
     elseif DIM == 2
-        SAT_Interface_cache!(B.BufferIn,cache,K[1],SAT)
+        if SAT.coordinates == :Cartesian
+            SAT_Interface_cache!(B.BufferIn,cache,K[1],SAT)
+        elseif SAT.coordinates == :Curvilinear
+            SAT_Interface_cache!(B.BufferIn,cache,K[1],K[3],SAT)
+        end
     end
 end
 function fillBuffer(source::Symbol,DB::DataMultiBlock,I::Int64,side::NodeType)

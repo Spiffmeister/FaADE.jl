@@ -13,13 +13,14 @@ K = 1.0
 nx = ny = 41
 
 Δt = 1e-3
-t = Δt
+# t = Δt
+t = 0.76
 
 ωt = 1.0
 ωx = 1.0
 ωy = 1.0
-cx = 1.0
-cy = 0.5
+cx = 0.0
+cy = 0.0
 
 Kx = 1.0
 Ky = 1.0
@@ -29,243 +30,119 @@ Ky = 1.0
 
 # 2D sine wave solution
 # Solution
-exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
-u₀(x,y) = exact(x,y,0.0)
-F(X,t) = begin
-    x,y = X
-    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
-end
+# exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+# u₀(x,y) = exact(x,y,0.0)
+# F(X,t) = begin
+#     x,y = X
+#     -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+#     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+#     K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+# end
 # DIRICHLET
-Bx0(y,t) = cos(2π*ωt*t) * sin(cx) * sin(2π*ωy*y + cy)           #Boundary condition x=0
-Bxl(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx) * sin(2π*ωy*y + cy)   #Boundary condition x=Lx
-By0(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(cy)           #Boundary condition y=0
-Byl(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) * sin(2π*ωy + cy)   #Boundary condition y=Ly
+# Bxy(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*ωy*X[2] + cy)   #Boundary condition x=0
 # NEUMANN
 # BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-# BxRũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(2π*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-# ByLũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-# ByRũ(x,t) = 2π*ωy * K * cos(2π*t) * sin(2π*x*ωx + cx)   * cos(2π*ωy + cy) #Boundary condition y=Ly
 
-
-#=
-# Plane wave solution
-exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx)
-u₀(x,y) = exact(x,y,0.0)
-F(X,t) = begin
-    x,y = X
-    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx) + 
-    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)
-end
-
-# DIRICHLET
-BxL(y,t) = cos(2π*ωt*t) * sin(cx)           #Boundary condition x=0
-BxR(y,t) = cos(2π*ωt*t) * sin(2π*ωx + cx)   #Boundary condition x=Lx
-ByL(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) #Boundary condition y=0
-ByR(x,t) = cos(2π*ωt*t) * sin(2π*ωx*x + cx) #Boundary condition y=Ly
-=#
-
-#=
-# Linear solution
-exact(x,y,t) = x
-u₀(x,y) = exact(x,y,0.0)
-F = nothing
-
-BxL(y,t) = 0.0
-BxR(y,t) = 1.0
-ByL(x,t) = x
-ByR(x,t) = x
-=#
-
-
-#====== New solver 1 volume ======#
-Dom = Grid2D([0.0,1.0],[0.0,1.0],nx,ny)
-
-# New solver 1 volume
-Dl = FaADE.SATs.SAT_Dirichlet(Bx0,Dom.Δx,Left,order)
-Dr = FaADE.SATs.SAT_Dirichlet(Bxl,Dom.Δx,Right,order)
-Dd = FaADE.SATs.SAT_Dirichlet(By0,Dom.Δy,Down,order)
-Du = FaADE.SATs.SAT_Dirichlet(Byl,Dom.Δy,Up,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr,Du,Dd)
-
-# Pl = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-# Pr = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-# Pu = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
-# Pd = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
-# BD = FaADE.Inputs.SATBoundaries(Pl,Pr,Pu,Pd)
-
-P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
-println("---Solving 1 volume---")
-soln = solve(P,Dom,Δt,t)
-
-
-#====== New solver 1 volume ======#
-# println("2 volume")
-# D1 = Grid2D([0.0,0.5],[0.0,1.0],21,41)
-# D2 = Grid2D([0.5,1.0],[0.0,1.0],21,41)
-
-# joints = ((Joint(2,Right),),
-#             (Joint(1,Left),))
-
-# Dom2V = GridMultiBlock((D1,D2),joints)
-
-# # Block 1 boundary
-# Dl = FaADE.SATs.SAT_Dirichlet(Bx0,D1.Δx,Left,   order)
-# Dd1 = FaADE.SATs.SAT_Dirichlet(By0,D1.Δy,Down,  order)
-# Du1 = FaADE.SATs.SAT_Dirichlet(Byl,D2.Δy,Up,    order)
-# # Block 2 boundary
-# Dr = FaADE.SATs.SAT_Dirichlet(Bxl,D2.Δx,Right,   order)
-# Dd2 = FaADE.SATs.SAT_Dirichlet(By0,D2.Δy,Down,  order)
-# Du2 = FaADE.SATs.SAT_Dirichlet(Byl,D2.Δy,Up,    order)
-
-# BD2 = Dict(1 => (Dl,Du1,Dd1), 2 => (Dr,Du2,Dd2))
-
-# P2V = Problem2D(order,u₀,K,K,Dom2V,BD2,F,nothing)
-
-# println("---Solving 2 volume---")
-# soln2V = solve(P2V,Dom2V,Δt,t)
-
-
-#====== New solver 1 volume ======#
-println("2 volume y stack")
-
-D1 = Grid2D([0.0,1.0],[0.0,0.5],41,21)
-D2 = Grid2D([0.0,1.0],[0.5,1.0],41,21)
-
-joints = ((Joint(2,Up),),
-            (Joint(1,Down),))
-
-Dom2V = GridMultiBlock((D1,D2),joints)
-
-# Block 1 boundary
-Dl1 = FaADE.SATs.SAT_Dirichlet(Bx0,D1.Δx,Left,  order)
-Dr1 = FaADE.SATs.SAT_Dirichlet(Bxl,D1.Δx,Right, order)
-Dd1 = FaADE.SATs.SAT_Dirichlet(By0,D1.Δy,Down,  order)
-# Block 2 boundary
-Dl2 = FaADE.SATs.SAT_Dirichlet(Bx0,D2.Δx,Left,  order)
-Dr2 = FaADE.SATs.SAT_Dirichlet(Bxl,D2.Δx,Right, order)
-Du2 = FaADE.SATs.SAT_Dirichlet(Byl,D2.Δy,Up,    order)
-
-BD2 = Dict(1 => (Dl1,Dr1,Dd1), 2 => (Dl2,Dr2,Du2))
-
-P2V = Problem2D(order,u₀,K,K,Dom2V,BD2,F,nothing)
-
-println("---Solving 2 volume---")
-soln2V = solve(P2V,Dom2V,Δt,t)
-
-
-
-#====== New solver 1 volume ======#
-println("3 volume")
-
-# New solover 2 volume
-D1 = Grid2D([0.0,0.4],[0.0,1.0],21,41)
-D2 = Grid2D([0.4,0.6],[0.0,1.0],21,41)
-D3 = Grid2D([0.6,1.0],[0.0,1.0],21,41)
-
-joints = ((Joint(2,Right),),
-            (Joint(1,Left),Joint(3,Right)),
-            (Joint(2,Left),))
-
-Dom3V = GridMultiBlock((D1,D2,D3),joints)
-
-# Block 1 boundary
-Dl = FaADE.SATs.SAT_Dirichlet(Bx0,D1.Δx,Left,   order)
-Dd1 = FaADE.SATs.SAT_Dirichlet(By0,D1.Δy,Down,  order)
-Du1 = FaADE.SATs.SAT_Dirichlet(Byl,D1.Δy,Up,    order)
-# Block 2 boundary
-Dd2 = FaADE.SATs.SAT_Dirichlet(By0,D2.Δy,Down,  order)
-Du2 = FaADE.SATs.SAT_Dirichlet(Byl,D2.Δy,Up,    order)
-# Block 3 boundary
-Dr = FaADE.SATs.SAT_Dirichlet(Bxl,D2.Δx,Right,  order)
-Dd3 = FaADE.SATs.SAT_Dirichlet(By0,D3.Δy,Down,  order)
-Du3 = FaADE.SATs.SAT_Dirichlet(Byl,D3.Δy,Up,    order)
-
-
-BD3 = Dict(1 => (Dl,Du1,Dd1), 2=> (Du2, Dd2), 3 => (Dr,Du3,Dd3))
-
-P3V = Problem2D(order,u₀,K,K,Dom3V,BD3,F,nothing)
-
-println("---Solving 3 volume---")
-soln3V = solve(P3V,Dom3V,Δt,t)
+exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
+u₀(R,Z) = exact(R,Z,0.0)
+F(X,t) = 0.0
+Bxy(X,t) = 0.0
 
 
 
 #====== New solver 4 volume ======#
-println("4 volume")
-D1 = Grid2D([0.0,0.5],[0.0,0.5],21,21)
-D2 = Grid2D([0.5,1.0],[0.0,0.5],21,21)
-D3 = Grid2D([0.0,0.5],[0.5,1.0],21,21)
-D4 = Grid2D([0.5,1.0],[0.5,1.0],21,21)
+println("Curvilinear volume")
 
-joints = ((Joint(2,Right),Joint(3,Up)),
-            (Joint(1,Left),Joint(4,Up)),
-            (Joint(4,Right),Joint(1,Down)),
-            (Joint(3,Left),Joint(2,Down)))
+D1 = Grid2D([-0.25,0.25],[-0.25,0.25],
+            nx,ny,
+            coord=CurvilinearMetric)
 
-Dom4V = GridMultiBlock((D1,D2,D3,D4),joints)
+T = FaADE.Grid.Torus([1.0],[1.0],[1],[0])
 
-# Block 1 BCs
-Dl1 = FaADE.SATs.SAT_Dirichlet(Bx0,D1.Δx,Left,    order)
-Dd1 = FaADE.SATs.SAT_Dirichlet(By0,D1.Δy,Down,    order)
-# Block 2 BCs
-Dr2 = FaADE.SATs.SAT_Dirichlet(Bxl,D2.Δx,Right,   order)
-Dd2 = FaADE.SATs.SAT_Dirichlet(By0,D2.Δy,Down,    order)
-# Block 3 BCs
-Dl3 = FaADE.SATs.SAT_Dirichlet(Bx0,D3.Δx,Left,    order)
-Du3 = FaADE.SATs.SAT_Dirichlet(Byl,D3.Δy,Up,      order)
-# Block 4 BCs
-Dr4 = FaADE.SATs.SAT_Dirichlet(Bxl,D4.Δx,Right,   order)
-Du4 = FaADE.SATs.SAT_Dirichlet(Byl,D4.Δy,Up,      order)
+# Right domain
+D2 = Grid2D(u->u*(T(7π/4,0.0) + [-0.25, 0.25]) + [0.25, -0.25],
+            v->[0.25, v*0.5 - 0.25],
+            v->T(v*(9π/4 - 7π/4) + 7π/4,0.0),
+            u->u*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25],
+            nx,ny)
 
-BD4= Dict(1 => (Dl1,Dd1), 2=> (Dr2,Dd2), 3 => (Dl3,Du3), 4 => (Dr4,Du4))
+# Top domain
+D3 = Grid2D(u->[u*0.5 - 0.25, 0.25],
+            v->v*(T(3π/4,0.0) + [0.25,-0.25]) + [-0.25,0.25],
+            v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25],
+            u->T(u*(π/4 - 3π/4) + 3π/4,0.0),
+            nx,ny)
+
+# Left domain
+D4 = Grid2D(u->u*(T(5π/4,0.0) + [0.25, 0.25]) + [-0.25,0.25],
+            v->T(v*(3π/4 - 5π/4) + 5π/4,0.0),
+            v->[-0.25,v*0.5 - 0.25],
+            u->u*([0.25,0.25] + T(3π/4,0.0)) + T(3π/4,0.0),
+            nx,ny)
+
+# Bottom domain
+D5 = Grid2D(u->T(u*(7π/4 - 5π/4) + 5π/4,0.0),
+            v->v*([-0.25,-0.25] - T(5π/4,0.0)) + T(5π/4,0.0),
+            v->v*([0.25,-0.25] - T(7π/4,0.0)) + T(7π/4,0.0),
+            u->[u*0.5 - 0.25, -0.25],
+            nx,ny)
+
+
+joints = ((Joint(2,Right),Joint(3,Up),Joint(4,Left),Joint(5,Down)),
+            (Joint(1,Left),Joint(3,Up),Joint(5,Down)),
+            (Joint(1,Down),Joint(2,Right),Joint(4,Left)),
+            (Joint(1,Right),Joint(3,Up),Joint(5,Down)),
+            (Joint(1,Up),Joint(4,Left),Joint(2,Right)))
+
+# joints = (1=>((2,Right),(3,Up),(4,Left),(5,Down)),
+#           2=>((1,Left),(3,Up),(5,Down)),
+#           3=>((1,Down),(2,Right),(4,Left)),
+#           4=>((1,Right),(3,Up),(5,Down)),
+#           5=>((1,Up),(4,Left),(2,Right)))
+
+Dom = GridMultiBlock((D1,D2,D3,D4,D5),joints)
+
+Dr = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δy, Right,order, D2.Δx, :Curvilinear) # Block 2 BCs
+Du = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δx, Up,   order, D2.Δy, :Curvilinear) # Block 3 BCs
+Dl = FaADE.SATs.SAT_Dirichlet(Bxy, D4.Δy, Left, order, D2.Δx, :Curvilinear) # Block 4 BCs
+Dd = FaADE.SATs.SAT_Dirichlet(Bxy, D5.Δx, Down, order, D2.Δy, :Curvilinear) # Block 5 BCs
+
+BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 
-P4V = Problem2D(order,u₀,K,K,Dom4V,BD4,F,nothing)
+using GLMakie
+gridfig = Figure()
+gridfix_ax = Axis(gridfig[1,1])
+scatter!(gridfix_ax,D1.gridx[:],D1.gridy[:],markersize=1.5)
+scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=1.5)
+scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=1.5)
+scatter!(gridfix_ax,D4.gridx[:],D4.gridy[:],markersize=1.5)
+scatter!(gridfix_ax,D5.gridx[:],D5.gridy[:],markersize=1.5)
+gridfig
+
+
+
+P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
 
 println("---Solving 4 volume---")
-soln4V = solve(P4V,Dom4V,Δt,t)
+soln = solve(P,Dom,Δt,t)
 
 
-
-
-
-
-
-println("Plotting")
-using GLMakie
-
-e = zeros(size(Dom))
-for I in eachindex(Dom)
-    e[I] = exact(Dom[I]...,t)
-end
-u0 = [u₀(Dom[i]...) for i in eachindex(Dom)]
-
+colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
 
 f = Figure()
-ax1 = Axis3(f[1,1])
-# surface!(ax1,Dom.gridx,Dom.gridy,e,colorbar=false)
-surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2],colorbar=false)
-# surface!(ax1,Dom.gridx,Dom.gridy,soln.u[2].-e,colorbar=false)
+ax = Axis3(f[1,1])
+surface!(ax,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
 
-ax2 = Axis3(f[1,2])
-surface!(ax2,Dom2V.Grids[1].gridx,Dom2V.Grids[1].gridy,soln2V.u[2][1],colorbar=false)
-surface!(ax2,Dom2V.Grids[2].gridx,Dom2V.Grids[2].gridy,soln2V.u[2][2],colorbar=false)
-
-ax3 = Axis3(f[2,1])
-surface!(ax3,Dom3V.Grids[1].gridx,Dom3V.Grids[1].gridy,soln3V.u[2][1],colorbar=false)
-surface!(ax3,Dom3V.Grids[2].gridx,Dom3V.Grids[2].gridy,soln3V.u[2][2],colorbar=false)
-surface!(ax3,Dom3V.Grids[3].gridx,Dom3V.Grids[3].gridy,soln3V.u[2][3],colorbar=false)
-
-ax4 = Axis3(f[2,2])
-surface!(ax4,Dom4V.Grids[1].gridx,Dom4V.Grids[1].gridy,soln4V.u[2][1],colorbar=false)
-surface!(ax4,Dom4V.Grids[2].gridx,Dom4V.Grids[2].gridy,soln4V.u[2][2],colorbar=false)
-surface!(ax4,Dom4V.Grids[3].gridx,Dom4V.Grids[3].gridy,soln4V.u[2][3],colorbar=false)
-surface!(ax4,Dom4V.Grids[4].gridx,Dom4V.Grids[4].gridy,soln4V.u[2][4],colorbar=false)
-
+scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+scatter!(ax,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
+scatter!(ax,D4.gridx[:],D4.gridy[:],-ones(length(D4)),markersize=1.5)
+scatter!(ax,D5.gridx[:],D5.gridy[:],-ones(length(D5)),markersize=1.5)
 f
-
-# p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 

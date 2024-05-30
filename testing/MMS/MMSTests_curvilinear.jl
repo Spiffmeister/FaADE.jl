@@ -68,7 +68,7 @@ function comp_MMS(Dx,Dy,npts,
             Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
             BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
         end
-        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
+        BD = (Bx0,BxL,By0,ByL)
 
 
         Δt = dt_scale*min(Dom.Δx,Dom.Δy)^2

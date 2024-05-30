@@ -115,8 +115,8 @@ struct InterfaceBoundaryData{
 end
 function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
 
-    BufferIn    = zeros(TT,order)
-    BufferOut   = zeros(TT,order)
+    BufferIn    = zeros(TT,2)
+    BufferOut   = zeros(TT,2)
     if BC.side == Right
         I = CartesianIndices((1:order,))
     elseif BC.side == Left
@@ -129,8 +129,8 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) wh
 
     if BC.side ∈ [Left,Right]
         n = G2.ny
-        BufferIn    = zeros(TT,(order,n))
-        BufferOut   = zeros(TT,(order,n))
+        BufferIn    = zeros(TT,(order+1,n))
+        BufferOut   = zeros(TT,(order+1,n))
 
         if BC.side == Right
             I = CartesianIndices((1:order,1:n))
@@ -140,8 +140,8 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) wh
 
     elseif BC.side ∈ [Up,Down]
         n = G2.nx
-        BufferIn    = zeros(TT,(n,order))
-        BufferOut   = zeros(TT,(n,order))
+        BufferIn    = zeros(TT,(n,order+1))
+        BufferOut   = zeros(TT,(n,order+1))
 
         if BC.side == Up
             I = CartesianIndices((1:n,1:order))
@@ -154,10 +154,6 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint,order::Int) wh
 end
 
 
-
-
-function getjoint(BC::BoundaryData) end
-getjoint(BC::InterfaceBoundaryData) = BC.Joint
 
 
 function GenerateBoundaries(P::Problem1D,G::LocalGridType{TT,1}) where TT
@@ -214,10 +210,10 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
 
     tmpDict = Dict()
 
-    GetMetricType(G[I]) == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
+    GetMetricType(G.Grids[I]) == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
 
     for Joint in jts
-        BC = SAT_Interface(G.Grids[Joint.index].Δx,G.Grids[I].Δx,Joint.side,GetAxis(Joint.side),P.order)
+        BC = SAT_Interface(G.Grids[Joint.index].Δx,G.Grids[I].Δx,Joint.side,GetAxis(Joint.side),P.order,Δy=G.Grids[I].Δy,coordinates=sattype)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint.index,P.order)
     end
 
@@ -732,7 +728,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     end
 
     typeof(BS[1].Boundary).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
-    sattype = :Constant
+    # sattype = :Constant
     for BC in BS
         # @show :Variable ∈ typeof(BC.Boundary).parameters
         if :Variable ∈ typeof(BC.Boundary).parameters

@@ -36,7 +36,7 @@ struct SAT_Interface{
         else
             Δxₗ = Δx₁
             Δxᵣ = Δx₂
-    
+            
             τ₀, τ₁, τ₂ = SATpenalties(Interface,Δxₗ,Δxᵣ,order)
         end
 
@@ -54,7 +54,7 @@ struct SAT_Interface{
 
         loopaxis = SelectLoopDirection(axis)
 
-        new{TN,:Cartesian,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
+        new{TN,coordinates,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(side,axis,order,
             D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates)
     end
 
@@ -149,22 +149,31 @@ function SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interfa
     m = size(dest,mod1(SI.axis+1,2))
 
     if SI.side == Left
-        DEST = view(dest,   1,1:m)
-        SRC = view(u[1,1:m] - buffer[1,1:m], :,:)
-        C = view(cxy[1,1:m]-cxy[n,1:m],:,:) # needs to be fixed, should pull from both regions
+        DEST= view(dest,        1,  1:m)
+        SRC = view(u[1,1:m],    :,  1)
+        C   = view(cxy[1,1:m],  :,  1) # needs to be fixed, should pull from both regions
+
+        DEST .= DEST + -buffer[3,:]
     elseif SI.side == Right
-        DEST = view(dest,   n,1:m)
-        SRC = view(buffer[1,1:m] - u[n,1:m],:,:)
-        C = view(cxy[n,1:m]-cxy[1,1:m],:,:) # needs to be fixed, should pull from both regions
+        DEST= view(dest,        n,  1:m)
+        SRC = view(-u[n,1:m],   :,  1)
+        C   = view(cxy[n,1:m],  :,  1) # needs to be fixed, should pull from both regions
+
+        DEST .= DEST + buffer[3,:]
     elseif SI.side == Up
-        DEST = view(dest,   1:m,1)
-        SRC = view(buffer[:,1] - u[:,n], :,1)
-        C = view(cxy[:,1] - cxy[:,n],:,1) # needs to be fixed, should pull from both regions
+        DEST = view(dest,                   1:m,    1)
+        SRC = view(u[:,n] - buffer[:,1],    :,      1)
+        C = view(cxy[:,1] - cxy[:,n],       :,      1) # needs to be fixed, should pull from both regions
+
+        DEST .= DEST + buffer[:,3]
     else
-        DEST = view(dest,   1:m,n)
-        SRC = view(-u[:,1] + buffer[:,1],:,1)
-        C = view(-cxy[:,1] + cxy[:,n],:,1) # needs to be fixed, should pull from both regions
+        DEST = view(dest,                   1:m,    n)
+        SRC = view(-u[:,1] + buffer[:,1],   :,      1)
+        C = view(-cxy[:,1] + cxy[:,n],      :,      1) # needs to be fixed, should pull from both regions
+
+        DEST .= DEST + -buffer[:,3]
     end
+
     FirstDerivativeTranspose!(DEST,SRC,m,SI.Δy,SI.order,TT(1))
 
     dest
@@ -206,7 +215,36 @@ function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT
     end
     dest
 end
+"""
+    SAT_Interface_cache!
+Computes the required values from the LEFT handed block for sending to the buffer for RIGHT handed interface conditions
+"""
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN}
+    SAT_Interface_cache!(dest,u,c,SI)
 
+    # m = size(dest,mod1(SI.axis+1,2))
+
+    # if SI.side == Left
+    #     DEST = view(dest[3,:],  :, 1)
+    #     SRC = view(u[end,:],    :, 1)
+    #     C = view(cxy[end,:],    :, 1)
+    # elseif SI.side == Right
+    #     DEST= view(dest[3,:],:, 1)
+    #     SRC = view(u[1,:],  :, 1)
+    #     C   = view(cxy[1,:],:, 1)
+    # elseif SI.side == Up
+    # else
+    # end
+
+    # # @show m
+    # # @show DEST
+    # # @show SRC
+    # # @show C
+
+    # FirstDerivativeTranspose!(DEST,SRC,C,m,SI.Δy,SI.order,TT(1))
+
+    # dest
+end
 
 
 
