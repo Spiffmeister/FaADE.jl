@@ -115,8 +115,8 @@ struct InterfaceBoundaryData{
 end
 function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint,order::Int) where {TT}
 
-    BufferIn    = zeros(TT,2)
-    BufferOut   = zeros(TT,2)
+    BufferIn    = zeros(TT,order)
+    BufferOut   = zeros(TT,order)
     if BC.side == Right
         I = CartesianIndices((1:order,))
     elseif BC.side == Left
@@ -213,7 +213,17 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
     GetMetricType(G.Grids[I]) == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
 
     for Joint in jts
-        BC = SAT_Interface(G.Grids[Joint.index].Δx,G.Grids[I].Δx,Joint.side,GetAxis(Joint.side),P.order,Δy=G.Grids[I].Δy,coordinates=sattype)
+        if (Joint.side == Left) || (Joint.side == Right)
+            Δx₁ = G.Grids[I].Δx
+            Δx₂ = G.Grids[Joint.index].Δx
+            Δy₁ = G.Grids[I].Δy
+        else
+            Δx₁ = G.Grids[I].Δy
+            Δx₂ = G.Grids[Joint.index].Δy
+            Δy₁ = G.Grids[I].Δx
+        end
+
+        BC = SAT_Interface(Δx₁,Δx₂,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint.index,P.order)
     end
 
@@ -627,7 +637,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
 
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
-    PMap = nothing
+    
+    PMap = P.Parallel
     source = P.source
 
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)

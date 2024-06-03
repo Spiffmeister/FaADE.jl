@@ -54,44 +54,67 @@ struct ParallelData{TT<:Real,
     MagneticField   :: BT
 
     τ_i         :: Vector{TT}
-
-    function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing) where {TT}
-
-        intercept_fieldlines = FieldLineIntercept(intercept)
-        # intercept_fieldlines = intercept
-
-        # K = DiffusionCoefficient(κ)
-
-        # τ = -sqrt(1.0/((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1]) * G.Δx*G.Δy))
-        # τ = -1/(G.Δx*G.Δy)
-        # τ = TT(-1)
-
-        τ = TT(1)
-
-        Hx = DiagonalH(order,G.Δx,G.nx)
-        Hy = DiagonalH(order,G.Δy,G.ny)
-
-        H = CompositeH(Hx,Hy)
-
-
-        # gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
-        # gridy = LinRange(G.gridy[1],G.gridy[end],G.ny)
-
-        gridx = G.gridx[1:end,1]
-        gridy = G.gridy[1,1:end]
-
-        w_f = zeros(TT,size(G))
-        w_b = zeros(TT,size(G))
-
-        Bp = zeros(TT,(3,3))
-        MF = MagneticField{typeof(B),:EQUILIBRIUM,TT,typeof(Bp)}(B,false,Bp)
-
-        if isnothing(B)
-            # @warn "B not provided, perpendicular solve may not be performed correctly."
-        end
-
-        new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF,[TT(0)])
-    end
+    
 end
+function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing) where {TT}
 
+    intercept_fieldlines = FieldLineIntercept(intercept)
+    # intercept_fieldlines = intercept
+
+    # K = DiffusionCoefficient(κ)
+
+    # τ = -sqrt(1.0/((G.gridx[end]-G.gridx[1])*(G.gridy[end]-G.gridy[1]) * G.Δx*G.Δy))
+    # τ = -1/(G.Δx*G.Δy)
+    # τ = TT(-1)
+
+    τ = TT(1)
+
+    Hx = DiagonalH(order,G.Δx,G.nx)
+    Hy = DiagonalH(order,G.Δy,G.ny)
+
+    H = CompositeH(Hx,Hy)
+
+
+    # gridx = LinRange(G.gridx[1],G.gridx[end],G.nx)
+    # gridy = LinRange(G.gridy[1],G.gridy[end],G.ny)
+
+    gridx = G.gridx[1:end,1]
+    gridy = G.gridy[1,1:end]
+
+    w_f = zeros(TT,size(G))
+    w_b = zeros(TT,size(G))
+
+    Bp = zeros(TT,(3,3))
+    MF = MagneticField{typeof(B),:EQUILIBRIUM,TT,typeof(Bp)}(B,false,Bp)
+
+    if isnothing(B)
+        # @warn "B not provided, perpendicular solve may not be performed correctly."
+    end
+
+    new{TT,2,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF,[TT(0)])
+end
+function ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),intercept=nothing) where TT
+
+    intercept_fieldlines = FieldLineIntercept(intercept)
+
+    τ = TT(-1)
+
+    Hx = DiagonalH(order,G.Δx,G.n)
+
+    H = CompositeH(Hx,Hx)
+
+    gridx = G.grid
+    gridy = zeros(TT,1)
+
+    Δx = G.Δx
+    Δy = TT(0)
+
+    w_f = zeros(TT,(length(G),1))
+    w_b = zeros(TT,(length(G),1))
+
+    Bp = zeros(TT,(1,1))
+    MF = MagneticField{Nothing,:EQUILIBRIUM,TT,typeof(Bp)}(nothing,false,Bp)
+    
+    ParallelData{TT,1,typeof(gridx),typeof(MF)}(PGrid,κ,τ,intercept_fieldlines,gridx,gridy,Δx,Δy,H,w_f,w_b,MF,[TT(0)])
+end
 

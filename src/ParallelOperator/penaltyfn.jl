@@ -1,35 +1,4 @@
 
-#=
-struct FieldLineIntercept{F<:Union{Function,Nothing}}
-    Intercept :: F
-end
-
-
-struct ParallelData{TT<:Real,
-        DIM}
-    PGrid       :: ParallelGrid
-    κ           :: TT
-    Intercept   :: FieldLineIntercept
-    gridx       :: LinRange
-    gridy       :: LinRange
-    Δx          :: TT
-    Δy          :: TT
-
-    function ParallelData(PGrid::ParallelGrid,Grid::Grid2D{TT};κ=TT(1),intercept=nothing) where {TT}
-
-        intercept_fieldlines = FieldLineIntercept(intercept)
-        # intercept_fieldlines = intercept
-
-        # K = DiffusionCoefficient(κ)
-
-        gridx = LinRange(Grid.gridx[1],Grid.gridx[end],Grid.nx)
-        gridy = LinRange(Grid.gridy[1],Grid.gridy[end],Grid.ny)
-
-        new{TT,2}(PGrid,κ,intercept_fieldlines,gridx,gridy,Grid.Δx,Grid.Δy)
-    end
-end
-=#
-
 """
     generate_parallel_penalty
 Generates a 2D or 3D parallel penalty function given a parallel grid mapping.
@@ -148,6 +117,38 @@ end
 """
     For multiblock
 """
+function applyParallelPenalty! end
+
+function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,1},grid::Grid1D{TT,MET}) where {TT,VT,MET}
+    κ = P.κ
+    w_f = P.w_f
+    H = P.H
+
+    I = LinearInterpolator(P.gridx,u)
+
+    # w_f ← P_f u + P_b u
+    for i in eachindex(P.gridx)
+        w_f[i] = I(P.PGrid.Fplane.x[i]) + I(P.PGrid.Bplane.x[i])
+        # w_f[i] = w_f[i]/2
+    end
+
+    # Tune the parallel penalty
+    τ = P.τ/grid.Δx
+    # P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
+
+    P.w_b[1,1] = maximum(u - w_f)
+
+    # u^{n+1} = (1+θ)Δt κ τ
+    # _compute_u!(u,w_f,κ,τ,Δt,H,length(P.gridx),length(P.gridy))
+
+    for i in 1:grid.n
+        u[i] = TT(1)/(TT(1) - τ*κ/TT(2) * Δt * H.H[1][i]) *
+            (u[i] - Δt * κ * τ / TT(4) * H.H[1][i] * w_f[i])
+    end
+
+    u
+end
+
 function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,θ::TT,
     P::ParallelData{TT,2},grid::Grid2D{TT,MET}) where {TT,MET}
 
@@ -188,15 +189,6 @@ function _compute_u!(u::AT,w_f::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,n
     for j in 1:ny
         for i in 1:nx
             ### CURRENTLY IN THE PAPER
-            # u[i,j] = 1/(1 + θ * Δt * κ * τ / H[i,j]) * (
-            #     u[i,j] + 
-            #     +θ*Δt*κ*τ*w_f[i,j]/H[i,j] #+ 
-            #     -(1-θ)*Δt*κ*τ*w_b[i,j]/H[i,j] ) #w_b = [I - 0.5(P_f + P_b)] u_n
-
-            # u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
-            #     u[i,j] + 
-            #     +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
-            #     )
 
             u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
                 u[i,j] + 
@@ -257,8 +249,6 @@ function compute_parallel_operator(dest::AT,u::AT,P::ParallelData) where {AT}
     @. dest = u - dest
 end
 
-# function P_parallel(dest,u,w,κ,τ)
-#     @. dest = -κ * τ * P.H (u - w/2)
-# end
+
 
 
