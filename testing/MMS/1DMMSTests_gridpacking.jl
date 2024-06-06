@@ -7,13 +7,11 @@ using FaADE
 
 
 
-rundirichlet    = true
-runneumann      = false
-runperiodic     = false
+rundirichlet = true
+runneumann = true
+runperiodic = true
 
 saverates = true
-
-# plots = false
 
 ###=== GLOBAL PROPS ===###
 𝒟x = [0.0,1.0]
@@ -33,12 +31,17 @@ end
 
 
 
+function packingfunction(x)
+    return x
+end
+
+
 
 
 function comp_MMS(Dx,npts,
         BoundaryX0,BX0Type,BoundaryXL,BXLType,
         F,ũ,ũ₀,order;
-        dt_scale=0.01,t_f=5.0,k=1.0,θ=1.0)
+        dt_scale=0.10,t_f=5.0,k=1.0,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
@@ -46,14 +49,16 @@ function comp_MMS(Dx,npts,
     relerr = []
     interr = []
 
+
+
     # Loop
     for n in npts
         Dom = Grid1D(Dx,n)
         
         # X boundaries
         if BX0Type == Periodic
-            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,order,Left)
-            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,order,Right)
+            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
+            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
         elseif BX0Type == Dirichlet
             Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left, order)
             BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,order)
@@ -88,64 +93,12 @@ function comp_MMS(Dx,npts,
 end
 
 
-function time_MMS(Dx,npts,
-        BoundaryX0,BX0Type,BoundaryXL,BXLType,
-        F,ũ,ũ₀,order;
-        dt_scale=0.10,t_f=5.0,k=1.0,θ=1.0)
-
-    comp_soln = []
-    MMS_soln = []
-    grids = []
-    relerr = []
-    interr = []
-
-    # Loop
-    for n in npts
-        Dom = Grid1D(Dx,n)
-        
-        # X boundaries
-        if BX0Type == Periodic
-            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,order,Left)
-            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,order,Right)
-        elseif BX0Type == Dirichlet
-            Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left, order)
-            BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,order)
-        elseif BX0Type == Neumann
-            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,1,order)
-            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,1,order)
-        end
-        BD = (Bx0,BxL)
-
-        Δt = dt_scale*Dom.Δx
-
-        K = k
-
-        P = Problem1D(order,ũ₀,K,Dom,BD,F,nothing)
-
-        println("Solving n=",Dom.n," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
-
-        u_MMS = generate_MMS(ũ,Dom,soln.t[2]+Δt)
-
-        push!(comp_soln,soln)
-        push!(grids,Dom)
-        push!(MMS_soln,u_MMS)
-        
-        push!(relerr, norm(u_MMS .- soln.u[2])/norm(u_MMS))
-        push!(interr, norm(u_MMS[order:end-order+1] .- soln.u[2][order:end-order+1])/norm(u_MMS[order:end-order+1]))
-    end
-
-    conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
-
-    return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,interr=interr,conv_rate=conv_rate,npts=npts)
-end
-
 
 
 ###=== MMS TESTS ===###
-npts = [51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
+npts = [21,31,41,51,61,71,81,91,101,111,121,131,141,151,161,171,181,191,201]
 
-@show θ = 1.0
+@show θ = 0.5
 
 
 # Solution
@@ -168,12 +121,9 @@ if rundirichlet
     # Dirichlet
     println("=====")
     println("Dirichlet")
-    # cx=0.7
-    # ωx=12.5
-    # ωt=1.0
     cx=1.0
-    ωx=16.5
-    ωt=21.0
+    ωx=9.0
+    ωt=1.0
 
 
     analytic(x,t) = ũ(x,t, ωt=ωt, ωx=ωx, cx=cx)
@@ -209,12 +159,9 @@ if runneumann
     println("=====")
     println("Neumann")
 
-    cx=0.7
-    ωx=12.5
+    cx=1.0
+    ωx=9.0
     ωt=1.0
-    # cx=0.0
-    # ωx=1.0
-    # ωt=5.0
 
     println("ωx=",ωx,"  cx=",cx)
 
@@ -251,12 +198,9 @@ if runperiodic
     println("Periodic")
 
     cx=1.0
-    ωx=12.0
+    ωx=8.0
     ωt=1.0
-    # cx=1.0
-    # ωx=1.0
-    # ωt=12.0
-    
+
     println("ωx=",ωx,",  cx=",cx)
 
     analytic(x,t) = ũ(x,t,ωt=ωt, ωx=ωx, cx=cx)
@@ -288,7 +232,7 @@ end
 if saverates
     using DelimitedFiles
 
-    nameappend=string("spatial")
+    nameappend=string("timeconv")
 
     open(string("testing/MMS/1DMMS_Tests_O2",nameappend,".csv"),"w") do io
         writedlm(io,[npts O2_DirichletMMS.relerr O2_NeumannMMS.relerr O2_PeriodicMMS.relerr])
@@ -299,34 +243,3 @@ if saverates
     end
 end
 
-
-
-
-# if plots
-#     using GLMakie
-
-#     f = Figure()
-
-#     Ax = Axis(f[1,1])
-#     menu1 = Menu(f[2,1], options = ["$N" for N in npts], default="MMS")
-
-#     on(menu1.selection) do s
-#         empty!(Ax)
-#         if s == "MMS"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end])
-#         elseif s == "Computed"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.comp_soln[end].u[2])
-#         elseif s == "Error"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end] .- O2_DirichletMMS.comp_soln[end].u[2])
-#         end
-#     end
-#     notify(menu1.selection)
-#     f
-# end
-
-plot(O4_DirichletMMS.comp_soln[1].grid.grid,O4_DirichletMMS.comp_soln[1].u[2] .- O4_DirichletMMS.MMS_soln[1])
-plot!(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.comp_soln[end].u[2] .- O4_DirichletMMS.MMS_soln[end])
-
-
-plot(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.MMS_soln[end])
-plot!(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.comp_soln[end].u[2])

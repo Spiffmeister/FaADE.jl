@@ -199,7 +199,7 @@ Construct a 2D grid from the boundary functions in ``x`` and ``y`` and the numbe
 
 Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate in the ``x`` direction and ``v`` is the coordinate in the ``y`` direction and where ``u`` and ``v`` are in the range ``[0,1]``.
 """
-function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=2)
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=nothing)
     X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
     Grid2D(X,Y;order=order)
 end

@@ -69,11 +69,11 @@ function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
         end
 
         
-        if parallel
-            for I in eachblock(DBlock)
-                compute_parallel_operator(DBlock[I].Parallel.w_b,DBlock[I].u,DBlock[I].Parallel)
-            end
-        end
+        # if parallel
+        #     for I in eachblock(DBlock)
+        #         compute_parallel_operator(DBlock[I].Parallel.w_b,DBlock[I].u,DBlock[I].Parallel)
+        #     end
+        # end
 
 
         # implicitsolve(P,G,Δt,t_f,SD)

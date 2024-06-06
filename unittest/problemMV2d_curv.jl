@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 41
+nx = ny = 11
 
 Δt = 1e-3
-# t = Δt
-t = 0.76
+t = Δt
+# t = 0.76
 
 ωt = 1.0
 ωx = 1.0
@@ -53,9 +53,15 @@ Bxy(X,t) = 0.0
 #====== New solver 4 volume ======#
 println("Curvilinear volume")
 
-D1 = Grid2D([-0.25,0.25],[-0.25,0.25],
-            nx,ny,
-            coord=CurvilinearMetric)
+# D1 = Grid2D([-0.25,0.25],[-0.25,0.25],
+#             nx,ny,
+#             coord=CurvilinearMetric)
+
+D1 = Grid2D(u->[u*0.5 - 0.25,-0.25],
+            v->[-0.25,v*0.5 - 0.25],
+            v->[0.25,v*0.5 - 0.25],
+            u->[u*0.5 - 0.25, 0.25],
+    nx,ny)
 
 T = FaADE.Grid.Torus([1.0],[1.0],[1],[0])
 
@@ -114,11 +120,11 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 using GLMakie
 gridfig = Figure()
 gridfix_ax = Axis(gridfig[1,1])
-scatter!(gridfix_ax,D1.gridx[:],D1.gridy[:],markersize=1.5)
-scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=1.5)
-scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=1.5)
-scatter!(gridfix_ax,D4.gridx[:],D4.gridy[:],markersize=1.5)
-scatter!(gridfix_ax,D5.gridx[:],D5.gridy[:],markersize=1.5)
+scatter!(gridfix_ax,D1.gridx[:],D1.gridy[:],markersize=10.5)
+scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=10.5)
+scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=10.5)
+scatter!(gridfix_ax,D4.gridx[:],D4.gridy[:],markersize=10.5)
+scatter!(gridfix_ax,D5.gridx[:],D5.gridy[:],markersize=10.5)
 gridfig
 
 
@@ -139,10 +145,10 @@ surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false,
 surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
 surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
 
-scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
-scatter!(ax,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
-scatter!(ax,D4.gridx[:],D4.gridy[:],-ones(length(D4)),markersize=1.5)
-scatter!(ax,D5.gridx[:],D5.gridy[:],-ones(length(D5)),markersize=1.5)
+# scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+# scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+# scatter!(ax,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
+# scatter!(ax,D4.gridx[:],D4.gridy[:],-ones(length(D4)),markersize=1.5)
+# scatter!(ax,D5.gridx[:],D5.gridy[:],-ones(length(D5)),markersize=1.5)
 f
 

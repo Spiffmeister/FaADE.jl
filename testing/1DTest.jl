@@ -23,7 +23,10 @@ order = 2
 BoundaryLeft =  SAT_Dirichlet(t->sin(1.0),       Dom.Δx, Left, order)
 BoundaryRight = SAT_Dirichlet(t->sin(4π + 1.0),  Dom.Δx, Right, order)
 
-BD = SATBoundaries(BoundaryLeft,BoundaryRight)
+BLeft =     (:Dirichlet,:SAT,t->sin(1.0),Left)
+BRight =    (:Dirichlet,:SAT,t->sin(1.0),Left)
+
+BD = (BoundaryLeft,BoundaryRight)
 
 
 P = Problem1D(order,u₀,K,Dom,BD)

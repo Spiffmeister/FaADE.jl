@@ -46,9 +46,35 @@ Ky = 1.0
 # exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
 exact(R,Z,t) = sin(2π*R*ωx + cx)
 u₀(R,Z) = exact(R,Z,0.0)
-F(X,t) = 0.0
+F(X,t) = -4π^2*sin(2π)
 # Bxy(X,t) = exp.( -(X[1].^2 + X[2].^2) / 0.1 )
 Bxy(X,t) = sin(2π*X[1]*ωx + cx)
+
+
+
+D1 = Grid2D([-0.25,0.25],[-0.25,0.25],nx,ny)
+D2 = Grid2D([0.25,0.75],[-0.25,0.25],nx,ny)
+
+joints = ((Joint(2,Right),),
+            (Joint(1,Left),),)
+
+Domcart = GridMultiBlock((D1,D2),joints)
+
+Dd1 = SAT_Dirichlet(Bxy, D1.Δy, Down, order) # Block 5 BCs
+Du1 = SAT_Dirichlet(Bxy, D1.Δy, Up,   order) # Block 3 BCs
+Dl1 = SAT_Dirichlet((X,t)->-1.0, D1.Δx, Left, order) # Block 1 BCs
+
+Dr2 = SAT_Dirichlet((X,t)->-1.0, D2.Δy, Right,order) # Block 2 BCs
+Dd2 = SAT_Dirichlet(Bxy, D2.Δx, Down, order) # Block 5 BCs
+Du2 = SAT_Dirichlet(Bxy, D2.Δx, Up,   order) # Block 3 BCs
+
+BD = Dict(1 => (Dd1,Du1,Dl1), 2 => (Dr2,Dd2,Du2))
+
+
+Pcart = Problem2D(order,u₀,K,K,Domcart,BD,F,nothing)
+
+solncart = solve(Pcart,Domcart,Δt,t)
+
 
 
 #====== New solver 4 volume ======#
@@ -74,34 +100,24 @@ D2 = Grid2D(u->u*(T(7π/4,0.0) + [-0.25, 0.25]) + [0.25, -0.25],
             nx,ny)
 
 
-# Left domain
-D3 = Grid2D(u->u*(T(5π/4,0.0) + [0.25, 0.25]) + [-0.25,0.25],
-            v->T(v*(3π/4 - 5π/4) + 5π/4,0.0),
-            v->[-0.25,v*0.5 - 0.25],
-            u->u*([0.25,0.25] + T(3π/4,0.0)) + T(3π/4,0.0),
-            nx,ny)
 
-
-joints = ((Joint(2,Right),Joint(3,Left)),
+joints = ((Joint(2,Right),),
             (Joint(1,Left),),
-            (Joint(1,Right),),
-)
+            )
 
 
-Dom = GridMultiBlock((D1,D2,D3),joints)
+Dom = GridMultiBlock((D1,D2),joints)
 
-Dd1 = FaADE.SATs.SAT_Dirichlet(Bxy, D1.Δx, Down, order, D1.Δy, :Curvilinear) # Block 5 BCs
-Du1 = FaADE.SATs.SAT_Dirichlet(Bxy, D1.Δx, Up,   order, D1.Δy, :Curvilinear) # Block 3 BCs
+Dd1 = FaADE.SATs.SAT_Dirichlet(Bxy, D1.Δy, Down, order, D1.Δx, :Curvilinear) # Block 5 BCs
+Du1 = FaADE.SATs.SAT_Dirichlet(Bxy, D1.Δy, Up,   order, D1.Δx, :Curvilinear) # Block 3 BCs
+Dl1 = SAT_Dirichlet((X,t)->-1.0, D1.Δx, Left, order, D1.Δy, :Curvilinear) # Block 1 BCs
 
 Dr2 = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δy, Right,order, D2.Δx, :Curvilinear) # Block 2 BCs
 Dd2 = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δx, Down, order, D2.Δy, :Curvilinear) # Block 5 BCs
 Du2 = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δx, Up,   order, D2.Δy, :Curvilinear) # Block 3 BCs
 
-Dl3 = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δy, Left, order, D3.Δx, :Curvilinear) # Block 4 BCs
-Dd3 = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δx, Down, order, D3.Δy, :Curvilinear) # Block 5 BCs
-Du3 = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δx, Up,   order, D3.Δy, :Curvilinear) # Block 3 BCs
 
-BD = Dict(1 => (Dd1,Du1), 2 => (Dr2,Dd2,Du2), 3 => (Dl3,Dd3,Du3))
+BD = Dict(1 => (Dd1,Du1,Dl1), 2 => (Dr2,Dd2,Du2))
 
 
 
@@ -110,7 +126,6 @@ gridfig = Figure()
 gridfix_ax = Axis(gridfig[1,1])
 scatter!(gridfix_ax,D1.gridx[:],D1.gridy[:],markersize=1.5)
 scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=1.5)
-scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=1.5)
 gridfig
 
 
@@ -125,23 +140,20 @@ colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
 
 f = Figure()
 
-# ax1 = Axis3(f[1,1])
-# surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false, colorrange=colourrange)
-# surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false, colorrange=colourrange)
-# surface!(ax1,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[1][3],colorbar=false, colorrange=colourrange)
+ax1 = Axis3(f[1,1])
+surface!(ax1,Domcart.Grids[1].gridx, Domcart.Grids[1].gridy, solncart.u[2][1],colorbar=false, colorrange=colourrange)
+surface!(ax1,Domcart.Grids[2].gridx, Domcart.Grids[2].gridy, solncart.u[2][2],colorbar=false, colorrange=colourrange)
 
 # scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 # scatter!(ax1,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
 
-ax2 = Axis3(f[1,1])
+ax2 = Axis3(f[1,2])
 surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
 surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
-surface!(ax2,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
 
 scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
-scatter!(ax2,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
 
 f
 
@@ -150,11 +162,12 @@ f
 
 h = Figure()
 axh1 = Axis(h[1,1])
-lines!(axh1,Dom.Grids[1].gridx[:,21],soln.u[1][1][:,21])
-lines!(axh1,Dom.Grids[2].gridx[:,21],soln.u[1][2][:,21])
-lines!(axh1,Dom.Grids[3].gridx[:,21],soln.u[1][3][:,21])
+# lines!(axh1,Domcart.Grids[1].gridx[:,21],solncart.u[2][1][:,21])
+# lines!(axh1,Domcart.Grids[2].gridx[:,21],solncart.u[2][2][:,21])
+lines!(axh1,Domcart.Grids[1].gridy[1,:],solncart.u[2][1][end,:])
+scatter!(axh1,Domcart.Grids[2].gridy[1,:],solncart.u[2][2][1,:])
 axh2 = Axis(h[1,2])
-lines!(axh2,Dom.Grids[1].gridx[:,21],soln.u[2][1][:,21])
-lines!(axh2,Dom.Grids[2].gridx[:,21],soln.u[2][2][:,21])
-lines!(axh2,Dom.Grids[3].gridx[:,21],soln.u[2][3][:,21])
-
+# lines!(axh2,Dom.Grids[1].gridx[:,21],soln.u[2][1][:,21])
+# lines!(axh2,Dom.Grids[2].gridx[:,21],soln.u[2][2][:,21])
+lines!(axh2,Dom.Grids[1].gridy[1,:],soln.u[2][1][end,:])
+scatter!(axh2,Dom.Grids[2].gridy[1,:],soln.u[2][2][1,:])

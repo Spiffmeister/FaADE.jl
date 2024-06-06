@@ -214,8 +214,8 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
 
     for Joint in jts
         if (Joint.side == Left) || (Joint.side == Right)
-            Δx₁ = G.Grids[I].Δx
-            Δx₂ = G.Grids[Joint.index].Δx
+            Δx₁ = G.Grids[I].Δx# * G.Grids[I].qx[1]
+            Δx₂ = G.Grids[Joint.index].Δx# * G.Grids[Joint.index].qx[1]
             Δy₁ = G.Grids[I].Δy
         else
             Δx₁ = G.Grids[I].Δy
