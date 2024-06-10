@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 41
+nx = ny = 81
 
 Δt = 1e-3
-t = Δt
-# t = 0.76
+# t = Δt
+t = 0.76
 
 ωt = 1.0
 ωx = 1.0 
@@ -46,34 +46,10 @@ Ky = 1.0
 # exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
 exact(R,Z,t) = sin(2π*R*ωx + cx)
 u₀(R,Z) = exact(R,Z,0.0)
-F(X,t) = -4π^2*sin(2π)
+# F(X,t) = 4π^2*ωx^2*sin(2π*X[1]*ωx + cx)
+F(X,t) = 0.0
 # Bxy(X,t) = exp.( -(X[1].^2 + X[2].^2) / 0.1 )
 Bxy(X,t) = sin(2π*X[1]*ωx + cx)
-
-
-
-D1 = Grid2D([-0.25,0.25],[-0.25,0.25],nx,ny)
-D2 = Grid2D([0.25,0.75],[-0.25,0.25],nx,ny)
-
-joints = ((Joint(2,Right),),
-            (Joint(1,Left),),)
-
-Domcart = GridMultiBlock((D1,D2),joints)
-
-Dd1 = SAT_Dirichlet(Bxy, D1.Δy, Down, order) # Block 5 BCs
-Du1 = SAT_Dirichlet(Bxy, D1.Δy, Up,   order) # Block 3 BCs
-Dl1 = SAT_Dirichlet((X,t)->-1.0, D1.Δx, Left, order) # Block 1 BCs
-
-Dr2 = SAT_Dirichlet((X,t)->-1.0, D2.Δy, Right,order) # Block 2 BCs
-Dd2 = SAT_Dirichlet(Bxy, D2.Δx, Down, order) # Block 5 BCs
-Du2 = SAT_Dirichlet(Bxy, D2.Δx, Up,   order) # Block 3 BCs
-
-BD = Dict(1 => (Dd1,Du1,Dl1), 2 => (Dr2,Dd2,Du2))
-
-
-Pcart = Problem2D(order,u₀,K,K,Domcart,BD,F,nothing)
-
-solncart = solve(Pcart,Domcart,Δt,t)
 
 
 
@@ -136,17 +112,27 @@ println("---Solving 4 volume---")
 soln = solve(P,Dom,Δt,t)
 
 
+e = [zeros(size(D1)),zeros(size(D2))]
+for I in eachindex(D1)
+    e[1][I] = exact(D1.gridx[I],D1.gridy[I],t)
+end
+for I in eachindex(D2)
+    e[2][I] = exact(D2.gridx[I],D2.gridy[I],t)
+end
+
+
+
 colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
 
 f = Figure()
 
 ax1 = Axis3(f[1,1])
-surface!(ax1,Domcart.Grids[1].gridx, Domcart.Grids[1].gridy, solncart.u[2][1],colorbar=false, colorrange=colourrange)
-surface!(ax1,Domcart.Grids[2].gridx, Domcart.Grids[2].gridy, solncart.u[2][2],colorbar=false, colorrange=colourrange)
+# surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
+# surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
 
-# scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-# scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
-# scatter!(ax1,D3.gridx[:],D3.gridy[:],-ones(length(D3)),markersize=1.5)
+surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false, colorrange=colourrange)
+surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false, colorrange=colourrange)
+
 
 ax2 = Axis3(f[1,2])
 surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)

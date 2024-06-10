@@ -35,20 +35,19 @@ In-place conjugate gradient method. Designed for multiblock problems
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-12,maxIT::Int=1000,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-12,maxIT::Int=100,warnings=false) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
     local dₖAdₖ::TT
     local βₖ::TT
     local αₖ::TT
-
     # testA!(:u,DBlock[1]) # cache ← Au
     A!(:u,DBlock) # cache ← Au = u - θ*Δt*Du
+     
     setValue(:rₖ,:cache,DBlock) # r ← cache
     muladd!(:rₖ,:b,DBlock,α=TT(-1)) # r = b - cache
     setValue(:dₖ,:rₖ,DBlock) # d = r
-    # @show "CG-------------------"
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     # unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
@@ -75,7 +74,6 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
         muladd!(:dₖ,:rₖ,DBlock,α=βₖ/rnorm^2) #dₖ = rₖ + βₖ/rnorm^2 * dₖ
         
         rnorm = sqrt(βₖ)
-        # println(rnorm)
         i += 1
     end
     if (rnorm>rtol*bnorm) & warnings
@@ -83,8 +81,6 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
         warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end 
-    # warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
-    # @warn warnstr
 end
 
 """
@@ -115,7 +111,6 @@ end
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(source,DB)
     for i in eachblock(DB)
-        # @show i
         A!(source,DB[i])
     end
 end
@@ -144,7 +139,6 @@ end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
     fillBuffers(:u,DB)
     for i in eachblock(DB)
-        # @show i
         CGRHS!(DB[i])
     end
 end

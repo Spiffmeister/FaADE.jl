@@ -80,7 +80,7 @@ end
 """
     BoundaryDerivative
 
-Used to construct `E₀D₁` or `EₙD₁`.
+Used to construct `E₀D₁` or `EₙD₁`. Does not contain the normal vector.
 """
 function BoundaryDerivative end
 function BoundaryDerivative(::NodeType{:Left},Δx::Real,order::Int)
@@ -137,7 +137,8 @@ end
     # τ₁ = -0.0
     τ₂ = 0.5 #1/h accounted for in BoundaryDerivativeTranspose
     # τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
-    τ₀(c) = -c * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
+    τ₀(c) = -(1.0 + 1.0) * 1.0 * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
+    # τ₀(c1,c2) = -(1.0 + 1.0/max(c1,c2)) * max(c1,c2) * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
 
     return τ₀,τ₁,τ₂
 end

@@ -218,10 +218,10 @@ function applyCurvilinearSAT! end
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,PT,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,PT,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.Boundary)
 end
-function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
+function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,VT,FT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT} where {SIDE,AXIS}
     SAT_Interface!(dest,source,K[AXIS],K[3],BC.BufferIn,BC.Boundary,mode)
 end
 

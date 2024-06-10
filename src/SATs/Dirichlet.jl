@@ -146,13 +146,7 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{
     n = size(dest,SD.axis)
     m = size(dest,mod1(SD.axis+1,2))
         
-    # println("===")
-    # @show n, m
-    # @show SD.side, SD.axis
-    # @show size(dest), size(data)
-
     if SD.side == Left
-        # println("hi")
         DEST =  view(dest,  1,1:m)
         SRC =   view(data,  1,1:m)
         C =     view(cxy,   1,1:m)
@@ -169,8 +163,6 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{
         SRC =   view(data,  1:m,1)
         C =     view(cxy,   1:m,n)
     end
-    # @show size(DEST),size(SRC)
-    # println("===")
 
     FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
     dest

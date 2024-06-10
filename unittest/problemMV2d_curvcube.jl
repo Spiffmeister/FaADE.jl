@@ -13,8 +13,8 @@ K = 1.0
 nx = ny = 41
 
 Δt = 1e-3
-t = Δt
-# t = 0.76
+# t = Δt
+t = 0.76
 
 ωt = 1.0
 ωx = 1.0
@@ -147,15 +147,15 @@ ax1 = Axis3(f[1,1])
 surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false, colorrange=colourrange)
 surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false, colorrange=colourrange)
 
-scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+# scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+# scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 
 ax2 = Axis3(f[1,2])
 surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
 surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
 
-scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+# scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+# scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 
 f
 

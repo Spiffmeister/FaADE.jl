@@ -213,17 +213,36 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
     GetMetricType(G.Grids[I]) == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
 
     for Joint in jts
+
+        G1 = G.Grids[I]
+        G2 = G.Grids[Joint.index]
         if (Joint.side == Left) || (Joint.side == Right)
-            Δx₁ = G.Grids[I].Δx# * G.Grids[I].qx[1]
-            Δx₂ = G.Grids[Joint.index].Δx# * G.Grids[Joint.index].qx[1]
-            Δy₁ = G.Grids[I].Δy
+            Δx₁ = G1.Δx# * G.Grids[I].qx[1]
+            Δx₂ = G2.Δx# * G.Grids[Joint.index].qx[1]
+            Δy₁ = G1.Δy
+
+            buffer = zeros(TT,(1,G1.ny))
+
+            if Joint.side == Left # TODO poor implementation fix this
+                @. buffer[1,:] = P.Kx * max(G1.J[1,:] * (G1.qx[1,:]^2 + G1.qy[1,:]^2), G2.J[end,:] * (G2.qx[end,:]^2 + G2.qy[end,:]^2))
+            else # TODO poor implementation fix this
+                @. buffer[1,:] = P.Kx * max(G1.J[end,:] * (G1.qx[end,:]^2 + G1.qy[end,:]^2), G2.J[1,:]*(G2.qx[1,:]^2 + G2.qy[1,:]^2))
+            end
         else
-            Δx₁ = G.Grids[I].Δy
-            Δx₂ = G.Grids[Joint.index].Δy
-            Δy₁ = G.Grids[I].Δx
+            Δx₁ = G1.Δy
+            Δx₂ = G2.Δy
+            Δy₁ = G1.Δx
+
+            buffer = zeros(TT,(G1.nx,1))
+
+            if Joint.side == Down # TODO poor implementation fix this
+                @. buffer[:,1] = P.Ky * max(G1.J[:,1] * (G1.qx[:,1]^2 + G1.qy[:,1]^2), G2.J[:,end]*(G2.qx[:,end]^2 + G2.qy[:,end]^2))
+            else # TODO poor implementation fix this
+                @. buffer[:,1] = P.Ky * max(G1.J[:,end] * (G1.qx[:,end]^2 + G1.qy[:,end]^2), G2.J[:,1]*(G2.qx[:,1]^2 + G2.qy[:,1]^2))
+            end
         end
 
-        BC = SAT_Interface(Δx₁,Δx₂,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype)
+        BC = SAT_Interface(Δx₁,Δx₂,buffer,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint.index,P.order)
     end
 
