@@ -56,16 +56,16 @@ function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,order::Int64) where {TT}
         BufferRHS = zeros(TT,(1,n))
         if BC.side == Left
             X = G.gridy[1,:]
-        else
+        elseif BC.side == Right
             X = G.gridy[G.nx,:]
         end
     elseif BC.side ∈ [Up,Down]
         n = G.nx
         BufferRHS = zeros(TT,(n,1))
         if BC.side == Up
-            X = G.gridx[:,1]
-        else
             X = G.gridx[:,G.ny]
+        elseif BC.side == Down
+            X = G.gridx[:,1]
         end
     end
 
@@ -79,16 +79,16 @@ function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT
         BufferRHS = zeros(TT,(1,n))
         if BC.side == Left
             X = [(G.gridx[1,i],G.gridy[1,i]) for i in 1:G.ny]
-        else
+        elseif BC.side == Right
             X = [(G.gridx[G.nx,i],G.gridy[G.nx,i]) for i in 1:G.ny]
         end
     elseif BC.side ∈ [Up,Down]
         n = G.nx
         BufferRHS = zeros(TT,(n,1))
         if BC.side == Up
-            X = [(G.gridx[i,1],G.gridy[i,1]) for i in 1:G.nx]
-        else
             X = [(G.gridx[i,G.ny],G.gridy[i,G.ny]) for i in 1:G.nx]
+        elseif BC.side == Down
+            X = [(G.gridx[i,1],G.gridy[i,1]) for i in 1:G.nx]
         end
     end
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)

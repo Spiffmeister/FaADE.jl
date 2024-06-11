@@ -132,7 +132,6 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Carte
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(c))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
     end
-
     dest
 end
 """
@@ -142,10 +141,9 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{
     for (DEST,DATA,C) in zip(SD.loopaxis(dest),SD.loopaxis(data),SD.loopaxis(cx))
         SAT_Dirichlet_data!(DEST,DATA,C,SD)
     end
-
     n = size(dest,SD.axis)
     m = size(dest,mod1(SD.axis+1,2))
-        
+    
     if SD.side == Left
         DEST =  view(dest,  1,1:m)
         SRC =   view(data,  1,1:m)
@@ -154,11 +152,11 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{
         DEST =  view(dest,  n,1:m)
         SRC =   view(data,  1,1:m)
         C =     view(cxy,   n,1:m)
-    elseif SD.side == Up
+    elseif SD.side == Down
         DEST =  view(dest,  1:m,1)
         SRC =   view(data,  1:m,1)
         C =     view(cxy,   1:m,1)
-    else
+    elseif SD.side == Up
         DEST =  view(dest,  1:m,n)
         SRC =   view(data,  1:m,1)
         C =     view(cxy,   1:m,n)
@@ -216,14 +214,14 @@ function SAT_Dirichlet_solution!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirich
         DEST =  view(dest,  n,1:m)
         SRC =   view(data,  n,1:m)
         C =     view(cxy,   n,1:m)
+    elseif SD.side == Down
+        DEST = view(dest,   1:m,1)
+        SRC = view(data,    1:m,1)
+        C = view(cxy,       1:m,1)
     elseif SD.side == Up
-        DEST =  view(dest,  1:m,1)
-        SRC =   view(data,  1:m,1)
-        C =     view(cxy,   1:m,1)
-    else
-        DEST = view(dest,   1:m,n)
-        SRC = view(data,    1:m,n)
-        C = view(cxy,       1:m,n)
+        DEST =  view(dest,  1:m,n)
+        SRC =   view(data,  1:m,n)
+        C =     view(cxy,   1:m,n)
     end
     # @show size(DEST),size(SRC)
 

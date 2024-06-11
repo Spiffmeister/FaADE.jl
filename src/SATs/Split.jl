@@ -48,10 +48,10 @@ struct SAT_Interface{
 
         h = hval(order)
 
-        τ₁ = -TT(1//2) / h / Δx # h and Δx correct for no H⁻¹ in term 
+        τ₁ = -TT(1//2) / (h * Δx) # h and Δx correct for no H⁻¹ in term 
         τ₂ = TT(1//2)
 
-        @. τ₀ = -TT(1//2) * (1 + 1/buffer) * buffer / h^2 / min(Δxₗ,Δxᵣ)^2 * buffer
+        @. τ₀ = -TT(1//2) * (1 + 1/buffer) * buffer / (h^2 * min(Δxₗ,Δxᵣ)^2)
 
         # τ₂ penalties
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
