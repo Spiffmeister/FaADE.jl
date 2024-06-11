@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 81
+nx = ny = 41
 
 Δt = 1e-3
 # t = Δt
-t = 0.76
+t = 0.46
 
 ωt = 1.0
 ωx = 1.0 
@@ -30,25 +30,25 @@ Ky = 1.0
 
 # 2D sine wave solution
 # Solution
-# exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
-# u₀(x,y) = exact(x,y,0.0)
-# F(X,t) = begin
-#     x,y = X
-#     -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-#     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-#     K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
-# end
+exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+u₀(x,y) = exact(x,y,0.0)
+F(X,t) = begin
+    x,y = X
+    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+end
 # DIRICHLET
-# Bxy(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*ωy*X[2] + cy)   #Boundary condition x=0
+Bxy(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*ωy*X[2] + cy)   #Boundary condition x=0
 # NEUMANN
 # BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
 
 # exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
-exact(R,Z,t) = sin(2π*R*ωx + cx)
-u₀(R,Z) = exact(R,Z,0.0)
-F(X,t) = 4π^2*ωx^2*sin(2π*X[1]*ωx + cx)
+# exact(R,Z,t) = sin(2π*R*ωx + cx)
+# u₀(R,Z) = exact(R,Z,0.0)
+# F(X,t) = 4π^2*ωx^2*sin(2π*X[1]*ωx + cx)
 # F(X,t) = 0.0
-Bxy(X,t) = sin(2π*X[1]*ωx + cx)
+# Bxy(X,t) = sin(2π*X[1]*ωx + cx)
 
 
 #====== New solver 4 volume ======#
@@ -127,15 +127,15 @@ ax1 = Axis3(f[1,1])
 surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false, colorrange=colourrange)
 surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false, colorrange=colourrange)
 
-scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+# scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+# scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 
 ax2 = Axis3(f[1,2])
 surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
 surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
 
-scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
-scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
+# scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
+# scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 
 f
 

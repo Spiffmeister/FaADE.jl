@@ -16,7 +16,7 @@ struct SAT_Interface{
     D₁ᵀEₙ   :: TV
     D₁E₀    :: TV
     D₁Eₙ    :: TV
-    τ₀      :: Matrix{TT} # Stored as a vector for now
+    τ₀      :: TT # Stored as a vector for now
     τ₁      :: TT
     τ₂      :: TT
     loopaxis :: F1
@@ -24,7 +24,7 @@ struct SAT_Interface{
     Δy      :: TT
     coordinates :: Symbol
 
-    function SAT_Interface(Δx₁::TT,Δx₂::TT,buffer::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian) where {TT,AT,TN}
+    function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian) where {TT,AT,TN}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
         loopaxis = SelectLoopDirection(axis)
@@ -44,14 +44,14 @@ struct SAT_Interface{
             # τ₀, τ₁, τ₂ = SATpenalties(Interface,Δxᵣ,Δxₗ,order)
         end
         
-        τ₀ = zeros(TT,size(buffer))
+        # τ₀ = zeros(TT,size(buffer))
 
         h = hval(order)
 
         τ₁ = -TT(1//2) / (h * Δx) # h and Δx correct for no H⁻¹ in term 
         τ₂ = TT(1//2)
 
-        @. τ₀ = -TT(1//2) * (1 + 1/buffer) * buffer / (h^2 * min(Δxₗ,Δxᵣ)^2)
+        τ₀ = -TT(1//2) * (1 + 1/τ₀) * τ₀ / (h^2 * min(Δxₗ,Δxᵣ)^2)
 
         # τ₂ penalties
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
@@ -111,8 +111,8 @@ Left handed SAT for interface conditions. Correspond to block 2 in the setup
 Superscript + is the current block - is the joining block
 """
 function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Down}}}
-    for (S⁺,U⁺,K⁺,U⁻,τ₀) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer),SI.loopaxis(SI.τ₀))
-        S⁺[1] += τ₀[1] * (U⁺[1] - U⁻[1])
+    for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁺[1] += SI.τ₀ * (U⁺[1] - U⁻[1])
         U⁻[1] = U⁻[1] - U⁺[1]
         for i = 1:SI.order
             S⁺[1] += SI.τ₁ * K⁺[1] * -SI.D₁E₀[i] * U⁺[i] # τ₁ K⁺_q D_q u⁺
@@ -134,8 +134,8 @@ Right handed SAT for interface conditions. Correspond to block 1 in the setup
 Superscript - is the current block + is the joining block
 """
 function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Up}}}
-    for (S⁻,U⁻,K⁻,U⁺,τ₀) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer),SI.loopaxis(SI.τ₀))
-        S⁻[end] += τ₀[1] * (U⁻[end] - U⁺[1])
+    for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
+        S⁻[end] += SI.τ₀ * (U⁻[end] - U⁺[1])
         U⁺[1] = U⁻[end] - U⁺[1]
         for i = 1:SI.order
             S⁻[end]             += SI.τ₁ * K⁻[end] * SI.D₁Eₙ[i] * U⁻[end-SI.order+i]

@@ -223,26 +223,19 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
 
             buffer = zeros(TT,(1,G1.ny))
 
-            if Joint.side == Left # TODO poor implementation fix this
-                @. buffer[1,:] = P.Kx * max(G1.J[1,:] * (G1.qx[1,:]^2 + G1.qy[1,:]^2), G2.J[end,:] * (G2.qx[end,:]^2 + G2.qy[end,:]^2))
-            else # TODO poor implementation fix this
-                @. buffer[1,:] = P.Kx * max(G1.J[end,:] * (G1.qx[end,:]^2 + G1.qy[end,:]^2), G2.J[1,:]*(G2.qx[1,:]^2 + G2.qy[1,:]^2))
-            end
-        else
+            @. buffer[1,:] = P.Kx * max(G1.J[1,:] * (G1.qx[1,:]^2 + G1.qy[1,:]^2), G2.J[end,:] * (G2.qx[end,:]^2 + G2.qy[end,:]^2))
+        elseif (Joint.side == Down) | (Joint.side == Up)
             Δx₁ = G1.Δy
             Δx₂ = G2.Δy
             Δy₁ = G1.Δx
 
             buffer = zeros(TT,(G1.nx,1))
 
-            if Joint.side == Down # TODO poor implementation fix this
-                @. buffer[:,1] = P.Ky * max(G1.J[:,1] * (G1.qx[:,1]^2 + G1.qy[:,1]^2), G2.J[:,end]*(G2.qx[:,end]^2 + G2.qy[:,end]^2))
-            else # TODO poor implementation fix this
-                @. buffer[:,1] = P.Ky * max(G1.J[:,end] * (G1.qx[:,end]^2 + G1.qy[:,end]^2), G2.J[:,1]*(G2.qx[:,1]^2 + G2.qy[:,1]^2))
-            end
+            @. buffer[:,1] = P.Ky * max(G1.J[:,1] * (G1.qx[:,1]^2 + G1.qy[:,1]^2), G2.J[:,end]*(G2.qx[:,end]^2 + G2.qy[:,end]^2))
         end
+        τ₀ = maximum(buffer)
 
-        BC = SAT_Interface(Δx₁,Δx₂,buffer,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype)
+        BC = SAT_Interface(Δx₁,Δx₂,τ₀,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint.index,P.order)
     end
 
