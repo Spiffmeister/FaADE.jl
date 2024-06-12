@@ -26,7 +26,7 @@ struct SAT_Dirichlet{
         COORD,
         TT<:Real,
         VT<:Vector{TT},
-        F1<:Function, PT<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
+        F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
 
     side        :: TN
     axis        :: Int
@@ -36,7 +36,7 @@ struct SAT_Dirichlet{
     H⁻¹D₁ᵀE     :: VT
     Δx          :: TT
     α           :: TT
-    τ           :: PT
+    τ           :: VT
     loopaxis    :: LAT
     Δy          :: TT
     coordinates :: Symbol
@@ -53,7 +53,8 @@ struct SAT_Dirichlet{
             α = TT(1)
         end
         if τ === nothing
-            τ = t -> -TT(1 + 1/max(t,eps(TT)))
+            # τ = t -> -TT(1 + 1/max(t,eps(TT)))
+            τ = [-TT(2)]
         end
 
         Hinv = _InverseMassMatrix(order,Δx,side)
@@ -70,7 +71,7 @@ struct SAT_Dirichlet{
         # α H⁻¹ * (K H D₁ᵀ) * H⁻¹ * E * (u-f)
         H⁻¹D₁ᵀE     = Hinv.*D₁ᵀ.*E
 
-        new{TN,coord,TT,Vector{TT},typeof(RHS),typeof(τ),typeof(loopaxis)}(
+        new{TN,coord,TT,Vector{TT},typeof(RHS),typeof(loopaxis)}(
             side,axis,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,α,τ,loopaxis,Δy,coord)
     end
 end
@@ -119,9 +120,9 @@ function SAT_Dirichlet_data!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) wher
     SIDE == :Left ? m = 0 : m = j-SD.order
     SIDE == :Left ? o = 1 : o = lastindex(data)
 
-    dest[j] -= SD.τ(c[j])*SD.H⁻¹EH⁻¹E*c[j]*data[o]
+    dest[j] += -SD.τ[1]*SD.H⁻¹EH⁻¹E*c[j]*data[o]
     for i = 1:SD.order #nodes SD.nodes
-        dest[m+i] -= SD.α*c[j]*SD.H⁻¹D₁ᵀE[i]*data[o] #u[Left]
+        dest[m+i] += -SD.α*c[j]*SD.H⁻¹D₁ᵀE[i]*data[o] #u[Left]
     end
     dest
 end
@@ -147,19 +148,19 @@ function SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{
     if SD.side == Left
         DEST =  view(dest,  1,1:m)
         SRC =   view(data,  1,1:m)
-        C =     view(cxy,   1,1:m)
+        C =     view(-SD.α*cxy,  1,1:m)
     elseif SD.side == Right
         DEST =  view(dest,  n,1:m)
         SRC =   view(data,  1,1:m)
-        C =     view(cxy,   n,1:m)
+        C =     view(-SD.α*cxy,  n,1:m)
     elseif SD.side == Down
         DEST =  view(dest,  1:m,1)
         SRC =   view(data,  1:m,1)
-        C =     view(cxy,   1:m,1)
+        C =     view(-SD.α*cxy,  1:m,1)
     elseif SD.side == Up
         DEST =  view(dest,  1:m,n)
         SRC =   view(data,  1:m,1)
-        C =     view(cxy,   1:m,n)
+        C =     view(-SD.α*cxy,  1:m,n)
     end
 
     FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
@@ -176,7 +177,7 @@ function SAT_Dirichlet_solution!(dest::VT,data::VT,c::VT,SD::SAT_Dirichlet{TN}) 
     SIDE == :Left ? j = 1 : j = lastindex(dest)
     SIDE == :Left ? m = 0 : m = j-SD.order
 
-    dest[j] += SD.τ(c[j])*SD.H⁻¹EH⁻¹E*c[j]*data[j]
+    dest[j] += SD.τ[1]*SD.H⁻¹EH⁻¹E*c[j]*data[j]
     for i = 1:SD.order #nodes SD.nodes
         dest[m+i] += SD.α*c[j]*SD.H⁻¹D₁ᵀE[i]*data[j] #u[Right]
     end
@@ -202,28 +203,23 @@ function SAT_Dirichlet_solution!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirich
     n = size(dest,SD.axis)
     m = size(dest,mod1(SD.axis+1,2))
     
-    # @show n, m
-    # @show size(dest)
-    # @show SD.side, SD.axis
-
     if SD.side == Left
         DEST =  view(dest,  1,1:m)
         SRC =   view(data,  1,1:m)
-        C =     view(cxy,   1,1:m)
+        C =     view(SD.α*cxy,   1,1:m)
     elseif SD.side == Right
         DEST =  view(dest,  n,1:m)
         SRC =   view(data,  n,1:m)
-        C =     view(cxy,   n,1:m)
+        C =     view(SD.α*cxy,   n,1:m)
     elseif SD.side == Down
-        DEST = view(dest,   1:m,1)
-        SRC = view(data,    1:m,1)
-        C = view(cxy,       1:m,1)
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(SD.α*cxy,   1:m,1)
     elseif SD.side == Up
         DEST =  view(dest,  1:m,n)
         SRC =   view(data,  1:m,n)
-        C =     view(cxy,   1:m,n)
+        C =     view(SD.α*cxy,   1:m,n)
     end
-    # @show size(DEST),size(SRC)
 
     FirstDerivativeTranspose!(DEST,SRC,C,m,SD.Δy,SD.order,TT(1))
     dest

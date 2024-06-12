@@ -193,19 +193,27 @@ function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where
 
     return (tmpDict[Left],tmpDict[Right])
 end
-function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2}) where TT
+function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
     tmpDict = Dict()
     for BC in P.BoundaryConditions
         if typeof(BC) <: SAT_Periodic
             tmpDict[BC.side] = _newBoundaryCondition(G,G,BC,1,P.order)
         else
+            if (GetMetricType(G) == CurvilinearMetric) | (typeof(BC) <: SAT_Dirichlet)
+                if typeof(BC.side).parameters[2] == 1
+                    typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[1][1,:]) : τ = minimum(K[1][end,:])
+                else
+                    typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[2][:,1]) : τ = minimum(K[2][:,end])
+                end
+                BC.τ[1] = -(10 + 1/τ)
+            end
             tmpDict[BC.side] = BoundaryData(G,BC,P.order)
         end
     end
 
     return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
 end
-function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where TT
+function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64,K) where TT
     jts = G.Joint[I]
 
     tmpDict = Dict()
@@ -247,6 +255,14 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2},I::Int64) where
                 tmpDict[BC.side] = _newBoundaryCondition(G.Grids[I],G.Grids[j],BC,j,P.order)
             else
                 # If non-periodic we can just assign the BC
+                if (GetMetricType(G) == CurvilinearMetric) | (typeof(BC) <: SAT_Dirichlet)
+                    if typeof(BC.side).parameters[2] == 1
+                        typeof(BC.side).parameters[1] == :Left ? τ = maximum(K[1][1,:]) : τ = maximum(K[1][end,:])
+                    else
+                        typeof(BC.side).parameters[1] == :Left ? τ = maximum(K[2][:,1]) : τ = maximum(K[2][:,end])
+                    end
+                    BC.τ[1] = -(10 + 1/τ)
+                end
                 tmpDict[BC.side] = BoundaryData(G.Grids[I],BC,P.order)
             end
         end
@@ -645,7 +661,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
         end
     end
 
-    BS = GenerateBoundaries(P,G)
+    BS = GenerateBoundaries(P,G,K)
 
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
@@ -678,7 +694,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,S
         PMap = P.Parallel
     end
 
-    BS = GenerateBoundaries(P,G,I)
+    BS = GenerateBoundaries(P,G,I,K)
     IP = innerH(G.Grids[I].Δx,G.Grids[I].n,P.order)
     # D = DerivativeOperator{TT,1,typeof(P.order),:Constant}(P.order,G.Grids[I].n,0,G.Grids[I].Δx,TT(0),false,false)
     D = DiffusionOperator(G.Grids[I].n,G.Grids[I].Δx,P.order,false,:Constant)
@@ -700,7 +716,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
 
     PK = (P.Kx,P.Ky)
 
-    BS = GenerateBoundaries(P,G)
+    BS = GenerateBoundaries(P,G,K)
     IP = innerH(G.Δx,G.Δy,G.nx,G.ny,P.order)
 
     # if length(K) == 3
@@ -741,7 +757,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     
     K = _BuildDiffusionMatrix(LG,P,PMap)
 
-    BS = GenerateBoundaries(P,G,I)
+    BS = GenerateBoundaries(P,G,I,K)
     IP = innerH(LG.Δx,LG.Δy,LG.nx,LG.ny,P.order)
 
     if GetMetricType(G) == CurvilinearMetric

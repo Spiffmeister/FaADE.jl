@@ -34,7 +34,7 @@ end
 function comp_MMS_y(npts,
         Bxy,BType,
         F,ũ,ũ₀,order;
-        dt_scale=1.0,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
+        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
@@ -106,7 +106,7 @@ end
 function comp_MMS_x(npts,
         Bxy,BType,
         F,ũ,ũ₀,order;
-        dt_scale=1.0,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
+        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
@@ -166,7 +166,7 @@ function comp_MMS_x(npts,
         push!(comp_soln,soln)
         push!(grids,Dom)
         push!(MMS_soln,u_MMS)
-        push!(relerr, norm(u_MMS[1] .- soln.u[2][1])/norm(u_MMS[1]) + norm(u_MMS[2] .- soln.u[2][2])/norm(u_MMS[2]))
+        push!(relerr, norm(hcat(u_MMS...) .- hcat(soln.u[2]...))/norm(hcat(u_MMS...)))
     end
 
     conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
