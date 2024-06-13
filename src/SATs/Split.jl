@@ -256,12 +256,12 @@ function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,
         @views DEST= dest[2,:]
         @views SRC = u[1,:] 
         @views C = cxy[1,:]
-    elseif SI.side == Up
-        DEST = view(dest, 1:m,2)
-        SRC = view(u, 1:m, n)
-        C = view(cxy, 1:m, n)
     elseif SI.side == Down
         DEST = view(dest, 1:m, 2)
+        SRC = view(u, 1:m, n)
+        C = view(cxy, 1:m, n)
+    elseif SI.side == Up
+        DEST = view(dest, 1:m,2)
         SRC = view(u, 1:m, 1)
         C = view(cxy, 1:m, 1)
     end
