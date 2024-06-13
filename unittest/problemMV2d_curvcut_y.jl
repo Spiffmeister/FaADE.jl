@@ -10,17 +10,17 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 41
+nx = ny = 81
 
 Δt = 1e-3
 # t = Δt
-t = 0.46
+t = 0.26
 
-ωt = 1.0
-ωx = 1.0 
-ωy = 1.0
-cx = 0.0
-cy = 0.0
+ωt = 3.0
+ωx = 3.5 
+ωy = 2.5
+cx = 1.0
+cy = 0.5
 
 Kx = 1.0
 Ky = 1.0
@@ -118,14 +118,17 @@ for I in eachindex(D2)
     e[2][I] = exact(D2.gridx[I],D2.gridy[I],t)
 end
 
+@show norm(e[1] .- soln.u[2][1])/norm(e[1])
+@show norm(e[2] .- soln.u[2][2])/norm(e[2])
+
 
 f = Figure()
 
 ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false, colorrange=colourrange)
 # surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false, colorrange=colourrange)
-surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false, colorrange=colourrange)
-surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false, colorrange=colourrange)
+surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1] .-  soln.u[2][1],colorbar=false, colorrange=colourrange)
+surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2] .-  soln.u[2][2],colorbar=false, colorrange=colourrange)
 
 # scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)

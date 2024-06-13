@@ -92,9 +92,9 @@ function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::Data
         SAT_Interface_cache!(B.BufferIn,cache,K,SAT)
     elseif DIM == 2
         if SAT.coordinates == :Cartesian
-            SAT_Interface_cache!(B.BufferIn,cache,K[1],SAT)
+            SAT_Interface_cache!(B.BufferIn,cache,K[SAT.axis],SAT)
         elseif SAT.coordinates == :Curvilinear
-            SAT_Interface_cache!(B.BufferIn,cache,K[1],K[3],SAT)
+            SAT_Interface_cache!(B.BufferIn,cache,K[SAT.axis],K[3],SAT)
         end
     end
 end

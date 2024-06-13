@@ -113,14 +113,17 @@ for I in eachindex(D2)
     e[2][I] = exact(D2.gridx[I],D2.gridy[I],t)
 end
 
+@show norm(e[1] .- soln.u[2][1])/norm(e[1])
+@show norm(e[2] .- soln.u[2][2])/norm(e[2])
+
 
 f = Figure()
 
 ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false, colorrange=colourrange)
 # surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false, colorrange=colourrange)
-surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false)#, colorrange=colourrange)
-surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false)#, colorrange=colourrange)
+surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1] .- soln.u[2][1],colorbar=false)#, colorrange=colourrange)
+surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2] .- soln.u[2][2],colorbar=false)#, colorrange=colourrange)
 
 ax2 = Axis3(f[1,2])
 surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
