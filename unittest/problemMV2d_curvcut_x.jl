@@ -18,7 +18,7 @@ t = 0.26
 
 ωt = 3.0
 ωx = 3.5 
-ωy = 2.5
+ωy = 3.5
 cx = 1.0
 cy = 0.5
 
@@ -126,8 +126,8 @@ surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1] .- soln.u[2][1],colorb
 surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2] .- soln.u[2][2],colorbar=false)#, colorrange=colourrange)
 
 ax2 = Axis3(f[1,2])
-surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
-surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
+surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false, colorrange=colourrange)
+surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false, colorrange=colourrange)
 
 f
 

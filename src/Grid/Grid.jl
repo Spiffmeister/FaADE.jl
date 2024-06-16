@@ -24,6 +24,7 @@ module Grid
     export Torus
     export meshgrid
     
+    export GetBoundaryCoordinates
     export eachgrid
 
 end

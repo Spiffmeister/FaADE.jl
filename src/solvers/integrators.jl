@@ -109,7 +109,9 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST
     W
 end
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
-    fillBuffers(source,DB)
+    # fillBuffers(source,DB)
+    _fillLocalBuffers(source,DB)
+    _tradeBuffers!(DB)
     for i in eachblock(DB)
         A!(source,DB[i])
     end
@@ -137,7 +139,9 @@ function CGRHS!(D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) whe
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
-    fillBuffers(:u,DB)
+    # fillBuffers(:u,DB)
+    _fillLocalBuffers(:u,DB)
+    _tradeBuffers!(DB)
     for i in eachblock(DB)
         CGRHS!(DB[i])
     end

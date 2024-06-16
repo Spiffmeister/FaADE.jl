@@ -66,52 +66,47 @@ D1 = Grid2D(u->[u*0.5 - 0.25,-0.25],
 T = FaADE.Grid.Torus([1.0],[1.0],[1],[0])
 
 # Right domain
-D2 = Grid2D(u->u*(T(7π/4,0.0) + [-0.25, 0.25]) + [0.25, -0.25],
-            v->[0.25, v*0.5 - 0.25],
-            v->T(v*(9π/4 - 7π/4) + 7π/4,0.0),
-            u->u*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25],
+D2 = Grid2D(u->[0.25, -u*0.5 + 0.25], # Bottom
+            v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25], # Left
+            v->v*(T(7π/4,0.0) + [-0.25, 0.25]) + [0.25, -0.25], # Right
+            u->T(u*(7π/4 - 9π/4) + 9π/4,0.0), # Top
             nx,ny)
 
 # Top domain
-D3 = Grid2D(u->[u*0.5 - 0.25, 0.25],
-            v->v*(T(3π/4,0.0) + [0.25,-0.25]) + [-0.25,0.25],
-            v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25],
-            u->T(u*(π/4 - 3π/4) + 3π/4,0.0),
+D3 = Grid2D(u->[u*0.5 - 0.25, 0.25], # Bottom
+            v->v*(T(3π/4,0.0) + [0.25,-0.25]) + [-0.25,0.25], # Left
+            v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25], # Right
+            u->T(u*(π/4 - 3π/4) + 3π/4,0.0), # Top
             nx,ny)
 
 # Left domain
-D4 = Grid2D(u->u*(T(5π/4,0.0) + [0.25, 0.25]) + [-0.25,0.25],
-            v->T(v*(3π/4 - 5π/4) + 5π/4,0.0),
-            v->[-0.25,v*0.5 - 0.25],
-            u->u*([0.25,0.25] + T(3π/4,0.0)) + T(3π/4,0.0),
+D4 = Grid2D(u->[-0.25,u*0.5 - 0.25],
+            v->v*(T(5π/4,0.0) - [-0.25, -0.25]) + [-0.25, -0.25],
+            v->v*(T(3π/4,0.0) - [-0.25,0.25]) + [-0.25,0.25],
+            u->T(u*(3π/4 - 5π/4) + 5π/4,0.0),
             nx,ny)
 
 # Bottom domain
-D5 = Grid2D(u->T(u*(7π/4 - 5π/4) + 5π/4,0.0),
-            v->v*([-0.25,-0.25] - T(5π/4,0.0)) + T(5π/4,0.0),
-            v->v*([0.25,-0.25] - T(7π/4,0.0)) + T(7π/4,0.0),
-            u->[u*0.5 - 0.25, -0.25],
+D5 = Grid2D(u->[-u*0.5 + 0.25, -0.25],
+            v->v*(T(7π/4,0.0) - [0.25,-0.25]) + [0.25, -0.25],
+            v->v*(T(5π/4,0.0) - [-0.25,-0.25]) + [-0.25, -0.25],
+            u->T(u*(5π/4 - 7π/4) + 7π/4, 0.0),
             nx,ny)
 
 
 joints = ((Joint(2,Right),Joint(3,Up),Joint(4,Left),Joint(5,Down)),
-            (Joint(1,Left),Joint(3,Up),Joint(5,Down)),
-            (Joint(1,Down),Joint(2,Right),Joint(4,Left)),
-            (Joint(1,Right),Joint(3,Up),Joint(5,Down)),
-            (Joint(1,Up),Joint(4,Left),Joint(2,Right)))
+            (Joint(1,Down),Joint(3,Left),Joint(5,Right)),
+            (Joint(1,Down),Joint(4,Left),Joint(2,Right)),
+            (Joint(1,Down),Joint(5,Left),Joint(3,Right)),
+            (Joint(1,Down),Joint(2,Left),Joint(4,Right)))
 
-# joints = (1=>((2,Right),(3,Up),(4,Left),(5,Down)),
-#           2=>((1,Left),(3,Up),(5,Down)),
-#           3=>((1,Down),(2,Right),(4,Left)),
-#           4=>((1,Right),(3,Up),(5,Down)),
-#           5=>((1,Up),(4,Left),(2,Right)))
 
 Dom = GridMultiBlock((D1,D2,D3,D4,D5),joints)
 
-Dr = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δy, Right,order, D2.Δx, :Curvilinear) # Block 2 BCs
-Du = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δx, Up,   order, D2.Δy, :Curvilinear) # Block 3 BCs
-Dl = FaADE.SATs.SAT_Dirichlet(Bxy, D4.Δy, Left, order, D2.Δx, :Curvilinear) # Block 4 BCs
-Dd = FaADE.SATs.SAT_Dirichlet(Bxy, D5.Δx, Down, order, D2.Δy, :Curvilinear) # Block 5 BCs
+Dr = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δy, Up, order, D2.Δx, :Curvilinear) # Block 2 BCs
+Du = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δy, Up, order, D3.Δx, :Curvilinear) # Block 3 BCs
+Dl = FaADE.SATs.SAT_Dirichlet(Bxy, D4.Δy, Up, order, D4.Δx, :Curvilinear) # Block 4 BCs
+Dd = FaADE.SATs.SAT_Dirichlet(Bxy, D5.Δy, Up, order, D5.Δx, :Curvilinear) # Block 5 BCs
 
 BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
@@ -139,11 +134,11 @@ colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
 
 f = Figure()
 ax = Axis3(f[1,1])
-surface!(ax,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
-surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
-surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
-surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
-surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false)#, colorrange=colourrange)
+surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false)#, colorrange=colourrange)
+surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false)#, colorrange=colourrange)
+surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false)#, colorrange=colourrange)
+surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false)#, colorrange=colourrange)
 
 # scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)

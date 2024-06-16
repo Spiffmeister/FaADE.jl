@@ -10,15 +10,16 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 81
+nx = ny = 41
 
 Δt = 1e-3
-# t = Δt
-t = 0.26
+# @show Δt= 1/(nx-1)^2
+t = Δt
+# t = 0.1
 
-ωt = 3.0
-ωx = 3.5 
-ωy = 2.5
+ωt = 1.0
+ωx = 1.0 
+ωy = 1.0
 cx = 1.0
 cy = 0.5
 
@@ -65,11 +66,10 @@ D1 = Grid2D(u->u*[cos(7π/4), sin(7π/4)] - [0.0,0.25],
 
 # Left domain
 D2 = Grid2D(u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # bottom - same as D1 top -- done
-            v->[cos(v*(3π/4 - 5π/4) + 5π/4), sin(v*(3π/4 - 5π/4) + 5π/4)] - 
-                [cos(5π/4), sin(5π/4) - 0.25], # left - shifted up 0.25 -- done
+            v->[cos(v*(3π/4 - 5π/4) + 5π/4), sin(v*(3π/4 - 5π/4) + 5π/4)] + v*[0.0, 0.5] - 
+                    [cos(5π/4), sin(5π/4) - 0.25], # left - shifted up 0.25 -- done
             v->v*[0.0, 0.5] + [cos(π/4), sin(π/4) + 0.25], # shifted to top of D1 -- done
-            u->u*([cos(π/4), sin(π/4) + 3/4] - [cos(3π/4) - cos(5π/4), sin(3π/4) - sin(5π/4) + 0.25]) +
-                [cos(3π/4) - cos(5π/4), sin(3π/4) - sin(5π/4) + 0.25], # top - shifted up 0.25
+            u->u*[cos(3π/4), sin(3π/4)] + [cos(π/4), sin(π/4) + 0.75], # top - shifted up 0.25
             nx,ny)
 
 
@@ -127,15 +127,15 @@ f = Figure()
 ax1 = Axis3(f[1,1])
 # surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false, colorrange=colourrange)
 # surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false, colorrange=colourrange)
-surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1] .-  soln.u[2][1],colorbar=false, colorrange=colourrange)
-surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2] .-  soln.u[2][2],colorbar=false, colorrange=colourrange)
+surface!(ax1,Dom.Grids[1].gridx, Dom.Grids[1].gridy, e[1],colorbar=false, colorrange=colourrange)
+surface!(ax1,Dom.Grids[2].gridx, Dom.Grids[2].gridy, e[2],colorbar=false, colorrange=colourrange)
 
 # scatter!(ax1,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax1,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
 
 ax2 = Axis3(f[1,2])
-surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
-surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
+surface!(ax2,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[1][1],colorbar=false)#, colorrange=colourrange)
+surface!(ax2,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[1][2],colorbar=false)#, colorrange=colourrange)
 
 # scatter!(ax2,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax2,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
@@ -145,11 +145,11 @@ f
 
 
 
-h = Figure()
-axh1 = Axis(h[1,1])
-lines!(axh1,Dom.Grids[1].gridx[:,21],soln.u[1][1][:,21])
-lines!(axh1,Dom.Grids[2].gridx[:,21],soln.u[1][2][:,21])
-axh2 = Axis(h[1,2])
-lines!(axh2,Dom.Grids[1].gridx[:,21],soln.u[2][1][:,21])
-lines!(axh2,Dom.Grids[2].gridx[:,21],soln.u[2][2][:,21])
+# h = Figure()
+# axh1 = Axis(h[1,1])
+# lines!(axh1,Dom.Grids[1].gridx[:,21],soln.u[1][1][:,21])
+# lines!(axh1,Dom.Grids[2].gridx[:,21],soln.u[1][2][:,21])
+# axh2 = Axis(h[1,2])
+# lines!(axh2,Dom.Grids[1].gridx[:,21],soln.u[2][1][:,21])
+# lines!(axh2,Dom.Grids[2].gridx[:,21],soln.u[2][2][:,21])
 

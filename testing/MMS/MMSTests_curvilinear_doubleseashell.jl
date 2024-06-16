@@ -21,8 +21,8 @@ function generate_MMS(MMS::Function,grid::GridMultiBlock,t::Float64)
     for I in eachindex(D1)
         u_MMS1[I] = MMS(D1.gridx[I],D1.gridy[I],t)
     end
-    for I in eachindex(D1)
-        u_MMS2[I] = MMS(D1.gridx[I],D1.gridy[I],t)
+    for I in eachindex(D2)
+        u_MMS2[I] = MMS(D2.gridx[I],D2.gridy[I],t)
     end
     return u_MMS1, u_MMS2
 end
@@ -34,29 +34,31 @@ end
 function comp_MMS_y(npts,
         Bxy,BType,
         F,ũ,ũ₀,order;
-        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
+        dt_scale=1.0,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
     grids = []
-    relerr = []
+    # relerr = []
+    relerr = [zeros(length(npts)),zeros(length(npts))]
 
     # Loop
-    for n in npts
+    # for n in npts
+    for I in eachindex(npts)
+        n = npts[I]
 
         D1 = Grid2D(u->u*[cos(7π/4), sin(7π/4)] - [0.0,0.25],
-            v->[0.0, v/2 - 0.25],
-            v->[cos(v*(9π/4 - 7π/4) + 7π/4), sin(v*(9π/4 - 7π/4) + 7π/4)] - 
-                (1-v)*[0.0,0.25] + v*[0.0,0.25],
-            u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # top of D1
+                v->[0.0, v/2 - 0.25],
+                v->[cos(v*(9π/4 - 7π/4) + 7π/4), sin(v*(9π/4 - 7π/4) + 7π/4)] - 
+                    (1-v)*[0.0,0.25] + v*[0.0,0.25],
+                u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # top of D1
             n,n)
     
         D2 = Grid2D(u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # bottom - same as D1 top -- done
-            v->[cos(v*(3π/4 - 5π/4) + 5π/4), sin(v*(3π/4 - 5π/4) + 5π/4)] - 
-                [cos(5π/4), sin(5π/4) - 0.25], # left - shifted up 0.25 -- done
-            v->v*[0.0, 0.5] + [cos(π/4), sin(π/4) + 0.25], # shifted to top of D1 -- done
-            u->u*([cos(π/4), sin(π/4) + 3/4] - [cos(3π/4) - cos(5π/4), sin(3π/4) - sin(5π/4) + 0.25]) +
-                [cos(3π/4) - cos(5π/4), sin(3π/4) - sin(5π/4) + 0.25], # top - shifted up 0.25
+                v->[cos(v*(3π/4 - 5π/4) + 5π/4), sin(v*(3π/4 - 5π/4) + 5π/4)] + v*[0.0, 0.5] - 
+                        [cos(5π/4), sin(5π/4) - 0.25], # left - shifted up 0.25 -- done
+                v->v*[0.0, 0.5] + [cos(π/4), sin(π/4) + 0.25], # shifted to top of D1 -- done
+                u->u*[cos(3π/4), sin(3π/4)] + [cos(π/4), sin(π/4) + 0.75], # top - shifted up 0.25
             n,n)
 
         joints = ((Joint(2,Up),), (Joint(1,Down),),)
@@ -92,10 +94,13 @@ function comp_MMS_y(npts,
         push!(comp_soln,soln)
         push!(grids,Dom)
         push!(MMS_soln,u_MMS)
-        push!(relerr, norm(u_MMS[1] .- soln.u[2][1])/norm(u_MMS[1]) + norm(u_MMS[2] .- soln.u[2][2])/norm(u_MMS[2]))
+        # push!(relerr, norm(u_MMS[1] .- soln.u[2][1])/norm(u_MMS[1]) + norm(u_MMS[2] .- soln.u[2][2])/norm(u_MMS[2]))
+        @show relerr[1][I] = norm(u_MMS[1] .- soln.u[2][1])/norm(u_MMS[1])
+        @show relerr[2][I] = norm(u_MMS[2] .- soln.u[2][2])/norm(u_MMS[2])
     end
 
-    conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
+    # conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
+    conv_rate = log2.(relerr[1][1:end-1] ./ relerr[1][2:end], relerr[2][1:end-1] ./ relerr[2][2:end])
 
     return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
 end
@@ -106,15 +111,18 @@ end
 function comp_MMS_x(npts,
         Bxy,BType,
         F,ũ,ũ₀,order;
-        dt_scale=0.1,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
+        dt_scale=1.0,t_f=0.1,kx=1.0,ky=kx,θ=1.0)
 
     comp_soln = []
     MMS_soln = []
     grids = []
     relerr = []
 
+    relerr = [zeros(length(npts)),zeros(length(npts))]
+
     # Loop
-    for n in npts
+    for I in eachindex(npts)
+        n = npts[I]
 
         D1 = Grid2D(u->u*[0.5, 0.0] - [0.0,0.0],
             v->v*[cos(3π/4),sin(3π/4)] + [0.0,0.0],
@@ -166,10 +174,14 @@ function comp_MMS_x(npts,
         push!(comp_soln,soln)
         push!(grids,Dom)
         push!(MMS_soln,u_MMS)
-        push!(relerr, norm(hcat(u_MMS...) .- hcat(soln.u[2]...))/norm(hcat(u_MMS...)))
+        # push!(relerr, ((norm(u_MMS[1] .- soln.u[2][1]))/norm(u_MMS[1]) + 
+                        # (norm(u_MMS[2] .- soln.u[2][2]))/norm(u_MMS[2])))
+        relerr[1][I] = norm(u_MMS[1] .- soln.u[2][1])/norm(u_MMS[1])
+        relerr[2][I] = norm(u_MMS[2] .- soln.u[2][2])/norm(u_MMS[2])
     end
 
-    conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (npts[1:end-1].-1))./(1 ./ (npts[2:end].-1) ))
+    # conv_rate = log.(relerr[1:end-1]./relerr[2:end]) ./ log.( (1 ./ (2npts[1:end-1].-1))./(1 ./ (2npts[2:end].-1) ))
+    conv_rate = (relerr[1][1:end-1] ./ relerr[1][2:end], relerr[2][1:end-1] ./ relerr[2][2:end])
 
     return (comp_soln=comp_soln,MMS_soln=MMS_soln,grids=grids,relerr=relerr,conv_rate=conv_rate,npts=npts)
 end
@@ -184,7 +196,8 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = collect(21:10:81)
+# npts = collect(21:10:81)
+npts = [21,41,81]
 
 θ = 0.5
 
@@ -218,10 +231,10 @@ println("=== K=",K," ===")
 if TestDirichlet
     println("=====")
     println("Dirichlet")
-    cx=0.0
-    cy=0.0
-    ωx=3.5
-    ωy=2.5
+    cx=1.0
+    cy=0.5
+    ωx=4.5
+    ωy=3.5
     ωt=3.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)

@@ -1,7 +1,9 @@
 
 
 
-
+"""
+    SAT_Interface
+"""
 struct SAT_Interface{
         TN<:NodeType,
         COORD,
@@ -24,7 +26,7 @@ struct SAT_Interface{
     Δy      :: TT
     coordinates :: Symbol
 
-    function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian) where {TT,AT,TN}
+    function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,TN}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
         loopaxis = SelectLoopDirection(axis)
@@ -56,9 +58,9 @@ struct SAT_Interface{
         # τ₂ penalties
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
         D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ^2) # H⁻¹D₁ᵀEₙ
-        # τ₁ penalties
-        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
-        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
+        # τ₁ penalties - updated with normal vector if required
+        E₀D₁ = normal*BoundaryDerivative(Left,Δxₗ,order)
+        EₙD₁ = normal*BoundaryDerivative(Right,Δxᵣ,order)
 
         # τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
@@ -204,7 +206,7 @@ end
 
 
 
-
+#=
 """
     SAT_Interface_cache!
 Computes the required values for sending to the buffer
@@ -272,11 +274,54 @@ function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,
 
     dest
 end
+=#
 
 
 
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:NodeType{:Left}}
+    for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
+        S⁺[1] = U⁺[1]
+        S⁺[2] = TT(0)
+        for i = 1:SI.order
+            S⁺[2] += K⁺[1] * SI.D₁E₀[i] * U⁺[i]
+        end
+    end
+end
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:NodeType{:Right}}
+    for (S⁻,U⁻,K⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
+        S⁻[1] = U⁻[end]
+        S⁻[2] = TT(0)
+        for i = 1:SI.order
+            S⁻[2] += K⁻[end] * SI.D₁Eₙ[i] * U⁻[end-SI.order+i]
+        end
+    end
+end
+function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN}
+    SAT_Interface_cache!(dest,u,c,SI)
+    n = size(dest,SI.axis)
+    m = size(dest,mod1(SI.axis+1,2))
 
+    if SI.side == Left
+        @views DEST = dest[2,:]
+        @views SRC = u[1,:]
+        @views C = cxy[1,:]
+    elseif SI.side == Right
+        @views DEST= dest[2,:]
+        @views SRC = u[end,:] 
+        @views C = cxy[end,:]
+    elseif SI.side == Down
+        DEST = view(dest, 1:m, 2)
+        SRC = view(u, 1:m, 1)
+        C = view(cxy, 1:m, 1)
+    elseif SI.side == Up
+        DEST = view(dest, 1:m,2)
+        SRC = view(u, 1:m, n)
+        C = view(cxy, 1:m, n)
+    end
 
+    # Don't compute D^T_{qr} here
+    # FirstDerivativeTranspose!(DEST,SRC,C,m,SI.Δy,SI.order,TT(1))
+    D₁!(DEST,C,SRC,m,SI.Δy,Val(SI.order),TT(1))
 
-
-
+    dest
+end

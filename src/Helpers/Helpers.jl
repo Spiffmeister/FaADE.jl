@@ -17,7 +17,7 @@ module Helpers
 
     # types import
     export NodeType, Left, Internal, Right, Up, Down
-    export _flip
+    export _flipside
     export BoundaryConditionType, Dirichlet, Neumann, Robin, Periodic, Interface
     # export SATMode, DataMode, SolutionMode
     export SourceTerm, DiffusionCoefficient

@@ -199,7 +199,7 @@ Construct a 2D grid from the boundary functions in ``x`` and ``y`` and the numbe
 
 Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate in the ``x`` direction and ``v`` is the coordinate in the ``y`` direction and where ``u`` and ``v`` are in the range ``[0,1]``.
 """
-function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=nothing)
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer;order=nothing)
     X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
     Grid2D(X,Y;order=order)
 end
@@ -207,10 +207,16 @@ end
 
 
 
-
+"""
+    Joint
+Specifies the joining surface between two grids.
+"""
 struct Joint
     index   :: Int64
     side    :: NodeType
+    # pair    :: NodeType
+
+    # Joint(index::Int64,side::NodeType;pair::NodeType) = new(index,side,pair)
 end
 
 
@@ -285,7 +291,8 @@ TODO: Add example for non-stacked grids
 TODO: Add checking that there are no hanging nodes
 """
 function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET,GT},N}},joints) where {N,TT,GT,MET}
-    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]    
+    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    # _checkjoints(joints)
     return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
 end
 
@@ -303,6 +310,50 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
     GetMetricType
 """
 GetMetricType(G::GridType{TT,DIM,COORD}) where {TT,DIM,COORD} = COORD
+
+
+
+
+
+function GetBoundaryCoordinates(grid::Grid2D,side::NodeType)
+    if side == Left
+        return [(grid.gridx[1,i],grid.gridy[1,i]) for i in 1:grid.ny]
+    elseif side == Right
+        return [(grid.gridx[end,i],grid.gridy[end,i]) for i in 1:grid.ny]
+    elseif side == Down
+        return [(grid.gridx[i,1],grid.gridy[i,1]) for i in 1:grid.nx]
+    elseif side == Up
+        return [(grid.gridx[i,end],grid.gridy[i,end]) for i in 1:grid.nx]
+    end
+end
+
+
+function _checkjoints(G::GridMultiBlock)
+    joints = G.Joint
+    warnprint = false
+    for (I,BLOCK) in enumerate(joints)
+        for JOINT in BLOCK
+            for joint in joints[JOINT.index]
+                if (joint.index == I) & (joint.side != Helpers._flipside(JOINT.side))
+                    @warn "Blocks $I and $(JOINT.index) have side mismatch. Block $I has block $(JOINT.index) as $(JOINT.side) but block $(JOINT.index) has block $I as $(joint.side)"
+                    warnprint = true
+                end
+            end
+        end
+    end
+    if warnprint
+        @warn "The above issues may be caused by certain grid layouts, solver will attempt to work out the correct normal vectors (typically normals defined by blocks with higher index take higher precidence)."
+    end
+end
+
+
+# function GetBoundaryIndex(grid::Grid2D,side::NodeType)
+#     if side == Left
+#     elseif side == Right
+#     elseif side == Down
+#     elseif side == Up
+#     end
+# end
 
 
 

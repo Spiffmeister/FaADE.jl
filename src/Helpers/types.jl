@@ -19,8 +19,7 @@ const Right = NodeType{:Right,1}()
 const Up = NodeType{:Right,2}()
 const Down = NodeType{:Left,2}()
 
-
-function _flip(NT)
+function _flipside(NT)
     if NT == Left
         return Right
     elseif NT == Right
