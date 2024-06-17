@@ -6,6 +6,9 @@
 function coordinate(cbottom::Function,cleft::Function,cright::Function,ctop::Function,u::TT,v::TT) where TT
     S = (one(TT)-v)*cbottom(u) + v*ctop(u) + (one(TT)-u)*cleft(v) + u*cright(v) - 
         (u*v*ctop(one(TT)) + u*(one(TT)-v)*cbottom(one(TT)) + v*(one(TT)-u)*ctop(zero(TT)) + (one(TT)-u)*(one(TT)-v)*cbottom(zero(TT)))
+    # if u == 1
+    #     @show S
+    # end
     return S
 end
 
@@ -34,9 +37,9 @@ function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Fu
     for j = 1:ny
         for i = 1:nx
             # println(S(u[i],v[j])," ",u[i],",",v[j])
-
-            X[i,j] = S(u[i],v[j])[1]
-            Y[i,j] = S(u[i],v[j])[2]
+            coord = S(u[i],v[j])
+            X[i,j] = coord[1]
+            Y[i,j] = coord[2]
         end
     end
     return X,Y

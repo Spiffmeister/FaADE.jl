@@ -13,8 +13,8 @@ K = 1.0
 nx = ny = 81
 
 Δt = 1e-3
-t = Δt
-# t = 0.76
+# t = Δt
+t = 0.26
 
 ωt = 1.0
 ωx = 1.0
@@ -30,23 +30,23 @@ Ky = 1.0
 
 # 2D sine wave solution
 # Solution
-# exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
-# u₀(x,y) = exact(x,y,0.0)
-# F(X,t) = begin
-#     x,y = X
-#     -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-#     K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
-#     K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
-# end
+exact(x,y,t) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
+u₀(x,y) = exact(x,y,0.0)
+F(X,t) = begin
+    x,y = X
+    -2π*ωt*sin(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωx^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy) + 
+    K * 4π^2 * ωy^2 * cos(2π*ωt*t)*sin(2π*x*ωx + cx)*sin(2π*y*ωy + cy)
+end
 # DIRICHLET
-# Bxy(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*ωy*X[2] + cy)   #Boundary condition x=0
+Bxy(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*ωy*X[2] + cy)   #Boundary condition x=0
 # NEUMANN
 # BxLũ(y,t) = 2π*ωx * K * cos(2π*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
 
-exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
-u₀(R,Z) = exact(R,Z,0.0)
-F(X,t) = 0.0
-Bxy(X,t) = 0.0
+# exact(R,Z,t) = exp.( -(R.^2 + Z.^2) / 0.1 )
+# u₀(R,Z) = exact(R,Z,0.0)
+# F(X,t) = 0.0
+# Bxy(X,t) = 0.0
 
 
 
@@ -134,11 +134,11 @@ colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
 
 f = Figure()
 ax = Axis3(f[1,1])
-surface!(ax,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false)#, colorrange=colourrange)
-surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false)#, colorrange=colourrange)
-surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false)#, colorrange=colourrange)
-surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false)#, colorrange=colourrange)
-surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false)#, colorrange=colourrange)
+surface!(ax,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
+surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
 
 # scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)

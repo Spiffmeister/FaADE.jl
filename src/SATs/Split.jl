@@ -26,6 +26,8 @@ struct SAT_Interface{
     Δy      :: TT
     coordinates :: Symbol
 
+    normal :: TT
+
     function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,TN}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
@@ -59,13 +61,13 @@ struct SAT_Interface{
         D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δxₗ^2) # H⁻¹D₁ᵀE₀
         D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δxᵣ^2) # H⁻¹D₁ᵀEₙ
         # τ₁ penalties - updated with normal vector if required
-        E₀D₁ = normal*BoundaryDerivative(Left,Δxₗ,order)
-        EₙD₁ = normal*BoundaryDerivative(Right,Δxᵣ,order)
+        E₀D₁ = BoundaryDerivative(Left,Δxₗ,order)
+        EₙD₁ = BoundaryDerivative(Right,Δxᵣ,order)
 
         # τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
         new{TN,coordinates,TT,Vector{TT},typeof(loopaxis)}(side,axis,order,
-            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates)
+            D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates,normal)
     end
 end
 
@@ -112,7 +114,7 @@ Left handed SAT for interface conditions. Correspond to block 2 in the setup
 
 Superscript + is the current block - is the joining block
 """
-function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Left},NodeType{:Down}}}
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Left}}
     for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
         S⁺[1] += SI.τ₀ * (U⁺[1] - U⁻[1])
         U⁻[1] = U⁻[1] - U⁺[1]
@@ -121,7 +123,7 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
             S⁺[i] += SI.τ₂ * K⁺[1] * SI.D₁ᵀE₀[i] * U⁻[1] # (U⁻[1] - U⁺[1]) # τ₂ K⁺_q D_qᵀL₀ u
             # S⁺[1] += SI.τ₁ * K⁺[1] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
         end
-        S⁺[1] += SI.τ₁ * U⁻[2] # τ₁ K⁻_q u⁻
+        S⁺[1] += SI.normal * SI.τ₁ * U⁻[2] # τ₁ K⁻_q u⁻ -- Correct for the incoming normal vector
     end
     dest
 end
@@ -135,7 +137,7 @@ Right handed SAT for interface conditions. Correspond to block 1 in the setup
 
 Superscript - is the current block + is the joining block
 """
-function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:Union{NodeType{:Right},NodeType{:Up}}}
+function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Right}}
     for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
         S⁻[end] += SI.τ₀ * (U⁻[end] - U⁺[1])
         U⁺[1] = U⁻[end] - U⁺[1]
@@ -144,7 +146,7 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
             S⁻[end-SI.order+i]  += SI.τ₂ * K⁻[end] * SI.D₁ᵀEₙ[i] * U⁺[1] # (U⁻[end] - U⁺[1]) # τ₂ K⁻ D₁ᵀL₀ u
             # S⁻[end]             += SI.τ₁ * K⁻[end] * (SI.D₁Eₙ[i]*U⁻[end-SI.order+i] - SI.D₁E₀[i]*U⁺[i])
         end
-        S⁻[end] += -SI.τ₁ * U⁺[2]
+        S⁻[end] += -SI.normal * SI.τ₁ * U⁺[2]
     end
     dest
 end
