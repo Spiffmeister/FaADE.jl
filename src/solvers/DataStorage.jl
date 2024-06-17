@@ -197,6 +197,10 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
                 NeighbouringJoint = tmpJoint
                 if (_flipside(tmpJoint.side) != Joint.side) & (Joint.index > I) # flip the normal vector if required
                     if typeof(Joint.side).parameters[1] == typeof(tmpJoint.side).parameters[1]
+                        @show "Flipping normal"
+                        @show I
+                        @show Joint
+                        @show tmpJoint
                         normal = -TT(1)
                     end
                 end

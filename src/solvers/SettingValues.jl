@@ -153,18 +153,28 @@ function _tradeBuffer!(B::InterfaceBoundaryData,DB)
     # @show Tojoint
     # @show DB[Myjoint.index].boundary[Tojoint.side].BufferIn
 
-    if Myjoint.side == _flipside(Tojoint.side) # if they are the same dimension we can just write to array
+    if (Myjoint.side == _flipside(Tojoint.side)) 
+        # if they are the same dimension and they match we can just write to array
         ToBuffer .= MyBuffer
-    else # if they are not the the same dimension we need to rearrange things
+    elseif Myjoint.side == Tojoint.side
+        # if they are the same dimension but they don't match we must reverse
+        # @show Myjoint, Tojoint
+        # @show Tojoint.side
+        ToBuffer .= MyBuffer
+        reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
+        # reverse!(ToBuffer,dims=2)
+    else
+        # if they are not the the same dimension we need to rearrange things
         for (BI,BO) in zip(eachrow(ToBuffer),eachcol(MyBuffer))
             BI .= BO
         end
+        if typeof(Myjoint.side).parameters[1] != typeof(Tojoint.side).parameters[1]
+            # If they are not the same axis we need to reverse
+            # @show Myjoint, Tojoint
+            # @show ToBuffer
+            reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
+        end
     end
-    if Myjoint.side == Tojoint.side # if same boundaries are connected (i.e. down with down) we need to reverse the array
-        ToBuffer .= reverse(ToBuffer,dims=mod1(typeof(Tojoint).parameters[2]+1))
-    end
-    # @show DB[Myjoint.index].boundary[Tojoint.side].BufferIn
-
 end
 function _tradeBuffers!(D,DB)
     for J in eachindex(D.boundary)
@@ -173,7 +183,6 @@ function _tradeBuffers!(D,DB)
 end
 function _tradeBuffers!(DB::DataMultiBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     for I in eachblock(DB)
-        @show I
         _tradeBuffers!(DB[I],DB)
     end
 end
