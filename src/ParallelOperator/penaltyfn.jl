@@ -126,9 +126,24 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
 
     I = LinearInterpolator(P.gridx,u)
 
+    Fplane = P.PGrid.Fplane
+    Bplane = P.PGrid.Bplane
+
     # w_f ← P_f u + P_b u
     for i in eachindex(P.gridx)
-        w_f[i] = I(P.PGrid.Fplane.x[i]) + I(P.PGrid.Bplane.x[i])
+        x_f = Fplane.x[i]
+        x_b = Bplane.x[i]
+        if grid[1] ≤ x_f ≤ grid[grid.n]
+            w_f[i] = I(x_f)
+        else
+            w_f[i] = TT(0)
+        end
+        if grid[1] ≤ x_b ≤ grid[grid.n]
+            w_f[i] += I(x_b)
+        else
+            w_f[i] += TT(0)
+        end
+        # w_f[i] = w_fi + w_bi
         # w_f[i] = w_f[i]/2
     end
 
