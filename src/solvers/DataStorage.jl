@@ -647,7 +647,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
         end
     end
 
-    BS = GenerateBoundaries(P,G,K)
+    BS = GenerateBoundaries(P,G)
 
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
