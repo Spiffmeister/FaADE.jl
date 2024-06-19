@@ -132,7 +132,7 @@ function GenerateBoundaries(P::Problem1D,G::LocalGridType{TT,1}) where TT
         end
     end
 
-    return (tmpDict[Left],tmpDict[Right])
+    return tmpDict
 end
 function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where TT
     jts = G.Joint[I]
