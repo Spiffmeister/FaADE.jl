@@ -1,33 +1,4 @@
 
-#=
-"""
-    ParGrid{TT,AT<:AbstractArray{TT}}
-Storing the x-y coordinates of a parallel grid
-"""
-struct ParGrid{TT,AT<:AbstractArray{TT}}
-    x   :: AT
-    y   :: AT
-end
-
-"""
-    ParallelGrid{TT,DIM,AT,PA}
-Stores the current, forward and backward planes for the parallel tracing.
-
-In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
-"""
-struct ParallelGrid{TT<:Real,
-        DIM,
-        AT<:AbstractArray{TT},
-        PA<:AbstractArray{Vector{TT}}}
-
-    plane   :: PA
-    Bplane  :: ParGrid{TT,AT}
-    Fplane  :: ParGrid{TT,AT}
-    # w_f     :: AT
-    # w_b     :: AT
-end
-=#
-
 
 """
     construct_grid(χ::Function,grid::Grid2D,z::Vector)
@@ -64,13 +35,30 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
 end
 
 
+function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};xmode=:stop,ymode=:preiod) where {TT,DIM}
+
+    PGridStorage = Dict()
+
+    for I in eachgrid(grid)
+        Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=xmode,ymode=ymode)
+
+        sgi = _subgrid_index(grid,Pgrid.Bplane,I)
+        Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
+        
+        sgi = _subgrid_index(grid,Pgrid.Fplane,I)
+        Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
+
+        PGridStorage[I] = ParallelGrid{TT,DIM,typeof(Bplane.x)}(Bplane,Fplane)
+    end
+
+    return PGridStorage
+end
+
 """
     construct_plane(χ,X,z,n)
 Constructs the forward and backward planes for a single solution plane
 """
 function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1) where T
-
-    # plane = fill(zeros(T,2),n)
 
     function prob_fn(prob,i,repeat)
         remake(prob,u0=X[i])
@@ -80,15 +68,6 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
 
     sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,
         save_on=false,save_end=true)
-    # sim = solve(EP,McAte5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,save_on=false,save_end=true)
-    
-    #=
-    plane = fill(zeros(T,2),prod(n))
-    for i = 1:prod(n)
-        plane[i] = sim.u[i].u[2]
-    end
-    =#
-
 
     planex = zeros(T,n)
     planey = zeros(T,n)
@@ -96,15 +75,26 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
         planex[i] = sim.u[i].u[2][1]
         planey[i] = sim.u[i].u[2][2]
     end
-    # planex = reshape(planex,n[2],n[1])'
-    # planey = reshape(planey,n[2],n[1])'
 
-
-    # plane = reshape(plane,n[2],n[1])'
-
-    return ParGrid{T,typeof(planex)}(planex,planey)
+    return ParGrid{T,typeof(planex)}(planex,planey,zeros(Int,1,1))
 end
 
+function _subgrid_index(grid::GridMultiBlock,plane::ParGrid,I::Int)
+    containedgrid = zeros(Int,size(plane.x))
+    for I in eachgrid(grid) # For each point, check which subgrid it falls within 
+        minx = minimum(grid.Grids[I].gridx)
+        maxx = maximum(grid.Grids[I].gridx)
+        miny = minimum(grid.Grids[I].gridy)
+        maxy = maximum(grid.Grids[I].gridy)
+
+        for J in eachindex(plane.x)
+            if (minx ≤ plane.x[J] ≤ maxx) && (miny ≤ plane.y[J] ≤ maxy)
+                containedgrid[J] = I
+            end
+        end
+    end
+    return containedgrid
+end
 
 function postprocess_plane!(X,xbound,ybound,xmode,ymode)
     @views out_of_bounds!(X.x,xbound,xmode)

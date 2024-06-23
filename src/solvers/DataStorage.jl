@@ -132,7 +132,7 @@ function GenerateBoundaries(P::Problem1D,G::LocalGridType{TT,1}) where TT
         end
     end
 
-    return (tmpDict[Left],tmpDict[Right])
+    return tmpDict
 end
 function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where TT
     jts = G.Joint[I]
@@ -157,7 +157,7 @@ function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where
         end
     end
 
-    return (tmpDict[Left],tmpDict[Right])
+    return tmpDict
 end
 function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
     tmpDict = Dict()
@@ -177,7 +177,7 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
         end
     end
 
-    return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
+    return tmpDict
 end
 """
 2D multiblock version of GenerateBoundaries.
@@ -735,7 +735,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     
     PK = (P.Kx,P.Ky) #need to fix this for material properties
     
-    if typeof(P.Parallel) <: Vector
+    if typeof(P.Parallel) <: Dict
         PMap = P.Parallel[I]
     else
         PMap = P.Parallel

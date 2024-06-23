@@ -35,7 +35,7 @@ In-place conjugate gradient method. Designed for multiblock problems
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-12,maxIT::Int=100,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-12,maxIT::Int=1000,warnings=true) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT

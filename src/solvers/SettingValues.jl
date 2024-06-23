@@ -306,12 +306,12 @@ Solution and Data modes
 """
 function applySATs end
 function applySATs(dest::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #data mode
-    applyCartesianSAT!(D.boundary[1],  dest, D.K, mode)
-    applyCartesianSAT!(D.boundary[2],  dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[Left],  dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[Right],  dest, D.K, mode)
 end
 function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #solution mode
-    applyCartesianSAT!(D.boundary[1],  dest, source, D.K, mode)
-    applyCartesianSAT!(D.boundary[2],  dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[Left],  dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[Right],  dest, source, D.K, mode)
 end
 """
     applySATs
@@ -567,12 +567,10 @@ end
 function applyParallelPenalties(DB::DataMultiBlock)
     for I in eachblock(DB)
         applyParallelPenalty(DB[I])
+
+        
     end
 end
-
-
-
-
 
 #=
 """
