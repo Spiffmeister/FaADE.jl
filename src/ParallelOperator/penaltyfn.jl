@@ -265,21 +265,27 @@ function compute_parallel_operator(dest::AT,u::AT,P::ParallelData) where {AT}
 end
 
 
-
-function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET},I::Int) where {TT,MET}
+"""
+    applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
+Applies the parallel penalty for a multiblock problem.
+"""
+function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
     
+    # Ipt = [BicubicInterpolator(P.gridx,P.PGrid.Fplane.y,uglobal[I]) for I in eachindex(uglobal)]
+
     κ = P.κ
     w_f = P.w_f
     H = P.H
     J = grid.J
 
-    sgi = P.PGrid.Fplane.subgrid
+    sgiF = P.PGrid.Fplane.subgrid
+    sgiB = P.PGrid.Bplane.subgrid
     nnF = P.PGrid.Fplane.x
     nnB = P.PGrid.Bplane.x
 
     for I in eachindex(w_f)
-        w_f[I] = uglobal[sgi[I]][nnF[I]]
-        w_f[I] += uglobal[sgi[I]][nnB[I]]
+        w_f[I] = uglobal[sgiF[I]][nnF[I]]
+        w_f[I] += uglobal[sgiB[I]][nnB[I]]
         w_f[I] = w_f[I]/2
     end
 

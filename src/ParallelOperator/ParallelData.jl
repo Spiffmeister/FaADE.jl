@@ -134,7 +134,10 @@ end
 
 
 
-
+"""
+    ParallelDataMultiblock{TT,DIM,IT}
+Stores the parallel data for multiblock problems.
+"""
 struct ParallelDataMultiblock{TT<:Real,
         DIM,
         IT} <: ParallelGridType
@@ -144,7 +147,7 @@ struct ParallelDataMultiblock{TT<:Real,
     # u           :: Matrix{TT}
     Interpolant :: IT
 end
-function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpolant=nothing,domain=(:square,:connected)) where {TT}
+function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpolant=:nearest) where {TT}
 
     PData  = Dict{Int,ParallelData}()
     for I in eachgrid(G)
@@ -152,7 +155,7 @@ function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1
     end
 
     # interpolant = [(u->LinearInterpolator(G.Grids[I].gridx,G.Grids[I].gridy,u)) for I in eachgrid(G)]
-    interpolant = nothing
+    interpolant = :nearest
 
     uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
 

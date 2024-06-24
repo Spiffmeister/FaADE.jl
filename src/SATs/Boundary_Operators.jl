@@ -80,7 +80,7 @@ end
 """
     BoundaryDerivative
 
-Used to construct `E₀D₁` or `EₙD₁`. Does not contain the normal vector.
+Used to construct `E₀D₁` or `EₙD₁`. Does not take into account the normal vector.
 """
 function BoundaryDerivative end
 function BoundaryDerivative(::NodeType{:Left},Δx::Real,order::Int)

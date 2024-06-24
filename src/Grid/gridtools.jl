@@ -48,7 +48,14 @@
     nearestpoint
 Find the closest point in a grid to a given point
 """
-function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT}) where TT
+function nearestpoint end
+"""
+    nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear)
+Takes a 2D grid and finds the nearest point.
+
+Returns the value of the nearest point and the linear index of that point.
+"""
+function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear) where TT
 
     tmpdist = TT(0)
     dist = TT(1e10)
@@ -61,6 +68,37 @@ function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT}) where TT
         end
     end
 
-    return linind
+    if indextype == :linear
+        return (grid.gridx[linind],grid.gridy[linind]), linind
+    elseif indextype == :cartesian
+        cartind = CartesianIndices(grid.gridx)[linind]
+        return (grid.gridx[linind],grid.gridy[linind]), (cartind[1],cartind[2])
+    else
+        error("Index type is either :linear or :cartesian")
+    end
 end
+"""
+    nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT})
+Takes a multiblock grid and finds the nearest point.
 
+Returns the value of the nearest point, the linear index of that point, and the grid number in GridMultiBlock.
+"""
+function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
+    point = TT(0)
+    dist = TT(1e10)
+    index = 0
+    gridindex = 0
+    for I in eachgrid(grid)
+        tmppt,tmpindex = nearestpoint(grid.Grids[I],pt)
+
+        tmpdist = sqrt( (tmppt[1] - pt[1])^2 + (tmppt[2] - pt[2])^2 )
+        if (tmpdist < dist ) | (point == 0)
+            dist = tmpdist
+            point = tmppt
+            index = tmpindex
+            gridindex = I
+        end
+    end
+
+    return point, index, gridindex
+end
