@@ -58,7 +58,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
             Bplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         else
-            sgi = _subgrid_index(grid,Pgrid.Bplane,I)
+            sgi = _subgrid_index(grid,Pgrid.Bplane)
             Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
         end
         
@@ -66,7 +66,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
             Fplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         else
-            sgi = _subgrid_index(grid,Pgrid.Fplane,I)
+            sgi = _subgrid_index(grid,Pgrid.Fplane)
             Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
         end
 

@@ -126,7 +126,7 @@ end
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
     if typeof(G) <: LocalGridType
-        uglobal = [zeros(size(G))]
+        # uglobal = [zeros(size(G))] # TESTING
     else
         uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
     end
@@ -151,11 +151,12 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if solverconfig.parallel
                 # println("b4",norm(DBlock[1].uₙ₊₁))
                 # @show norm(DBlock[1].u)
-                # applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
-
+                
                 if typeof(G) <: LocalGridType
-                    uglobal[1] .= DBlock[1].uₙ₊₁
-                    applyParallelPenalty!(DBlock[1].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[1].Parallel,G)
+                    applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
+                    
+                    # uglobal[1] .= DBlock[1].uₙ₊₁ # TESTING
+                    # applyParallelPenalty!(DBlock[1].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[1].Parallel,G) # TESTING
                 else
                     for I in eachblock(DBlock)
                         uglobal[I] .= DBlock[I].uₙ₊₁

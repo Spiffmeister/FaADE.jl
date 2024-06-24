@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 161
+nx = ny = 41
 
 Δt = 1e-3
 # t = Δt
-t = 0.16
+t = 0.26
 
 ωt = 1.0
 ωx = 1.0

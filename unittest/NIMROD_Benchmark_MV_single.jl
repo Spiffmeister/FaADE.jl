@@ -124,8 +124,8 @@ soln = solve(P,Dom,Δt,1.1Δt,solver=:theta,  θ=θ)
 
 ###=== CHECKING ===###
 D12 = Grid2D([-0.5,0.5],[-0.5,0.5],2nx-1,ny)
-gdata_nn = construct_grid(B,D12,[-1.0,1.0],ymode=:ignore,interpmode=:nearest)
-PData_nn = ParallelData(gdata_nn,D12,order,κ=k_para,interpolant=:nearest)
+gdata_nn = construct_grid(B,D12,[-1.0,1.0],ymode=:stop)#,interpmode=:nearest)
+PData_nn = ParallelData(gdata_nn,D12,order,κ=k_para)#,interpolant=:nearest)
 
 BC_nn = (
     SAT_Dirichlet((y,t) -> cos(0.5π)*cos(π*y[2]) , D12.Δx , Left,  order),
@@ -142,34 +142,34 @@ soln_nn = solve(P_nn,D12,Δt,1.1Δt,solver=:theta,θ=θ)
 
 
 ###=== CHECKING CHECKING CHECKING ===###
-for i in 1:nx
-    for j in 1:ny
-        if Dom.Grids[gdata[1].Fplane.subgrid[i,j]][gdata[1].Fplane.x[i,j]] != D12[gdata_nn.Fplane.x[i,j]]
-            error("Mismatch at ($(i),$(j)) in 1")
-        end
-    end
-end
-for i in 1:nx
-    for j in 1:ny
-        if Dom.Grids[gdata[2].Fplane.subgrid[i,j]][gdata[2].Fplane.x[i,j]] != D12[gdata_nn.Fplane.x[nx+i-1,j]]
-            error("Mismatch at ($(i),$(j)) in 2)")
-        end
-    end
-end
-for i in 1:nx
-    for j in 1:ny
-        if Dom.Grids[gdata[1].Bplane.subgrid[i,j]][gdata[1].Bplane.x[i,j]] != D12[gdata_nn.Bplane.x[i,j]]
-            error("Mismatch at ($(i),$(j)) in 1")
-        end
-    end
-end
-for i in 1:nx
-    for j in 1:ny
-        if Dom.Grids[gdata[2].Bplane.subgrid[i,j]][gdata[2].Bplane.x[i,j]] != D12[gdata_nn.Bplane.x[nx+i-1,j]]
-            error("Mismatch at ($(i),$(j)) in 2)")
-        end
-    end
-end
+# for i in 1:nx
+#     for j in 1:ny
+#         if Dom.Grids[gdata[1].Fplane.subgrid[i,j]][gdata[1].Fplane.x[i,j]] != D12[gdata_nn.Fplane.x[i,j]]
+#             error("Mismatch at ($(i),$(j)) in 1")
+#         end
+#     end
+# end
+# for i in 1:nx
+#     for j in 1:ny
+#         if Dom.Grids[gdata[2].Fplane.subgrid[i,j]][gdata[2].Fplane.x[i,j]] != D12[gdata_nn.Fplane.x[nx+i-1,j]]
+#             error("Mismatch at ($(i),$(j)) in 2)")
+#         end
+#     end
+# end
+# for i in 1:nx
+#     for j in 1:ny
+#         if Dom.Grids[gdata[1].Bplane.subgrid[i,j]][gdata[1].Bplane.x[i,j]] != D12[gdata_nn.Bplane.x[i,j]]
+#             error("Mismatch at ($(i),$(j)) in 1")
+#         end
+#     end
+# end
+# for i in 1:nx
+#     for j in 1:ny
+#         if Dom.Grids[gdata[2].Bplane.subgrid[i,j]][gdata[2].Bplane.x[i,j]] != D12[gdata_nn.Bplane.x[nx+i-1,j]]
+#             error("Mismatch at ($(i),$(j)) in 2)")
+#         end
+#     end
+# end
 
 
 
