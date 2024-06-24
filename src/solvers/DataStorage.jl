@@ -735,12 +735,12 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     
     PK = (P.Kx,P.Ky) #need to fix this for material properties
     
-    if typeof(P.Parallel) <: Dict
-        PMap = P.Parallel[I]
+    if typeof(P.Parallel) <: ParallelDataMultiblock
+        PMap = P.Parallel.PData[I]
     else
         PMap = P.Parallel
     end
-    
+
     K = _BuildDiffusionMatrix(LG,P,PMap)
 
     BS = GenerateBoundaries(P,G,I,K)

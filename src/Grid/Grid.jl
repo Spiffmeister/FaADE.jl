@@ -5,13 +5,15 @@ Submodule containing the grid data structure and functions.
 """
 module Grid
 
+    using LinearAlgebra: sqrt
+
     using FaADE.Helpers
 
     include("DerivativeFirst.jl")
     include("toroidal.jl")
     include("generating.jl")
     include("grids.jl")
-    # include("data.jl")
+    include("gridtools.jl")
 
     export GridType, LocalGridType
     export CartesianMetric, CurvilinearMetric
@@ -26,5 +28,7 @@ module Grid
     
     export GetBoundaryCoordinates
     export eachgrid
+    
+    export nearestpoint
 
 end

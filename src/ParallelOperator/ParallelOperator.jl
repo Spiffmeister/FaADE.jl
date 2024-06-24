@@ -22,7 +22,7 @@ module ParallelOperator
     include("penaltyfn.jl")
 
     export ParallelGrid
-    export ParallelData
+    export ParallelData, ParallelDataMultiblock
 
     export construct_grid
     export generate_parallel_penalty

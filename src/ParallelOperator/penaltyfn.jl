@@ -266,4 +266,31 @@ end
 
 
 
+function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET},I::Int) where {TT,MET}
+    
+    κ = P.κ
+    w_f = P.w_f
+    H = P.H
+    J = grid.J
 
+    sgi = P.PGrid.Fplane.subgrid
+    nnF = P.PGrid.Fplane.x
+    nnB = P.PGrid.Bplane.x
+
+    for I in eachindex(w_f)
+        w_f[I] = uglobal[sgi[I]][nnF[I]]
+        w_f[I] += uglobal[sgi[I]][nnB[I]]
+        w_f[I] = w_f[I]/2
+    end
+
+    τ = P.τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+
+    for j in 1:grid.ny
+        for i in 1:grid.nx
+            u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
+                u[i,j] + Δt * κ * τ * w_f[i,j] / H[i,j]
+            )
+        end
+    end
+
+end

@@ -1,6 +1,6 @@
 
 
-abstract type ParallelGridType{TT} end
+abstract type ParallelGridType end
 
 
 
@@ -41,10 +41,11 @@ end
 
 struct ParallelData{TT<:Real,
         DIM,
+        PGT,
         GT,
         BT,
-        IT}
-    PGrid       :: ParallelGrid{TT,DIM,Matrix{TT}}
+        IT} <: ParallelGridType
+    PGrid       :: PGT # ParallelGrid{TT,DIM,Matrix{TT}}
     κ           :: TT
     τ           :: TT
     Intercept   :: FieldLineIntercept
@@ -58,6 +59,8 @@ struct ParallelData{TT<:Real,
 
     w_f         :: Matrix{TT}
     w_b         :: Matrix{TT}
+
+    u           :: Matrix{TT}
 
     MagneticField   :: BT
 
@@ -81,6 +84,8 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),inte
     w_f = zeros(TT,size(G))
     w_b = zeros(TT,size(G))
 
+    u = zeros(TT,1,1)
+
     Bp = zeros(TT,(3,3))
     MF = MagneticField{typeof(B),:EQUILIBRIUM,TT,typeof(Bp)}(B,false,Bp)
 
@@ -88,17 +93,17 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),inte
         # @warn "B not provided, perpendicular solve may not be performed correctly."
     end
 
-    if typeof(interpolant) <: Nothing
+    # if typeof(interpolant) <: Nothing
         Interpolator = nothing
-    elseif typeof(interpolant) <: Symbol
-        if interpolant == :bicubic
-            Interpolator(u) = BicubicInterpolator(G.gridx,G.gridy,u)
-        elseif interpolant == :bilinear
-            Interpolator(u) = LinearInterpolator(G.gridx,G.gridy,u)
-        end
-    end
+    # elseif typeof(interpolant) <: Symbol
+    #     if interpolant == :bicubic
+    #         Interpolator(u) = BicubicInterpolator(G.gridx,G.gridy,u)
+    #     elseif interpolant == :bilinear
+    #         Interpolator(u) = LinearInterpolator(G.gridx,G.gridy,u)
+    #     end
+    # end
 
-    ParallelData{TT,2,typeof(gridx),typeof(MF),typeof(Interpolator)}(PGrid,κ,τ,intercept_fieldlines,Interpolator,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,MF,[TT(0)])
+    ParallelData{TT,2,typeof(PGrid),typeof(gridx),typeof(MF),typeof(Interpolator)}(PGrid,κ,τ,intercept_fieldlines,Interpolator,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,u,MF,[TT(0)])
 end
 function ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),intercept=nothing) where TT
 
@@ -119,20 +124,39 @@ function ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),inte
     w_f = zeros(TT,(length(G),1))
     w_b = zeros(TT,(length(G),1))
 
+    u = zeros(TT,1,1)
+
     Bp = zeros(TT,(1,1))
     MF = MagneticField{Nothing,:EQUILIBRIUM,TT,typeof(Bp)}(nothing,false,Bp)
     
-    ParallelData{TT,1,typeof(gridx),typeof(MF),Nothing}(PGrid,κ,τ,intercept_fieldlines,nothing,gridx,gridy,Δx,Δy,H,w_f,w_b,MF,[TT(0)])
+    ParallelData{TT,1,typeof(PGrid),typeof(gridx),typeof(MF),Nothing}(PGrid,κ,τ,intercept_fieldlines,nothing,gridx,gridy,Δx,Δy,H,w_f,w_b,u,MF,[TT(0)])
 end
 
 
 
-function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing) where {TT}
+
+struct ParallelDataMultiblock{TT<:Real,
+        DIM,
+        IT} <: ParallelGridType
+    
+    PData       :: Dict{Int,ParallelData{TT,DIM}}
+    uglobal     :: Vector{Matrix{TT}}
+    # u           :: Matrix{TT}
+    Interpolant :: IT
+end
+function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpolant=nothing,domain=(:square,:connected)) where {TT}
 
     PData  = Dict{Int,ParallelData}()
     for I in eachgrid(G)
-        PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=intercept,B=B,interpolant=interpolant)
+        PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=nothing,B=nothing,interpolant=nothing)
     end
-    return PData
+
+    # interpolant = [(u->LinearInterpolator(G.Grids[I].gridx,G.Grids[I].gridy,u)) for I in eachgrid(G)]
+    interpolant = nothing
+
+    uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
+
+    # u = zeros(TT,size(GridMultiBlock))
+    return ParallelDataMultiblock{TT,2,typeof(interpolant)}(PData,uglobal,interpolant)
 end
 

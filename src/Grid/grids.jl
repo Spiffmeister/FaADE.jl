@@ -291,8 +291,12 @@ TODO: Add example for non-stacked grids
 TODO: Add checking that there are no hanging nodes
 """
 function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET,GT},N}},joints) where {N,TT,GT,MET}
-    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    # inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    # inds = [sum([grids[j].nx])]
+    indx = vcat([sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]...)
+    indy = vcat([sum([grids[j].ny] for j in 1:i) for i in 1:length(grids)]...)
     # _checkjoints(joints)
+    inds = [indx,indy]
     return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
 end
 

@@ -125,6 +125,8 @@ end
 # function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
+    uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
+
     target_state = solverconfig.target
 
     t = TT(0)
@@ -144,7 +146,15 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if solverconfig.parallel
                 # println("b4",norm(DBlock[1].uₙ₊₁))
                 # @show norm(DBlock[1].u)
-                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
+                # applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
+
+                for I in eachblock(DBlock)
+                    uglobal[I] .= DBlock[I].uₙ₊₁
+                end
+
+                for I in eachblock(DBlock)
+                    applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid,I)
+                end
                 # println("afta",norm(DBlock[1].uₙ₊₁))
             end
 
