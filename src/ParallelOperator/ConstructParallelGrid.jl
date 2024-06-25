@@ -47,7 +47,7 @@ Constructs the backwards and forward planes for a multiblock grid. Returns a dic
 
 By default will return points for nearest neighbour interpolation.
 """
-function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};xmode=:stop,ymode=:preiod,interpmode=:nearest) where {TT,DIM}
+function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};xmode=:stop,ymode=:period,interpmode=:nearest) where {TT,DIM}
 
     PGridStorage = Dict()
 

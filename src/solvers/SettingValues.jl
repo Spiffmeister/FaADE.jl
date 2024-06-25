@@ -66,48 +66,25 @@ end
 
 
 """
-    fillBuffer!
 """
-function fillBuffer! end
-function fillBuffer!(source,B::BoundaryData,args...) end
-function fillBuffer!(source::AT,B::InterfaceBoundaryData,K::AT) where AT
-    B.BufferIn .= source
-end
-"""
-fillBuffer
-"""
-function fillBuffer end
-function fillBuffer(source,B::Nothing,args...) end # no boundary data
-function fillBuffer(source::Symbol,B::BoundaryData,DB::DataMultiBlock) end
-function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::DataMultiBlock) where {TT,DIM,BCT<:SAT_Periodic}
-    cache = getproperty(DB[B.Joint],source)
-    copyto!(B.BufferIn,CartesianIndices(B.BufferIn),cache,B.I)
-end
-function fillBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},DB::DataMultiBlock) where {TT,DIM,BCT<:SAT_Interface}
-    cache = getproperty(DB[B.Joint],source)
-    K = getproperty(DB[B.Joint],:K)
-    SAT = B.BoundaryOperator
-    # Kq = K[SAT.axis]
-    # Kqr = K[3]
+function _filllocalBuffer(source::Symbol,B::BoundaryData,D::newLocalDataBlock) end
+function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Periodic}
+    cache = getarray(D,source)
+    BufferIn = B.BufferIn
 
-    if DIM == 1
-        SAT_Interface_cache!(B.BufferIn,cache,K,SAT)
-    elseif DIM == 2
-        if SAT.coordinates == :Cartesian
-            SAT_Interface_cache!(B.BufferIn,cache,K[SAT.axis],SAT)
-        elseif SAT.coordinates == :Curvilinear
-            SAT_Interface_cache!(B.BufferIn,cache,K[SAT.axis],K[3],SAT)
-        end
+    side = B.BoundaryOperator.side
+    order = B.BoundaryOperator.order
+
+    if side == Left
+        BufferIn .= cache[end-order+1:end,:]
+    elseif side == Right
+        BufferIn .= cache[1:order,:]
+    elseif side == Up
+        BufferIn .= cache[:,end-order+1:end]
+    elseif side == Down
+        BufferIn .= cache[:,1:order]
     end
 end
-function fillBuffer(source::Symbol,DB::DataMultiBlock,I::Int64,side::NodeType)
-    BC = DB[I].boundary[side]
-    fillBuffer(source,BC,DB)
-end
-
-
-function _filllocalBuffer(source::Symbol,B::BoundaryData,D::newLocalDataBlock) end
-function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Periodic} end
 function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Interface}
     cache = getproperty(D,source)
     K = getproperty(D,:K)
@@ -123,6 +100,8 @@ function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D:
         end
     end
 end
+"""
+"""
 function _fillLocalBuffers(source::Symbol,D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     _filllocalBuffer(source,D.boundary[Left],D)
     _filllocalBuffer(source,D.boundary[Right],D)
@@ -138,28 +117,22 @@ function _fillLocalBuffers(source::Symbol,D::DataMultiBlock{TT,DIM}) where {TT,D
 end
 
 
+"""
+"""
 function _tradeBuffer!(B::BoundaryData,DB) end
-function _tradeBuffer!(B::InterfaceBoundaryData,DB)
-    side = B.BoundaryOperator.side
-    # @show B.Joint
-
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM,AT,BCT<:SAT_Periodic} end
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM,AT,BCT<:SAT_Interface}
     Myjoint = B.OutgoingJoint
     Tojoint = B.IncomingJoint
     
     MyBuffer = B.BufferOut # Get this buffer
     ToBuffer = DB[Myjoint.index].boundary[Tojoint.side].BufferIn # Get the buffer we are writing to
 
-    # @show Myjoint
-    # @show Tojoint
-    # @show DB[Myjoint.index].boundary[Tojoint.side].BufferIn
-
     if (Myjoint.side == _flipside(Tojoint.side)) 
         # if they are the same dimension and they match we can just write to array
         ToBuffer .= MyBuffer
     elseif Myjoint.side == Tojoint.side
         # if they are the same dimension but they don't match we must reverse
-        # @show Myjoint, Tojoint
-        # @show Tojoint.side
         ToBuffer .= MyBuffer
         reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
         # reverse!(ToBuffer,dims=2)
@@ -170,8 +143,6 @@ function _tradeBuffer!(B::InterfaceBoundaryData,DB)
         end
         if typeof(Myjoint.side).parameters[1] != typeof(Tojoint.side).parameters[1]
             # If they are not the same axis we need to reverse
-            # @show Myjoint, Tojoint
-            # @show ToBuffer
             reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
         end
     end
@@ -187,25 +158,7 @@ function _tradeBuffers!(DB::DataMultiBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     end
 end
 
-"""
-    fillBuffers
-"""
-function fillBuffers end
-function fillBuffers(B::BoundaryData,args...) end
-function fillBuffer(source::Symbol,DB::DataMultiBlock{TT,DIM},I::Int64) where {TT,DIM}
-    D = DB[I]
-    fillBuffer(source,D.boundary[Left],DB)
-    fillBuffer(source,D.boundary[Right],DB)
-    if DIM == 2
-        fillBuffer(source,D.boundary[Up],DB)
-        fillBuffer(source,D.boundary[Down],DB)
-    end
-end
-function fillBuffers(source::Symbol,DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
-    for I in eachblock(DB)
-        fillBuffer(source,DB,I)
-    end
-end
+
 
 
 

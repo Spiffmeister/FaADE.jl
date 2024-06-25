@@ -86,7 +86,7 @@ function SAT_Periodic(Δx::TT,order::Int,side::NodeType{SIDE,AX}) where {TT,SIDE
     SAT_Periodic{typeof(side),:Cartesian,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
         Periodic,side,AX,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,0.0,:Cartesian)
 end
-function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType,Δy::TT,coord::Symbol) where TT
+function SAT_Periodic(Δx::TT,order::Int,side::NodeType{TN,AX},Δy::TT,coord::Symbol) where {TT,TN,AX}
     D₁ᵀE₀ = BoundaryDerivativeTranspose(Left,order,Δx)
     D₁ᵀEₙ = BoundaryDerivativeTranspose(Right,order,Δx)
     E₀D₁ = BoundaryDerivative(Left,Δx,order)
@@ -94,10 +94,10 @@ function SAT_Periodic(Δx::TT,axis::Int,order::Int,side::NodeType,Δy::TT,coord:
 
     α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
 
-    loopaxis = SelectLoopDirection(axis)
+    loopaxis = SelectLoopDirection(AX)
 
     SAT_Periodic{typeof(side),coord,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
-        Periodic,side,axis,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,Δy,coord)
+        Periodic,side,AX,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,Δy,coord)
 end
 
 

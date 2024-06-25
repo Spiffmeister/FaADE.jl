@@ -116,6 +116,20 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2
 
     InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
+function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
+    if BC.side ∈ [Left,Right]
+        n = G1.ny
+        BufferIn    = zeros(TT,(BC.order,n))
+        BufferOut   = zeros(TT,(BC.order,n))
+
+    elseif BC.side ∈ [Up,Down]
+        n = G1.nx
+        BufferIn    = zeros(TT,(n,BC.order))
+        BufferOut   = zeros(TT,(n,BC.order))
+    end
+
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+end
 
 
 """
@@ -149,7 +163,7 @@ function GenerateBoundaries(P::Problem1D,G::GridMultiBlock{TT,1},I::Int64) where
             if typeof(BC) <: SAT_Periodic
                 # In 1D the boundary must be on the other side
                 I - 1 == 0 ? j = G.ngrids : j = 1 # Tell the periodic BC where to find the source data
-                tmpDict[BC.side] = _newBoundaryCondition(G.Grids[I],G.Grids[j],BC,j,P.order)
+                tmpDict[BC.side] = _newBoundaryCondition(G.Grids[I],BC)
             else
                 # If non-periodic we can just assign the BC
                 tmpDict[BC.side] = BoundaryData(G.Grids[I],BC,P.order)
@@ -163,7 +177,7 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
     tmpDict = Dict()
     for BC in P.BoundaryConditions
         if typeof(BC) <: SAT_Periodic
-            tmpDict[BC.side] = _newBoundaryCondition(G,G,BC,1,P.order)
+            tmpDict[BC.side] = _newBoundaryCondition(G,BC)
         else
             if (GetMetricType(G) == CurvilinearMetric) | (typeof(BC) <: SAT_Dirichlet)
                 if typeof(BC.side).parameters[2] == 1
@@ -236,8 +250,8 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
         for BC in P.BoundaryConditions[I]
             if typeof(BC) <: SAT_Periodic
                 # In 2D we need to find which boundary matches the periodic BC
-                @warn "Periodic boundary condition for 2D multiblock problem. I will attempt to find the correct boundary"
-                tmpDict[BC.side] = _newBoundaryCondition(G.Grids[I],G.Grids[j],BC,j,P.order)
+                @warn "Periodic boundary condition for 2D multiblock problem assumes the periodic boundary is contained to one block, if you want to use periodic conditions across blocks you should connect them via a Joint."
+                tmpDict[BC.side] = _newBoundaryCondition(G.Grids[I],BC)
             else
                 # If non-periodic we can just assign the BC
                 if (GetMetricType(G) == CurvilinearMetric) | (typeof(BC) <: SAT_Dirichlet)
@@ -257,7 +271,7 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
     # return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
 end
 
-_newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Periodic},Joint1,Joint2) where TT  = InterfaceBoundaryData{TT}(G1,G2,BC,Joint1,Joint2)
+_newBoundaryCondition(G1::GridType{TT},BC::SimultanousApproximationTerm{:Periodic}) where TT  = InterfaceBoundaryData{TT}(G1,BC)
 _newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},Joint1,Joint2) where TT = InterfaceBoundaryData{TT}(G1,G2,BC,Joint1,Joint2)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},order) where TT = BoundaryData(G,BC,order)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},order) where TT   = BoundaryData(G,BC,order)
