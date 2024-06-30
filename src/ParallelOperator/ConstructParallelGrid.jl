@@ -58,6 +58,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
             Bplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         else
+            postprocess_plane!(Pgrid.Bplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Bplane)
             Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
         end
@@ -66,6 +67,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
             Fplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         else
+            postprocess_plane!(Pgrid.Fplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Fplane)
             Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
         end
@@ -139,11 +141,9 @@ Find the subgrid index closest to each point in a ParGrid.
 """
 function _subgrid_index(grid::GridMultiBlock,plane::ParGrid)
     containedgrid = zeros(Int,size(plane.x))
-    for I in eachgrid(grid) # For each point, check which subgrid it falls within 
-        for J in eachindex(plane.x)
-            _, _, gridind = nearestpoint(grid,(plane.x[J],plane.y[J]))
-            containedgrid[J] = gridind
-        end
+    for J in eachindex(plane.x)
+        gridind = findgrid(grid,(plane.x[J],plane.y[J]),mode=:nearest)
+        containedgrid[J] = gridind
     end
     return containedgrid
 end

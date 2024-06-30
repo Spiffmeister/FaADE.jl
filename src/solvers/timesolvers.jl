@@ -129,6 +129,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         # uglobal = [zeros(size(G))] # TESTING
     else
         uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
+
+        Par = [DBlock[I].Parallel for I in eachblock(DBlock)]
     end
     # uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
 
@@ -162,7 +164,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                         uglobal[I] .= DBlock[I].uₙ₊₁
                     end
                     for I in eachblock(DBlock)
-                        applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
+                        # applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
+                        applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)
                     end
                 end
                 # println("afta",norm(DBlock[1].uₙ₊₁))

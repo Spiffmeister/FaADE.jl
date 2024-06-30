@@ -102,3 +102,25 @@ function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
 
     return point, index, gridindex
 end
+
+function findgrid(grid::GridMultiBlock,pt::Tuple{TT,TT};mode=:inside) where TT
+    gridind = 0
+    for I in eachgrid(grid)
+        minx = grid.Grids[I].gridx[1]
+        maxx = grid.Grids[I].gridx[end]
+        miny = grid.Grids[I].gridy[1]
+        maxy = grid.Grids[I].gridy[end]
+
+        if (minx <= pt[1] <= maxx) & (miny <= pt[2] <= maxy)
+            gridind = I
+        end
+    end
+    if gridind != 0
+        return gridind
+    elseif (gridind == 0) & (mode == :nearest)
+        gridind = nearestpoint(grid,pt)[3]
+        return nearestpoint(grid,pt)[3]
+    elseif (gridind == 0) & (mode == :inside)
+        error("Point $(pt) is not in any grid")
+    end
+end

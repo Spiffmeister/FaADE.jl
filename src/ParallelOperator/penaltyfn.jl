@@ -269,27 +269,36 @@ end
     applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
 Applies the parallel penalty for a multiblock problem.
 """
-function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
+# function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
+function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,PGT,GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,PGT,GT,BT,IT}
     
-    # Ipt = [BicubicInterpolator(P.gridx,P.PGrid.Fplane.y,uglobal[I]) for I in eachindex(uglobal)]
+    Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
+    # Ipt = [interpolate(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
 
-    κ = P.κ
-    w_f = P.w_f
-    H = P.H
+    κ = P[I].κ
+    w_f = P[I].w_f
+    H = P[I].H
     J = grid.J
 
-    sgiF = P.PGrid.Fplane.subgrid
-    sgiB = P.PGrid.Bplane.subgrid
-    nnF = P.PGrid.Fplane.x
-    nnB = P.PGrid.Bplane.x
+    sgiF = P[I].PGrid.Fplane.subgrid
+    sgiB = P[I].PGrid.Bplane.subgrid
+    # nnF = P.PGrid.Fplane.x
+    # nnB = P.PGrid.Bplane.x
 
-    for I in eachindex(w_f)
-        w_f[I] = uglobal[sgiF[I]][nnF[I]]
-        w_f[I] += uglobal[sgiB[I]][nnB[I]]
-        w_f[I] = w_f[I]/2
+    nnFx = P[I].PGrid.Fplane.x
+    nnFy = P[I].PGrid.Fplane.y
+    nnBx = P[I].PGrid.Bplane.x
+    nnBy = P[I].PGrid.Bplane.y
+
+    for J in eachindex(w_f)
+        # w_f[I] = uglobal[sgiF[I]][nnF[I]]
+        # w_f[I] += uglobal[sgiB[I]][nnB[I]]
+        w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
+        w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
+        w_f[J] = w_f[J]/2
     end
 
-    τ = P.τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
     for j in 1:grid.ny
         for i in 1:grid.nx

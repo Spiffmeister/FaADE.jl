@@ -29,6 +29,6 @@ module Grid
     export GetBoundaryCoordinates
     export eachgrid
     
-    export nearestpoint
+    export nearestpoint, findgrid
 
 end

@@ -14,7 +14,7 @@ savefigs = false
 save_reference_solution = false
 
 θ = 0.5
-order = 4
+order = 2
 
 
 # Time setup
@@ -26,7 +26,7 @@ nf = round(t_f/Δt)
 
 
 
-k_para = 1.0e6
+k_para = 1.0e8
 k_perp = 1.0
 
 
@@ -34,7 +34,7 @@ k_perp = 1.0
 𝒟x = [0.0,1.0]
 𝒟y = [0.0,2π]
 nx = 201
-ny = 201
+ny = 41
 
 Dx(x,nx) = sinh(0.15*x * (nx/51)^1.3)/2sinh(0.15*(nx/51)^1.3) + 0.5
 Dy(y) = y
@@ -42,9 +42,9 @@ Dy(y) = y
 𝒟x,𝒟y= FaADE.Grid.meshgrid(Dx.(LinRange(-1.0,1.0,nx),nx),Dy.(LinRange(0,2π,ny)))
 TestDom = Grid2D(𝒟x,𝒟y,ymap=false)
 
-D1 = Grid2D([0.0,0.35], [0.0,2π],21,ny)
-D2 = Grid2D([0.35,0.65],[0.0,2π],nx,ny)
-D3 = Grid2D([0.65,1.0], [0.0,2π],21,ny)
+D1 = Grid2D([0.0,0.3],[0.0,2π],41,ny)
+D2 = Grid2D([0.3,0.65],[0.0,2π],201,ny)
+D3 = Grid2D([0.65,1.0],[0.0,2π],41,ny)
 
 joints = ((Joint(2,Right),),
             (Joint(1,Left),Joint(3,Right)),
@@ -75,7 +75,7 @@ BC = Dict(1=>(Bl1,Bu1,Bd1), 2=>(Bu2,Bd2), 3=>(Br3,Bu3,Bd3))
 
 
 #=== PARALLEL MAP===#
-δ = 0.01
+δ = 0.015
 xₛ = 0.5
 
 function B(X,x,p,t)
@@ -102,10 +102,10 @@ if poincare
 end
 
 
-gdata   = construct_grid(B,Dom,[-2.0π,2.0π])
-PData   = ParallelData(gdata,Dom,order,κ=k_para)
+gdata   = construct_grid(B,Dom,[-2.0π,2.0π],interpmode=:bicubic)
+PData   = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=k_para)
 
-#=
+
 # S(X,t) = (1-X[1]^2)^2
 # S(X,t) = (1-(X[1]-1)^2)^2
 S = nothing
@@ -117,29 +117,44 @@ println("Solving")
 
 soln = solve(P,Dom,Δt,1.1Δt,solver=:theta,  θ=θ)
 soln = solve(P,Dom,Δt,t_f,  solver=:theta,  θ=θ)
-=#
 
 
-#=
+
+
 if plot
     println("plotting")
     using GLMakie
+
+    colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
+
     # using CairoMakie
     f = Figure();
     ax_f = Axis3(f[1,1]);
-    ax2_f = Axis(f[1,2]);
-    surface!(ax_f,Dom.gridx,Dom.gridy,soln.u[2])
-    lines!(ax2_f,Dom.gridx[:,1],soln.u[2][:,floor(Int,ny/2)+1])
+
+    surface!(ax_f,Dom.Grids[1].gridx,Dom.Grids[1].gridy,soln.u[2][1],colorrange=colourrange)
+    surface!(ax_f,Dom.Grids[2].gridx,Dom.Grids[2].gridy,soln.u[2][2],colorrange=colourrange)
+    surface!(ax_f,Dom.Grids[3].gridx,Dom.Grids[3].gridy,soln.u[2][3],colorrange=colourrange)
+
+
+
+    gridfig = Figure();
+    ax_g = Axis(gridfig[1,1]);
+    scatter!(ax_g,Dom.Grids[1].gridx[:],Dom.Grids[1].gridy[:],markersize=3.0)
+    scatter!(ax_g,Dom.Grids[2].gridx[:],Dom.Grids[2].gridy[:],markersize=3.0)
+    scatter!(ax_g,Dom.Grids[3].gridx[:],Dom.Grids[3].gridy[:],markersize=3.0)
+
+    
+    # lines!(ax2_f,Dom.gridx[:,1],soln.u[2][:,floor(Int,ny/2)+1])
 
     # wireframe!(ax,Dom.gridx,Dom.gridy,soln.u[2])
     # contour3d!(ax,soln.u[2],levels=100)
 
-    g = Figure(); 
-    ax_g = Axis(g[1,1]); 
-    contour3d!(ax_g,Dom.gridy[1,:],Dom.gridx[:,1],soln.u[2]',levels=100)
-    Colorbar(g[1,2])
+    # g = Figure(); 
+    # ax_g = Axis(g[1,1]); 
+    # contour3d!(ax_g,Dom.gridy[1,:],Dom.gridx[:,1],soln.u[2]',levels=100)
+    # Colorbar(g[1,2])
 end
-=#
+
 
 
 

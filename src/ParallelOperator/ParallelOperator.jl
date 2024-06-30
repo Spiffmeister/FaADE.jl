@@ -6,7 +6,7 @@ module ParallelOperator
 
     using DifferentialEquations: ODEProblem, EnsembleProblem, EnsembleSerial, solve, Tsit5, remake
     # using Interpolations: LinearInterpolation
-    # using Interpolations
+    using Interpolations
     using BasicInterpolators: BicubicInterpolator, LinearInterpolator
 
     using LinearAlgebra: norm
@@ -22,7 +22,7 @@ module ParallelOperator
     include("penaltyfn.jl")
 
     export ParallelGrid
-    export ParallelData, ParallelDataMultiblock
+    export ParallelData, ParallelMultiBlock
 
     export construct_grid
     export generate_parallel_penalty

@@ -749,7 +749,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     
     PK = (P.Kx,P.Ky) #need to fix this for material properties
     
-    if typeof(P.Parallel) <: ParallelDataMultiblock
+    if typeof(P.Parallel) <: ParallelMultiBlock
         PMap = P.Parallel.PData[I]
     else
         PMap = P.Parallel
