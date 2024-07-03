@@ -108,22 +108,29 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 
+δ = 0.005
+rs = 0.7
+function B(X,x::Array{Float64},params,t)
+    X[1] = -x[1] * δ * (-r^4 + 1) * sin(x[2])
+    X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])
+    # time dependent
+    # X[1] = -x[1] * δ * (-r^4 + 1) * sin(x[2]) * t
+    # X[1] = (-2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])) * t
+end
+dH(X,x,params,t) = B(X,x,params,t)
+gdata = construct_grid(dH,Dom,[-2.0π,2.0π],interpmode=:linear)
+PData = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=1.0e6)
 
-P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
+
+
+
+
+
+
+P = Problem2D(order,u₀,K,K,Dom,BD,F,PData)
 
 println("---Solving 4 volume---")
 soln = solve(P,Dom,Δt,t)
-
-
-
-
-function B(X,x::Array{Float64},params,t)
-    X[1] = x[1] 
-    X[1] = x[1]
-end
-
-
-
 
 
 

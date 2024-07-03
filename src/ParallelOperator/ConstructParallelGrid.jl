@@ -57,6 +57,9 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
         if interpmode == :nearest
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
             Bplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
+        elseif interpmode == :linear
+            ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
+            Bplane = ParGridLinear{TT,typeof(ix)}(Bplane.x,Bplane.y,ix,iy,sgi)
         else
             postprocess_plane!(Pgrid.Bplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Bplane)
@@ -66,6 +69,9 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
         if interpmode == :nearest
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
             Fplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
+        elseif interpmode == :linear
+            ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
+            Fplane = ParGridLinear{TT,typeof(ix)}(Fplane.x,Fplane.y,ix,iy,sgi)
         else
             postprocess_plane!(Pgrid.Fplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Fplane)
@@ -103,6 +109,37 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     return ParGrid{T,typeof(planex)}(planex,planey,zeros(Int,1,1))
 end
 
+
+
+function _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
+    ix = zeros(Int,size(plane.x))
+    iy = zeros(Int,size(plane.y))
+    sgi = zeros(Int,size(plane.x))
+
+    weightx = zeros(Int,size(plane.x))
+    weighty = zeros(Int,size(plane.y))
+
+    for I in eachindex(ix)
+        pt,ind,gridind = nearestpoint(grid,(plane.x[I],plane.y[I]))
+
+        # findcell(grid,(plane.x[I],plane.y[I]))
+
+        cartind = CartesianIndices(grid.Grids[gridind].gridx)[ind]
+
+        # Make sure the point is to the bottom left of the cell
+        if (grid.Grids[gridind].gridx[cardind[1]] < pt[1])
+            pt[1] = grid.Grids[gridind].gridx[cardind[1]-1]
+        end
+
+
+        
+        ix[I] = cartind[1]
+        iy[I] = cartind[2]
+        sgi[I] = gridind
+
+        weightx[I] = (plane.x[I] - pt[1])/(cartind[1] - pt[1])
+    end
+end
 
 """
     _remap_to_nearest_neighbours(grid::GridMultiBlock,plane::ParGrid)

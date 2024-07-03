@@ -124,3 +124,19 @@ function findgrid(grid::GridMultiBlock,pt::Tuple{TT,TT};mode=:inside) where TT
         error("Point $(pt) is not in any grid")
     end
 end
+
+function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
+    gridind = findgrid(grid,pt)
+    grid = grid.Grids[gridind]
+
+
+    for I in eachindex(grid.gridx)
+        if (grid.gridx[I] <= pt[1] <= grid.gridx[I+1]) & (grid.gridy[I] <= pt[2] <= grid.gridy[I+1])
+            return I
+        end
+    end
+
+
+
+    return pt,index,gridind
+end

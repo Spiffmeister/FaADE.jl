@@ -2,6 +2,7 @@
 
 abstract type ParallelGridType end
 
+abstract type ParallelMapType end
 
 
 """
@@ -11,6 +12,19 @@ Storing the x-y coordinates of a parallel grid
 struct ParGrid{TT,AT<:AbstractArray{TT}}
     x       :: AT
     y       :: AT
+    subgrid :: Matrix{Int}
+end
+"""
+    ParGridLinear{TT,AT<:AbstractArray{TT}}
+Storage for a parallel map using linear interpolation.
+"""
+struct ParGridLinear{TT,AT<:AbstractArray{TT}} <: ParallelMapType
+    weightx :: AT
+    weighty :: AT
+
+    xindex  :: Vector{Int}
+    yindex  :: Vector{Int}
+
     subgrid :: Matrix{Int}
 end
 
