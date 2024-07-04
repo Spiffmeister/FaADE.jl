@@ -58,8 +58,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
             Bplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         elseif interpmode == :linear
-            ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
-            Bplane = ParGridLinear{TT,typeof(ix)}(Bplane.x,Bplane.y,ix,iy,sgi)
+            Bplane = _remap_to_linear(grid,Pgrid.Bplane)
         else
             postprocess_plane!(Pgrid.Bplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Bplane)
@@ -70,8 +69,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
             Fplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         elseif interpmode == :linear
-            ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
-            Fplane = ParGridLinear{TT,typeof(ix)}(Fplane.x,Fplane.y,ix,iy,sgi)
+            Fplane = _remap_to_linear(grid,Pgrid.Fplane)
         else
             postprocess_plane!(Pgrid.Fplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Fplane)
@@ -119,26 +117,12 @@ function _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
     weightx = zeros(Int,size(plane.x))
     weighty = zeros(Int,size(plane.y))
 
+
     for I in eachindex(ix)
-        pt,ind,gridind = nearestpoint(grid,(plane.x[I],plane.y[I]))
-
-        # findcell(grid,(plane.x[I],plane.y[I]))
-
-        cartind = CartesianIndices(grid.Grids[gridind].gridx)[ind]
-
-        # Make sure the point is to the bottom left of the cell
-        if (grid.Grids[gridind].gridx[cardind[1]] < pt[1])
-            pt[1] = grid.Grids[gridind].gridx[cardind[1]-1]
-        end
-
-
-        
-        ix[I] = cartind[1]
-        iy[I] = cartind[2]
-        sgi[I] = gridind
-
-        weightx[I] = (plane.x[I] - pt[1])/(cartind[1] - pt[1])
+        weightx[I],weighty[I],ix[I],iy[I],sgi[I] = findcell(grid,(plane.x[I],plane.y[I]))
     end
+
+    return ParGridLinear{eltype(weightx),typeof(weightx)}(weightx,weighty,ix,iy,sgi)
 end
 
 """

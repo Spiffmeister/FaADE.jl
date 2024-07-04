@@ -129,14 +129,25 @@ function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
     gridind = findgrid(grid,pt)
     grid = grid.Grids[gridind]
 
+    ix = 0
+    jy = 0
+    subgridindex = 0
 
-    for I in eachindex(grid.gridx)
-        if (grid.gridx[I] <= pt[1] <= grid.gridx[I+1]) & (grid.gridy[I] <= pt[2] <= grid.gridy[I+1])
-            return I
+    for I in eachgrid(grid)
+        for j in 1:grid[I].ny-1
+            for i in 1:grid[I].nx-1
+                if (grid.gridy[j] ≤ pt[2] ≤ grid.gridy[j+1]) && (grid.gridx[i] ≤ pt[1] ≤ grid.gridx[i+1])
+                    jy = j
+                    ix = i
+                    subgridindex = I
+                    break
+                end
+            end
         end
     end
 
+    weightx = (pt[1] - grid[I].gridx[ix])/(grid[I].gridx[ix+1] - grid[I].gridx[ix])
+    weighty = (pt[2] - grid[I].gridy[jy])/(grid[I].gridy[jy+1] - grid[I].gridy[jy])
 
-
-    return pt,index,gridind
+    return weightx, weighty, ix, jy, subgridindex
 end

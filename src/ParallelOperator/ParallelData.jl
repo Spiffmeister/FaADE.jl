@@ -9,7 +9,7 @@ abstract type ParallelMapType end
     ParGrid{TT,AT<:AbstractArray{TT}}
 Storing the x-y coordinates of a parallel grid
 """
-struct ParGrid{TT,AT<:AbstractArray{TT}}
+struct ParGrid{TT,AT<:AbstractArray{TT}} <: ParallelMapType
     x       :: AT
     y       :: AT
     subgrid :: Matrix{Int}
@@ -36,10 +36,11 @@ In 2D arrays are of format ``[(x_1,y_1),(x_1,y_2),...,(x_n,y_n)]``
 """
 struct ParallelGrid{TT<:Real,
         DIM,
+        PMT<:ParallelMapType,
         AT<:Matrix{TT}}
 
-    Bplane  :: ParGrid{TT,AT}
-    Fplane  :: ParGrid{TT,AT}
+    Bplane  :: PMT
+    Fplane  :: PMT
 end
 
 struct MagneticField{BT<:Union{Function,Nothing},STATE,TT<:Real,AT<:Matrix{TT}}
