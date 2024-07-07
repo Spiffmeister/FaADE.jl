@@ -37,7 +37,7 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
         FPlane = ParGrid{Int,typeof(ix)}(ix,iy,ones(Int,size(ix)))
     end
 
-    Pgrid = ParallelGrid{eltype(BPlane.x),2,typeof(BPlane.x)}(BPlane,FPlane)#,zeros(size(BPlane.x)),zeros(size(BPlane.x)))
+    Pgrid = ParallelGrid{eltype(BPlane.x),2,typeof(BPlane),typeof(BPlane.x)}(BPlane,FPlane)
 
     return Pgrid
 end
@@ -51,6 +51,11 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
 
     PGridStorage = Dict()
 
+    minx = minimum([minimum(grid.Grids[I].gridx) for I in eachgrid(grid)])
+    maxx = maximum([maximum(grid.Grids[I].gridx) for I in eachgrid(grid)])
+    miny = minimum([minimum(grid.Grids[I].gridy) for I in eachgrid(grid)])
+    maxy = maximum([maximum(grid.Grids[I].gridy) for I in eachgrid(grid)])
+    
     for I in eachgrid(grid)
         Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=:ignore,ymode=:ignore)
         
@@ -58,9 +63,10 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
             Bplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         elseif interpmode == :linear
+            postprocess_plane!(Pgrid.Bplane,[minx,maxx],[miny,maxy],xmode,ymode)
             Bplane = _remap_to_linear(grid,Pgrid.Bplane)
         else
-            postprocess_plane!(Pgrid.Bplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
+            postprocess_plane!(Pgrid.Bplane,[minx,maxx],[miny,maxy],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Bplane)
             Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
         end
@@ -69,14 +75,15 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
             ix,iy,sgi = _remap_to_nearest_neighbours(grid,Pgrid.Fplane)
             Fplane = ParGrid{Int,typeof(ix)}(ix,iy,sgi)
         elseif interpmode == :linear
+            postprocess_plane!(Pgrid.Fplane,[minx,maxx],[miny,maxy],xmode,ymode)
             Fplane = _remap_to_linear(grid,Pgrid.Fplane)
         else
-            postprocess_plane!(Pgrid.Fplane,[0.0,1.0],[-TT(π),TT(π)],xmode,ymode)
+            postprocess_plane!(Pgrid.Fplane,[minx,maxx],[miny,maxy],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Fplane)
             Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
         end
 
-        PGridStorage[I] = ParallelGrid{eltype(Bplane.x),DIM,typeof(Bplane.x)}(Bplane,Fplane)
+        PGridStorage[I] = ParallelGrid{eltype(Bplane.x),DIM,typeof(Bplane),typeof(Bplane.x)}(Bplane,Fplane)
     end
 
     return PGridStorage
@@ -110,19 +117,64 @@ end
 
 
 function _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
-    ix = zeros(Int,size(plane.x))
-    iy = zeros(Int,size(plane.y))
+    index = zeros(Int,size(plane.x))
     sgi = zeros(Int,size(plane.x))
 
-    weightx = zeros(Int,size(plane.x))
-    weighty = zeros(Int,size(plane.y))
+    weight11 = zeros(Int,size(plane.x))
+    weight12 = zeros(Int,size(plane.x))
+    weight21 = zeros(Int,size(plane.x))
+    weight22 = zeros(Int,size(plane.x))
 
 
-    for I in eachindex(ix)
-        weightx[I],weighty[I],ix[I],iy[I],sgi[I] = findcell(grid,(plane.x[I],plane.y[I]))
+    for I in eachindex(sgi)
+        @show pt = (plane.x[I], plane.y[I])
+
+        # First we need to find the cell the node belongs to
+        @show ix,iy,sgi[I] = findcell(grid,pt)
+
+        i = ix
+        j = iy
+
+                
+        @show (grid.Grids[sgi[I]].gridx[ix[I]+1] - grid.Grids[sgi[I]].gridx[ix])
+        @show (grid.Grids[sgi[I]].gridy[iy[I]+1] - grid.Grids[sgi[I]].gridy[iy])
+        
+        subgrid = grid.Grids[sgi[I]]
+
+        # Now we need to perform inverse bilinear interpolation to find the weights
+        k0 = (subgrid.gridx[ix,iy] - subgrid.gridx[ix+1,iy]) * (pt[2] - subgrid.gridy[ix,iy])
+
+        k1 = subgrid.gridx[ix,iy]*(-pt[2] + subgrid.gridy[ix,iy] - subgrid.gridy[ix+1,iy] + subgrid.gridy[ix,iy+1]) * 
+            subgrid.gridy[ix,iy] * subgrid.gridx[ix+1,iy+1] + subgrid.gridx[ix+1,iy] * (pt[2] - subgrid.gridy[ix,iy+1]) +
+            pt[2] * (subgrid.gridx[ix+1,iy+1] - subgrid.gridx[ix,iy+1]) + subgrid.gridx[ix,iy+1] * subgrid.gridy[ix+1,iy]
+        
+        k2 = subgrid.gridx[ix,iy] * (subgrid.gridy[ix+1,iy] - 2*subgrid.gridy[ix,iy+1] + subgrid.gridy[ix+1,iy+1]) + 
+            subgrid.gridx[ix,iy] * (-subgrid.gridx[ix+1,iy] + 2*subgrid.gridx[ix,iy+1] - subgrid.gridx[ix+1,iy+1]) +
+            subgrid.gridx[ix+1,iy] * subgrid.gridy[ix,iy+1] * subgrid.gridx[ix,iy+1] * (-subgrid.gridy[ix+1,iy] - subgrid.gridy[ix+1,iy+1]) + subgrid.gridx[ix+1,iy+1] * subgrid.gridy[ix,iy+1]
+
+
+        # distance between the curves p_11 - p_12 and p_21 - p_22
+        v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
+
+        u = - v*(subgrid.gridx[i,j] - subgrid.gridx[i,j+1]) / (v*(subgrid.gridx[i,j] - subgrid.gridx[i+1,j] + subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) - subgrid.gridx[i,j] + subgrid.gridx[i+1,j])
+
+        # TODO: we should check if the point is correct
+
+
+
+        ΔxΔy = (subgrid[ix+1,iy] - subgrid[ix,iy])*(subgrid[ix,iy+1] - subgrid[ix,iy])
+        
+        weight11[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (subgrid.y[ix,iy+1] - pt[2])/ΔxΔy  # bottom left
+        weight12[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (pt[2] - subgrid.y[ix,iy])/ΔxΔy    # bottom right
+        weight21[I] = (pt[1] - subgrid.gridy[ix,iy])   * (subgrid.y[ix,iy] - pt[2])/ΔxΔy    # top left
+        weight22[I] = (pt[1] - subgrid.gridy[ix,iy])   * (pt[2] - subgrid.y[ix,iy])/ΔxΔy    # top right
+
+        
+        J = ix[I] + grid.Grids[sgi[I]].ny*(iy[I]-1) # linearise index
+        index[I] = J
     end
 
-    return ParGridLinear{eltype(weightx),typeof(weightx)}(weightx,weighty,ix,iy,sgi)
+    return ParGridLinear{eltype(weightx),typeof(weightx)}(weight11,weight12,weight21,weight22,index,sgi)
 end
 
 """
@@ -200,13 +252,17 @@ Move out of bounds points to the boundary
                 X[i] = rem2pi(X[i],RoundNearest)
                 if X[i] ≥ bound[end]
                     X[i] = bound[end]
-                    # println(X[i])
                 end
             end
         else
+            # @show X[1], bound[end], X[1] > bound[end]
             for i in eachindex(X)
                 X[i] = rem2pi(X[i],RoundDown)
+                # if X[i] > bound[end] # if X[i] ~ 2π it can round to > 2π instead of 0
+                #     X[i] = bound[end]
+                # end
             end
+            # @show X[1] == bound[end]
         end
     elseif mode == :ignore
     end

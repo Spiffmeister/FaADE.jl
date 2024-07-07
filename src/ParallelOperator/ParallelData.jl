@@ -19,11 +19,12 @@ end
 Storage for a parallel map using linear interpolation.
 """
 struct ParGridLinear{TT,AT<:AbstractArray{TT}} <: ParallelMapType
-    weightx :: AT
-    weighty :: AT
+    weight11 :: AT
+    weight12 :: AT
+    weight21 :: AT
+    weight22 :: AT
 
-    xindex  :: Vector{Int}
-    yindex  :: Vector{Int}
+    index   :: Vector{Int}
 
     subgrid :: Matrix{Int}
 end

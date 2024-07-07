@@ -126,17 +126,27 @@ function findgrid(grid::GridMultiBlock,pt::Tuple{TT,TT};mode=:inside) where TT
 end
 
 function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
-    gridind = findgrid(grid,pt)
-    grid = grid.Grids[gridind]
+    # gridind = findgrid(grid,pt)
+    # grid = grid.Grids[gridind]
 
     ix = 0
     jy = 0
     subgridindex = 0
 
     for I in eachgrid(grid)
-        for j in 1:grid[I].ny-1
-            for i in 1:grid[I].nx-1
-                if (grid.gridy[j] ≤ pt[2] ≤ grid.gridy[j+1]) && (grid.gridx[i] ≤ pt[1] ≤ grid.gridx[i+1])
+        subgrid = grid.Grids[I]
+        # for J in 1:length(subgrid)-ny
+        #     if (subgrid.gridy[J] ≤ pt[2] ≤ subgrid.gridy[J+ny]) && (subgrid.gridx[I] ≤ pt[1] ≤ subgrid.gridx[I+1])
+        #         jy = J
+        #         ix = J
+        #         subgridindex = I
+        #         break
+        #     end
+        # end
+
+        for j in 1:subgrid.ny-1
+            for i in 1:subgrid.nx-1
+                if (subgrid.gridy[i,j] ≤ pt[2] ≤ subgrid.gridy[i,j+1]) && (subgrid.gridx[i,j] ≤ pt[1] ≤ subgrid.gridx[i+1,j])
                     jy = j
                     ix = i
                     subgridindex = I
@@ -146,8 +156,5 @@ function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
         end
     end
 
-    weightx = (pt[1] - grid[I].gridx[ix])/(grid[I].gridx[ix+1] - grid[I].gridx[ix])
-    weighty = (pt[2] - grid[I].gridy[jy])/(grid[I].gridy[jy+1] - grid[I].gridy[jy])
-
-    return weightx, weighty, ix, jy, subgridindex
+    return ix, jy, subgridindex
 end

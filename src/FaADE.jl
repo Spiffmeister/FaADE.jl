@@ -42,14 +42,14 @@ module FaADE
 
     using FaADE.solvers: solve
 
-    using FaADE.ParallelOperator: construct_grid, generate_parallel_penalty, ParallelData
+    using FaADE.ParallelOperator: construct_grid, ParallelData
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, GridMultiBlock, Joint
     export CartesianMetric, CurvilinearMetric
-    export construct_grid, generate_parallel_penalty, ParallelData
+    export construct_grid, ParallelData
 
     export D₁, D₂, D₂!, D₁!
 
