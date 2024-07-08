@@ -18,13 +18,14 @@ end
     ParGridLinear{TT,AT<:AbstractArray{TT}}
 Storage for a parallel map using linear interpolation.
 """
-struct ParGridLinear{TT,AT<:AbstractArray{TT}} <: ParallelMapType
+struct ParGridLinear{TT,AT<:AbstractArray{TT},METHOD} <: ParallelMapType
     weight11 :: AT
     weight12 :: AT
     weight21 :: AT
     weight22 :: AT
 
-    index   :: Vector{Int}
+    i       :: Matrix{Int}
+    j       :: Matrix{Int}
 
     subgrid :: Matrix{Int}
 end

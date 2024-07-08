@@ -196,7 +196,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     end
 
 end
-function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear}
+function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
     
     κ = P[I].κ
     w_f = P[I].w_f
@@ -207,16 +207,23 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     sgiB = P[I].PGrid.Bplane.subgrid
 
 
-    nnFx = P[I].PGrid.Fplane.x
-    nnFy = P[I].PGrid.Fplane.y
-    nnBx = P[I].PGrid.Bplane.x
-    nnBy = P[I].PGrid.Bplane.y
+    nnFx = P[I].PGrid.Fplane.i
+    nnFy = P[I].PGrid.Fplane.j
+    nnBx = P[I].PGrid.Bplane.i
+    nnBy = P[I].PGrid.Bplane.j
+
+    w11 = P[I].PGrid.Fplane.weight11
+    w12 = P[I].PGrid.Fplane.weight12
+    w21 = P[I].PGrid.Fplane.weight21
+    w22 = P[I].PGrid.Fplane.weight22
 
     for J in eachindex(w_f)
         # w_f[I] = uglobal[sgiF[I]][nnF[I]]
         # w_f[I] += uglobal[sgiB[I]][nnB[I]]
-        w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
-        w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
+        # w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
+        # w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
+        w_f[J] = _idw_interpolation(uglobal[sgiB[J]], w11, w12, w21, w22, nnBx[J], nnBy[J], J)
+        w_f[J] += _idw_interpolation(uglobal[sgiF[J]],w11, w12, w21, w22, nnFx[J], nnFy[J], J)
         w_f[J] = w_f[J]/2
     end
 
@@ -241,4 +248,10 @@ function _linear_interpolation(u::AbstractArray{TT},wx::TT,wy::TT,i::Int,j::Int)
     return w
 end
 
-
+function _idw_interpolation(u::AT,w11::AT,w12::AT,w21::AT,w22::AT,i::Int,j::Int,I::Int) where {AT}
+    w = (u[i,j] * w11[I])
+    w += (u[i+1,j] * w12[I])
+    w += (u[i,j+1] * w21[I])
+    w += (u[i+1,j+1] * w22[I])
+    return w
+end

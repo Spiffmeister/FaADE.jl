@@ -65,6 +65,9 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
         elseif interpmode == :linear
             postprocess_plane!(Pgrid.Bplane,[minx,maxx],[miny,maxy],xmode,ymode)
             Bplane = _remap_to_linear(grid,Pgrid.Bplane)
+        elseif interpmode == :idw
+            postprocess_plane!(Pgrid.Bplane,[minx,maxx],[miny,maxy],xmode,ymode)
+            Bplane = _remap_to_idw(grid,Pgrid.Bplane)
         else
             postprocess_plane!(Pgrid.Bplane,[minx,maxx],[miny,maxy],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Bplane)
@@ -77,13 +80,18 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM},z::Vector{TT};
         elseif interpmode == :linear
             postprocess_plane!(Pgrid.Fplane,[minx,maxx],[miny,maxy],xmode,ymode)
             Fplane = _remap_to_linear(grid,Pgrid.Fplane)
+        elseif interpmode == :idw
+            postprocess_plane!(Pgrid.Fplane,[minx,maxx],[miny,maxy],xmode,ymode)
+            Fplane = _remap_to_idw(grid,Pgrid.Fplane)
         else
             postprocess_plane!(Pgrid.Fplane,[minx,maxx],[miny,maxy],xmode,ymode)
             sgi = _subgrid_index(grid,Pgrid.Fplane)
             Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
         end
 
-        PGridStorage[I] = ParallelGrid{eltype(Bplane.x),DIM,typeof(Bplane),typeof(Bplane.x)}(Bplane,Fplane)
+        # PGridStorage[I] = ParallelGrid{eltype(Bplane.x),DIM,typeof(Bplane),typeof(Bplane.x)}(Bplane,Fplane)
+
+        PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
     end
 
     return PGridStorage
@@ -174,7 +182,57 @@ function _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
         index[I] = J
     end
 
-    return ParGridLinear{eltype(weightx),typeof(weightx)}(weight11,weight12,weight21,weight22,index,sgi)
+    return ParGridLinear{eltype(weightx),typeof(weightx),:Bilinear}(weight11,weight12,weight21,weight22,index,sgi)
+end
+
+"""
+    _remap_to_idw(grid::GridMultiBlock,plane::ParGrid)
+Remap the interpolation points to their inverse distance weights
+"""
+function _remap_to_idw(grid::GridMultiBlock{TT},plane::ParGrid) where TT
+    index = zeros(Int,size(plane.x))
+    sgi = zeros(Int,size(plane.x))
+
+    weight11 = zeros(TT,size(plane.x))
+    weight12 = zeros(TT,size(plane.x))
+    weight21 = zeros(TT,size(plane.x))
+    weight22 = zeros(TT,size(plane.x))
+
+    iindex = zeros(Int,size(plane.x))
+    jindex = zeros(Int,size(plane.x))
+
+
+    for I in eachindex(sgi)
+        @show pt = (plane.x[I], plane.y[I])
+
+        # First we need to find the cell the node belongs to
+        @show i,j,sgi[I] = findcell(grid,pt)
+
+        iindex[I] = i
+        jindex[I] = j
+
+        subgrid = grid.Grids[sgi[I]]
+
+        p1 = subgrid[i,j]
+        p2 = subgrid[i+1,j]
+        p3 = subgrid[i,j+1]
+        p4 = subgrid[i+1,j+1]
+
+        dist = 1/norm(p1 .- pt)^2 + 1/norm(p2 .- pt)^2 + 1/norm(p3 .- pt)^2 + 1/norm(p4 .- pt)^2
+
+        # @show I, pt, dist
+        # @show 1/norm(p1 .- pt)/dist
+
+        weight11[I] = TT(1)/norm(p1 .- pt)^2 /dist
+        weight12[I] = TT(1)/norm(p2 .- pt)^2 /dist
+        weight21[I] = TT(1)/norm(p3 .- pt)^2 /dist
+        weight22[I] = TT(1)/norm(p4 .- pt)^2 /dist
+
+    end
+
+
+
+    return ParGridLinear{TT,typeof(weight11),:InverseDistanceWeighting}(weight11,weight12,weight21,weight22,iindex,jindex,sgi)
 end
 
 """
