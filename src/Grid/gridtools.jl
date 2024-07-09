@@ -1,47 +1,6 @@
 
 
 
-# function Master_grid(Grid::GridMultiBlock;shape=:square,domain=:connected)
-# end
-
-
-
-
-
-# function _form_master_square(Grid::GridMultiBlock{TT},Val{:square},Val{:connected}) where TT
-
-#     # local masterLeft :: Int
-#     doubleindex_x = 0
-#     doubleindex_y = 0
-
-#     for I in eachgrid(Grid)
-#         for Joint in Grid.Joint[I]
-#             if Joint.side == Right
-#                 doubleindex_x += 1
-#             elseif Joint.side == Up
-#                 doubleindex_y += 1
-#             end
-#         end
-#     end
-
-#     n = size(Grid)
-#     masterx = zeros(TT,n[1]-doubleindex_x,n[2]-doubleindex_y)
-#     mastery = zeros(TT,n[1]-doubleindex_x,n[2]-doubleindex_y)
-
-#     for I in eachgrid(Grid)
-#         if I == 1
-#             masterx[1:Dom.inds[1][1],1:Dom.inds[2][1]] = Grid.Grids[I].gridx
-#             mastery[1:Dom.inds[1][1],1:Dom.inds[2][1]] = Grid.Grids[I].gridy
-#         else
-#             masterx[Dom.inds[1][I]:Dom.inds[1][I+1],Dom.inds[2][I]:Dom.inds[2][I+1]] = Grid.Grids[I].gridx
-#             mastery[Dom.inds[1][I]:Dom.inds[1][I+1],Dom.inds[2][I]:Dom.inds[2][I+1]] = Grid.Grids[I].gridy
-#         end
-#     end
-
-# end
-
-# function _findside(Grid::GridMultiblock)
-# end
 
 
 """
@@ -95,7 +54,14 @@ function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
         tmppt,tmpindex = nearestpoint(grid.Grids[I],pt)
 
         tmpdist = sqrt( (tmppt[1] - pt[1])^2 + (tmppt[2] - pt[2])^2 )
-        if (tmpdist < dist ) | (point == 0)
+        if (tmpdist ≤ dist[I] ) | (point == 0)
+            if tmpdist == dist
+                # if these are the same then two points are next to eachother
+                # we'll check the current grid to see if contains the point, if not we'll leave things alone
+                ci = CartesianIndex(grid.Grids[I].gridx)[tmpindex]
+                
+
+            end
             dist = tmpdist
             point = tmppt
             index = tmpindex
@@ -144,7 +110,7 @@ end
     findcell(grid::GridMultiBlock,pt::Tuple{TT,TT})
 Find which cell bounds the point
 """
-function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
+function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,DIM,MET}
 
     ix = 0
     jy = 0
@@ -152,16 +118,19 @@ function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
 
 
     # Find the nearest point in the grid
-    _, ind, subgridindex = nearestpoint(grid,pt)
+    if MET == CartesianMetric
+        ind, subgridindex = findgrid(grid,pt,mode=:nearest)
+    else
+        _, ind, subgridindex = nearestpoint(grid,pt)
+    end
 
     subgrid = grid.Grids[subgridindex]
-
+    
     # As a reference point we want the indices of the bottom left point of the cell so the point is bounded by
     cartind = CartesianIndices(subgrid.gridx)
     i = cartind[ind][1]
     j = cartind[ind][2]
-    
-    
+    @show subgrid[i,j], i, j
     # We need to check if the point is bounded by the grid or not and shift the indices accordingly
     if i+1 > subgrid.nx
         i = i-1
@@ -169,7 +138,6 @@ function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
     if j+1 > subgrid.ny
         j = j-1
     end
-
 
     #   [i,j] - [i,j+1] - [i+1,j+1] - [i+1,j]
     # point must be close to a1, but unknown which square
@@ -205,6 +173,10 @@ function findcell(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
         end
     end
 
+    if ix == iy == 0
+
+    end
+
     return ix, jy, subgridindex
 end
 
@@ -215,11 +187,14 @@ Check if a point is inside a cell with the point `i,j` at the bottom left.
 function _check_inside(grid,i,j,pt)
     tf = false
 
-    ab = _checkside(grid[i,j],grid[i+1,j],pt)
-    bd = _checkside(grid[i+1,j],grid[i+1,j+1],pt)
-    da = _checkside(grid[i+1,j+1],grid[i,j+1],pt)
-    ac = _checkside(grid[i,j+1],grid[i,j],pt)
-    if sign(ab) == sign(bd) == sign(da) == sign(ac) == 1
+    @show ab = _checkside(grid[i,j],grid[i+1,j],pt)
+    @show bd = _checkside(grid[i+1,j],grid[i+1,j+1],pt)
+    @show da = _checkside(grid[i+1,j+1],grid[i,j+1],pt)
+    @show ac = _checkside(grid[i,j+1],grid[i,j],pt)
+    if sign(ab) == sign(bd) == sign(da) == sign(ac) == -1
+        tf = true
+    end
+    if (sign(ab) == 0) || (sign(bd)==0) || (sign(da)==0) || (sign(ac)==0) #if the point is on one of the lines this will do
         tf = true
     end
     return tf

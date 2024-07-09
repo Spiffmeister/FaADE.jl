@@ -170,12 +170,12 @@ function _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
 
 
 
-        ΔxΔy = (subgrid[ix+1,iy] - subgrid[ix,iy])*(subgrid[ix,iy+1] - subgrid[ix,iy])
+        ΔxΔy = (subgrid.gridx[ix+1,iy] - subgrid.gridx[ix,iy])*(subgrid.gridy[ix,iy+1] - subgrid.gridy[ix,iy])
         
-        weight11[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (subgrid.y[ix,iy+1] - pt[2])/ΔxΔy  # bottom left
-        weight12[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (pt[2] - subgrid.y[ix,iy])/ΔxΔy    # bottom right
-        weight21[I] = (pt[1] - subgrid.gridy[ix,iy])   * (subgrid.y[ix,iy] - pt[2])/ΔxΔy    # top left
-        weight22[I] = (pt[1] - subgrid.gridy[ix,iy])   * (pt[2] - subgrid.y[ix,iy])/ΔxΔy    # top right
+        weight11[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (subgrid.gridy[ix,iy+1] - pt[2])/ΔxΔy  # bottom left
+        weight12[I] = (subgrid.gridx[ix+1,iy] - pt[1]) * (pt[2] - subgrid.gridy[ix,iy])/ΔxΔy    # bottom right
+        weight21[I] = (pt[1] - subgrid.gridx[ix,iy])   * (subgrid.gridy[ix,iy] - pt[2])/ΔxΔy    # top left
+        weight22[I] = (pt[1] - subgrid.gridx[ix,iy])   * (pt[2] - subgrid.gridy[ix,iy])/ΔxΔy    # top right
 
         
         J = ix[I] + grid.Grids[sgi[I]].ny*(iy[I]-1) # linearise index
