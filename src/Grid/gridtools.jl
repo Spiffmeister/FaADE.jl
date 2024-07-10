@@ -98,7 +98,7 @@ function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,D
     cartind = CartesianIndices(subgrid.gridx)
     i = cartind[ind][1]
     j = cartind[ind][2]
-    @show subgrid[i,j], i, j
+    subgrid[i,j], i, j
     # We need to check if the point is bounded by the grid or not and shift the indices accordingly
     if i+1 > subgrid.nx
         i = i-1
@@ -148,13 +148,15 @@ function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,D
     return ix, jy, subgridindex
 end
 
+"""
+    findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
+"""
 function findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
 
     ix = 0
     jy = 0
-    subgridindex = 0
 
-    @show _, inds = nearestpoint(grid,pt,:cartesian)
+    _, inds = nearestpoint(grid,pt,:cartesian)
     i = inds[1]
     j = inds[2]
 
@@ -224,17 +226,19 @@ Check if a point is inside a cell with the point `i,j` at the bottom left.
 function _check_inside(grid,i,j,pt)
     tf = false
 
-    @show grid[i,j], grid[i+1,j], grid[i+1,j+1], grid[i,j+1]
+    grid[i,j], grid[i+1,j], grid[i+1,j+1], grid[i,j+1]
 
-    ab = _checkside(grid[i,j],grid[i+1,j],pt)
-    bd = _checkside(grid[i+1,j],grid[i+1,j+1],pt)
-    da = _checkside(grid[i+1,j+1],grid[i,j+1],pt)
-    ac = _checkside(grid[i,j+1],grid[i,j],pt)
+    ab = sign(_checkside(grid[i,j],grid[i+1,j],pt))
+    bd = sign(_checkside(grid[i+1,j],grid[i+1,j+1],pt))
+    da = sign(_checkside(grid[i+1,j+1],grid[i,j+1],pt))
+    ac = sign(_checkside(grid[i,j+1],grid[i,j],pt))
     if sign(ab) == sign(bd) == sign(da) == sign(ac) == -1
         tf = true
     end
-    if (sign(ab) == 0) || (sign(bd)==0) || (sign(da)==0) || (sign(ac)==0) #if the point is on one of the lines this will do
-        tf = true
+    if (ab == 0) || (bd==0) || (da==0) || (ac==0) #if the point is on one of the lines this will do
+        if abs(ab+bd+da+ac) == 3
+            tf = true
+        end
     end
     return tf
 end

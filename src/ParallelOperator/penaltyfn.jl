@@ -159,7 +159,8 @@ Applies the parallel penalty for a multiblock problem.
 # function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
 function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,PGT,GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,PGT,GT,BT,IT}
     
-    Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
+    # Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
+    Ipt = [interpolate((P[I].gridx,P[I].gridy),uglobal[I],Gridded(Linear())) for I in eachindex(uglobal)]
     # Ipt = [interpolate(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
 
     κ = P[I].κ
@@ -222,8 +223,8 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
         # w_f[I] += uglobal[sgiB[I]][nnB[I]]
         # w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
         # w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
-        w_f[J] = _idw_interpolation(uglobal[sgiB[J]], w11, w12, w21, w22, nnBx[J], nnBy[J], J)
-        w_f[J] += _idw_interpolation(uglobal[sgiF[J]],w11, w12, w21, w22, nnFx[J], nnFy[J], J)
+        w_f[J] = _interpolation(uglobal[sgiB[J]], w11, w12, w21, w22, nnBx[J], nnBy[J], J)
+        w_f[J] += _interpolation(uglobal[sgiF[J]],w11, w12, w21, w22, nnFx[J], nnFy[J], J)
         w_f[J] = w_f[J]/2
     end
 
@@ -248,7 +249,7 @@ function _linear_interpolation(u::AbstractArray{TT},wx::TT,wy::TT,i::Int,j::Int)
     return w
 end
 
-function _idw_interpolation(u::AT,w11::AT,w12::AT,w21::AT,w22::AT,i::Int,j::Int,I::Int) where {AT}
+function _interpolation(u::AT,w11::AT,w12::AT,w21::AT,w22::AT,i::Int,j::Int,I::Int) where {AT}
     w = (u[i,j] * w11[I])
     w += (u[i+1,j] * w12[I])
     w += (u[i,j+1] * w21[I])
