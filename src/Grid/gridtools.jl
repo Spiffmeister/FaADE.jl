@@ -40,42 +40,10 @@ function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear) where TT
     end
 end
 """
-    nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT})
-Takes a multiblock grid and finds the nearest point.
-
-Returns the value of the nearest point, the linear index of that point, and the grid number in GridMultiBlock.
-"""
-function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT}) where TT
-    point = TT(0)
-    dist = TT(1e10)
-    index = 0
-    gridindex = 0
-    for I in eachgrid(grid)
-        tmppt,tmpindex = nearestpoint(grid.Grids[I],pt)
-
-        tmpdist = sqrt( (tmppt[1] - pt[1])^2 + (tmppt[2] - pt[2])^2 )
-        if (tmpdist ≤ dist[I] ) | (point == 0)
-            if tmpdist == dist
-                # if these are the same then two points are next to eachother
-                # we'll check the current grid to see if contains the point, if not we'll leave things alone
-                ci = CartesianIndex(grid.Grids[I].gridx)[tmpindex]
-                
-
-            end
-            dist = tmpdist
-            point = tmppt
-            index = tmpindex
-            gridindex = I
-        end
-    end
-
-    return point, index, gridindex
-end
-"""
     findgrid(grid::GridMultiBlock{TT,DIM,CartesianMetric},pt::Tuple{TT,TT};mode=:inside)
 Check which cartesian grid a point is in.
 """
-function findgrid(grid::GridMultiBlock{TT,DIM,CartesianMetric},pt::Tuple{TT,TT};mode=:inside) where {TT,DIM}
+function findgrid(grid::GridMultiBlock{TT},pt::Tuple{TT,TT};mode=:inside) where {TT}
     gridind = 0
     for I in eachgrid(grid)
         minx = grid.Grids[I].gridx[1]
@@ -180,6 +148,75 @@ function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,D
     return ix, jy, subgridindex
 end
 
+function findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
+
+    ix = 0
+    jy = 0
+    subgridindex = 0
+
+    @show _, inds = nearestpoint(grid,pt,:cartesian)
+    i = inds[1]
+    j = inds[2]
+
+    if i+1 > grid.nx
+        i = i-1
+    end
+    if j+1 > grid.ny
+        j = j-1
+    end
+
+    #   [i,j] - [i,j+1] - [i+1,j+1] - [i+1,j]
+    # point must be close to a1, but unknown which square
+    # b0 --b1 --b2
+    # |     |   |
+    # a0 --a1 --a2
+    # |     |   |
+    # c0 --c1 --c2 
+    # Is the point above or below the line joining the two points a1--a2
+
+    # TODO: this is awful fix this
+    inside = _check_inside(grid,i,j,pt) #check a1--a2--b2--b1
+    if inside
+        ix = i
+        jy = j
+    end
+    if (!inside) && (i != 1)
+        inside = _check_inside(grid,i-1,j,pt) # check a0--a1--b1--b0
+        if inside
+            ix = i-1
+            jy = j
+        end
+    end
+    if (!inside) && (j != 1)
+        inside = _check_inside(grid,i,j-1,pt) # check a1--a2--c2--c1
+        if inside
+            ix = i
+            jy = j-1
+        end
+    end
+    if (!inside) && (i != 1) && (j != 1)
+        inside = _check_inside(grid,i-1,j-1,pt) # check a0--a1--c1--c0
+        if inside
+            ix = i-1
+            jy = j-1
+        end
+    end
+
+    if ix == jy == 0
+        if pt == (grid.gridx[i,j],grid.gridy[i,j])
+            ix = i
+            jy = j
+        else
+            error("Point $(pt) is not in any cell.")
+        end
+    end
+
+    return ix, jy
+end
+
+
+
+
 """
     _check_inside(grid,i,j,pt)
 Check if a point is inside a cell with the point `i,j` at the bottom left.
@@ -187,10 +224,12 @@ Check if a point is inside a cell with the point `i,j` at the bottom left.
 function _check_inside(grid,i,j,pt)
     tf = false
 
-    @show ab = _checkside(grid[i,j],grid[i+1,j],pt)
-    @show bd = _checkside(grid[i+1,j],grid[i+1,j+1],pt)
-    @show da = _checkside(grid[i+1,j+1],grid[i,j+1],pt)
-    @show ac = _checkside(grid[i,j+1],grid[i,j],pt)
+    @show grid[i,j], grid[i+1,j], grid[i+1,j+1], grid[i,j+1]
+
+    ab = _checkside(grid[i,j],grid[i+1,j],pt)
+    bd = _checkside(grid[i+1,j],grid[i+1,j+1],pt)
+    da = _checkside(grid[i+1,j+1],grid[i,j+1],pt)
+    ac = _checkside(grid[i,j+1],grid[i,j],pt)
     if sign(ab) == sign(bd) == sign(da) == sign(ac) == -1
         tf = true
     end
