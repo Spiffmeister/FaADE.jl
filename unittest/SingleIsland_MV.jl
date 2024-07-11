@@ -43,7 +43,7 @@ Dy(y) = y
 TestDom = Grid2D(𝒟x,𝒟y,ymap=false)
 
 D1 = Grid2D([0.0,0.3],[0.0,2π],41,ny)
-D2 = Grid2D([0.3,0.65],[0.0,2π],41,ny)
+D2 = Grid2D([0.3,0.65],[0.0,2π],201,ny)
 D3 = Grid2D([0.65,1.0],[0.0,2π],41,ny)
 
 joints = ((Joint(2,Right),),

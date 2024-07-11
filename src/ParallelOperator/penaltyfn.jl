@@ -213,18 +213,23 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     nnBx = P[I].PGrid.Bplane.i
     nnBy = P[I].PGrid.Bplane.j
 
-    w11 = P[I].PGrid.Fplane.weight11
-    w12 = P[I].PGrid.Fplane.weight12
-    w21 = P[I].PGrid.Fplane.weight21
-    w22 = P[I].PGrid.Fplane.weight22
+    w11F = P[I].PGrid.Fplane.weight11
+    w12F = P[I].PGrid.Fplane.weight12
+    w21F = P[I].PGrid.Fplane.weight21
+    w22F = P[I].PGrid.Fplane.weight22
+
+    w11B = P[I].PGrid.Bplane.weight11
+    w12B = P[I].PGrid.Bplane.weight12
+    w21B = P[I].PGrid.Bplane.weight21
+    w22B = P[I].PGrid.Bplane.weight22
 
     for J in eachindex(w_f)
         # w_f[I] = uglobal[sgiF[I]][nnF[I]]
         # w_f[I] += uglobal[sgiB[I]][nnB[I]]
         # w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
         # w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
-        w_f[J] = _interpolation(uglobal[sgiB[J]], w11, w12, w21, w22, nnBx[J], nnBy[J], J)
-        w_f[J] += _interpolation(uglobal[sgiF[J]],w11, w12, w21, w22, nnFx[J], nnFy[J], J)
+        w_f[J] = _interpolation(uglobal[sgiB[J]], w11B, w12B, w21B, w22B, nnBx[J], nnBy[J], J)
+        w_f[J] += _interpolation(uglobal[sgiF[J]],w11F, w12F, w21F, w22F, nnFx[J], nnFy[J], J)
         w_f[J] = w_f[J]/2
     end
 

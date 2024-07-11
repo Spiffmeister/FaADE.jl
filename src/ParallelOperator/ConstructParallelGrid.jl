@@ -159,25 +159,25 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,MET},plane::ParGrid) where {
 
         iindex[I] = i; jindex[I] = j
 
-        if MET == CurvilinearMetric
-            # Now we need to perform inverse bilinear interpolation to find the weights
-            k0 = (subgrid.gridx[i,j] - subgrid.gridx[i+1,j]) * (pt[2] - subgrid.gridy[i,j])
+        # if MET == CurvilinearMetric
+        #     # Now we need to perform inverse bilinear interpolation to find the weights
+        #     k0 = (subgrid.gridx[i,j] - subgrid.gridx[i+1,j]) * (pt[2] - subgrid.gridy[i,j])
     
-            k1 = subgrid.gridx[i,j]*(-pt[2] + subgrid.gridy[i,j] - subgrid.gridy[i+1,j] + subgrid.gridy[i,j+1]) * 
-                subgrid.gridy[i,j] * subgrid.gridx[i+1,j+1] + subgrid.gridx[i+1,j] * (pt[2] - subgrid.gridy[i,j+1]) +
-                pt[2] * (subgrid.gridx[i+1,j+1] - subgrid.gridx[i,j+1]) + subgrid.gridx[i,j+1] * subgrid.gridy[i+1,j]
+        #     k1 = subgrid.gridx[i,j]*(-pt[2] + subgrid.gridy[i,j] - subgrid.gridy[i+1,j] + subgrid.gridy[i,j+1]) * 
+        #         subgrid.gridy[i,j] * subgrid.gridx[i+1,j+1] + subgrid.gridx[i+1,j] * (pt[2] - subgrid.gridy[i,j+1]) +
+        #         pt[2] * (subgrid.gridx[i+1,j+1] - subgrid.gridx[i,j+1]) + subgrid.gridx[i,j+1] * subgrid.gridy[i+1,j]
             
-            k2 = subgrid.gridx[i,j] * (subgrid.gridy[i+1,j] - 2*subgrid.gridy[i,j+1] + subgrid.gridy[i+1,j+1]) + 
-                subgrid.gridx[i,j] * (-subgrid.gridx[i+1,j] + 2*subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) +
-                subgrid.gridx[i+1,j] * subgrid.gridy[i,j+1] * subgrid.gridx[i,j+1] * (-subgrid.gridy[i+1,j] - subgrid.gridy[i+1,j+1]) + subgrid.gridx[i+1,j+1] * subgrid.gridy[i,j+1]
+        #     k2 = subgrid.gridx[i,j] * (subgrid.gridy[i+1,j] - 2*subgrid.gridy[i,j+1] + subgrid.gridy[i+1,j+1]) + 
+        #         subgrid.gridx[i,j] * (-subgrid.gridx[i+1,j] + 2*subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) +
+        #         subgrid.gridx[i+1,j] * subgrid.gridy[i,j+1] * subgrid.gridx[i,j+1] * (-subgrid.gridy[i+1,j] - subgrid.gridy[i+1,j+1]) + subgrid.gridx[i+1,j+1] * subgrid.gridy[i,j+1]
 
-            # distance between the curves p_11 - p_12 and p_21 - p_22
-            v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
+        #     # distance between the curves p_11 - p_12 and p_21 - p_22
+        #     v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
     
-            u = - v*(subgrid.gridx[i,j] - subgrid.gridx[i,j+1]) / (v*(subgrid.gridx[i,j] - subgrid.gridx[i+1,j] + subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) - subgrid.gridx[i,j] + subgrid.gridx[i+1,j])
+        #     u = - v*(subgrid.gridx[i,j] - subgrid.gridx[i,j+1]) / (v*(subgrid.gridx[i,j] - subgrid.gridx[i+1,j] + subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) - subgrid.gridx[i,j] + subgrid.gridx[i+1,j])
     
-            # TODO: we should check if the point is correct
-        end
+        #     # TODO: we should check if the point is correct
+        # end
 
 
 
@@ -188,10 +188,10 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,MET},plane::ParGrid) where {
         weight21[I] = (subgrid.gridx[i+1,j] - pt[1])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top left
         weight22[I] = (pt[1] - subgrid.gridx[i,j])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top right
 
-        @show pt
-        @show subgrid[i,j],  subgrid[i+1,j], subgrid[i,j+1], subgrid[i+1,j+1]
-        @show norm(subgrid[i,j].-pt),  norm(subgrid[i+1,j].-pt), norm(subgrid[i,j+1].-pt), norm(subgrid[i+1,j+1].-pt)
-        @show weight11[I], weight12[I], weight21[I], weight22[I]
+        # @show pt
+        # @show subgrid[i,j],  subgrid[i+1,j], subgrid[i,j+1], subgrid[i+1,j+1]
+        # @show norm(subgrid[i,j].-pt),  norm(subgrid[i+1,j].-pt), norm(subgrid[i,j+1].-pt), norm(subgrid[i+1,j+1].-pt)
+        # @show weight11[I], weight12[I], weight21[I], weight22[I]
  
     end
 
