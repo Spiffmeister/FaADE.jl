@@ -111,14 +111,17 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 δ = 0.005
 rs = 0.7
 function B(X,x::Array{Float64},params,t)
-    X[1] = -x[1] * δ * (-r^4 + 1) * sin(x[2])
-    X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])
+    X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
+    X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * x[1]^5 * cos(x[2])
     # time dependent
     # X[1] = -x[1] * δ * (-r^4 + 1) * sin(x[2]) * t
     # X[1] = (-2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])) * t
 end
 dH(X,x,params,t) = B(X,x,params,t)
-gdata = construct_grid(dH,Dom,[-2.0π,2.0π],interpmode=:linear)
+gdata = construct_grid(dH,Dom,[-2.0π,2.0π],interpmode=:idw)
+
+# gdata = remap_grid(gdata,interpmode=:idw)
+
 PData = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=1.0e6)
 
 
@@ -145,7 +148,7 @@ scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=10.5)
 scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=10.5)
 scatter!(gridfix_ax,D4.gridx[:],D4.gridy[:],markersize=10.5)
 scatter!(gridfix_ax,D5.gridx[:],D5.gridy[:],markersize=10.5)
-gridfig
+gridfige
 
 
 

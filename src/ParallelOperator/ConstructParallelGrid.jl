@@ -47,10 +47,14 @@ Constructs the backwards and forward planes for a multiblock grid. Returns a dic
 
 By default will return points for nearest neighbour interpolation.
 """
-function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{TT};xmode=:stop,ymode=:period,interpmode=:nearest) where {TT,DIM,MET}
+function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{TT};xmode=:stop,ymode=:period,interpmode=:nearest,coordinate_type=:xy) where {TT,DIM,MET}
 
     if interpmode ∉ [:nearest,:bilinear,:idw,:bicubic]
         error("Interpolation mode not available")
+    end
+
+    if coordinate_type == :rθ
+        println("Remapping output of χ from (x,y) to (r,θ)")
     end
 
     if MET == CurvilinearMetric
@@ -136,7 +140,7 @@ end
 
 # function remap_parallel_grid(grid,parallelgrid,method)
 # end
-function _remap_to_linear(grid::GridMultiBlock{TT,2,MET},plane::ParGrid) where {TT,MET}
+function _remap_to_linear(grid::GridMultiBlock{TT,2,CartesianMetric},plane::ParGrid) where {TT,MET}
     iindex = zeros(Int,size(plane.x))
     jindex = zeros(Int,size(plane.x))
     sgi = zeros(Int,size(plane.x))
@@ -159,28 +163,6 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,MET},plane::ParGrid) where {
 
         iindex[I] = i; jindex[I] = j
 
-        # if MET == CurvilinearMetric
-        #     # Now we need to perform inverse bilinear interpolation to find the weights
-        #     k0 = (subgrid.gridx[i,j] - subgrid.gridx[i+1,j]) * (pt[2] - subgrid.gridy[i,j])
-    
-        #     k1 = subgrid.gridx[i,j]*(-pt[2] + subgrid.gridy[i,j] - subgrid.gridy[i+1,j] + subgrid.gridy[i,j+1]) * 
-        #         subgrid.gridy[i,j] * subgrid.gridx[i+1,j+1] + subgrid.gridx[i+1,j] * (pt[2] - subgrid.gridy[i,j+1]) +
-        #         pt[2] * (subgrid.gridx[i+1,j+1] - subgrid.gridx[i,j+1]) + subgrid.gridx[i,j+1] * subgrid.gridy[i+1,j]
-            
-        #     k2 = subgrid.gridx[i,j] * (subgrid.gridy[i+1,j] - 2*subgrid.gridy[i,j+1] + subgrid.gridy[i+1,j+1]) + 
-        #         subgrid.gridx[i,j] * (-subgrid.gridx[i+1,j] + 2*subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) +
-        #         subgrid.gridx[i+1,j] * subgrid.gridy[i,j+1] * subgrid.gridx[i,j+1] * (-subgrid.gridy[i+1,j] - subgrid.gridy[i+1,j+1]) + subgrid.gridx[i+1,j+1] * subgrid.gridy[i,j+1]
-
-        #     # distance between the curves p_11 - p_12 and p_21 - p_22
-        #     v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
-    
-        #     u = - v*(subgrid.gridx[i,j] - subgrid.gridx[i,j+1]) / (v*(subgrid.gridx[i,j] - subgrid.gridx[i+1,j] + subgrid.gridx[i,j+1] - subgrid.gridx[i+1,j+1]) - subgrid.gridx[i,j] + subgrid.gridx[i+1,j])
-    
-        #     # TODO: we should check if the point is correct
-        # end
-
-
-
         ΔxΔy = (subgrid.gridx[i+1,j] - subgrid.gridx[i,j])*(subgrid.gridy[i,j+1] - subgrid.gridy[i,j])
         
         weight11[I] = (subgrid.gridx[i+1,j] - pt[1]) * (subgrid.gridy[i,j+1] - pt[2])/ΔxΔy  # bottom left
@@ -188,21 +170,48 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,MET},plane::ParGrid) where {
         weight21[I] = (subgrid.gridx[i+1,j] - pt[1])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top left
         weight22[I] = (pt[1] - subgrid.gridx[i,j])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top right
 
-        # @show pt
-        # @show subgrid[i,j],  subgrid[i+1,j], subgrid[i,j+1], subgrid[i+1,j+1]
-        # @show norm(subgrid[i,j].-pt),  norm(subgrid[i+1,j].-pt), norm(subgrid[i,j+1].-pt), norm(subgrid[i+1,j+1].-pt)
-        # @show weight11[I], weight12[I], weight21[I], weight22[I]
- 
     end
 
     return ParGridLinear{eltype(weight11),typeof(weight11),:Bilinear}(weight11,weight12,weight21,weight22,iindex,jindex,sgi)
 end
 
+
+
+"""
+    inverse_bilinear_interpolation
+Given the four points of a bilinear interpolation, find the weights for the point pt
+
+"""
+
+function inverse_bilinear_interpolation(p11,p12,p21,p22,pt)
+    Q1 = p21 .- p11 # lower wall
+    Q2 = p22 .- p21 # right wall
+    Q3 = (p22 .- p21) .- (p12 .- p11)
+    Q = pt .- p11
+
+
+
+
+    @show k0 = (Q[1]*Q1[2] - Q[2]*Q1[1])
+    @show k1 = (-Q[2]*Q3[1] + Q[1]*Q3[2] - Q1[2]*Q2[1] + Q2[2]*Q1[1])
+    @show k2 = (Q2[2]*Q3[1] - Q3[2]*Q2[1])
+
+    @show k1^2 - 4*k0*k2, sign(k1^2 - 4*k0*k2)
+    
+    @show  (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0
+    v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
+
+    u = (Q[1] - Q2[1]*v)/(Q1[1] + Q3[1]*v)
+
+    return u,v
+end
+
+
 """
     _remap_to_idw(grid::GridMultiBlock,plane::ParGrid)
 Remap the interpolation points to their inverse distance weights
 """
-function _remap_to_idw(grid::GridMultiBlock{TT},plane::ParGrid) where TT
+function _remap_to_idw(grid::GridMultiBlock{TT,2},plane::ParGrid) where {TT}
     sgi = zeros(Int,size(plane.x))
 
     weight11 = zeros(TT,size(plane.x))

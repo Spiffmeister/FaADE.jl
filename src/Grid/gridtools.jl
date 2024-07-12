@@ -40,10 +40,49 @@ function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear) where TT
     end
 end
 """
-    findgrid(grid::GridMultiBlock{TT,DIM,CartesianMetric},pt::Tuple{TT,TT};mode=:inside)
+    nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT},indextype=:linear)
+Takes a 2D grid and finds the nearest point.
+
+Returns the value of the nearest point and the linear index of that point.
+"""
+function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT},indextype=:linear) where TT
+
+    tmpdist = TT(0)
+    dist = TT(1e10)
+    linind = 0
+    sgi = 0
+    for I in eachgrid(grid)
+        tmppt, tmpind = nearestpoint(grid.Grids[I],pt)
+        # Check the distance to each point in the grid and record the smallest distance
+        tmpdist = sqrt( (tmppt[1] - pt[1])^2 + (tmppt[2] - pt[2])^2 )
+        if tmpdist < dist
+            dist = tmpdist
+            linind = tmpind
+            sgi = I
+        end
+    end
+
+    if indextype == :linear
+        # Return the LinearIndex in the array
+        return (grid.Grids[sgi].gridx[linind],grid.Grids[sgi].gridy[linind]), linind, sgi
+    elseif indextype == :cartesian
+        # Return the i,j coordinate in the array
+        cartind = CartesianIndices(grid.Grids[sgi].gridx)[linind]
+        return (grid.Grids[sgi].gridx[linind],grid.Grids[sgi].gridy[linind]), (cartind[1],cartind[2]), sgi
+    else
+        error("Index type is either :linear or :cartesian")
+    end
+end
+
+
+
+
+
+"""
+    findgrid(grid::GridMultiBlock{TT,2,CartesianMetric},pt::Tuple{TT,TT};mode=:inside)
 Check which cartesian grid a point is in.
 """
-function findgrid(grid::GridMultiBlock{TT},pt::Tuple{TT,TT};mode=:inside) where {TT}
+function findgrid(grid::GridMultiBlock{TT,2,CartesianMetric},pt::Tuple{TT,TT};mode=:inside) where {TT}
     gridind = 0
     for I in eachgrid(grid)
         minx = grid.Grids[I].gridx[1]
@@ -74,6 +113,16 @@ function findgrid(grid::GridMultiBlock{TT},pt::Tuple{TT,TT};mode=:inside) where 
         error("Point $(pt) is not in any grid")
     end
 end
+function findgrid(grid::GridMultiBlock{TT,DIM,CurvilinearMetric},pt::Tuple{TT,TT};mode=:inside) where {TT,DIM}
+
+    _, _, sgi = nearestpoint(grid,pt)
+
+    return sgi
+end
+
+
+
+
 """
     findcell(grid::GridMultiBlock,pt::Tuple{TT,TT})
 Find which cell bounds the point
