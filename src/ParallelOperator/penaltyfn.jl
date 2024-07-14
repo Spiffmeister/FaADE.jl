@@ -223,14 +223,22 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     w21B = P[I].PGrid.Bplane.weight21
     w22B = P[I].PGrid.Bplane.weight22
 
-    for J in eachindex(w_f)
-        # w_f[I] = uglobal[sgiF[I]][nnF[I]]
-        # w_f[I] += uglobal[sgiB[I]][nnB[I]]
-        # w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
-        # w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
-        w_f[J] = _interpolation(uglobal[sgiB[J]], w11B, w12B, w21B, w22B, nnBx[J], nnBy[J], J)
-        w_f[J] += _interpolation(uglobal[sgiF[J]],w11F, w12F, w21F, w22F, nnFx[J], nnFy[J], J)
-        w_f[J] = w_f[J]/2
+    if METHOD == :NearestNeighbour
+        for J in eachindex(u)
+            w_f[J] = uglobal[sgiB[J]][nnBx[J]]
+            w_f[J] += uglobal[sgiF[J]][nnFx[J]]
+            w_f[J] = w_f[J]/2
+        end
+    else
+        for J in eachindex(w_f)
+            # w_f[I] = uglobal[sgiF[I]][nnF[I]]
+            # w_f[I] += uglobal[sgiB[I]][nnB[I]]
+            # w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
+            # w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
+            w_f[J] = _interpolation(uglobal[sgiB[J]], w11B, w12B, w21B, w22B, nnBx[J], nnBy[J], J)
+            w_f[J] += _interpolation(uglobal[sgiF[J]],w11F, w12F, w21F, w22F, nnFx[J], nnFy[J], J)
+            w_f[J] = w_f[J]/2
+        end
     end
 
     τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0

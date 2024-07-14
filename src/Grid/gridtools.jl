@@ -14,7 +14,7 @@ Takes a 2D grid and finds the nearest point.
 
 Returns the value of the nearest point and the linear index of that point.
 """
-function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear) where TT
+function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear,skip=(nothing,)) where TT
 
     tmpdist = TT(0)
     dist = TT(1e10)
@@ -22,7 +22,7 @@ function nearestpoint(grid::Grid2D,pt::Tuple{TT,TT},indextype=:linear) where TT
     for I in eachindex(grid)
         # Check the distance to each point in the grid and record the smallest distance
         tmpdist = sqrt( (grid.gridx[I] - pt[1])^2 + (grid.gridy[I] - pt[2])^2 )
-        if tmpdist < dist
+        if (tmpdist < dist) && (I ∉ skip)
             dist = tmpdist
             linind = I
         end
@@ -44,6 +44,8 @@ end
 Takes a 2D grid and finds the nearest point.
 
 Returns the value of the nearest point and the linear index of that point.
+
+`indextype=:linear` returns the linear index of the point in the grid. `indextype=:cartesian` returns the i,j index of the point in the grid.
 """
 function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT},indextype=:linear) where TT
 
@@ -55,13 +57,12 @@ function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT},indextype=:linear) w
         tmppt, tmpind = nearestpoint(grid.Grids[I],pt)
         # Check the distance to each point in the grid and record the smallest distance
         tmpdist = sqrt( (tmppt[1] - pt[1])^2 + (tmppt[2] - pt[2])^2 )
-        if tmpdist < dist
+        if (tmpdist < dist) && !(tmpdist ≈ dist) #check approx due to rounding errors
             dist = tmpdist
             linind = tmpind
             sgi = I
         end
     end
-
     if indextype == :linear
         # Return the LinearIndex in the array
         return (grid.Grids[sgi].gridx[linind],grid.Grids[sgi].gridy[linind]), linind, sgi
@@ -115,7 +116,52 @@ function findgrid(grid::GridMultiBlock{TT,2,CartesianMetric},pt::Tuple{TT,TT};mo
 end
 function findgrid(grid::GridMultiBlock{TT,DIM,CurvilinearMetric},pt::Tuple{TT,TT};mode=:inside) where {TT,DIM}
 
-    _, _, sgi = nearestpoint(grid,pt)
+    _, (i,j), sgi = nearestpoint(grid,pt,:cartesian)
+    
+    
+    subgrid = grid.Grids[sgi]
+
+    # If the grid point is near the boundary we have to be careful
+    if (i == 1) || (i == subgrid.nx) || (j == 1) || (j == subgrid.ny)
+        try
+            findcell(subgrid,pt)
+        catch
+            joints = grid.Joint[sgi]
+
+            dist = TT(1e10)
+            for joint in joints # this will correct most instances
+                newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
+                if dist > norm(newpt .- pt)
+                    dist = norm(newpt .- pt)
+                    sgi = joint.index
+                end
+            end
+
+            # It possible that the grid point lies outside the domain entirely
+            # in this case we should move it to the nearest boundary node
+            # subgrid = grid.Grids[sgi]
+            # try
+            #     findcell(subgrid,pt)
+            # catch
+            # end
+
+        end
+        # xside = 0
+        # for ii in 1:subgrid.nx-1
+        #     xside += sign(_checkside(subgrid[ii,1],subgrid[ii+1,1],pt))
+        #     xside += sign(_checkside(subgrid[ii,subgrid.ny],subgrid[ii+1,subgrid.ny],pt))
+        # end
+        # yside = 0
+        # for jj in 1:subgrid.ny-1
+        #     yside += _checkside(subgrid[1,jj],subgrid[1,jj+1],pt)
+        #     yside += _checkside(subgrid[subgrid.nx,jj],subgrid[subgrid.nx,jj+1],pt)
+        # end
+        # if abs(xside == subgrid.nx) && abs(yside == subgrid.ny)
+        # else
+        #     @show "fuck"
+        # end
+    end
+
 
     return sgi
 end
@@ -200,12 +246,16 @@ end
 """
     findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
 """
-function findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
+function findcell(grid::Grid2D,pt::Tuple{TT,TT},inds=(0,0)) where {TT}
 
     ix = 0
     jy = 0
 
-    _, inds = nearestpoint(grid,pt,:cartesian)
+    if inds == (0,0)
+        _, inds = nearestpoint(grid,pt,:cartesian)
+    end
+
+    # _, inds = nearestpoint(grid,pt,:cartesian)
     i = inds[1]
     j = inds[2]
 
@@ -281,7 +331,7 @@ function _check_inside(grid,i,j,pt)
     bd = sign(_checkside(grid[i+1,j],grid[i+1,j+1],pt))
     da = sign(_checkside(grid[i+1,j+1],grid[i,j+1],pt))
     ac = sign(_checkside(grid[i,j+1],grid[i,j],pt))
-    if sign(ab) == sign(bd) == sign(da) == sign(ac) == -1
+    if sign(ab) == sign(bd) == sign(da) == sign(ac)
         tf = true
     end
     if (ab == 0) || (bd==0) || (da==0) || (ac==0) #if the point is on one of the lines this will do

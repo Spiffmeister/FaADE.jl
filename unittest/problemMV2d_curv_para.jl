@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 81
+nx = ny = 21
 
 Δt = 1e-3
 # t = Δt
-t = 1e-2
+t = 5e-2
 
 ωt = 1.0
 ωx = 1.0
@@ -109,7 +109,7 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 δ = 0.005
-rs = 0.7
+rs = 0.5
 function B(X,x::Array{Float64},params,t)
     X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
     X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * x[1]^5 * cos(x[2])
@@ -118,7 +118,12 @@ function B(X,x::Array{Float64},params,t)
     # X[1] = (-2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])) * t
 end
 dH(X,x,params,t) = B(X,x,params,t)
-gdata = construct_grid(dH,Dom,[-2.0π,2.0π],interpmode=:idw)
+
+XtoB(x,y) = [sqrt(x^2 + y^2), atan(y,x)]
+BtoX(r,θ) = [r*cos(θ), r*sin(θ)]
+gridoptions = Dict("coords"=>(XtoB,BtoX), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π], "remapping"=>:bilinear)
+
+gdata = construct_grid(dH,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
 
 # gdata = remap_grid(gdata,interpmode=:idw)
 
@@ -131,8 +136,10 @@ PData = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=1.0e6)
 
 
 P = Problem2D(order,u₀,K,K,Dom,BD,F,PData)
+# P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
 
 println("---Solving 4 volume---")
+# soln = solve(P,Dom,Δt,1.1Δt)
 soln = solve(P,Dom,Δt,t)
 
 
@@ -142,13 +149,17 @@ soln = solve(P,Dom,Δt,t)
 
 using GLMakie
 gridfig = Figure()
-gridfix_ax = Axis(gridfig[1,1])
-scatter!(gridfix_ax,D1.gridx[:],D1.gridy[:],markersize=10.5)
-scatter!(gridfix_ax,D2.gridx[:],D2.gridy[:],markersize=10.5)
-scatter!(gridfix_ax,D3.gridx[:],D3.gridy[:],markersize=10.5)
-scatter!(gridfix_ax,D4.gridx[:],D4.gridy[:],markersize=10.5)
-scatter!(gridfix_ax,D5.gridx[:],D5.gridy[:],markersize=10.5)
-gridfige
+gridfig_ax = Axis(gridfig[1,1])
+scatter!(gridfig_ax,D1.gridx[:],D1.gridy[:],markersize=10.5)
+scatter!(gridfig_ax,D2.gridx[:],D2.gridy[:],markersize=10.5)
+scatter!(gridfig_ax,D3.gridx[:],D3.gridy[:],markersize=10.5)
+scatter!(gridfig_ax,D4.gridx[:],D4.gridy[:],markersize=10.5)
+scatter!(gridfig_ax,D5.gridx[:],D5.gridy[:],markersize=10.5)
+
+# lines!(gridfig_ax,D5.gridx[:,41],D5.gridy[:,41],color=:black)
+# scatter!(gridfig_ax,[-0.10203062474510068],[ -0.9947812581739387])
+
+gridfig
 
 
 
