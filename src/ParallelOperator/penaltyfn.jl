@@ -241,6 +241,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
         end
     end
 
+    
     τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
     for j in 1:grid.ny

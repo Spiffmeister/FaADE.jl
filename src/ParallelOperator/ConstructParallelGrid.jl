@@ -251,11 +251,11 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
 
         firstpt, ind, sgi = nearestpoint(grid,pt,:cartesian)
 
-  
+        #TODO : REMOVE ALL THESE TRY CATCH
         # We should check this is the correct grid and index
         if (ind[1] == 1) || (ind[1] == grid.Grids[sgi].nx) || (ind[2] == 1) || (ind[2] == grid.Grids[sgi].ny)
             try # if the point is not in the domain
-                i,j = findcell(grid.Grids[sgi],pt)
+                tmpi,tmpj = findcell(grid.Grids[sgi],pt)
             catch # if that failed the point is not in the domain and we need to correct it
 
                 mappedpt = mapping(pt...)
@@ -265,13 +265,13 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
                 else
                     nearpt = (0,0)
                     joints = grid.Joint[sgi]
-                    dist = TT(1e10)
+                    # dist = TT(1e10)
                     for joint in joints # this will correct most instances
-                        newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
-                        if dist > norm(newpt .- pt)
-                            dist = norm(newpt .- pt)
+                        try
+                            i,j = findcell(grid.Grids[joint.index],pt)
                             sgi = joint.index
-                            nearpt = newpt
+                        catch
+                            continue
                         end
                     end
                 end
@@ -281,6 +281,7 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
                 # if it is, move it to the nearest point
                 try
                     i,j = findcell(grid.Grids[sgi],pt)
+
                 catch
                     pt = nearpt
                 end
@@ -323,15 +324,25 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
         elseif isapprox(vroot[1],TT(0),atol=1e-12) || isapprox(vroot[2],TT(0),atol=1e-12)
             v = TT(0)
         else
-            error("fuk")
+            error("Cannot find node.")
         end
 
-        u = (q[1] + a[1]*v - c[1]*v - a[1]) / ((a[1] - b[1] - c[1] + d[1])*v - a[1] + b[1])
+        # if v ≠ 0
+            u = (q[1] + a[1]*v - c[1]*v - a[1]) / ((a[1] - b[1] - c[1] + d[1])*v - a[1] + b[1])
+        # else
+            # u = 
+        # end
 
         weight11[I] = (1-v)*(1-u)
         weight12[I] = u*(1-v)
         weight21[I] = (1-u)*v
         weight22[I] = u*v
+
+        if isnan(weight11[I])
+            @show I, sgi, pt, v, u, vroot, i, j
+            @show a[1], b[1]
+            @show ""
+        end
 
 
     end

@@ -102,7 +102,9 @@ if poincare
 end
 
 
-gdata   = construct_grid(B,Dom,[-2.0π,2.0π],interpmode=:bilinear)
+gridoptions = Dict("xbound"=>[0.0,1.0], "ybound"=>[0.0,2π], "remapping"=>:idw)
+
+gdata   = construct_grid(B,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
 # gdata   = construct_grid(B,Dom,[-2.0π,2.0π],interpmode=:bicubic)
 PData   = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=k_para)
 

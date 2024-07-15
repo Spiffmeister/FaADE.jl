@@ -10,11 +10,11 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 81
+nx = ny = 41
 
 Δt = 1e-3
 # t = Δt
-t = 5e-2
+t = 1e-2
 
 ωt = 1.0
 ωx = 1.0
@@ -108,11 +108,14 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 
-δ = 0.008
+δ = 0.01
 rs = 0.5
 function B(X,x::Array{Float64},params,t)
-    X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
-    X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * x[1]^5 * cos(x[2])
+    # X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
+    # X[2] = -2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * x[1]^5 * cos(x[2])
+
+    X[1] = δ*x[1]*(1-x[1])*sin(x[2])#/bn
+    X[2] = (2x[1] - 2*rs + δ*(1-x[1])*cos(x[2]) - δ*x[1]*cos(x[2]))#/bn
     # time dependent
     # X[1] = -x[1] * δ * (-r^4 + 1) * sin(x[2]) * t
     # X[1] = (-2x[1] + 2rs - 2δ * x[1] * (-x[1]^4 + 1) * cos(x[2]) + 4δ * r^5 * cos(x[2])) * t
@@ -120,6 +123,7 @@ end
 dH(X,x,params,t) = B(X,x,params,t)
 
 XtoB(x,y) = [sqrt(x^2 + y^2), atan(y,x)]
+# XtoB(x,y) = [sqrt(x^2 + y^2), @show asin(y/sqrt(x^2 + y^2))]
 BtoX(r,θ) = [r*cos(θ), r*sin(θ)]
 gridoptions = Dict("coords"=>(XtoB,BtoX), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π], "remapping"=>:bilinear)
 
@@ -139,7 +143,7 @@ P = Problem2D(order,u₀,K,K,Dom,BD,F,PData)
 # P = Problem2D(order,u₀,K,K,Dom,BD,F,nothing)
 
 println("---Solving 4 volume---")
-# soln = solve(P,Dom,Δt,1.1Δt)
+soln = solve(P,Dom,Δt,1.1Δt)
 soln = solve(P,Dom,Δt,t)
 
 
@@ -161,6 +165,27 @@ scatter!(gridfig_ax,D5.gridx[:],D5.gridy[:],markersize=10.5)
 
 gridfig
 
+
+
+
+
+poinplot = Figure()
+poinplot_ax = Axis(poinplot[1,1])
+scatter!(poinplot_ax,D1.gridx[:],D1.gridy[:],markersize=2.5)
+scatter!(poinplot_ax,D2.gridx[:],D2.gridy[:],markersize=2.5)
+scatter!(poinplot_ax,D3.gridx[:],D3.gridy[:],markersize=2.5)
+scatter!(poinplot_ax,D4.gridx[:],D4.gridy[:],markersize=2.5)
+scatter!(poinplot_ax,D5.gridx[:],D5.gridy[:],markersize=2.5)
+
+
+noremap(x,y) = [x,y]
+gridoptions = Dict("coords"=>(XtoB,noremap), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π])
+gdata_poin = construct_grid(dH,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
+scatter!(poinplot_ax,gdata_poin[1].Fplane.x[:],gdata_poin[1].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(poinplot_ax,gdata_poin[2].Fplane.x[:],gdata_poin[2].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(poinplot_ax,gdata_poin[3].Fplane.x[:],gdata_poin[3].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(poinplot_ax,gdata_poin[4].Fplane.x[:],gdata_poin[4].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(poinplot_ax,gdata_poin[5].Fplane.x[:],gdata_poin[5].Fplane.y[:],markersize=2.5,color=:black)
 
 
 
@@ -193,4 +218,43 @@ wireframe!(axw,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=fal
 # scatter!(ax,D4.gridx[:],D4.gridy[:],-ones(length(D4)),markersize=1.5)
 # scatter!(ax,D5.gridx[:],D5.gridy[:],-ones(length(D5)),markersize=1.5)
 f
+
+
+
+
+
+
+questionmark = Figure()
+questionmark_ax = Axis(questionmark[1,1])
+
+noremap(x,y) = [x,y]
+gridoptions = Dict("coords"=>(XtoB,noremap), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π])
+gdata_poin = construct_grid(dH,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
+scatter!(questionmark_ax,gdata_poin[1].Fplane.x[:],gdata_poin[1].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(questionmark_ax,gdata_poin[2].Fplane.x[:],gdata_poin[2].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(questionmark_ax,gdata_poin[3].Fplane.x[:],gdata_poin[3].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(questionmark_ax,gdata_poin[4].Fplane.x[:],gdata_poin[4].Fplane.y[:],markersize=2.5,color=:black)
+scatter!(questionmark_ax,gdata_poin[5].Fplane.x[:],gdata_poin[5].Fplane.y[:],markersize=2.5,color=:black)
+
+
+
+tmpgridx = [XtoB(D1[I]...)[1] for I in eachindex(D1)];
+tmpgridy = [XtoB(D1[I]...)[2] for I in eachindex(D1)];
+scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+tmpgridx = [XtoB(D2[I]...)[1] for I in eachindex(D2)];
+tmpgridy = [XtoB(D2[I]...)[2] for I in eachindex(D2)];
+scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+tmpgridx = [XtoB(D3[I]...)[1] for I in eachindex(D3)];
+tmpgridy = [XtoB(D3[I]...)[2] for I in eachindex(D3)];
+scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+tmpgridx = [XtoB(D4[I]...)[1] for I in eachindex(D4)];
+tmpgridy = [XtoB(D4[I]...)[2] for I in eachindex(D4)];
+scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+tmpgridx = [XtoB(D5[I]...)[1] for I in eachindex(D5)];
+tmpgridy = [XtoB(D5[I]...)[2] for I in eachindex(D5)];
+scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
 
