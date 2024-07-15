@@ -133,10 +133,10 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
             PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
 
         elseif remapping == :bilinear
-            Bplane = _remap_to_linear(grid,Pgrid.Bplane)
-            Fplane = _remap_to_linear(grid,Pgrid.Fplane)
+            Bplane = _remap_to_linear(grid,Pgrid.Bplane,(xbounds,ybounds),coordinate_map)
+            Fplane = _remap_to_linear(grid,Pgrid.Fplane,(xbounds,ybounds),coordinate_map)
             PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
-
+        
         elseif remapping == :idw
             Bplane = _remap_to_idw(grid,Pgrid.Bplane)
             Fplane = _remap_to_idw(grid,Pgrid.Fplane)
@@ -185,6 +185,13 @@ end
 
 # function remap_parallel_grid(grid,parallelgrid,method)
 # end
+"""
+    _remap_to_linear
+"""
+function _remap_to_linear end
+"""
+Remap grid to bilinear interpolation weights.
+"""
 function _remap_to_linear(grid::GridMultiBlock{TT,2,CartesianMetric},plane::ParGrid) where {TT}
     iindex = zeros(Int,size(plane.x))
     jindex = zeros(Int,size(plane.x))
@@ -219,82 +226,117 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CartesianMetric},plane::ParG
 
     return ParGridLinear{eltype(weight11),typeof(weight11),:Bilinear}(weight11,weight12,weight21,weight22,iindex,jindex,sgi)
 end
-function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::ParGrid) where {TT}
+"""
+    _remap_to_linear(grid::GridMultiBlock,plane::ParGrid)
+Remap the grid to its bilinear interpolation weights.
+
+WARNING: This function may move points if they lie outside the domain.
+"""
+function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::ParGrid,bounds,mapping) where {TT}
     iindex = zeros(Int,size(plane.x))
     jindex = zeros(Int,size(plane.x))
-    sgi = zeros(Int,size(plane.x))
+    subgridindex = zeros(Int,size(plane.x))
 
     weight11 = zeros(TT,size(plane.x))
     weight12 = zeros(TT,size(plane.x))
     weight21 = zeros(TT,size(plane.x))
     weight22 = zeros(TT,size(plane.x))
 
-    for I in eachindex(sgi)
+    i = 0; j = 0; sgi = 0;
+
+    nearpt = (0,0)
+
+    for I in eachindex(subgridindex)
         pt = (plane.x[I], plane.y[I])
 
-        firstpt, ind, sgi[I] = nearestpoint(grid,pt,:cartesian)
+        firstpt, ind, sgi = nearestpoint(grid,pt,:cartesian)
 
+  
         # We should check this is the correct grid and index
-        if (ind[1] == 1) || (ind[1] == sgi[I]) || (ind[2] == 1) || (ind[2] == grid.Grids[sgi[I]].ny)
-            try # if the point is outside the domain
-                i,j = findcell(grid.Grids[sgi[I]],pt)
+        if (ind[1] == 1) || (ind[1] == grid.Grids[sgi].nx) || (ind[2] == 1) || (ind[2] == grid.Grids[sgi].ny)
+            try # if the point is not in the domain
+                i,j = findcell(grid.Grids[sgi],pt)
             catch # if that failed the point is not in the domain and we need to correct it
-                joints = grid.Joint[sgi]
-                dist = TT(1e10)
-                for joint in joints # this will correct most instances
-                    newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
-                    if dist > norm(newpt .- pt)
-                        dist = norm(newpt .- pt)
-                        sgi = joint.index
-                        nearpt = newpt
+
+                mappedpt = mapping(pt...)
+                if isapprox(mappedpt[1],bounds[1][2],atol=1e-12)
+                    nearpt,newind = nearestpoint(grid.Grids[sgi],pt)
+                    pt = nearpt
+                else
+                    nearpt = (0,0)
+                    joints = grid.Joint[sgi]
+                    dist = TT(1e10)
+                    for joint in joints # this will correct most instances
+                        newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
+                        if dist > norm(newpt .- pt)
+                            dist = norm(newpt .- pt)
+                            sgi = joint.index
+                            nearpt = newpt
+                        end
                     end
                 end
 
+
                 # we need to try again since it may be outside the domain
                 # if it is, move it to the nearest point
-                try 
-                    i,j = findcell(grid.Grids[sgi[I]],pt)
+                try
+                    i,j = findcell(grid.Grids[sgi],pt)
                 catch
                     pt = nearpt
                 end
-
+                
             end
-
-        else # otherwise we can proceed
-            i,j = findcell(grid.Grids[sgi[I]],pt)
+            
         end
 
-        sgi[I] = findgrid(grid,pt)
+        i,j = findcell(grid.Grids[sgi],pt)
         
-        subgrid = grid.Grids[sgi[I]]
+        subgrid = grid.Grids[sgi]
 
-        i = 0; j = 0;
+        iindex[I] = i; jindex[I] = j; subgridindex[I] = sgi;
 
 
 
-        # First we need to find the cell the node belongs to
-        if (i == 1) || (i == subgrid.nx) || (j == 1) || (j == subgrid.ny)
-            # its possible the point is outside the domain
-            try
-                i,j = findcell(subgrid,pt)
-            catch
-            end
+        a = subgrid[i,j]
+        b = subgrid[i+1,j]
+        c = subgrid[i,j+1]
+        d = subgrid[i+1,j+1]
+
+        q = pt
+
+        Q0 = - (b[2] - q[2]) * a[1] + (-q[2] + a[2]) * b[1] - q[1] * a[2] + b[2] * q[1]
+        Q1 = (-(q[2] - 2 * b[2] + d[2]) * a[1] + (q[2] - 2 * a[2] + c[2]) * b[1] - (-d[1] - q[1]) * a[2] + (-c[1] - q[1]) * b[2] - (c[2] - d[2]) * q[1] - (-c[1] + d[1]) * q[2])
+        Q2 = (-(b[2] - d[2]) * a[1] + (a[2] - c[2]) * b[1] + c[1] * b[2] - c[1] * d[2] - d[1] * a[2] + d[1] * c[2])
+
+        if abs(Q2) > 1e-12
+            vroot = ((-Q1 + sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2), (-Q1 - sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2))
         else
-            i,j = findcell(subgrid,pt)
+            vroot = 2Q0 ./ ( -Q1 + sqrt(Q1^2 - 4*Q0*Q2)  , -Q1 - sqrt(Q1^2 - 4*Q0*Q2) )
         end
 
-        iindex[I] = i; jindex[I] = j
+        if 0 ≤ vroot[1] ≤ 1
+            v = vroot[1]
+        elseif 0 ≤ vroot[2] ≤ 1
+            v = vroot[2]
+        elseif isapprox(vroot[1],TT(1),atol=1e-12) || isapprox(vroot[2],TT(1),atol=1e-12)
+            v = TT(1)
+        elseif isapprox(vroot[1],TT(0),atol=1e-12) || isapprox(vroot[2],TT(0),atol=1e-12)
+            v = TT(0)
+        else
+            error("fuk")
+        end
 
-        ΔxΔy = (subgrid.gridx[i+1,j] - subgrid.gridx[i,j])*(subgrid.gridy[i,j+1] - subgrid.gridy[i,j])
-        
-        weight11[I] = (subgrid.gridx[i+1,j] - pt[1]) * (subgrid.gridy[i,j+1] - pt[2])/ΔxΔy  # bottom left
-        weight12[I] = (pt[1] - subgrid.gridx[i,j]) * (subgrid.gridy[i,j+1] - pt[2])/ΔxΔy    # bottom right
-        weight21[I] = (subgrid.gridx[i+1,j] - pt[1])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top left
-        weight22[I] = (pt[1] - subgrid.gridx[i,j])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top right
+        u = (q[1] + a[1]*v - c[1]*v - a[1]) / ((a[1] - b[1] - c[1] + d[1])*v - a[1] + b[1])
+
+        weight11[I] = (1-v)*(1-u)
+        weight12[I] = u*(1-v)
+        weight21[I] = (1-u)*v
+        weight22[I] = u*v
+
 
     end
 
-    return ParGridLinear{eltype(weight11),typeof(weight11),:Bilinear}(weight11,weight12,weight21,weight22,iindex,jindex,sgi)
+    return ParGridLinear{eltype(weight11),typeof(weight11),:Bilinear}(weight11,weight12,weight21,weight22,iindex,jindex,subgridindex)
 end
 
 
@@ -354,7 +396,7 @@ function _remap_to_idw(grid::GridMultiBlock{TT,2},plane::ParGrid) where {TT}
         
         subgrid = grid.Grids[sgi[I]]
 
-        cartind = CartesianIndices(subgrid.grid)[]
+        cartind = CartesianIndices(subgrid.gridx)
 
         # First we need to find the cell the node belongs to
         try

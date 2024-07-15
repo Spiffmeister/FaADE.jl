@@ -304,7 +304,17 @@ function findcell(grid::Grid2D,pt::Tuple{TT,TT},inds=(0,0)) where {TT}
     end
 
     if ix == jy == 0
+        # Last chance is that the point lies on one of the nodes
         if pt == (grid.gridx[i,j],grid.gridy[i,j])
+            ix = i
+            jy = j
+        elseif pt == (grid.gridx[i+1,j],grid.gridy[i+1,j])
+            ix = i
+            jy = j
+        elseif pt == (grid.gridx[i+1,j+1],grid.gridy[i+1,j+1])
+            ix = i
+            jy = j
+        elseif pt == (grid.gridx[i,j+1],grid.gridy[i,j+1])
             ix = i
             jy = j
         else

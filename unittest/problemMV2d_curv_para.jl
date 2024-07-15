@@ -10,7 +10,7 @@ using FaADE
 order = 2
 K = 1.0
 
-nx = ny = 21
+nx = ny = 81
 
 Δt = 1e-3
 # t = Δt
@@ -108,7 +108,7 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 
-δ = 0.005
+δ = 0.008
 rs = 0.5
 function B(X,x::Array{Float64},params,t)
     X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
@@ -175,6 +175,17 @@ surface!(ax,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false,
 surface!(ax,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
 surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
 surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
+
+
+fw = Figure()
+axw = Axis3(fw[1,1])
+wireframe!(axw,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
+wireframe!(axw,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=false, colorrange=colourrange)
+wireframe!(axw,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
+wireframe!(axw,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
+wireframe!(axw,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
+
+
 
 # scatter!(ax,D1.gridx[:],D1.gridy[:],-ones(length(D1)),markersize=1.5)
 # scatter!(ax,D2.gridx[:],D2.gridy[:],-ones(length(D2)),markersize=1.5)
