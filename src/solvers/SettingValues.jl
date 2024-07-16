@@ -525,6 +525,48 @@ function applyParallelPenalties(DB::DataMultiBlock)
     end
 end
 
+
+
+function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
+
+    for I in eachblock(DB)
+        uglobal[I] .= getarray(DB[I],:uₙ₊₁)
+    end
+
+    for I in eachblock(DB)
+        if I == 1
+            ug = uglobal[I]
+            ug[:,1]     .= (uglobal[4][:,1] + ug[:,1])/2
+            ug[:,end]   .= (uglobal[2][:,1] + ug[:,end])/2
+            ug[1,:]     .= (uglobal[5][:,1] + ug[1,:])/2
+            ug[end,:]   .= (uglobal[3][:,1] + ug[end,:])/2
+        elseif I == 2
+            ug = uglobal[I]
+            ug[:,1]     .= (uglobal[1][:,end] + ug[:,1])/2
+            ug[1,:]     .= (uglobal[3][end,:]   + ug[1,:])/2
+            ug[end,:]   .= (uglobal[5][1,:]     + ug[end,:])/2
+        elseif I == 3
+            ug = uglobal[I]
+            ug[:,1]   .= (uglobal[1][end,:] + ug[:,1])/2
+            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
+            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
+        elseif I == 4
+            ug = uglobal[I]
+            ug[:,1]     .= (uglobal[1][1,:] + ug[:,1])/2
+            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
+            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
+        elseif I == 5
+            ug = uglobal[I]
+            ug[:,1]     .= (uglobal[1][1,:] + ug[:,1])/2
+            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
+            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
+        end
+    end
+
+end
+
+
+
 #=
 """
     kIminusB!

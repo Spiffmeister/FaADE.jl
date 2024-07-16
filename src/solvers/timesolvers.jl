@@ -163,6 +163,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     for I in eachblock(DBlock)
                         uglobal[I] .= DBlock[I].uₙ₊₁
                     end
+                    # setglobalu!(uglobal,DBlock)
+
                     for I in eachblock(DBlock)
                         # applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)

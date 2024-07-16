@@ -49,37 +49,55 @@ println("Curvilinear volume")
 #             nx,ny,
 #             coord=CurvilinearMetric)
 
-D1 = Grid2D(u->[u*0.5 - 0.25,-0.25],
-            v->[-0.25,v*0.5 - 0.25],
-            v->[0.25,v*0.5 - 0.25],
-            u->[u*0.5 - 0.25, 0.25],
-    nx,ny)
+# D1 = Grid2D(u->[u*0.5 - 0.25,-0.25],
+#             v->[-0.25,v*0.5 - 0.25],
+#             v->[0.25,v*0.5 - 0.25],
+#             u->[u*0.5 - 0.25, 0.25],
+#     nx,ny)
+
+
+dialation = 0.2
+
+
+D1 = Grid2D(
+    u -> [-0.25,-0.25] + u*([0.25,-0.25] - [-0.25,-0.25]) + u*(1-u)*[0.0,-dialation],
+    v -> [-0.25,-0.25] + v*([-0.25,0.25] - [-0.25,-0.25]) + v*(1-v)*[-dialation,0.0],
+    v -> [0.25,-0.25] + v*([0.25,0.25] - [0.25,-0.25]) + v*(1-v)*[dialation,0.0],
+    u -> [-0.25,0.25] + u*([0.25,0.25] - [-0.25,0.25]) + u*(1-u)*[0.0,dialation],
+    nx,ny
+)
+
+
 
 T = FaADE.Grid.Torus([1.0],[1.0],[1],[0])
 
 # Right domain
-D2 = Grid2D(u->[0.25, -u*0.5 + 0.25], # Bottom
+D2 = Grid2D(#u->[0.25, -u*0.5 + 0.25], # Bottom
+            u->[0.25,0.25] + u*([0.25,-0.25] - [0.25,0.25]) + u*(1-u)*[dialation,0.0],
             v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25], # Left
             v->v*(T(7π/4,0.0) + [-0.25, 0.25]) + [0.25, -0.25], # Right
             u->T(u*(7π/4 - 9π/4) + 9π/4,0.0), # Top
             nx,ny)
 
 # Top domain
-D3 = Grid2D(u->[u*0.5 - 0.25, 0.25], # Bottom
+D3 = Grid2D(#u->[u*0.5 - 0.25, 0.25], # Bottom
+            u->[-0.25,0.25] + u*([0.25,0.25] - [-0.25,0.25]) + u*(1-u)*[0.0,dialation],
             v->v*(T(3π/4,0.0) + [0.25,-0.25]) + [-0.25,0.25], # Left
             v->v*(T(π/4,0.0) - [0.25,0.25]) + [0.25,0.25], # Right
             u->T(u*(π/4 - 3π/4) + 3π/4,0.0), # Top
             nx,ny)
 
 # Left domain
-D4 = Grid2D(u->[-0.25,u*0.5 - 0.25],
+D4 = Grid2D(#u->[-0.25,u*0.5 - 0.25],
+            u->[-0.25,-0.25] + u*([-0.25,0.25] - [-0.25,-0.25]) + u*(1-u)*[-dialation,0.0],
             v->v*(T(5π/4,0.0) - [-0.25, -0.25]) + [-0.25, -0.25],
             v->v*(T(3π/4,0.0) - [-0.25,0.25]) + [-0.25,0.25],
             u->T(u*(3π/4 - 5π/4) + 5π/4,0.0),
             nx,ny)
 
 # Bottom domain
-D5 = Grid2D(u->[-u*0.5 + 0.25, -0.25],
+D5 = Grid2D(#u->[-u*0.5 + 0.25, -0.25],
+            u->[-0.25,-0.25] + u*([0.25,-0.25] - [-0.25,-0.25]) + u*(1-u)*[0.0,-dialation],
             v->v*(T(7π/4,0.0) - [0.25,-0.25]) + [0.25, -0.25],
             v->v*(T(5π/4,0.0) - [-0.25,-0.25]) + [-0.25, -0.25],
             u->T(u*(5π/4 - 7π/4) + 7π/4, 0.0),
@@ -108,7 +126,7 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
 
 
-δ = 0.01
+δ = 0.05
 rs = 0.5
 function B(X,x::Array{Float64},params,t)
     # X[1] = -x[1] * δ * (-x[1]^4 + 1) * sin(x[2])
@@ -123,7 +141,6 @@ end
 dH(X,x,params,t) = B(X,x,params,t)
 
 XtoB(x,y) = [sqrt(x^2 + y^2), atan(y,x)]
-# XtoB(x,y) = [sqrt(x^2 + y^2), @show asin(y/sqrt(x^2 + y^2))]
 BtoX(r,θ) = [r*cos(θ), r*sin(θ)]
 gridoptions = Dict("coords"=>(XtoB,BtoX), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π], "remapping"=>:bilinear)
 
@@ -152,6 +169,7 @@ soln = solve(P,Dom,Δt,t)
 
 
 using GLMakie
+
 gridfig = Figure()
 gridfig_ax = Axis(gridfig[1,1])
 scatter!(gridfig_ax,D1.gridx[:],D1.gridy[:],markersize=10.5)
@@ -202,6 +220,15 @@ surface!(ax,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false,
 surface!(ax,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
 
 
+
+
+
+
+include("../../BADESBP_examples/FieldLines.jl")
+poindata = FieldLines.construct_poincare(dH,[0.0,1.0],[0.0,π],N_trajs=400,N_orbs=400)
+
+poinrtheta = hcat([BtoX(poindata.ψ[I],poindata.θ[I]) for I in eachindex(poindata.ψ)]...)
+
 fw = Figure()
 axw = Axis3(fw[1,1])
 wireframe!(axw,Dom.Grids[1].gridx, Dom.Grids[1].gridy, soln.u[2][1],colorbar=false, colorrange=colourrange)
@@ -209,6 +236,8 @@ wireframe!(axw,Dom.Grids[2].gridx, Dom.Grids[2].gridy, soln.u[2][2],colorbar=fal
 wireframe!(axw,Dom.Grids[3].gridx, Dom.Grids[3].gridy, soln.u[2][3],colorbar=false, colorrange=colourrange)
 wireframe!(axw,Dom.Grids[4].gridx, Dom.Grids[4].gridy, soln.u[2][4],colorbar=false, colorrange=colourrange)
 wireframe!(axw,Dom.Grids[5].gridx, Dom.Grids[5].gridy, soln.u[2][5],colorbar=false, colorrange=colourrange)
+
+scatter!(axw,poinrtheta[1,:],poinrtheta[2,:],markersize=2.5,color=:red)
 
 
 
@@ -224,37 +253,61 @@ f
 
 
 
-questionmark = Figure()
-questionmark_ax = Axis(questionmark[1,1])
 
-noremap(x,y) = [x,y]
-gridoptions = Dict("coords"=>(XtoB,noremap), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π])
-gdata_poin = construct_grid(dH,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
-scatter!(questionmark_ax,gdata_poin[1].Fplane.x[:],gdata_poin[1].Fplane.y[:],markersize=2.5,color=:black)
-scatter!(questionmark_ax,gdata_poin[2].Fplane.x[:],gdata_poin[2].Fplane.y[:],markersize=2.5,color=:black)
-scatter!(questionmark_ax,gdata_poin[3].Fplane.x[:],gdata_poin[3].Fplane.y[:],markersize=2.5,color=:black)
-scatter!(questionmark_ax,gdata_poin[4].Fplane.x[:],gdata_poin[4].Fplane.y[:],markersize=2.5,color=:black)
-scatter!(questionmark_ax,gdata_poin[5].Fplane.x[:],gdata_poin[5].Fplane.y[:],markersize=2.5,color=:black)
+# frt = Figure()
+# axrt = Axis3(frt[1,1])
+
+# grtx = zeros(size(D1));
+# grty = zeros(size(D1));
+
+# for I in eachindex(D1); grtx[I],grty[I] = XtoB(D1[I]...); end
+# wireframe!(axrt,grtx,grty,soln.u[2][1],colorbar=false, colorrange=colourrange)
+
+# for I in eachindex(D2); grtx[I],grty[I] = XtoB(D2[I]...); end
+# wireframe!(axrt,grtx,grty,soln.u[2][2],colorbar=false, colorrange=colourrange)
+
+# for I in eachindex(D3); grtx[I],grty[I] = XtoB(D3[I]...); end
+# wireframe!(axrt,grtx,grty,soln.u[2][3],colorbar=false, colorrange=colourrange)
+
+# for I in eachindex(D4); grtx[I],grty[I] = XtoB(D4[I]...); end
+# wireframe!(axrt,grtx,grty,soln.u[2][4],colorbar=false, colorrange=colourrange)
+
+# for I in eachindex(D5); grtx[I],grty[I] = XtoB(D5[I]...); end
+# wireframe!(axrt,grtx,grty,soln.u[2][5],colorbar=false, colorrange=colourrange)
 
 
 
-tmpgridx = [XtoB(D1[I]...)[1] for I in eachindex(D1)];
-tmpgridy = [XtoB(D1[I]...)[2] for I in eachindex(D1)];
-scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
 
-tmpgridx = [XtoB(D2[I]...)[1] for I in eachindex(D2)];
-tmpgridy = [XtoB(D2[I]...)[2] for I in eachindex(D2)];
-scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
 
-tmpgridx = [XtoB(D3[I]...)[1] for I in eachindex(D3)];
-tmpgridy = [XtoB(D3[I]...)[2] for I in eachindex(D3)];
-scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+# questionmark = Figure()
+# questionmark_ax = Axis(questionmark[1,1])
 
-tmpgridx = [XtoB(D4[I]...)[1] for I in eachindex(D4)];
-tmpgridy = [XtoB(D4[I]...)[2] for I in eachindex(D4)];
-scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+# noremap(x,y) = [x,y]
+# gridoptions = Dict("coords"=>(XtoB,noremap), "xbound"=>[0.0,1.0], "ybound"=>[0.0,2π])
+# gdata_poin = construct_grid(dH,Dom,[-2.0π,2.0π],gridoptions=gridoptions)
+# scatter!(questionmark_ax,gdata_poin[1].Fplane.x[:],gdata_poin[1].Fplane.y[:],markersize=2.5,color=:black)
+# scatter!(questionmark_ax,gdata_poin[2].Fplane.x[:],gdata_poin[2].Fplane.y[:],markersize=2.5,color=:black)
+# scatter!(questionmark_ax,gdata_poin[3].Fplane.x[:],gdata_poin[3].Fplane.y[:],markersize=2.5,color=:black)
+# scatter!(questionmark_ax,gdata_poin[4].Fplane.x[:],gdata_poin[4].Fplane.y[:],markersize=2.5,color=:black)
+# scatter!(questionmark_ax,gdata_poin[5].Fplane.x[:],gdata_poin[5].Fplane.y[:],markersize=2.5,color=:black)
 
-tmpgridx = [XtoB(D5[I]...)[1] for I in eachindex(D5)];
-tmpgridy = [XtoB(D5[I]...)[2] for I in eachindex(D5)];
-scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+# tmpgridx = [XtoB(D1[I]...)[1] for I in eachindex(D1)];
+# tmpgridy = [XtoB(D1[I]...)[2] for I in eachindex(D1)];
+# scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+# tmpgridx = [XtoB(D2[I]...)[1] for I in eachindex(D2)];
+# tmpgridy = [XtoB(D2[I]...)[2] for I in eachindex(D2)];
+# scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+# tmpgridx = [XtoB(D3[I]...)[1] for I in eachindex(D3)];
+# tmpgridy = [XtoB(D3[I]...)[2] for I in eachindex(D3)];
+# scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+# tmpgridx = [XtoB(D4[I]...)[1] for I in eachindex(D4)];
+# tmpgridy = [XtoB(D4[I]...)[2] for I in eachindex(D4)];
+# scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
+
+# tmpgridx = [XtoB(D5[I]...)[1] for I in eachindex(D5)];
+# tmpgridy = [XtoB(D5[I]...)[2] for I in eachindex(D5)];
+# scatter!(questionmark_ax,tmpgridx,tmpgridy,markersize=2.5)
 

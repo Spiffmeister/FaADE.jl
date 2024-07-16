@@ -202,7 +202,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     κ = P[I].κ
     w_f = P[I].w_f
     H = P[I].H
-    J = grid.J
+    Jac = grid.J
 
     sgiF = P[I].PGrid.Fplane.subgrid
     sgiB = P[I].PGrid.Bplane.subgrid
@@ -246,8 +246,8 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
 
     for j in 1:grid.ny
         for i in 1:grid.nx
-            u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
-                u[i,j] + Δt * κ * τ * w_f[i,j] / H[i,j]
+            u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
+                u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
             )
         end
     end

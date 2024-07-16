@@ -290,6 +290,7 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
             
         end
 
+        # @show pt
         i,j = findcell(grid.Grids[sgi],pt)
         
         subgrid = grid.Grids[sgi]
@@ -319,9 +320,9 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
             v = vroot[1]
         elseif 0 ≤ vroot[2] ≤ 1
             v = vroot[2]
-        elseif isapprox(vroot[1],TT(1),atol=1e-12) || isapprox(vroot[2],TT(1),atol=1e-12)
+        elseif isapprox(vroot[1],TT(1),atol=1e-10) || isapprox(vroot[2],TT(1),atol=1e-10)
             v = TT(1)
-        elseif isapprox(vroot[1],TT(0),atol=1e-12) || isapprox(vroot[2],TT(0),atol=1e-12)
+        elseif isapprox(vroot[1],TT(0),atol=1e-10) || isapprox(vroot[2],TT(0),atol=1e-10)
             v = TT(0)
         else
             error("Cannot find node.")
@@ -337,13 +338,6 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
         weight12[I] = u*(1-v)
         weight21[I] = (1-u)*v
         weight22[I] = u*v
-
-        if isnan(weight11[I])
-            @show I, sgi, pt, v, u, vroot, i, j
-            @show a[1], b[1]
-            @show ""
-        end
-
 
     end
 
