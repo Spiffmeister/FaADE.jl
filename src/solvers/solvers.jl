@@ -22,7 +22,7 @@ module solvers
     SATpenalties, SimultanousApproximationTerm, SAT_Interface, SAT_Interface!, SAT_Interface_cache!,
     SATMode, DataMode, SolutionMode, ExplicitMode
 
-    using FaADE.ParallelOperator: ParallelGrid, ParallelMultiBlock, ParallelData, applyParallelPenalty!, compute_parallel_operator
+    using FaADE.ParallelOperator: ParallelGrid, ParallelMultiBlock, ParallelData, applyParallelPenalty!, compute_parallel_operator, computeglobalw!
 
     using FaADE.Inputs: newPDEProblem, Problem1D, Problem2D#, 
 

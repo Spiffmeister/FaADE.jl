@@ -25,7 +25,7 @@ module ParallelOperator
     export ParallelData, ParallelMultiBlock
 
     export construct_grid
-    export applyParallelPenalty!
+    export applyParallelPenalty!, computeglobalw!
     export compute_parallel_operator
     export MagneticField
 

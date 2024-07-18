@@ -197,7 +197,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     end
 
 end
-function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
+function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglobal::Vector{TT},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
     
     κ = P[I].κ
     w_f = P[I].w_f
@@ -240,9 +240,30 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
             w_f[J] = w_f[J]/2
         end
     end
-
     
-    τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+
+    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+
+    # for j in 1:grid.ny
+    #     for i in 1:grid.nx
+    #         u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
+    #             u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
+    #         )
+    #     end
+    # end
+
+end
+
+
+function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
+
+    κ = P[I].κ
+    w_f = P[I].w_f
+    H = P[I].H
+    Jac = grid.J
+
+    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
     for j in 1:grid.ny
         for i in 1:grid.nx
@@ -253,7 +274,6 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     end
 
 end
-
 
 
 function _linear_interpolation(u::AbstractArray{TT},wx::TT,wy::TT,i::Int,j::Int) where TT
