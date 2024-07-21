@@ -42,7 +42,7 @@ module FaADE
 
     using FaADE.solvers: solve
 
-    using FaADE.ParallelOperator: construct_grid, ParallelData
+    using FaADE.ParallelOperator: construct_grid, ParallelData, ParallelMultiBlock
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
