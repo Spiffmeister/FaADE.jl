@@ -152,16 +152,17 @@ function compute_parallel_operator(dest::AT,u::AT,P::ParallelData) where {AT}
 end
 
 
+
 """
-    applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
-Applies the parallel penalty for a multiblock problem.
+    computeglobalw!
 """
-# function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
-function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::Vector{ParallelData{TT,DIM,PGT,GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,PGT,GT,BT,IT}
+function computeglobalw! end
+"""
+Compute the globalw for parallel blocks where a package is used for bicubic interpolation
+"""
+function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglobal::Vector{TT},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGrid}
     
-    # Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
-    Ipt = [interpolate((P[I].gridx,P[I].gridy),uglobal[I],Gridded(Linear())) for I in eachindex(uglobal)]
-    # Ipt = [interpolate(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
+    Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
 
     κ = P[I].κ
     w_f = P[I].w_f
@@ -170,8 +171,6 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
 
     sgiF = P[I].PGrid.Fplane.subgrid
     sgiB = P[I].PGrid.Bplane.subgrid
-    # nnF = P.PGrid.Fplane.x
-    # nnB = P.PGrid.Bplane.x
 
     nnFx = P[I].PGrid.Fplane.x
     nnFy = P[I].PGrid.Fplane.y
@@ -179,24 +178,17 @@ function applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},
     nnBy = P[I].PGrid.Bplane.y
 
     for J in eachindex(w_f)
-        # w_f[I] = uglobal[sgiF[I]][nnF[I]]
-        # w_f[I] += uglobal[sgiB[I]][nnB[I]]
         w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
         w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
         w_f[J] = w_f[J]/2
     end
 
-    τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
-
-    for j in 1:grid.ny
-        for i in 1:grid.nx
-            u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
-                u[i,j] + Δt * κ * τ * w_f[i,j] / H[i,j]
-            )
-        end
-    end
+    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
 end
+"""
+Compute the globalw for parallel blocks where a custom interpolation scheme is used
+"""
 function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglobal::Vector{TT},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
     
     κ = P[I].κ
@@ -256,22 +248,38 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
 end
 
 
-function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
+
+"""
+    applyParallelPenalty!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},Δt::TT,P::ParallelData,grid::Grid2D{TT,MET}) where {TT,MET}
+Applies the parallel penalty for a multiblock problem.
+"""
+function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Vector{ParallelData{TT,DIM,PGT,GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,GT,BT,IT,PGT}
 
     κ = P[I].κ
     w_f = P[I].w_f
     H = P[I].H
     Jac = grid.J
 
-    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
-
-    for j in 1:grid.ny
-        for i in 1:grid.nx
-            u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
-                u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
-            )
+    if length(Jac) > 1
+        for j in 1:grid.ny
+            for i in 1:grid.nx
+                u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
+                    u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
+                )
+            end
+        end
+    else
+        for j in 1:grid.ny
+            for i in 1:grid.nx
+                u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
+                    u[i,j] + Δt * κ * τ * w_f[i,j] / H[i,j]
+                )
+            end
         end
     end
+
+    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+
 
 end
 

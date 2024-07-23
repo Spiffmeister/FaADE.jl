@@ -164,6 +164,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     for I in eachblock(DBlock)
                         uglobal[I] .= DBlock[I].uₙ₊₁
                     end
+                    @. uglobal[1][end,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
+                    @. uglobal[2][1,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
                     # setglobalu!(uglobal,DBlock)
 
                     for I in eachblock(DBlock)

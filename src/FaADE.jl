@@ -49,7 +49,7 @@ module FaADE
     export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, GridMultiBlock, Joint
     export CartesianMetric, CurvilinearMetric
-    export construct_grid, ParallelData
+    export construct_grid, ParallelData, ParallelMultiBlock
 
     export D₁, D₂, D₂!, D₁!
 
