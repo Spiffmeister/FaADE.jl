@@ -17,6 +17,7 @@ In curvilinear coordinates the SAT is
 """
 struct SAT_Neumann{
     TN<:NodeType,
+    COORD,
     TT<:Real,
     VT<:Vector{TT},
     F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Neumann}
@@ -31,7 +32,7 @@ struct SAT_Neumann{
     τ       :: TT
     loopaxis:: LAT
     ### CONSTRUCTOR ###
-    function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int) where {TT,TN,F1}
+    function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;coord=:Cartesian) where {TT,TN,F1}
 
         check_boundary(side)
 
@@ -53,13 +54,13 @@ struct SAT_Neumann{
 
         τ = TT(1)
 
-        new{TN,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA)
+        new{TN,coord,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA)
     end
 end
 """
     SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS}
 """
-SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS} = SAT_Neumann(RHS,Δx,side,AXIS,order)
+SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int;coord=:Cartesian) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS} = SAT_Neumann(RHS,Δx,side,AXIS,order,coord=coord)
 
 
 
