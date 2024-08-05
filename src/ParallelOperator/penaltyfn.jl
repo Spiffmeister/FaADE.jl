@@ -120,6 +120,7 @@ end
     _compute_w!
 Computes ``P_parallel u`` and stores it in `dest`.
 """
+function _compute_w! end
 function _compute_w!(itp,dest::AT,Fplane::ParGrid,Bplane::ParGrid,nx::Int,ny::Int) where {AT}
     for j in 1:ny
         for i in 1:nx
@@ -132,6 +133,14 @@ end
 function _compute_w!(itp,dest::AT,plane::ParGrid,nx::Int,ny::Int) where {AT}
     for j in 1:ny
         for i in 1:nx
+            dest[i,j] = itp(plane.x[i,j],plane.y[i,j])
+        end
+    end
+    dest
+end
+function _compute_w!(itp,dest::AT,plane::ParGrid) where {AT}
+    for j in 1:plane.y.len
+        for i in 1:plane.x.len
             dest[i,j] = itp(plane.x[i,j],plane.y[i,j])
         end
     end
@@ -164,9 +173,7 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
     
     Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
 
-    κ = P[I].κ
     w_f = P[I].w_f
-    H = P[I].H
     J = grid.J
 
     sgiF = P[I].PGrid.Fplane.subgrid
@@ -191,10 +198,7 @@ Compute the globalw for parallel blocks where a custom interpolation scheme is u
 """
 function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglobal::Vector{TT},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
     
-    κ = P[I].κ
     w_f = P[I].w_f
-    H = P[I].H
-    Jac = grid.J
 
     sgiF = P[I].PGrid.Fplane.subgrid
     sgiB = P[I].PGrid.Bplane.subgrid
@@ -235,16 +239,6 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
     
     τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
-    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
-
-    # for j in 1:grid.ny
-    #     for i in 1:grid.nx
-    #         u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
-    #             u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
-    #         )
-    #     end
-    # end
-
 end
 
 
@@ -283,14 +277,19 @@ function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Vector{Par
 
 end
 
+"""
+    _linear_interpolation
+"""
+# function _linear_interpolation(u::AbstractArray{TT},wx::TT,wy::TT,i::Int,j::Int) where TT
 
-function _linear_interpolation(u::AbstractArray{TT},wx::TT,wy::TT,i::Int,j::Int) where TT
+#     w = (u[i,j] * w11) + (u[i+1,j] * w12) + (u[i,j+1] * w21) + (u[i+1,j+1] * w22)
 
-    w = (u[i,j] * w11) + (u[i+1,j] * w12) + (u[i,j+1] * w21) + (u[i+1,j+1] * w22)
+#     return w
+# end
 
-    return w
-end
-
+"""
+    _interpolation
+"""
 function _interpolation(u::AT,w11::AT,w12::AT,w21::AT,w22::AT,i::Int,j::Int,I::Int) where {AT}
     w = (u[i,j] * w11[I])
     w += (u[i+1,j] * w12[I])

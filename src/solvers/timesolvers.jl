@@ -126,7 +126,10 @@ end
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
     if typeof(G) <: LocalGridType
-        # uglobal = [zeros(size(G))] # TESTING
+        uglobal = [zeros(size(G))] # TESTING
+        τglobal = zeros(length(uglobal))
+        Par = [DBlock[1].Parallel]
+
     else
         uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
         τglobal = zeros(length(uglobal))
@@ -152,20 +155,19 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
             if solverconfig.parallel
-                # println("b4",norm(DBlock[1].uₙ₊₁))
-                # @show norm(DBlock[1].u)
-                
                 if typeof(G) <: LocalGridType
-                    applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
+                    # applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
                     
-                    # uglobal[1] .= DBlock[1].uₙ₊₁ # TESTING
-                    # applyParallelPenalty!(DBlock[1].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[1].Parallel,G) # TESTING
+                    uglobal[1] .= DBlock[1].uₙ₊₁ # TESTING
+                    computeglobalw!(DBlock[1].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[1].grid,1)
+                    τ = τglobal[1]
+                    applyParallelPenalty!(DBlock[1].uₙ₊₁,τ,DBlock.SC.Δt,Par,DBlock[1].grid,1) # TESTING
                 else
                     for I in eachblock(DBlock)
                         uglobal[I] .= DBlock[I].uₙ₊₁
                     end
-                    @. uglobal[1][end,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
-                    @. uglobal[2][1,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
+                    # @. uglobal[1][end,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
+                    # @. uglobal[2][1,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
                     # setglobalu!(uglobal,DBlock)
 
                     for I in eachblock(DBlock)

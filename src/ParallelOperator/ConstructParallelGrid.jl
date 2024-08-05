@@ -12,17 +12,33 @@ Inputs:
 Outputs:
 - ParallelGrid object (see [ParallelGrid](@ref))
 """
-function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ymode=:period,interpmode=:bicubic,remap=nothing) where T
+function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ymode=:period,interpmode=:bicubic,remap=nothing,gridoptions=Dict()) where T
 
     modelist = [:stop,:period,:ignore]
     xmode ∈ modelist ? nothing : error("mode unavailable")
     ymode ∈ modelist ? nothing : error("mode unavailable")
+
+    if "xbound" ∈ keys(gridoptions)
+        xbounds = gridoptions["xbound"]
+    else
+        xbounds = [minimum(grid.gridx),maximum(grid.gridx)]
+    end
+    if "ybound" ∈ keys(gridoptions)
+        ybounds = gridoptions["ybound"]
+    else
+        ybounds = [minimum(grid.gridy),maximum(grid.gridy)]
+    end
+
+    inversemap = nothing
 
     if typeof(grid) <: Grid2D
         if typeof(remap) <: Nothing
             xy = [collect(grid[I]) for I in eachindex(grid)]
         elseif typeof(remap) <: Function
             xy = [remap(grid[I]...) for I in eachindex(grid)]
+        elseif typeof(remap) <: Tuple
+            xy = [remap[1](grid[I]...) for I in eachindex(grid)]
+            inversemap = remap[2]
         end
     end
 
@@ -30,8 +46,9 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
     FPlane = construct_plane(χ,xy,z[2],size(grid))
     # plane = reshape(xy,grid.nx,grid.ny)
 
-    postprocess_plane!(BPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
-    postprocess_plane!(FPlane,[grid.gridx[1],grid.gridx[end]],[grid.gridy[1],grid.gridy[end]],xmode,ymode)
+
+    postprocess_plane!(BPlane,xbounds,ybounds,xmode,ymode,inversemap)
+    postprocess_plane!(FPlane,xbounds,ybounds,xmode,ymode,inversemap)
 
     if interpmode == :nearest
         ix,iy = _remap_to_nearest_neighbours(grid,BPlane)
@@ -39,9 +56,15 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
         
         ix,iy = _remap_to_nearest_neighbours(grid,FPlane)
         FPlane = ParGrid{Int,typeof(ix)}(ix,iy,ones(Int,size(ix)))
+    elseif interpmode == :bilinear
+        Bplane = _remap_to_linear(grid,BPlane)
+        Fplane = _remap_to_linear(grid,FPlane)
+
+        Pgrid = ParallelGrid{eltype(Bplane.weight11),2,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
+    else
+        Pgrid = ParallelGrid{eltype(BPlane.x),2,typeof(BPlane),typeof(BPlane.x)}(BPlane,FPlane)
     end
 
-    Pgrid = ParallelGrid{eltype(BPlane.x),2,typeof(BPlane),typeof(BPlane.x)}(BPlane,FPlane)
 
     return Pgrid
 end
@@ -190,6 +213,58 @@ end
 """
 function _remap_to_linear end
 """
+"""
+function _remap_to_linear(grid::Grid2D{TT,MET},plane::ParGrid) where {TT,MET}
+    i = 0; j = 0;
+
+    iindex = zeros(Int,size(plane.x))
+    jindex = zeros(Int,size(plane.x))
+
+    weight11 = zeros(TT,size(plane.x))
+    weight12 = zeros(TT,size(plane.x))
+    weight21 = zeros(TT,size(plane.x))
+    weight22 = zeros(TT,size(plane.x))
+
+    for I in eachindex(iindex)
+        pt = (plane.x[I], plane.y[I])
+
+        try
+            i,j = findcell(grid,pt)
+        catch
+
+            firstnear,firstnearind = nearestpoint(grid,pt,:linear)
+
+            cartind = CartesianIndices(grid.gridx)[firstnearind]
+            i = cartind[1]
+            j = cartind[2]
+            pt = firstnear
+            i,j = findcell(grid,pt)
+
+            @warn "Point is not in the grid, moving the point and recomputing weights."
+        end
+
+        iindex[I] = i; jindex[I] = j
+
+        a = grid[i,j]
+        b = grid[i+1,j]
+        c = grid[i,j+1]
+        d = grid[i+1,j+1]
+
+        u,v = _inverse_bilinear_interpolation(a,b,c,d,pt)
+
+        if isnan(u) || isnan(v)
+            @show i,j, pt
+        end
+
+        weight11[I] = (1-v)*(1-u)
+        weight12[I] = u*(1-v)
+        weight21[I] = (1-u)*v
+        weight22[I] = u*v
+
+    end
+    return ParGridLinear{eltype(weight11),typeof(weight11),:Bilinear}(weight11,weight12,weight21,weight22,iindex,jindex,ones(Int,size(iindex)))
+end
+"""
 Remap grid to bilinear interpolation weights.
 """
 function _remap_to_linear(grid::GridMultiBlock{TT,2,CartesianMetric},plane::ParGrid) where {TT}
@@ -304,35 +379,7 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
         c = subgrid[i,j+1]
         d = subgrid[i+1,j+1]
 
-        q = pt
-
-        Q0 = - (b[2] - q[2]) * a[1] + (-q[2] + a[2]) * b[1] - q[1] * a[2] + b[2] * q[1]
-        Q1 = (-(q[2] - 2 * b[2] + d[2]) * a[1] + (q[2] - 2 * a[2] + c[2]) * b[1] - (-d[1] - q[1]) * a[2] + (-c[1] - q[1]) * b[2] - (c[2] - d[2]) * q[1] - (-c[1] + d[1]) * q[2])
-        Q2 = (-(b[2] - d[2]) * a[1] + (a[2] - c[2]) * b[1] + c[1] * b[2] - c[1] * d[2] - d[1] * a[2] + d[1] * c[2])
-
-        if abs(Q2) > 1e-12
-            vroot = ((-Q1 + sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2), (-Q1 - sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2))
-        else
-            vroot = 2Q0 ./ ( -Q1 + sqrt(Q1^2 - 4*Q0*Q2)  , -Q1 - sqrt(Q1^2 - 4*Q0*Q2) )
-        end
-
-        if 0 ≤ vroot[1] ≤ 1
-            v = vroot[1]
-        elseif 0 ≤ vroot[2] ≤ 1
-            v = vroot[2]
-        elseif isapprox(vroot[1],TT(1),atol=1e-10) || isapprox(vroot[2],TT(1),atol=1e-10)
-            v = TT(1)
-        elseif isapprox(vroot[1],TT(0),atol=1e-10) || isapprox(vroot[2],TT(0),atol=1e-10)
-            v = TT(0)
-        else
-            error("Cannot find node.")
-        end
-
-        # if v ≠ 0
-            u = (q[1] + a[1]*v - c[1]*v - a[1]) / ((a[1] - b[1] - c[1] + d[1])*v - a[1] + b[1])
-        # else
-            # u = 
-        # end
+        u,v = _inverse_bilinear_interpolation(a,b,c,d,pt)
 
         weight11[I] = (1-v)*(1-u)
         weight12[I] = u*(1-v)
@@ -351,26 +398,38 @@ end
 Given the four points of a bilinear interpolation, find the weights for the point pt
 
 """
+function _inverse_bilinear_interpolation(a::Tuple{TT,TT},b,c,d,q) where TT
 
-function inverse_bilinear_interpolation(p11,p12,p21,p22,pt)
-    Q1 = p21 .- p11 # lower wall
-    Q2 = p22 .- p21 # right wall
-    Q3 = (p22 .- p21) .- (p12 .- p11)
-    Q = pt .- p11
+    Q0 = - (b[2] - q[2]) * a[1] + (-q[2] + a[2]) * b[1] - q[1] * a[2] + b[2] * q[1]
+    Q1 = (-(q[2] - 2 * b[2] + d[2]) * a[1] + (q[2] - 2 * a[2] + c[2]) * b[1] - (-d[1] - q[1]) * a[2] + (-c[1] - q[1]) * b[2] - (c[2] - d[2]) * q[1] - (-c[1] + d[1]) * q[2])
+    Q2 = (-(b[2] - d[2]) * a[1] + (a[2] - c[2]) * b[1] + c[1] * b[2] - c[1] * d[2] - d[1] * a[2] + d[1] * c[2])
+
+   
+
+    if abs(Q2) > 1e-12
+        vroot = ((-Q1 + sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2), (-Q1 - sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2))
+    else
+        vroot = 2Q0 ./ ( -Q1 + sqrt(Q1^2 - 4*Q0*Q2)  , -Q1 - sqrt(Q1^2 - 4*Q0*Q2) )
+    end
+
+    if 0 ≤ vroot[1] ≤ 1
+        v = vroot[1]
+    elseif 0 ≤ vroot[2] ≤ 1
+        v = vroot[2]
+    elseif isapprox(vroot[1],TT(1),atol=1e-10) || isapprox(vroot[2],TT(1),atol=1e-10)
+        v = TT(1)
+    elseif isapprox(vroot[1],TT(0),atol=1e-10) || isapprox(vroot[2],TT(0),atol=1e-10)
+        v = TT(0)
+    else
+        error("Cannot find node.")
+    end
 
 
-
-
-    @show k0 = (Q[1]*Q1[2] - Q[2]*Q1[1])
-    @show k1 = (-Q[2]*Q3[1] + Q[1]*Q3[2] - Q1[2]*Q2[1] + Q2[2]*Q1[1])
-    @show k2 = (Q2[2]*Q3[1] - Q3[2]*Q2[1])
-
-    @show k1^2 - 4*k0*k2, sign(k1^2 - 4*k0*k2)
-    
-    @show  (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0
-    v = max( (-k1+sqrt(k1^2 - 4*k0*k2))/2k0, (-k1-sqrt(k1^2 - 4*k0*k2))/2k0 )
-
-    u = (Q[1] - Q2[1]*v)/(Q1[1] + Q3[1]*v)
+    if !iszero(v)
+        u = (q[1] + a[1]*v - c[1]*v - a[1]) / ((a[1] - b[1] - c[1] + d[1])*v - a[1] + b[1])
+    else
+        q[1] == a[1] ? u = TT(0) : u = TT(1)
+    end
 
     return u,v
 end
