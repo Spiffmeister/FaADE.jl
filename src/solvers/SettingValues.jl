@@ -205,7 +205,9 @@ Decide which curvilinear SAT to apply
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,LAT} where {SIDE,AX}
     SAT_Dirichlet_data!(dest,BC.BufferRHS,K[AX],K[3],BC.BoundaryOperator)
 end
-
+function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Neumann{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,LAT} where {SIDE,AX}
+    SAT_Neumann_data!(dest,BC.BufferRHS,BC.BoundaryOperator)
+end
 
 """
 Applying SATs in SolutionMode
@@ -238,6 +240,9 @@ Apply SATs for curvilinear grids
 function applyCurvilinearSAT! end
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.BoundaryOperator)
+end
+function applyCurvilinearSAT!(BD::BoundaryData{TT,DIM,FT,SAT_Neumann{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,LAT} where {SIDE,AXIS}
+    SAT_Neumann_solution!(dest,source,K[AXIS],K[3],BD.BoundaryOperator)
 end
 function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.BoundaryOperator)
