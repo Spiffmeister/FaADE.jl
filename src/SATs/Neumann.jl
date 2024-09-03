@@ -22,17 +22,19 @@ struct SAT_Neumann{
     VT<:Vector{TT},
     F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Neumann}
     
-    side    :: TN
-    axis    :: Int
-    order   :: Int
-    RHS     :: F1
-    H⁻¹E    :: TT
-    D₁      :: VT
-    Δx      :: TT
-    τ       :: TT
-    loopaxis:: LAT
+    side        :: TN
+    axis        :: Int
+    order       :: Int
+    RHS         :: F1
+    H⁻¹E        :: TT
+    D₁          :: VT
+    Δx          :: TT
+    τ           :: TT
+    loopaxis    :: LAT
+    Δy          :: TT
+    coordinates :: Symbol
     ### CONSTRUCTOR ###
-    function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;coord=:Cartesian) where {TT,TN,F1}
+    function SAT_Neumann(RHS::F1,Δx::TT,side::TN,axis::Int,order::Int;τ=nothing,Δy=TT(0),coord=:Cartesian) where {TT,TN,F1}
 
         check_boundary(side)
 
@@ -40,7 +42,7 @@ struct SAT_Neumann{
 
 
         Hinv = _InverseMassMatrix(order,Δx,side)
-        E = _BoundaryOperator(TT,side)
+        # E = _BoundaryOperator(TT,side)
         D₁ = _BoundaryDerivative(order,Δx,side)
 
 
@@ -52,15 +54,17 @@ struct SAT_Neumann{
             H⁻¹E    = n*Hinv[end]
         end
 
-        τ = TT(1)
+        if isnothing(τ)
+            τ = TT(1)
+        end
 
-        new{TN,coord,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA)
+        new{TN,coord,TT,Vector{TT},F1,typeof(LA)}(side,axis,order,RHS,H⁻¹E,D₁,Δx,τ,LA,Δy,coord)
     end
 end
 """
     SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS}
 """
-SAT_Neumann(RHS::F1,Δx::TT,side::TN,order::Int;coord=:Cartesian) where {TT,TN<:NodeType{SIDE,AXIS},F1} where {SIDE,AXIS} = SAT_Neumann(RHS,Δx,side,AXIS,order,coord=coord)
+SAT_Neumann(RHS::F1,Δx::TT,side::NodeType{SIDE,AX},order::Int,Δy=TT(0),coord=:Cartesian) where {TT,SIDE,AX,F1} = SAT_Neumann(RHS,Δx,side,AX,order,Δy=Δy,coord=coord)
 
 
 
@@ -204,7 +208,7 @@ end
 """
     2D caller for [`SAT_Neumann_data!`](@ref)
 """
-function SAT_Neumann_data!(dest::AT,u,SN::SAT_Neumann) where {AT<:AbstractMatrix}
+function SAT_Neumann_data!(dest::AT,u,SN::SAT_Neumann{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN,TT}
     for (DEST,U) in zip(SN.loopaxis(dest),SN.loopaxis(u))
         SAT_Neumann_data!(DEST,U,SN)
     end
@@ -212,8 +216,49 @@ end
 """
     2D caller for [`SAT_Neumann_solution!`](@ref)
 """
-function SAT_Neumann_solution!(dest::AT,u::AT,c::AT,SN::SAT_Neumann) where {AT<:AbstractMatrix}
+function SAT_Neumann_solution!(dest::AT,u::AT,c::AT,SN::SAT_Neumann{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN,TT}
     for (DEST,U,C) in zip(SN.loopaxis(dest),SN.loopaxis(u),SN.loopaxis(c))
         SAT_Neumann_solution!(DEST,U,C,SN)
     end
+end
+
+
+
+
+function SAT_Neumann_solution!(dest::AT,data::AT,c::AT,cxy::AT,SN::SAT_Neumann{TN,:Curvilinear,TT}) where {AT,TN<:NodeType,TT}
+    for (DEST,DATA,C) in zip(SN.loopaxis(dest),SN.loopaxis(data),SN.loopaxis(c))
+        SAT_Neumann_solution!(DEST,DATA,C,SN)
+    end
+    n = size(dest,SN.axis)
+    m = size(dest,mod1(SN.axis+1,2))
+    
+    if SN.side == Left
+        DEST =  view(dest,  1,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(SN.τ*cxy,  1,1:m)
+    elseif SN.side == Right
+        DEST =  view(dest,  n,1:m)
+        SRC =   view(data,  1,1:m)
+        C =     view(SN.τ*cxy,  n,1:m)
+    elseif SN.side == Down
+        DEST =  view(dest,  1:m,1)
+        SRC =   view(data,  1:m,1)
+        C =     view(SN.τ*cxy,  1:m,1)
+    elseif SN.side == Up
+        DEST =  view(dest,  1:m,n)
+        SRC =   view(data,  1:m,1)
+        C =     view(SN.τ*cxy,  1:m,n)
+    end
+    D₁!(DEST,C,SRC,m,SN.Δy,Val(SN.order),TT(1))
+    dest
+end
+
+
+
+
+function SAT_Neumann_data!(dest::AT,data::AT,SN::SAT_Neumann{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
+    for (DEST,DATA) in zip(SN.loopaxis(dest),SN.loopaxis(data))
+        SAT_Neumann_data!(DEST,DATA,SN)
+    end
+    dest
 end

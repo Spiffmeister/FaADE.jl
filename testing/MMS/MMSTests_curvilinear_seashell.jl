@@ -1,5 +1,5 @@
 using LinearAlgebra
-
+using Revise
 using FaADE
 
 inspect = true
@@ -8,7 +8,8 @@ inspect = true
 
 ###=== MMS ===###
 
-TestDirichlet   = true
+TestDirichlet   = false
+TestNeumann     = true
 SaveTests       = false
 
 
@@ -50,8 +51,10 @@ function comp_MMS(D,npts,
             By0 = SAT_Dirichlet(BoundaryY0,Dom.Δy,Down, order, Dom.Δx, :Curvilinear)
             ByL = SAT_Dirichlet(BoundaryYL,Dom.Δy,Up,   order, Dom.Δx, :Curvilinear)
         elseif BX0Type == Neumann
-            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
-            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
+            Bx0 = SAT_Neumann(BoundaryX0,Dom.Δx,Left,    order, Dom.Δy, :Curvilinear)
+            BxL = SAT_Neumann(BoundaryXL,Dom.Δx,Right,   order, Dom.Δy, :Curvilinear)
+            By0 = SAT_Neumann(BoundaryY0,Dom.Δy,Down,    order, Dom.Δx, :Curvilinear)
+            ByL = SAT_Neumann(BoundaryYL,Dom.Δy,Up,      order, Dom.Δx, :Curvilinear)
         end
         BD = (Bx0,BxL,By0,ByL)
 
@@ -64,6 +67,7 @@ function comp_MMS(D,npts,
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f)
+        # soln = solve(P,Dom,Δt,Δt*100)
 
         u_MMS = generate_MMS(ũ,Dom,soln.t[2])
 
@@ -82,7 +86,8 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = collect(21:10:101)
+# npts = collect(21:10:101)
+npts = [21,41,81]
 
 θ = 0.5
 
@@ -130,7 +135,7 @@ if TestDirichlet
 
     Bũ(X,t)           = cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
 
-
+    
     Dx(n) = Grid2D(u->u*[0.5, 0.0] - [0.0,0.0],
         v->v*[cos(3π/4),sin(3π/4)],
         v->v*[cos(π/4),sin(π/4)] + [0.5,0.0],
@@ -194,6 +199,99 @@ if TestDirichlet
 
     println("=====")
 end
+
+
+
+
+
+# Dirichlet
+if TestNeumann
+    println("=====")
+    println("Neumann")
+    cx=0.0
+    cy=0.0
+    ωx=1.0
+    ωy=1.0
+    ωt=1.0
+
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+
+    # Bũ(X,t)           = cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    DBũx(X,t)          = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    DBũy(X,t)          = 2π*ωy * K * cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * cos(2π*X[2]*ωy + cy) #Boundary condition y=0
+
+    
+    Dx(n) = Grid2D(u->u*[0.5, 0.0] - [0.0,0.0],
+        v->v*[cos(3π/4),sin(3π/4)],
+        v->v*[cos(π/4),sin(π/4)] + [0.5,0.0],
+        u->[cos(u*(π/4 - 3π/4) + 3π/4), sin(u*(π/4 - 3π/4) + 3π/4)] + 
+            u*[0.5,0.0], # top of D1
+        n,n)
+
+    order = 2
+    println("order=",order)
+    O2_NeumannMMS_x = comp_MMS(Dx,npts,
+        DBũx,Neumann,DBũx,Neumann,
+        DBũy,Neumann,DBũy,Neumann,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    # order = 4
+    # println("order=",order)
+    # O4_NeumannMMS_x = comp_MMS(Dx,npts,
+    #     DBũx,Neumann,DBũx,Neumann,
+    #     DBũy,Neumann,DBũy,Neumann,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    println("Order 2 Neumann convergence rates=",O2_NeumannMMS_x.conv_rate)
+    println("Order 4 Neumann convergence rates=",O4_NeumannMMS_x.conv_rate)
+
+    println("Order 2 relative error=",O2_NeumannMMS_x.relerr)
+    println("Order 4 relative error=",O4_NeumannMMS_x.relerr)
+
+
+
+    # Dy(n) = Grid2D(u->u*[cos(7π/4), sin(7π/4)] - [0.0,0.25],
+    #     v->[0.0, v/2 - 0.25],
+    #     v->[cos(v*(9π/4 - 7π/4) + 7π/4), sin(v*(9π/4 - 7π/4) + 7π/4)] - 
+    #         (1-v)*[0.0,0.25] + v*[0.0,0.25],
+    #     u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # top of D1
+    #     n,n)
+
+    # order = 2
+    # println("order=",order)
+    # O2_NeumannMMS_y = comp_MMS(Dx,npts,
+    #     DBũx,Neumann,DBũx,Neumann,
+    #     DBũy,Neumann,DBũy,Neumann,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    # order = 4
+    # println("order=",order)
+    # O4_NeumannMMS_y = comp_MMS(Dx,npts,
+    #     DBũx,Neumann,DBũx,Neumann,
+    #     DBũy,Neumann,DBũy,Neumann,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    # println("Order 2 Neumann convergence rates=",O2_NeumannMMS_y.conv_rate)
+    # println("Order 4 Neumann convergence rates=",O4_NeumannMMS_y.conv_rate)
+
+    # println("Order 2 relative error=",O2_NeumannMMS_y.relerr)
+    # println("Order 4 relative error=",O4_NeumannMMS_y.relerr)
+    
+
+    println("=====")
+end
+
+
+
+
 
 
 
