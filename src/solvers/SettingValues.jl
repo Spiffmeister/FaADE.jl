@@ -188,6 +188,8 @@ Decide which SAT to apply
         SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.BoundaryOperator)
     elseif typeof(BC.BoundaryOperator) <: SimultanousApproximationTerm{:Neumann}
         SAT_Neumann_data!(dest,BC.BufferRHS,BC.BoundaryOperator)
+    elseif typeof(BC.BoundaryOperator) <: SimultanousApproximationTerm{:Robin}
+        SAT_Robin_data!(dest,BC.BufferRHS,BC.BoundaryOperator)
     else
         applySAT!(BC.BoundaryOperator,dest,K,mode)
     end
@@ -219,6 +221,10 @@ function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,
         SAT_Interface!(dest,source,K,BC.BufferIn,SAT,mode)
     elseif typeof(SAT) <: SimultanousApproximationTerm{:Periodic}
         SAT_Periodic!(dest,source,K,SAT)
+    elseif typeof(SAT) <: SimultanousApproximationTerm{:Robin}
+        SAT_Robin_solution!(dest,source,K,SAT)
+    else
+        error("Not implemented")
     end
 end
 function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
@@ -227,6 +233,8 @@ function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,
         SAT_Dirichlet_solution!(dest,source,K,SAT)
     elseif BCT <: SimultanousApproximationTerm{:Neumann}
         SAT_Neumann_solution!(dest,source,K,SAT)
+    elseif BCT <: SimultanousApproximationTerm{:Robin}
+        SAT_Robin_solution!(dest,source,K,SAT)
     else
         error("Not implemented")
     end
@@ -238,15 +246,27 @@ end
 Apply SATs for curvilinear grids
 """
 function applyCurvilinearSAT! end
+"""
+Dirichlet curvilinear SAT
+"""
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,LAT} where {SIDE,AXIS}#,BCT<:SAT_Dirichlet}
     SAT_Dirichlet_solution!(dest,source,K[AXIS],K[3],BC.BoundaryOperator)
 end
+"""
+Neumann curvilinear SAT
+"""
 function applyCurvilinearSAT!(BD::BoundaryData{TT,DIM,FT,SAT_Neumann{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,LAT} where {SIDE,AXIS}
     SAT_Neumann_solution!(dest,source,K[AXIS],K[3],BD.BoundaryOperator)
 end
+"""
+Interface curvilinear SAT
+"""
 function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Periodic{TN,:Curvilinear,TT,VT,FT1,FT2},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT1,FT2} where {SIDE,AXIS}
     SAT_Periodic!(dest,source,K[AXIS],K[3],BC.BoundaryOperator)
 end
+"""
+Interface curvilinear SAT
+"""
 function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,VT,FT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT} where {SIDE,AXIS}
     SAT_Interface!(dest,source,K[AXIS],K[3],BC.BufferIn,BC.BoundaryOperator,mode)
 end
@@ -305,10 +325,10 @@ end
 
 
 function applyCurvilinearSATs(dest::AT,D::newLocalDataBlock{TT,2,COORD,AT},mode) where {TT,COORD,AT}
-    applySAT!(D.boundary[1],    dest,   source, D.K[1], D.K[3], mode)
-    applySAT!(D.boundary[2],    dest,   source, D.K[1], D.K[3], mode)
-    applySAT!(D.boundary[3],    dest,   source, D.K[2], D.K[3], mode)
-    applySAT!(D.boundary[4],    dest,   source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[Left], dest,   source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[Right],dest,   source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[Up],   dest,   source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[Down], dest,   source, D.K[2], D.K[3], mode)
 end
 
 

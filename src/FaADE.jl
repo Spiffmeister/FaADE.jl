@@ -38,7 +38,7 @@ module FaADE
 
     using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     
-    using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
+    using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SAT_Robin, SimultanousApproximationTerm
 
     using FaADE.solvers: solve
 
@@ -58,8 +58,8 @@ module FaADE
     export SimultanousApproximationTerm,
         SAT_Dirichlet,
         SAT_Neumann,
-        SAT_Periodic
-        #SAT_Robin, 
+        SAT_Periodic,
+        SAT_Robin
         #Split_domain
 
     using FaADE.Inputs: Problem1D, Problem2D, SATBoundaries
