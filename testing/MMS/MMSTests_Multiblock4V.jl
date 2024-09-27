@@ -6,8 +6,8 @@ using FaADE
 
 
 
-TestDirichlet   = false
-TestNeumann     = true
+TestDirichlet   = true
+TestNeumann     = false
 SaveTests       = false
 
 # Generates the exact MMS solution
@@ -97,7 +97,7 @@ function comp_MMS(npts,
         nt = round(t_f/Δt)
         Δt = t_f/nt
 
-        P = Problem2D(order,ũ₀,K,K,Dom,BD,F,nothing)
+        P = Problem2D(order,ũ₀,K,K,Dom,BD,source=F)
 
         println("Solving n=",n," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f)

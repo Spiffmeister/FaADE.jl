@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Revise
 using FaADE
 
 
@@ -13,9 +14,10 @@ using FaADE
 ###=== MMS ===###
 
 
-TestDirichlet   = true
+TestDirichlet   = false
 TestNeumann     = false
-TestPeriodic    = false
+TestPeriodic    = true
+TestRobin       = false
 
 
 # Generates the exact MMS solution
@@ -50,22 +52,28 @@ function comp_MMS(Dx,Dy,npts,
 
         # X boundaries
         if BX0Type == Periodic
-            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
-            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
-            By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up)
-            ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down)
+            Bx0 = FaADE.SATs.SAT_Periodic(Dom.Δx,Left,  order)
+            BxL = FaADE.SATs.SAT_Periodic(Dom.Δx,Right, order)
+            By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,Up,    order)
+            ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,Down,  order)
         elseif BX0Type == Dirichlet
             Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order)
             BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order)
             By0 = FaADE.SATs.SAT_Dirichlet(BoundaryY0,Dom.Δy,Down,    order)
             ByL = FaADE.SATs.SAT_Dirichlet(BoundaryYL,Dom.Δy,Up,  order)
         elseif BX0Type == Neumann
-            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
-            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
-            By0 = FaADE.SATs.SAT_Neumann(BoundaryY0,Dom.Δy,Up,      2,order)
-            ByL = FaADE.SATs.SAT_Neumann(BoundaryYL,Dom.Δy,Down,    2,order)
+            Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    order)
+            BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   order)
+            By0 = FaADE.SATs.SAT_Neumann(BoundaryY0,Dom.Δy,Up,      order)
+            ByL = FaADE.SATs.SAT_Neumann(BoundaryYL,Dom.Δy,Down,    order)
+        elseif BX0Type == Robin
+            Bx0 = SAT_Robin(BoundaryX0,Dom.Δx,Left,  order)
+            BxL = SAT_Robin(BoundaryXL,Dom.Δx,Right, order)
+            By0 = SAT_Robin(BoundaryY0,Dom.Δy,Down,  order)
+            ByL = SAT_Robin(BoundaryYL,Dom.Δy,Up,    order)
         end
-        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
+        # BD = (Bx0,BxL,By0,ByL)
+        BD = (Bx0,BxL,By0,ByL)
 
 
         Δt = dt_scale*Dom.Δx^2
@@ -75,7 +83,7 @@ function comp_MMS(Dx,Dy,npts,
         # Kx(x,y) = kx
         # Ky(x,y) = ky
 
-        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
+        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,source=F)
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
@@ -97,7 +105,9 @@ end
 
 
 ###=== MMS TESTS ===###
-npts = collect(21:10:101)
+# npts = collect(21:10:101)
+# npts = collect(21:10:51)
+npts = [21,41,81]
 
 θ = 0.5
 
@@ -133,8 +143,8 @@ if TestDirichlet
     println("Dirichlet")
     cx=0.0
     cy=1.0
-    ωx=7.5
-    ωy=5.0
+    ωx=8.5
+    ωy=7.0
     ωt=1.0
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
@@ -143,10 +153,10 @@ if TestDirichlet
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
-    BxLũ(y,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(y,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(x,t)           = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(cy) #Boundary condition y=0
-    ByRũ(x,t;Ly=1.0)    = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(X,t)           = cos(2π*ωt*t) * sin(cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    BxRũ(X,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*Lx*ωx + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=Lx
+    ByLũ(X,t)           = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(cy) #Boundary condition y=0
+    ByRũ(X,t;Ly=1.0)    = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * sin(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -197,10 +207,10 @@ if TestNeumann
     IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K=K)
 
-    BxLũ(y,t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx)             * sin(2π*y*ωy + cy) #Boundary condition x=0
-    BxRũ(y,t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx)  * sin(2π*y*ωy + cy) #Boundary condition x=Lx
-    ByLũ(x,t) =         2π*ωy * K * cos(2π*ωt*t) * sin(2π*x*ωx + cx)   * cos(cy) #Boundary condition y=0
-    ByRũ(x,t;Ly=1.0) =  2π*ωy * K * cos(2π*ωt*t) * sin(2π*x*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
+    BxLũ(X,t) =         2π*ωx * K * cos(2π*ωt*t) * cos(cx)             * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    BxRũ(X,t;Lx=1.0) =  2π*ωx * K * cos(2π*ωt*t) * cos(2π*Lx*ωx + cx)  * sin(2π*X[2]*ωy + cy) #Boundary condition x=Lx
+    ByLũ(X,t) =         2π*ωy * K * cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx)   * cos(cy) #Boundary condition y=0
+    ByRũ(X,t;Ly=1.0) =  2π*ωy * K * cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx)   * cos(2π*Ly*ωy + cy) #Boundary condition y=Ly
 
     order = 2
     println("order=",order)
@@ -283,7 +293,56 @@ if TestPeriodic
 end
 
 
-if TestDirichlet == TestNeumann == TestPeriodic
+
+if TestRobin
+    println("=====")
+    println("Robin")
+    cx=0.0
+    cy=1.0
+    ωx=7.5
+    ωy=5.0
+    ωt=1.0
+
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+
+    α = 1.0
+    Bx0(X,t) = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(cx) - 2π*ωx*K*cos(cx))
+    BxL(X,t) = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(2π*ωx + cx) + 2π*ωx*K*cos(2π*ωx + cx))
+    By0(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * (α*sin(cy) - 2π*ωy*K*cos(cy))
+    ByL(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * (α*sin(2π*ωy + cy) + 2π*ωy*K*cos(2π*ωy + cy))
+
+    order = 2
+    println("order=",order)
+
+    O2_RobinMMS = comp_MMS(𝒟x,𝒟y,npts,
+        Bx0,Robin,BxL,Robin,
+        By0,Robin,ByL,Robin,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    order = 4
+    println("order=",order)
+    O4_RobinMMS = comp_MMS(𝒟x,𝒟y,npts,
+        Bx0,Robin,BxL,Robin,
+        By0,Robin,ByL,Robin,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    println("Order 2 Robin convergence rates=",O2_RobinMMS.conv_rate)
+    println("Order 4 Robin convergence rates=",O4_RobinMMS.conv_rate)
+
+end
+
+
+
+
+
+
+if TestDirichlet == TestNeumann == TestPeriodic == TestRobin
     O2Conv = (n=npts,
         conv_D = O2_DirichletMMS.conv_rate,
         conv_N = O2_NeumannMMS.conv_rate,

@@ -75,7 +75,7 @@ function comp_MMS(Dx,Dy,npts,
             By0 = FaADE.SATs.SAT_Neumann(BoundaryY0,Dom.Δy,Up,      2,order)
             ByL = FaADE.SATs.SAT_Neumann(BoundaryYL,Dom.Δy,Down,    2,order)
         end
-        BD = FaADE.Inputs.SATBoundaries(Bx0,BxL,By0,ByL)
+        BD = (Bx0,BxL,By0,ByL)
 
 
         Δt = dt_scale*Dom.Δx^2
@@ -85,7 +85,7 @@ function comp_MMS(Dx,Dy,npts,
         # Kx(x,y) = kx
         # Ky(x,y) = ky
 
-        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
+        P = Problem2D(order,ũ₀,kx,ky,Dom,BD,source=F)
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
         soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)

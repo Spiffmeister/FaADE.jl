@@ -10,6 +10,7 @@ inspect = true
 
 TestDirichlet   = false
 TestNeumann     = true
+TestRobin       = false
 SaveTests       = false
 
 
@@ -47,7 +48,7 @@ function comp_MMS(D,npts,
         # X boundaries
         if BX0Type == Dirichlet
             Bx0 = SAT_Dirichlet(BoundaryX0,Dom.Δx,Left, order, Dom.Δy, :Curvilinear)
-            BxL = SAT_Dirichlet(BoundaryX0,Dom.Δx,Right,order, Dom.Δy, :Curvilinear)
+            BxL = SAT_Dirichlet(BoundaryXL,Dom.Δx,Right,order, Dom.Δy, :Curvilinear)
             By0 = SAT_Dirichlet(BoundaryY0,Dom.Δy,Down, order, Dom.Δx, :Curvilinear)
             ByL = SAT_Dirichlet(BoundaryYL,Dom.Δy,Up,   order, Dom.Δx, :Curvilinear)
         elseif BX0Type == Neumann
@@ -55,6 +56,11 @@ function comp_MMS(D,npts,
             BxL = SAT_Neumann(BoundaryXL,Dom.Δx,Right,   order, Dom.Δy, :Curvilinear)
             By0 = SAT_Neumann(BoundaryY0,Dom.Δy,Down,    order, Dom.Δx, :Curvilinear)
             ByL = SAT_Neumann(BoundaryYL,Dom.Δy,Up,      order, Dom.Δx, :Curvilinear)
+        elseif BX0Type == Robin
+            Bx0 = SAT_Robin(BoundaryX0, Dom.Δx, Left,    order, Δy=Dom.Δy, coord=:Curvilinear)
+            BxL = SAT_Robin(BoundaryXL, Dom.Δx, Right,   order, Δy=Dom.Δy, coord=:Curvilinear)
+            By0 = SAT_Robin(BoundaryY0, Dom.Δy, Down,    order, Δy=Dom.Δx, coord=:Curvilinear)
+            ByL = SAT_Robin(BoundaryYL, Dom.Δy, Up,      order, Δy=Dom.Δx, coord=:Curvilinear)
         end
         BD = (Bx0,BxL,By0,ByL)
 
@@ -66,8 +72,8 @@ function comp_MMS(D,npts,
         P = Problem2D(order,ũ₀,kx,ky,Dom,BD,F,nothing)
 
         println("Solving n=",Dom.nx," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f)
-        # soln = solve(P,Dom,Δt,Δt*100)
+        # soln = solve(P,Dom,Δt,t_f)
+        soln = solve(P,Dom,Δt,Δt*100.1)
 
         u_MMS = generate_MMS(ũ,Dom,soln.t[2])
 
@@ -92,13 +98,13 @@ npts = [21,41,81]
 θ = 0.5
 
 # Solution
-ũ(x,y,t;
+u(x,y,t;
     ωt=1.0,
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = cos(2π*ωt*t) * sin(2π*x*ωx + cx) * sin(2π*y*ωy + cy)
 
 # Initial condition
-ũ₀(x,y;
+u₀(x,y;
     ωx=1.0,cx=0.0,
     ωy=1.0,cy=0.0) = sin(2π*ωx*x + cx) * sin(2π*ωy*y + cy)
 
@@ -129,8 +135,8 @@ if TestDirichlet
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
-    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = u(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = u₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
 
     Bũ(X,t)           = cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
@@ -216,13 +222,13 @@ if TestNeumann
 
     println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
 
-    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
-    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    analytic(x,y,t) = u(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = u₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
     FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
-
+    
     # Bũ(X,t)           = cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
-    DBũx(X,t)          = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
-    DBũy(X,t)          = 2π*ωy * K * cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * cos(2π*X[2]*ωy + cy) #Boundary condition y=0
+    DBux(X,t)  = 2π*ωx * K * cos(2π*ωt*t) * cos(2π*ωx*X[1] + cx) * sin(2π*X[2]*ωy + cy) #Boundary condition x=0
+    DBuy(X,t)  = 2π*ωy * K * cos(2π*ωt*t) * sin(2π*ωx*X[1] + cx) * cos(2π*X[2]*ωy + cy) #Boundary condition y=L
 
     
     Dx(n) = Grid2D(u->u*[0.5, 0.0] - [0.0,0.0],
@@ -235,8 +241,8 @@ if TestNeumann
     order = 2
     println("order=",order)
     O2_NeumannMMS_x = comp_MMS(Dx,npts,
-        DBũx,Neumann,DBũx,Neumann,
-        DBũy,Neumann,DBũy,Neumann,
+        DBux,Neumann,DBux,Neumann,
+        DBuy,Neumann,DBuy,Neumann,
         FD,analytic,IC,order,
         kx=K,ky=K,θ=θ)
 
@@ -249,10 +255,99 @@ if TestNeumann
     #     kx=K,ky=K,θ=θ)
 
     println("Order 2 Neumann convergence rates=",O2_NeumannMMS_x.conv_rate)
-    println("Order 4 Neumann convergence rates=",O4_NeumannMMS_x.conv_rate)
+    # println("Order 4 Neumann convergence rates=",O4_NeumannMMS_x.conv_rate)
 
     println("Order 2 relative error=",O2_NeumannMMS_x.relerr)
-    println("Order 4 relative error=",O4_NeumannMMS_x.relerr)
+    # println("Order 4 relative error=",O4_NeumannMMS_x.relerr)
+
+
+
+    # Dy(n) = Grid2D(u->u*[cos(7π/4), sin(7π/4)] - [0.0,0.25],
+    #     v->[0.0, v/2 - 0.25],
+    #     v->[cos(v*(9π/4 - 7π/4) + 7π/4), sin(v*(9π/4 - 7π/4) + 7π/4)] - 
+    #         (1-v)*[0.0,0.25] + v*[0.0,0.25],
+    #     u->u*[cos(π/4), sin(π/4)] + [0.0, 0.25], # top of D1
+    #     n,n)
+
+    # order = 2
+    # println("order=",order)
+    # O2_NeumannMMS_y = comp_MMS(Dx,npts,
+    #     DBũx,Neumann,DBũx,Neumann,
+    #     DBũy,Neumann,DBũy,Neumann,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    # order = 4
+    # println("order=",order)
+    # O4_NeumannMMS_y = comp_MMS(Dx,npts,
+    #     DBũx,Neumann,DBũx,Neumann,
+    #     DBũy,Neumann,DBũy,Neumann,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    # println("Order 2 Neumann convergence rates=",O2_NeumannMMS_y.conv_rate)
+    # println("Order 4 Neumann convergence rates=",O4_NeumannMMS_y.conv_rate)
+
+    # println("Order 2 relative error=",O2_NeumannMMS_y.relerr)
+    # println("Order 4 relative error=",O4_NeumannMMS_y.relerr)
+    
+
+    println("=====")
+end
+
+
+
+# Dirichlet
+if TestRobin
+    println("=====")
+    println("Robin")
+    cx=0.0
+    cy=0.0
+    ωx=1.0
+    ωy=1.0
+    ωt=1.0
+
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+
+    analytic(x,y,t) = u(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = u₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+
+    α = 1.0
+    Bx0(X,t) = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(2π*X[1]*ωx + cx) - 2π*ωx*K*cos(2π*X[1]*ωx + cx))
+    BxL(X,t) = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(2π*X[1]*ωx + cx) + 2π*ωx*K*cos(2π*X[1]*ωx + cx))
+    By0(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * (α*sin(2π*X[2]*ωy + cy) - 2π*ωy*K*cos(2π*X[2]*ωy + cy))
+    ByL(X,t) = cos(2π*ωt*t) * sin(2π*X[1]*ωx + cx) * (α*sin(2π*X[2]*ωy + cy) + 2π*ωy*K*cos(2π*X[2]*ωy + cy))
+
+    
+    Dx(n) = Grid2D(u->u*[0.5, 0.0] - [0.0,0.0],
+        v->v*[cos(3π/4),sin(3π/4)],
+        v->v*[cos(π/4),sin(π/4)] + [0.5,0.0],
+        u->[cos(u*(π/4 - 3π/4) + 3π/4), sin(u*(π/4 - 3π/4) + 3π/4)] + 
+            u*[0.5,0.0], # top of D1
+        n,n)
+
+    order = 2
+    println("order=",order)
+    O2_RobinMMS_x = comp_MMS(Dx,npts,
+        Bx0,Robin,BxL,Robin,
+        By0,Robin,ByL,Robin,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    # order = 4
+    # println("order=",order)
+    # O4_RobinMMS_x = comp_MMS(Dx,npts,
+    #     Bx0,Robin,BxL,Robin,
+    #     By0,Robin,ByL,Robin,
+    #     FD,analytic,IC,order,
+    #     kx=K,ky=K,θ=θ)
+
+    println("Order 2 Robin convergence rates=",O2_RobinMMS_x.conv_rate)
+    # println("Order 4 Neumann convergence rates=",O4_NeumannMMS_x.conv_rate)
+
+    println("Order 2 relative error=",O2_RobinMMS_x.relerr)
+    # println("Order 4 relative error=",O4_NeumannMMS_x.relerr)
 
 
 

@@ -21,7 +21,7 @@ using FaADE
 # ```
 #
 # 
-# We first need to create a domain to solve the PDE using [`Grid2D`](@ref FaADE.Helpers.Grid2D)
+# We first need to create a domain to solve the PDE using [`Grid2D`](@ref FaADE.Grid.Grid2D)
 #
 
 𝒟x = [0.0,1.0]
@@ -37,13 +37,13 @@ u₀(x,y) = exp(-((x-0.5)^2 + (y-0.5)^2) / 0.02)
 
 order = 2
 
-# The boundary conditions are defined by creating [`Boundary`](@ref FaADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
-BoundaryLeft = SAT_Dirichlet((y,t)->0.0,grid.Δx, Left, order)
-BoundaryRight = SAT_Neumann((y,t)->0.0, grid.Δx, Right, order)
-BoundaryUp = SAT_Periodic(grid.Δy, 2, order, Up)
-BoundaryDown = SAT_Periodic(grid.Δy, 2, order, Down)
+# The boundary conditions are defined by creating [`SimultanousApproximationTerm`](@ref FaADE.SATs.SimultanousApproximationTerm) objects, which will then be fed to the PDE structure
+BoundaryLeft    = SAT_Dirichlet((X,t)->0.0,grid.Δx, Left, order)
+BoundaryRight   = SAT_Neumann((X,t)->0.0, grid.Δx, Right, order)
+BoundaryUp      = SAT_Periodic(grid.Δy, Up, order)
+BoundaryDown    = SAT_Periodic(grid.Δy, Down, order)
 
-BCs = SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+BCs = (BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 # The `2` input to the periodic boundary ensures it is along the y-axis.
 #
@@ -51,7 +51,7 @@ BCs = SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 Kx = Ky = 1.0
 
-# Now we can create a PDE object to pass to the solver, in this case a [`VariableCoefficientPDE2D`](@ref FaADE.Helpers.VariableCoefficientPDE2D),
+# Now we can create a [`Problem2D`](@ref FaADE.Inputs.Problem2D) object to pass to the solver,
 
 P = Problem2D(order,u₀,Kx,Ky,grid,BCs)
 

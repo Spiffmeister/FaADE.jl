@@ -14,7 +14,8 @@ inspect = true
 ###=== MMS ===###
 
 
-TestDirichlet   = true
+TestDirichlet   = false
+TestRobin       = true
 SaveTests       = false
 
 
@@ -59,14 +60,17 @@ function comp_MMS(Dx,Dy,npts,
 
 
         # X boundaries
-        By0 = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Up,    Dom.Δx,:Curvilinear)
-        ByL = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,Down,  Dom.Δx,:Curvilinear)
+        By0 = SAT_Periodic(Dom.Δy,order,Up,    Dom.Δx,:Curvilinear)
+        ByL = SAT_Periodic(Dom.Δy,order,Down,  Dom.Δx,:Curvilinear)
         if BX0Type == Dirichlet
             Bx0 = FaADE.SATs.SAT_Dirichlet(BoundaryX0,Dom.Δx,Left,  order, Dom.Δy, :Curvilinear)
             BxL = FaADE.SATs.SAT_Dirichlet(BoundaryXL,Dom.Δx,Right, order, Dom.Δy, :Curvilinear)
         elseif BX0Type == Neumann
             Bx0 = FaADE.SATs.SAT_Neumann(BoundaryX0,Dom.Δx,Left,    1,order)
             BxL = FaADE.SATs.SAT_Neumann(BoundaryXL,Dom.Δx,Right,   1,order)
+        elseif BX0Type == Robin
+            Bx0 = SAT_Robin(BoundaryX0,Dom.Δx,Left, order, Δy = Dom.Δy, coord=:Curvilinear)
+            BxL = SAT_Robin(BoundaryXL,Dom.Δx,Right,order, Δy = Dom.Δy, coord=:Curvilinear)
         end
         BD = (Bx0,BxL,By0,ByL)
 
@@ -182,6 +186,63 @@ if TestDirichlet
 
     println("=====")
 end
+
+
+
+if TestRobin
+    println("=====")
+    println("Dirichlet")
+    cx=0.0
+    cy=0.0
+    ωx=1.0
+    ωy=1.0
+    ωt=1.0
+
+    println("ωx=",ωx,"  ωy=",ωy,",  cx=",cx,",  cy=",cy,", ωt=",ωt," θ=",θ)
+
+    analytic(x,y,t) = ũ(x,y,t, ωt=ωt , ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    IC(x,y) = ũ₀(x,y, ωx=ωx, cx=cx, ωy=ωy, cy=cy)
+    FD(X,t) = F(X[1],X[2],t, ωt=ωt, ωx=ωx, cx=cx, ωy=ωy, cy=cy, K = K)
+
+    α = 1.0
+    BxLũ(X,t)           = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(2π*X[1]*ωx + cx) - 2π*ωx*K*cos(2π*X[1]*ωx + cx))
+    BxRũ(X,t;Lx=1.0)    = cos(2π*ωt*t) * sin(2π*X[2]*ωy + cy) * (α*sin(2π*X[1]*ωx + cx) + 2π*ωx*K*cos(2π*X[1]*ωx + cx))
+
+    order = 2
+    println("order=",order)
+    O2_RobinMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Robin,BxRũ,Robin,
+        nothing,Periodic,nothing,Periodic,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    order = 4
+    println("order=",order)
+    O4_RobinMMS = comp_MMS(𝒟x,𝒟y,npts,
+        BxLũ,Robin,BxRũ,Robin,
+        nothing,Periodic,nothing,Periodic,
+        FD,analytic,IC,order,
+        kx=K,ky=K,θ=θ)
+
+    println("Order 2 Robin convergence rates=",O2_RobinMMS.conv_rate)
+    println("Order 4 Robin convergence rates=",O4_RobinMMS.conv_rate)
+
+    println("Order 2 relative error=",O2_RobinMMS.relerr)
+    println("Order 4 relative error=",O4_RobinMMS.relerr)
+
+    # pD = plot(axis=:log,minorgrid=true)
+    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^2)$", markershape=:circle)
+    # plot!(pD,  O2_DirichletMMS.npts,   O2_DirichletMMS.npts.^2,     label=L"$\mathcal{O}(h^2)$", markershape=:circle)
+    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.relerr,     label=L"Dirichlet $\mathcal{O}(h^4)$", markershape=:circle)
+    # plot!(pD,  O4_DirichletMMS.npts,   O4_DirichletMMS.npts.^4,     label=L"$\mathcal{O}(h^4)$", markershape=:circle)    
+    # savefig(pD,"2DMMSDirichlet.png")
+
+
+    println("=====")
+end
+
+
+
 
 
 if SaveTests
