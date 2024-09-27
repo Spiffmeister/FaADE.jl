@@ -49,8 +49,5 @@ Depth=2
 ## References
 
 The mathematical background for this package can be found in:
-- D. Muir, K. Duru, M. Hole, and S. Hudson, ‘Provably stable numerical method for the anisotropic diffusion equation in toroidally confined magnetic fields’. arXiv, Jun. 01, 2023. doi: [10.48550/arXiv.2306.00423](http://arxiv.org/abs/2306.00423)
-
-
-
-
+- D. Muir, K. Duru, M. Hole, and S. Hudson, “An efficient method for the anisotropic diffusion equation in magnetic fields,” Feb. 08, 2023, arXiv. doi: [10.48550/arXiv.2303.15447](http://arxiv.org/abs/2303.15447).
+- D. Muir, K. Duru, M. Hole, and S. Hudson, “A provably stable numerical method for the anisotropic diffusion equation in confined magnetic fields,” Apr. 09, 2024, arXiv. doi: [10.48550/arXiv.2306.00423](http://arxiv.org/abs/2306.00423).

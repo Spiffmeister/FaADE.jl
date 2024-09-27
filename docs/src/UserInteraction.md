@@ -1,16 +1,15 @@
-# Helpers
+# User interaction
 
-The `Helpers` sub-package contains both user interface function and functions useful for many of the internals such as data structure objects. 
+```@docs
+FaADE.Inputs
+```
 
 ## User interaction
 
-```@docs
-FaADE.Inputs.SATBoundaries
-```
 
-```@docs
-FaADE.Inputs.Problem1D
-FaADE.Inputs.Problem2D
-```
 
+```@autodocs
+Modules = [FaADE.Inputs]
+Pages = ["UserTypes.jl"]
+```
 

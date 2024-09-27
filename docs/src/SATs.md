@@ -4,48 +4,62 @@
 FaADE.SATs
 ```
 
-All `SATs` belong to the `abstract type`
+All `SATs` belong to the `abstract type`.
 
 ```@docs
 FaADE.SATs.SimultanousApproximationTerm
 ```
 
+# Boundary operators
 
-## Boundary operators
+## Dirichlet
 
-The following are for boundary conditions
-```@docs
-FaADE.SATs.SAT_Dirichlet
-FaADE.SATs.SAT_Neumann
+```@autodocs
+Modules = [FaADE.SATs]
+Pages = ["Dirichlet.jl"]
 ```
 
-Robin (mixed) boundary conditions are to be implemented still.
 
-If periodic boundaries are applied
-```@docs
-FaADE.SATs.SAT_Periodic
+## Neumann
+
+```@autodocs
+Modules = [FaADE.SATs]
+Pages = ["Neumann.jl"]
 ```
 
-Interface conditions are not currently implemented.
 
+## Robin
+
+```@autodocs
+Modules = [FaADE.SATs]
+Pages = ["Robin.jl"]
+```
+
+
+## Periodic
+
+```@autodocs
+Modules = [FaADE.SATs]
+Pages = ["Periodic.jl"]
+```
+
+
+## Interface
+
+```@autodocs
+Modules = [FaADE.SATs]
+Pages = ["Split.jl"]
+```
 
 
 ---
 
-## Boundary derivatives and penalties
+# Helpers
 
-The following are all internally accessed when setting up the SATs
 
-The `D_x^T B` and `B D_x` operators are given by,
 ```@docs
-FaADE.SATs.BoundaryDerivativeTranspose
-FaADE.SATs.BoundaryDerivative
+FaADE.SATs.SATMode
 ```
 
-Penalties are constructed with the following,
-```@docs
-FaADE.SATs.SATpenalties
-FaADE.SATs.hval
-```
 
 
