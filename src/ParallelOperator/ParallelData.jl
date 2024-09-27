@@ -55,7 +55,14 @@ struct FieldLineIntercept{F<:Union{Function,Nothing}}
     Intercept :: F
 end
 
-
+"""
+    ParallelData{TT<:Real,
+        DIM,
+        PGT,
+        GT,
+        BT,
+        IT} <: ParallelGridType
+"""
 struct ParallelData{TT<:Real,
         DIM,
         PGT,
@@ -84,7 +91,10 @@ struct ParallelData{TT<:Real,
     τ_i         :: Vector{TT}
     
 end
-function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing) where {TT}
+"""
+    ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing,remap=nothing) where {TT}
+"""
+function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing,remap=nothing) where {TT}
 
     intercept_fieldlines = FieldLineIntercept(intercept)
 
@@ -95,8 +105,13 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),inte
 
     H = CompositeH(Hx,Hy)
 
+    # if isnothing(remap)
     gridx = G.gridx[1:end,1]
     gridy = G.gridy[1,1:end]
+    # else
+    #     gridx = remap(G.gridx,G.gridy)[1:end,1]
+    #     gridy = remap(G.gridx,G.gridy)[1,1:end]
+    # end
 
     w_f = zeros(TT,size(G))
     w_b = zeros(TT,size(G))
@@ -122,6 +137,9 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),inte
 
     ParallelData{TT,2,typeof(PGrid),typeof(gridx),typeof(MF),typeof(Interpolator)}(PGrid,κ,τ,intercept_fieldlines,Interpolator,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,u,MF,[TT(0)])
 end
+"""
+    ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),intercept=nothing) where TT
+"""
 function ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),intercept=nothing) where TT
 
     intercept_fieldlines = FieldLineIntercept(intercept)

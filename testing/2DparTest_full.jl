@@ -40,7 +40,7 @@ BoundaryRight   = FaADE.SATs.SAT_Dirichlet((y,t) -> 1.0 ,Dom.Δx, FaADE.Right, o
 BoundaryUp      = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,FaADE.Up,    Dom.Δx,:Cartesian)
 BoundaryDown    = FaADE.SATs.SAT_Periodic(Dom.Δy,2,order,FaADE.Down,  Dom.Δx,:Cartesian)
 
-BC = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+BC = (BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 
 

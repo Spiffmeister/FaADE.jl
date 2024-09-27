@@ -34,8 +34,5 @@ module SATs
 
 
     export SimultanousApproximationTerm
-    # export construct_SAT
-    # export SATBoundaries
-    # export applySAT!
     
 end

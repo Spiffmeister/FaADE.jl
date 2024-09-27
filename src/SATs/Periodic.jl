@@ -92,7 +92,7 @@ The 2D method loops over the 1D methods by `loopaxis`
 
     SAT_Periodic!(dest::AT,u::AT,c::AT,SP::SAT_Periodic{TN,:Cartesian,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
 
-The curvilinear method wraps the 2D Cartesian method and calls the [`FirstDerivativeTranspose`](@ref) function.
+The curvilinear method wraps the 2D Cartesian method and calls the [`FirstDerivativeTranspose!`](@ref) function.
 
     SAT_Periodic!(dest::AT,u::AT,cx::AT,cxy::AT,SP::SAT_Periodic{TN,:Curvilinear,TT}) where {TT,AT<:AbstractMatrix{TT},TN<:NodeType}
 

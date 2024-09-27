@@ -45,7 +45,7 @@ solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 #====== New solver 1 volume ======#
 Dl = FaADE.SATs.SAT_Dirichlet(t->0.0,Dom1V.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->1.0,Dom1V.Δx,Right,1,order)
-BD1V = FaADE.Inputs.SATBoundaries(Dl,Dr)
+BD1V = (Dl,Dr)
 P1V = newProblem1D(order,u₀,K,Dom1V,BD1V)
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t,solver=:theta,θ=3/4)

@@ -108,7 +108,7 @@ end
 1D implementation for 2D problems for [`D₁!`](@ref).
 """
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer) where T
-    loopdir = SelectLoopDirection(dim)
+    loopdir = _SelectLoopDirection(dim)
     for (cache,U) in zip(loopdir(uₓ),loopdir(u))
         D₁!(cache,U,n,Δ,order)
     end
@@ -119,7 +119,7 @@ end
 1D implementation for 2D problems for [`D₁!`](@ref).
 """
 function PeriodicD₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,dim::Integer) where T
-    loopdir = SelectLoopDirection(dim)
+    loopdir = _SelectLoopDirection(dim)
     for (cache,U) in zip(loopdir(uₓ),loopdir(u))
         FirstDerivativePeriodic!(cache,U,Δ,n,order)
     end

@@ -35,7 +35,7 @@ solnO1V = solve(P,Dom1V,Δt,t,:cgie)
 #====== New solver 1 volume ======#
 Pl = FaADE.SATs.SAT_Periodic(Dom1V.Δx,1,order,Left)
 Pr = FaADE.SATs.SAT_Periodic(Dom1V.Δx,1,order,Right)
-BD1V = FaADE.Inputs.SATBoundaries(Pl,Pr)
+BD1V = (Pl,Pr)
 P1V = Problem1D(order,u₀,K,Dom1V,BD1V)
 println("---Solving 1 volume---")
 soln1V = solve(P1V,Dom1V,Δt,t)
@@ -49,7 +49,7 @@ Dom2V = GridMultiBlock(D1,D2)
 
 Pl = FaADE.SATs.SAT_Periodic(D1.Δx,1,order,Left)
 Pr = FaADE.SATs.SAT_Periodic(D2.Δx,1,order,Right)
-BD = FaADE.Inputs.SATBoundaries(Pl,Pr)
+BD = (Pl,Pr)
 
 P2V = Problem1D(order,u₀,K,Dom2V,BD)
 println("---Solving 2 volume---")

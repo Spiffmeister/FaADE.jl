@@ -1,5 +1,5 @@
 """
-    Parallel
+    ParallelOperator
 Methods for constructing the parallel operator
 """
 module ParallelOperator

@@ -21,7 +21,7 @@ u₀(x) = 0.0
 
 Dl = FaADE.SATs.SAT_Dirichlet(t->0,Dom.Δx,Left,1,order)
 Dr = FaADE.SATs.SAT_Dirichlet(t->0,Dom.Δx,Right,1,order)
-BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+BD = (Dl,Dr)
 P = Problem1D(order,u₀,K,Dom,BD,nothing,nothing)
 
 SC = FaADE.solvers.StepConfig{Float64}()

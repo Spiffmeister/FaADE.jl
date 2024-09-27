@@ -77,10 +77,10 @@ Returns the number of nodes needed for the [`BoundaryData1D`](@ref) and [`Bounda
     SELECT LOOPING DIRECTION
 ========#
 """
-    SelectLoopDirection
+    _SelectLoopDirection
 Used to tell the SATs over which axis to loop
 """
-function SelectLoopDirection(axis::Int)
+function _SelectLoopDirection(axis::Int)
     if axis == 1
         return eachcol
     elseif axis == 2

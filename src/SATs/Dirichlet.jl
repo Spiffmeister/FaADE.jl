@@ -139,7 +139,7 @@ The 2D method loops over the 1D method using the `loopaxis` value in [`SAT_Diric
         
     SAT_Dirichlet_data!(dest::AT,data::AT,c::AT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT}
 
-The curvilinear call wraps around the 1D method and then calls the [`FirstDerivativeTranspose`](@ref) for the cross derivative term.
+The curvilinear call wraps around the 1D method and then calls the [`FirstDerivativeTranspose!`](@ref) for the cross derivative term.
 
     SAT_Dirichlet_data!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,KT,TT}
 """
@@ -205,7 +205,7 @@ The 2D method loops over the 1D method using the `loopaxis` value in [`SAT_Diric
 
     SAT_Dirichlet_solution!(dest::AT,data::AT,c::KT,SD::SAT_Dirichlet{TN,:Cartesian,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
 
-The curvilinear call wraps around the 1D method and then calls the [`FirstDerivativeTranspose`](@ref) for the cross derivative term.
+The curvilinear call wraps around the 1D method and then calls the [`FirstDerivativeTranspose!`](@ref) for the cross derivative term.
 
     SAT_Dirichlet_solution!(dest::AT,data::AT,cx::KT,cxy::KT,SD::SAT_Dirichlet{TN,:Curvilinear,TT}) where {AT<:AbstractMatrix,TN<:NodeType,TT,KT}
 """

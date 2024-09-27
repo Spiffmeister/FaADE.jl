@@ -62,11 +62,11 @@ module FaADE
         SAT_Robin
         #Split_domain
 
-    using FaADE.Inputs: Problem1D, Problem2D, SATBoundaries
+    using FaADE.Inputs: Problem1D, Problem2D
 
 
 
-    export Problem1D, Problem2D, SATBoundaries
+    export Problem1D, Problem2D
     
 
 

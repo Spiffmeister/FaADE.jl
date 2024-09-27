@@ -28,7 +28,7 @@ BoundaryRight = FaADE.SATs.SAT_Dirichlet((y,t) -> 0.0, Dom.Δx, Right,   order)
 BoundaryUp =    FaADE.SATs.SAT_Dirichlet((x,t) -> 0.0, Dom.Δx, Up,      order)
 BoundaryDown =  FaADE.SATs.SAT_Dirichlet((x,t) -> 0.0, Dom.Δx, Down,    order)
 
-BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+BD = (BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 P = Problem2D(order,u₀,kx,ky,Dom,BD)
 

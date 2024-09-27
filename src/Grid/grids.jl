@@ -226,8 +226,8 @@ end
     GridMultiBlock{TT,DIM,MET,TG,TJ,IT} <: GridType{TT,DIM,MET}
 Grid data for multiblock problems
 
-Grabbing a particular subgrid can be done by ``G.Grids[i]`` which indexes in the order the grids are given. 
-Indexing can be performed by ``G[i]`` for 1D or ``G[i,j]`` for 2D multiblock problems.
+Grabbing a particular subgrid can be done by `G.Grids[i]` which indexes in the order the grids are given. 
+Indexing can be performed by `G[i]` for 1D or `G[i,j]` for 2D multiblock problems.
 `GridMultiBlock.Joint` contains the information on how to connect grids. If periodic boundary conditions are being used, do not specify the joint across that boundary.
 
 Example grid creation,
@@ -257,7 +257,7 @@ struct GridMultiBlock{TT  <: Real,
     ngrids  :: Int
 end
 """
-    GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
+    GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
 Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
 """
 function GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}

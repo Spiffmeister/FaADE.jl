@@ -333,24 +333,15 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
                 tmpi,tmpj = findcell(grid.Grids[sgi],pt)
             catch # if that failed the point is not in the domain and we need to correct it
 
-                mappedpt = mapping(pt...)
-                if isapprox(mappedpt[1],bounds[1][2],atol=1e-12)
-                    nearpt,newind = nearestpoint(grid.Grids[sgi],pt)
-                    pt = nearpt
-                else
-                    nearpt = (0,0)
-                    joints = grid.Joint[sgi]
-                    # dist = TT(1e10)
-                    for joint in joints # this will correct most instances
-                        try
-                            i,j = findcell(grid.Grids[joint.index],pt)
-                            sgi = joint.index
-                        catch
-                            continue
-                        end
+                joints = grid.Joint[sgi]
+                for joint in joints # this will correct most instances
+                    try
+                        i,j = findcell(grid.Grids[joint.index],pt)
+                        sgi = joint.index
+                    catch
+                        continue
                     end
                 end
-
 
                 # we need to try again since it may be outside the domain
                 # if it is, move it to the nearest point
@@ -365,7 +356,6 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
             
         end
 
-        # @show pt
         i,j = findcell(grid.Grids[sgi],pt)
         
         subgrid = grid.Grids[sgi]
@@ -394,8 +384,15 @@ end
 
 
 """
-    inverse_bilinear_interpolation
+    _inverse_bilinear_interpolation
 Given the four points of a bilinear interpolation, find the weights for the point pt
+
+`` S(u,v) = uvB + u(1-v)D + v(1-u)C + (1-u)(1-v)A ``
+
+where `A`,`B`,`C`,`D` are the four points of the quadrilateral;
+C -- D
+|    |
+A -- B
 
 """
 function _inverse_bilinear_interpolation(a::Tuple{TT,TT},b,c,d,q) where TT

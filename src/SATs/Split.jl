@@ -161,7 +161,7 @@ Right handed SAT for interface conditions. Correspond to block 1 in the setup:
 
     SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Right}}
 
-The curvilinear function calls the Cartesian functions and [`D₁`](@ref) and [`FirstDerivativeTranspose!`](@ref) functions
+The curvilinear function calls the Cartesian functions and [`D₁!`](@ref) and [`FirstDerivativeTranspose!`](@ref) functions
 
     SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT},::SATMode{:SolutionMode}) where {AT,TN,TT}
 

@@ -47,7 +47,7 @@ BxR(t) = cos(2π*ωt*t) * sin(2π*ωx + cx) #Boundary condition x=Lx
 Dom = Grid1D([0.0,1.0],n)
 Dl = FaADE.SATs.SAT_Dirichlet(BxL,Dom.Δx,Left,  order)
 Dr = FaADE.SATs.SAT_Dirichlet(BxR,Dom.Δx,Right, order)
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# BD = (Dl,Dr)
 BD = (Dl,Dr)
 
 P = Problem1D(order,u₀,K,Dom,BD,F,nothing)
@@ -69,7 +69,7 @@ Dr = FaADE.SATs.SAT_Dirichlet(BxR,D2.Δx,Right,order)
 
 BD2 = Dict(1 => (Dl,), 2 => (Dr,))
 
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# BD = (Dl,Dr)
 println("---Solving 2 volume---")
 P2V = Problem1D(order,u₀,K,Dom2V,BD2,F,nothing)
 
@@ -87,7 +87,7 @@ Dom3V = GridMultiBlock(D1,D2,D3)
 
 Dl = FaADE.SATs.SAT_Dirichlet(BxL,D1.Δx,Left,    order)
 Dr = FaADE.SATs.SAT_Dirichlet(BxR,D3.Δx,Right,   order)
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# BD = (Dl,Dr)
 
 BD3 = Dict(1 => (Dl,), 3 => (Dr,))
 
@@ -108,7 +108,7 @@ soln3V = solve(P3V,Dom3V,Δt,t)
 
 # Dl = FaADE.SATs.SAT_Dirichlet(BxL,D1.Δx,Left,    order)
 # Dr = FaADE.SATs.SAT_Dirichlet(BxR,D3.Δx,Right,   order)
-# # BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# # BD = (Dl,Dr)
 
 # BD4 = Dict(1 => (Dl,), 4 => (Dr,))
 
@@ -130,7 +130,7 @@ Dom2VD = GridMultiBlock(D1,D2)
 
 Dl = FaADE.SATs.SAT_Dirichlet(BxL,D1.Δx,Left,    order)
 Dr = FaADE.SATs.SAT_Dirichlet(BxR,D2.Δx,Right,   order)
-# BD = FaADE.Inputs.SATBoundaries(Dl,Dr)
+# BD = (Dl,Dr)
 
 BD3 = Dict(1 => (Dl,), 3 => (Dr,))
 

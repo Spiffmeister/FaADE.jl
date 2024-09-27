@@ -24,7 +24,7 @@ order = 2
 BoundaryLeft = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Left)
 BoundaryRight = FaADE.SATs.SAT_Periodic(Dom.Δx,1,order,Right)
 
-BD = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight)
+BD = (BoundaryLeft,BoundaryRight)
 
 P = Problem1D(order,u₀,K,Dom,BD)
 

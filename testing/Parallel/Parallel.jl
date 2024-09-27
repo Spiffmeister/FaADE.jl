@@ -24,7 +24,7 @@ BoundaryRight   = FaADE.SATs.SAT_Dirichlet((y,t) -> cos(-0.5π)*cos(π*y)   , Do
 BoundaryUp      = FaADE.SATs.SAT_Dirichlet((x,t) -> cos(π*x)*cos(0.5π)    , Dom.Δy, Up,     order)
 BoundaryDown    = FaADE.SATs.SAT_Dirichlet((x,t) -> cos(π*x)*cos(-0.5π)   , Dom.Δy, Down,   order)
 
-BC = FaADE.Inputs.SATBoundaries(BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
+BC = (BoundaryLeft,BoundaryRight,BoundaryUp,BoundaryDown)
 
 # Source term
 F(x,t) = 2π^2*cos(π*x[1])*cos(π*x[2])

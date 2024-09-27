@@ -1,72 +1,25 @@
 
-
-abstract type newPDEProblem{dtype,DIMS} end
-
-
-
-struct BoundaryConditions{SATL<:SimultanousApproximationTerm,
-        SATR<:Union{SimultanousApproximationTerm,Nothing},
-        SATU<:Union{SimultanousApproximationTerm,Nothing},
-        SATD<:Union{SimultanousApproximationTerm,Nothing}}
-    BoundaryLeft    :: SATL
-    BoundaryRight   :: SATR
-    BoundaryUp      :: SATU
-    BoundaryDown    :: SATD
-
-
-    function BoundaryConditions(BCs...)
-        if length(BCs) == 1
-            new{Nothing,Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
-        elseif length(BCs) == 2
-            new{typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
-        elseif length(BCs) == 3
-            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),Nothing}(BCs[1],BCs[2],BCs[3],nothing)
-        else
-            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),typeof(BCs[4])}(BCs[1],BCs[2],BCs[3],BCs[4])
-        end
-    end
-end
-
 """
-    SATBoundaries
+    PDEProblem{dtype,DIMS}
+Abstract type for `PDEProblemND` structs.
+
+see [`Problem1D`](@ref) and [`Problem2D`](@ref)
 """
-struct SATBoundaries{SATL<:SimultanousApproximationTerm,
-        SATR<:Union{SimultanousApproximationTerm,Nothing},
-        SATU<:Union{SimultanousApproximationTerm,Nothing},
-        SATD<:Union{SimultanousApproximationTerm,Nothing}}
-    BoundaryLeft    :: SATL
-    BoundaryRight   :: SATR
-    BoundaryUp      :: SATU
-    BoundaryDown    :: SATD
-
-
-    function SATBoundaries(BCs...)
-        if length(BCs) == 1
-            new{Nothing,Nothing,Nothing,Nothing}(BCs,nothing,nothing,nothing)
-        elseif length(BCs) == 2
-            new{typeof(BCs[1]),typeof(BCs[2]),Nothing,Nothing}(BCs[1],BCs[2],nothing,nothing)
-        elseif length(BCs) == 3
-            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),Nothing}(BCs[1],BCs[2],BCs[3],nothing)
-        else
-            new{typeof(BCs[1]),typeof(BCs[2]),typeof(BCs[3]),typeof(BCs[4])}(BCs[1],BCs[2],BCs[3],BCs[4])
-        end
-    end
-end
-
-
-
-
-
-
-
-
+abstract type PDEProblem{dtype,DIMS} end
 
 
 
 
 
 """
-    Problem1D
+    Problem1D{TT      <: Real,
+    DIMS,
+    DCT,
+    ST      <: SourceTerm,
+    SATB    <: Union{Dict,Tuple},
+    PART} <: PDEProblem{TT,DIMS}
+
+Struct for one dimensional problems
 """
 struct Problem1D{TT      <: Real,
     DIMS,
@@ -74,7 +27,7 @@ struct Problem1D{TT      <: Real,
     ST      <: SourceTerm,
     SATB    <: Union{Dict,Tuple},
     PART    # Parallel map, vector of parallel map, or nothing
-        } <: newPDEProblem{TT,DIMS}
+        } <: PDEProblem{TT,DIMS}
     InitialCondition    :: Function
     K                   :: DCT
     source              :: ST
@@ -82,9 +35,19 @@ struct Problem1D{TT      <: Real,
     BoundaryConditions  :: SATB
     Parallel            :: PART
 
-    function Problem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs,S,Par) where {TT,DIMS}
+    @doc """
+        Problem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs,S,Par) where {TT,DIMS}
+    
+    Required arguments:
+    - `order`: order of the solver to be used
+    - `u₀`: Initial condition
+    - `K`: Diffusion coefficient
+    - `G`: one dimensional [`Grid1D`](@ref) or [`GridMultiBlock`](@ref)
+    - `BCs`: Tuple of boundary conditions (see [`SATs`](@ref))
+    """
+    function Problem1D(order::Integer,u₀,K,G::GridType{TT,DIMS},BCs;source=nothing,parallel=nothing) where {TT,DIMS}
 
-        source = SourceTerm{typeof(S)}(S)
+        S = SourceTerm{typeof(source)}(source)
 
         if typeof(G) <: GridMultiBlock
             typeof(BCs) <: Dict ? nothing : error("Boundary conditions must be a dictionary for multiblock problems")
@@ -92,14 +55,20 @@ struct Problem1D{TT      <: Real,
         end
 
         # new{DIMS,TT}(u₀)
-        new{TT,DIMS,typeof(K),typeof(source),typeof(BCs),typeof(Par)}(u₀,K,source,order,BCs,Par)
+        new{TT,DIMS,typeof(K),typeof(S),typeof(BCs),typeof(parallel)}(u₀,K,S,order,BCs,parallel)
     end
 end
-Problem1D(order,u₀,K,G,BCs) = Problem1D(order,u₀,K,G,BCs,nothing,nothing)
 
 
 """
-    Problem2D
+    Problem2D{TT      <: Real,
+        DIM,
+        DCT,
+        ST      <: SourceTerm,
+        SATB    <: Union{Dict,Tuple},
+        PART} <: PDEProblem{TT,DIM}
+
+Struct for two dimensional problems
 """
 struct Problem2D{TT      <: Real,
         DIM,
@@ -107,7 +76,7 @@ struct Problem2D{TT      <: Real,
         ST      <: SourceTerm,
         SATB    <: Union{Dict,Tuple},
         PART    # Parallel map, vector of parallel map, or nothing
-            } <: newPDEProblem{TT,DIM}
+            } <: PDEProblem{TT,DIM}
     InitialCondition    :: Function
     Kx                  :: DCT
     Ky                  :: DCT
@@ -116,25 +85,35 @@ struct Problem2D{TT      <: Real,
     BoundaryConditions  :: SATB
     Parallel            :: PART
     
-    function Problem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIM},BCs,S,Par) where {TT,DIM}
+    @doc """
+        Problem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIM},BCs,S,Par) where {TT,DIM}
+    
+    Required arguments:
+    - `order`: order of the solver to be used
+    - `u₀`: Initial condition
+    - `Kx`: Diffusion coefficient in ``x``
+    - `Ky`: Diffusion coefficient in ``y``
+    - `G`: one dimensional [`Grid2D`](@ref) or [`GridMultiBlock`](@ref)
+    - `BCs`: Tuple of boundary conditions (see [`SATs`](@ref))
+    """
+    function Problem2D(order::Integer,u₀,Kx,Ky,G::GridType{TT,DIM},BCs;source=nothing,parallel=nothing) where {TT,DIM}
 
-        source = SourceTerm{typeof(S)}(S)
+        S = SourceTerm{typeof(source)}(source)
 
         if typeof(G) <: GridMultiBlock
             typeof(BCs) <: Dict ? nothing : error("Boundary conditions must be a dictionary for multiblock problems")
             parse_boundaries(BCs,G)
         end
 
-        new{TT,2,typeof(Kx),typeof(source),typeof(BCs),typeof(Par)}(u₀,Kx,Ky,source,order,BCs,Par)
+        new{TT,2,typeof(Kx),typeof(S),typeof(BCs),typeof(parallel)}(u₀,Kx,Ky,S,order,BCs,parallel)
     end
 end
-Problem2D(order,u₀,Kx,Ky,G,BCs) = Problem2D(order,u₀,Kx,Ky,G,BCs,nothing,nothing)
 
 
 
-Base.ndims(P::newPDEProblem{TT,DIM}) where {TT,DIM} = DIM
+Base.ndims(P::PDEProblem{TT,DIM}) where {TT,DIM} = DIM
 
-Base.show(io::IO, P::newPDEProblem{TT,DIMS}) where {TT,DIMS} = print(io, DIMS," dimensional PDE Problem")
+Base.show(io::IO, P::PDEProblem{TT,DIMS}) where {TT,DIMS} = print(io, DIMS," dimensional PDE Problem")
 
 
 
