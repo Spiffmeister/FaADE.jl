@@ -75,7 +75,7 @@ struct SAT_Interface{
     function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::NodeType{SIDE,AX},order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,SIDE,AX}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
-        loopaxis = SelectLoopDirection(AX)
+        loopaxis = _SelectLoopDirection(AX)
 
         
         if SIDE == :Left #If the left boundary it should be this way around
@@ -94,7 +94,7 @@ struct SAT_Interface{
         
         # τ₀ = zeros(TT,size(buffer))
 
-        h = hval(order)
+        h = _hval(order)
 
         τ₁ = -TT(1//2) / (h * Δx) # h and Δx correct for no H⁻¹ in term 
         τ₂ = TT(1//2)

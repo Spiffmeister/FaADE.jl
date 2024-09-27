@@ -115,13 +115,13 @@ TODO: Remove inlineing
 """
 function SATpenalties end
 @inline function SATpenalties(::BoundaryConditionType{:Robin},a,Δx::Float64,order::Int64)
-    h = hval(order)
+    h = _hval(order)
 
     τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
     return τ
 end
 @inline function SATpenalties(::BoundaryConditionType{:Periodic},Δx::Real,order::Int64)
-    h = hval(order)
+    h = _hval(order)
 
     α₀ = 0.5/(h*Δx)
     τ₁ = -0.5/Δx #1/h accounted for in BoundaryDerivativeTranspose
@@ -131,7 +131,7 @@ end
 end
 @inline function SATpenalties(::BoundaryConditionType{:Interface},Δx₁,Δx₂,order)
 
-    h = hval(order)
+    h = _hval(order)
 
     τ₁ = -0.5/(h*Δx₁)
     # τ₁ = -0.0
@@ -149,13 +149,9 @@ end
 
 
 """
-    hval(order::Int64)
-
-Returns the value of ``h^{-1}`` for the penalties
-
-TODO: Remove inlineing
+Returns the value of ``H^{-1}`` for the penalties
 """
-@inline function hval(order::Int64)
+function _hval(order::Int64)
     if order == 2
         return 0.5
     elseif order == 4

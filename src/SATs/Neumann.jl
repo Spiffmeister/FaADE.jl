@@ -55,7 +55,7 @@ struct SAT_Neumann{
 
         check_boundary(side)
 
-        LA = SelectLoopDirection(AX)
+        LA = _SelectLoopDirection(AX)
 
 
         Hinv = _InverseMassMatrix(order,Δx,side)

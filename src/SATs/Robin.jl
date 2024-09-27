@@ -57,7 +57,7 @@ struct SAT_Robin{
 
         check_boundary(side)
 
-        loopaxis = SelectLoopDirection(AX)
+        loopaxis = _SelectLoopDirection(AX)
 
 
         Hinv = _InverseMassMatrix(order,Δx,side)

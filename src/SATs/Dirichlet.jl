@@ -72,7 +72,7 @@ struct SAT_Dirichlet{
     
         check_boundary(side)
     
-        loopaxis = SelectLoopDirection(AX)
+        loopaxis = _SelectLoopDirection(AX)
     
         if τ₀ === nothing
             τ₀ = TT(1)

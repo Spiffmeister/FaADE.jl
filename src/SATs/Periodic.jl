@@ -66,7 +66,7 @@ struct SAT_Periodic{
     
         α₀, τ₁, τ₀ = SATpenalties(Periodic,Δx,order)
     
-        loopaxis = SelectLoopDirection(AX)
+        loopaxis = _SelectLoopDirection(AX)
     
         new{typeof(side),coord,TT,Vector{TT},typeof(τ₀),typeof(loopaxis)}(
             Periodic,side,AX,order,D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,Δx,α₀,τ₁,τ₀,loopaxis,Δy,coord)
