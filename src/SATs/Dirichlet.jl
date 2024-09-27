@@ -10,7 +10,13 @@ end
 
 
 """
-    SAT_Dirichlet{TN<:NodeType,COORD,TT<:Real,VT<:Vector{TT},F1<:Function, PT<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
+    SAT_Dirichlet{
+        TN<:NodeType,
+        COORD,
+        TT<:Real,
+        VT<:Vector{TT},
+        F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Dirichlet}
+
 Storage of all objects needed for a Dirichlet SAT ``u(x_i) - g(t) = 0``.
 
 In Cartesian coordinates the SAT reads
@@ -89,7 +95,7 @@ struct SAT_Dirichlet{
         # α H⁻¹ * (K H D₁ᵀ) * H⁻¹ * E * (u-f)
         H⁻¹D₁ᵀE     = Hinv.*D₁ᵀ.*E
     
-        SAT_Dirichlet{typeof(side),coord,TT,Vector{TT},typeof(RHS),typeof(loopaxis)}(side,AX,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,τ₀,τ₁,loopaxis,Δy,coord)
+        new{typeof(side),coord,TT,Vector{TT},typeof(RHS),typeof(loopaxis)}(side,AX,order,RHS,H⁻¹EH⁻¹E,H⁻¹D₁ᵀE,Δx,τ₀,τ₁,loopaxis,Δy,coord)
     end
 end
 

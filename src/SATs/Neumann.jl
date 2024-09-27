@@ -2,7 +2,12 @@
 
 
 """
-    SAT_Neumann{TN<:NodeType,COORD,TT<:Real,VT<:Vector{TT},F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Neumann}
+    SAT_Neumann{
+        TN<:NodeType,
+        COORD,
+        TT<:Real,
+        VT<:Vector{TT},
+        F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Neumann}
 
 Simulatenous approximation term for Neumann boundary conditions 
     ``\\left.\\frac{\\partial u}{\\partial x}\\right|_{x_i} = g(t) \\iff \\frac{\\partial}{\\partial x} u(x_i) - g(t) = 0``

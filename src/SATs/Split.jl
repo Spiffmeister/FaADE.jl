@@ -2,7 +2,40 @@
 
 
 """
-    SAT_Interface
+    SAT_Interface{
+        TN<:NodeType,
+        COORD,
+        TT<:Real,
+        TV<:Vector{TT},
+        F1<:Function} <: SimultanousApproximationTerm{:Interface}
+
+Struct for storage of the interface SAT which enforces ``u^-(x_I) = u^+(x_I)`` and ``\\left.\\partial_x u^-\\right|_{x_I} = \\left.\\partial_x u^+\\right|_{x_I}``
+
+In Cartesian coordinates the SAT is
+
+``\\operatorname{SAT}_I = \\tau_0 H^{-1} \\hat{L}_0 u + \\tau_1 H^{-1} K_x D_x^T \\hat{L}_1 u + \\tau_2 H^{-1} \\hat{L}_1 K_x D_x u``
+
+and in curvilinear coordinates the SAT isnan
+
+``\\operatorname{SAT}_I = \\tau_0 H^{-1} \\hat{L}_0 u + \\tau_1 H^{-1} (K_q D_q^T + K_{qr} D_r^T)\\hat{L}_1 u + \\tau_2 H^{-1} \\hat{L}_1 (K_q D_q + K_{qr} D_r)u``
+
+where in both cases
+
+```math
+\\hat{L}_0 = \\begin{bmatrix} 
+    0 & \\dots & \\dots & 0 \\\\ 
+    \\vdots & 1 & -1 & \\vdots \\\\
+    \\vdots & -1& 1 & \\vdots \\\\
+    0 & \\dots & \\dots & 0
+    \\end{bmatrix} \\qquad
+\\hat{L}_1 = \\begin{bmatrix} 
+    0 & \\dots & \\dots & 0 \\\\ 
+    \\vdots & 1 & -1 & \\vdots \\\\
+    \\vdots & 1 & -1 & \\vdots \\\\
+    0 & \\dots & \\dots & 0
+    \\end{bmatrix}
+```
+
 """
 struct SAT_Interface{
         TN<:NodeType,
@@ -28,13 +61,24 @@ struct SAT_Interface{
 
     normal :: TT
 
-    function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,TN}
+    @doc """
+        SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::TN,axis::Int,order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,TN}
+    
+    Constructor for the interface SAT
+
+    Required arguments:
+    - `Δx₁`, `Δx₂`: Grid spacing
+    - `τ₀`: Penalty
+    - `side`: Boundary side, either `Left`, `Right`, `Up`, `Down`
+    - `order`: Order of the ``D_x`` operators, either `2` or `4`
+    """
+    function SAT_Interface(Δx₁::TT,Δx₂::TT,τ₀::AT,side::NodeType{SIDE,AX},order::Int;Δy=TT(0),coordinates=:Cartesian,normal=TT(1)) where {TT,AT,SIDE,AX}
         # Δxₗ = Δx₁
         # Δxᵣ = Δx₂
-        loopaxis = SelectLoopDirection(axis)
+        loopaxis = SelectLoopDirection(AX)
 
         
-        if TN <: NodeType{:Left} #If the left boundary it should be this way around
+        if SIDE == :Left #If the left boundary it should be this way around
             Δxₗ = Δx₁
             Δxᵣ = Δx₂
             
@@ -66,7 +110,7 @@ struct SAT_Interface{
 
         # τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
-        new{TN,coordinates,TT,Vector{TT},typeof(loopaxis)}(side,axis,order,
+        new{typeof(side),coordinates,TT,Vector{TT},typeof(loopaxis)}(side,AX,order,
             D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates,normal)
     end
 end
@@ -101,20 +145,30 @@ end
 #######
 
 """
-    SAT_Interface!
+Applies the interface SAT where `buffer` contains the required data from the neighbouring block
+
+    SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Left}}
+
+Left handed SAT for interface conditions. Correspond to block 2 in the setup:
+
+``\\begin{bmatrix} 1 & 2 \\end{bmatrix}``
+
+    SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Left}}
+
+Right handed SAT for interface conditions. Correspond to block 1 in the setup:
+
+``\\begin{bmatrix} 1 & 2 \\end{bmatrix}``
+
+    SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Right}}
+
+The curvilinear function calls the Cartesian functions and [`D₁`](@ref) and [`FirstDerivativeTranspose!`](@ref) functions
+
+    SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT},::SATMode{:SolutionMode}) where {AT,TN,TT}
+
 """
 function SAT_Interface! end
-"""
-    SAT_Interface!
-Left handed SAT for interface conditions. Correspond to block 2 in the setup
-
-|---|---|
-| 1 | 2 |
-|---|---|
-
-Superscript + is the current block - is the joining block
-"""
 function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Left}}
+    # Superscript + is the current block - is the joining block
     for (S⁺,U⁺,K⁺,U⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
         S⁺[1] += SI.τ₀ * (U⁺[1] - U⁻[1])
         U⁻[1] = U⁻[1] - U⁺[1]
@@ -127,17 +181,8 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
     end
     dest
 end
-"""
-    SAT_Interface!
-Right handed SAT for interface conditions. Correspond to block 1 in the setup
-
-|---|---|
-| 1 | 2 |
-|---|---|
-
-Superscript - is the current block + is the joining block
-"""
 function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::SATMode{:SolutionMode}) where {AT,TN<:NodeType{:Right}}
+    # Superscript - is the current block + is the joining block
     for (S⁻,U⁻,K⁻,U⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c),SI.loopaxis(buffer))
         S⁻[end] += SI.τ₀ * (U⁻[end] - U⁺[1])
         U⁺[1] = U⁻[end] - U⁺[1]
@@ -150,10 +195,6 @@ function SAT_Interface!(dest::AT,u::AT,c::AT,buffer::AT,SI::SAT_Interface{TN},::
     end
     dest
 end
-
-"""
-SAT = τ₀ (u⁻[end] - u⁺[1]) + τ₁ [K⁻_q D_q + K⁻_{qr} D_r](u⁻ - u⁺) + τ₂ [K⁻_q D_q + K⁻_{qr} D_r](u⁻[end] - u⁺[1])
-"""
 function SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT},::SATMode{:SolutionMode}) where {AT,TN,TT}
     # @show TN, "SAT", cx[1], cxy[1]
     SAT_Interface!(dest,u,cx,buffer,SI,SolutionMode)
@@ -208,78 +249,21 @@ end
 
 
 
-#=
+
 """
-    SAT_Interface_cache!
-Computes the required values for sending to the buffer
+Writes the interface interface terms to a buffer for sending to a neighbouring block.
+
+1D and 2D Cartesian functions for `Left`, `Down` and `Right`, `Up` boundaries respectively
+
+    SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:NodeType{:Left}}
+    SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:NodeType{:Right}}
+
+For curvilinear coordinates the [`D₁!`](@ref) operator is used from [`FaADE.Derivatives`](@ref)
+
+    SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN}
+
 """
 function SAT_Interface_cache! end
-"""
-    SAT_Interface_cache!
-Computes the required values from the RIGHT handed block for sending to the buffer for LEFT handed interface conditions
-"""
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:Union{NodeType{:Left},NodeType{:Down}}}
-    for (S⁻,U⁻,K⁻) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
-        S⁻[1] = U⁻[end]
-        S⁻[2] = TT(0)
-        for i = 1:SI.order
-            S⁻[2] += K⁻[end] * SI.D₁Eₙ[i] * U⁻[end-SI.order+i]
-        end
-    end
-    dest
-end
-"""
-    SAT_Interface_cache!
-Computes the required values from the LEFT handed block for sending to the buffer for RIGHT handed interface conditions
-"""
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:Union{NodeType{:Right},NodeType{:Up}}}
-    for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
-        S⁺[1] = U⁺[1]
-        S⁺[2] = TT(0)
-        for i = 1:SI.order
-            S⁺[2] += K⁺[1] * SI.D₁E₀[i] * U⁺[i]
-        end
-    end
-    dest
-end
-"""
-    SAT_Interface_cache!
-Computes the required values from the LEFT handed block for sending to the buffer for RIGHT handed interface conditions
-"""
-function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN}
-    SAT_Interface_cache!(dest,u,c,SI)
-
-    n = size(dest,SI.axis)
-    m = size(dest,mod1(SI.axis+1,2))
-
-    if SI.side == Left
-        @views DEST = dest[2,:]
-        @views SRC = u[end,:]
-        @views C = cxy[end,:]
-    elseif SI.side == Right
-        @views DEST= dest[2,:]
-        @views SRC = u[1,:] 
-        @views C = cxy[1,:]
-    elseif SI.side == Down
-        DEST = view(dest, 1:m, 2)
-        SRC = view(u, 1:m, n)
-        C = view(cxy, 1:m, n)
-    elseif SI.side == Up
-        DEST = view(dest, 1:m,2)
-        SRC = view(u, 1:m, 1)
-        C = view(cxy, 1:m, 1)
-    end
-
-    # Don't compute D^T_{qr} here
-    # FirstDerivativeTranspose!(DEST,SRC,C,m,SI.Δy,SI.order,TT(1))
-    D₁!(DEST,C,SRC,m,SI.Δy,Val(SI.order),TT(1))
-
-    dest
-end
-=#
-
-
-
 function SAT_Interface_cache!(dest::AT,u::AT,c::AT,SI::SAT_Interface{TN,COORD,TT}) where {TT,AT,COORD,TN<:NodeType{:Left}}
     for (S⁺,U⁺,K⁺) in zip(SI.loopaxis(dest),SI.loopaxis(u),SI.loopaxis(c))
         S⁺[1] = U⁺[1]

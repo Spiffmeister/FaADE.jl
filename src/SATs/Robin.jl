@@ -4,8 +4,7 @@
             TN<:NodeType,
             COORD,
             TT<:Real,
-            F1<:Function, LAT<:Function
-        } <: SimultanousApproximationTerm{:Robin}
+            F1<:Function, LAT<:Function} <: SimultanousApproximationTerm{:Robin}
 
 Simulatenous approximation term for Robin boundary conditions
     ``\\left.\\alpha u(x_i) + \\beta\\left.\\frac{\\partial u}{\\partial x}\\right|_{x_i} - g(t) = 0``

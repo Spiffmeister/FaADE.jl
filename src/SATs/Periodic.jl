@@ -1,14 +1,29 @@
 
 """
-    SAT_Periodic{TN<:NodeType,COORD,TT<:Real,VT<:Vector{TT},F1<:Function,F2<:Function} <: SimultanousApproximationTerm{:Periodic}
+    SAT_Periodic{
+        TN<:NodeType,
+        COORD,
+        TT<:Real,
+        VT<:Vector{TT},
+        F1<:Function,F2<:Function} <: SimultanousApproximationTerm{:Periodic}
 
 Storage of all objects needed for a Periodic SAT ``u(x_0) = u(x_N)`` and ``\\left.\\partial_x u\\right|_{x_0} = \\left.\\partial_x u\\right|_{x_N}``.
 
-In Cartesian the SAT is
-``\\tau_0 H^{-1}L_0u + \\tau_1 H^{-1}KD_x^TL_1u \\alpha_0 H^{-1}L_1KD_xu``
+In Cartesian coordinates the SAT is
+
+``\\operatorname{SAT}_P = \\tau_0 H^{-1}L_0u + \\tau_1 H^{-1}KD_x^TL_1u \\alpha_0 H^{-1}L_1KD_xu``
 
 In curvilinear coordinates the SAT is
-``\\tau_0 H^{-1}L_0u + \\tau_1 H^{-1}K_qD_q^TL_1u + \\tau_2H^{-1}K_{qr}D_r^TL_1 u + \\alpha_1 H^{-1}L_1K_qD_qu + \\alpha_2 H^{-1}L_1K_{qr}D_ru``
+
+``\\operatorname{SAT}_P = \\tau_0 H^{-1}L_0u + \\tau_1 H^{-1}K_qD_q^TL_1u + \\tau_2H^{-1}K_{qr}D_r^TL_1 u + \\alpha_1 H^{-1}L_1K_qD_qu + \\alpha_2 H^{-1}L_1K_{qr}D_ru``
+
+where in both cases,
+
+```math
+L_0 = \\begin{bmatrix} 1 & 0 & 0 & -1 \\\\ 0 & 0 & 0 & 0 \\\\ 0 & 0 & 0 & 0 \\\\ -1 & 0 & 0 & 1 \\end{bmatrix} \\qquad
+L_1 = \\begin{bmatrix} 1 & 0 & 0 & -1 \\\\ 0 & 0 & 0 & 0 \\\\ 0 & 0 & 0 & 0 \\\\ 1 & 0 & 0 & -1 \\end{bmatrix}
+```
+
 """
 struct SAT_Periodic{
         TN<:NodeType,
