@@ -179,13 +179,13 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
         if typeof(BC) <: SAT_Periodic
             tmpDict[BC.side] = _newBoundaryCondition(G,BC)
         else
-            if (GetMetricType(G) == CurvilinearMetric) | (typeof(BC) <: SAT_Dirichlet)
+            if (GetMetricType(G) == CurvilinearMetric) & (typeof(BC) <: SAT_Dirichlet)
                 if typeof(BC.side).parameters[2] == 1
                     typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[1][1,:]) : τ = minimum(K[1][end,:])
                 else
                     typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[2][:,1]) : τ = minimum(K[2][:,end])
                 end
-                BC.τ[1] = -(10 + 1/τ)
+                BC.τ₀[1] = -(10 + 1/τ)
             end
             tmpDict[BC.side] = BoundaryData(G,BC,P.order)
         end
@@ -242,7 +242,7 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
         end
         τ₀ = maximum(buffer)
 
-        BC = SAT_Interface(Δx₁,Δx₂,τ₀,Joint.side,GetAxis(Joint.side),P.order,Δy=Δy₁,coordinates=sattype,normal=normal)
+        BC = SAT_Interface(Δx₁,Δx₂,τ₀,Joint.side,P.order,Δy=Δy₁,coordinates=sattype,normal=normal)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint,NeighbouringJoint)
     end
 
@@ -260,9 +260,12 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
                     else
                         typeof(BC.side).parameters[1] == :Left ? τ = maximum(K[2][:,1]) : τ = maximum(K[2][:,end])
                     end
-                    BC.τ[1] = -(10 + 1/τ)
+                    BC.τ₀[1] = -(10 + 1/τ)
                 end
                 tmpDict[BC.side] = BoundaryData(G.Grids[I],BC,P.order)
+            
+                # @show typeof(BoundaryData(G.Grids[I],BC,P.order))
+
             end
         end
     end
@@ -437,7 +440,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
                 end
                 Kx = P.Kx * (TT(1) - B[1]^2/NB)
                 Ky = P.Ky * (TT(1) - B[2]^2/NB)
-                Kxy = -P.Kxy * B[1]*B[2]/NB
+                Kxy = -P.Kx * B[1]*B[2]/NB
             else
                 Kx = P.Kx
                 Ky = P.Ky
@@ -445,10 +448,9 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
             end
             K[1][i] = Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
             K[2][i] = Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-
+          
             K[3][i] = Kxy * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
-
     end
 
     return K
@@ -495,26 +497,26 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
                 K[3][i] = -P.Kx * B[1]*B[2]/NB
             end
 
-            x,y = G[i]
-            if (x == 0.5 && y == 0.5) | (x==-0.5 && y==-0.5) #NIMROD TEST
-                K[1][i] = P.Kx * 0.5
-                K[2][i] = P.Ky * 0.5
-                if existb
-                    K[3][i] = P.Kx*0.5
-                end
-            elseif (x==0.5 && y==-0.5) | (x==-0.5 && y==0.5)
-                K[1][i] = P.Kx * 0.5
-                K[2][i] = P.Ky * 0.5
-                if existb
-                    K[3][i] = -P.Kx*0.5
-                end
-            elseif x==0 && y==0
-                K[1][i] = P.Kx*0.5
-                K[2][i] = P.Ky*0.5
-                if existb
-                    K[3][i] = P.Kx*0.5
-                end
-            end
+            # x,y = G[i]
+            # if (x == 0.5 && y == 0.5) | (x==-0.5 && y==-0.5) #NIMROD TEST
+            #     K[1][i] = P.Kx * 0.5
+            #     K[2][i] = P.Ky * 0.5
+            #     if existb
+            #         K[3][i] = P.Kx*0.5
+            #     end
+            # elseif (x==0.5 && y==-0.5) | (x==-0.5 && y==0.5)
+            #     K[1][i] = P.Kx * 0.5
+            #     K[2][i] = P.Ky * 0.5
+            #     if existb
+            #         K[3][i] = -P.Kx*0.5
+            #     end
+            # elseif x==0 && y==0
+            #     K[1][i] = P.Kx*0.5
+            #     K[2][i] = P.Ky*0.5
+            #     if existb
+            #         K[3][i] = P.Kx*0.5
+            #     end
+            # end
 
             # if (x==0) && (y==0) #SINGLE ISLAND TEST
             #     K[1][i] = P.Kx
@@ -642,12 +644,12 @@ mutable struct newLocalDataBlock{TT<:Real,
     SC          :: StepConfig{TT}
 end
 """
-    newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType) where {TT}
+    newLocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType) where {TT}
 Initialise a data block for a 1D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
+function newLocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
 
@@ -672,10 +674,10 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::LocalGridType,SC::StepConfi
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
+    newLocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
 Initialise a data block for a 1D multiblock problem
 """
-function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::StepConfig) where {TT}
+function newLocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::StepConfig) where {TT}
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G.Grids[I])
 
     K = zeros(TT,size(G.Grids[I]))
@@ -703,12 +705,12 @@ function newLocalDataBlock(P::newPDEProblem{TT,1},G::GridMultiBlock,I::Integer,S
     return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType) where {TT}
+    newLocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType) where {TT}
 Initialise a data block for a 2D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
+function newLocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
     
@@ -738,14 +740,13 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     return newLocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock,I::Integer)
+    newLocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock,I::Integer)
 Initialise a data block for a 2D multiblock problem
 """
-function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer,SC::StepConfig) where {TT,MET}
+function newLocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer,SC::StepConfig) where {TT,MET}
     LG = G.Grids[I]
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(LG)
-    
     
     PK = (P.Kx,P.Ky) #need to fix this for material properties
     
@@ -768,6 +769,8 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
 
     typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     # sattype = :Constant
+    # @show sattype, I, typeof(BS[Left].BoundaryOperator)
+    # @show typeof(BS[Left].BoundaryOperator).parameters
     for (side,boundary) in BS
         # @show typeof(boundary)
         # @show :Variable ∈ typeof(BC.Boundary).parameters
@@ -777,7 +780,7 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I:
     end
 
     # @show typeof(BS[1].Boundary)
-    
+    # @show sattype, I
     Dx = DiffusionOperator(LG.nx,LG.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(LG.ny,LG.Δy,P.order,false,difftype)
     D = DiffusionOperatorND(Dx,Dy)
@@ -819,12 +822,12 @@ struct DataMultiBlock{TT<:Real,
     nblock  :: Int64
     parallel:: Bool
 
-    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
+    function DataMultiBlock(P::PDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = (newLocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)
     end
-    function DataMultiBlock(P::newPDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
+    function DataMultiBlock(P::PDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = map((x)->newLocalDataBlock(P,G,x,SC),eachgrid(G))
         DTA = tuple(DTA...)

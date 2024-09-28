@@ -38,12 +38,11 @@ function setBoundaryCondition!(B::BoundaryData{TT,2,Fn},Δt::TT,t::TT,θ::TT) wh
         B.BufferRHS[i] = Δt*(1-θ)*B.RHS(B.X[i],t) + Δt*θ*B.RHS(B.X[i],t+Δt)
     end
 end
-"""
-If no boundary condition set or the boundary condition is periodic or an interface, ignore this step
-"""
 function setBoundaryCondition!(BC::Nothing,args...) end
 function setBoundaryCondition!(BC::InterfaceBoundaryData,args...) end
 """
+    setBoundaryConditions!(D::LocalDataBlockType{TT,DIM}) where {TT,DIM}
+
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::LocalDataBlockType{TT,DIM}) where {TT,DIM}
@@ -55,6 +54,8 @@ function setBoundaryConditions!(D::LocalDataBlockType{TT,DIM}) where {TT,DIM}
     end
 end
 """
+    setBoundaryConditions!(D::DataMultiBlock)
+
 Calling boundaries from multiblocks
 """
 function setBoundaryConditions!(D::DataMultiBlock)
@@ -66,6 +67,7 @@ end
 
 
 """
+Move interface data from `getproperty(DataBlock,source)` into internal buffers `DataBlock.InterfaceBoundaryData.BufferIn`
 """
 function _filllocalBuffer(source::Symbol,B::BoundaryData,D::newLocalDataBlock) end
 function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Periodic}
@@ -85,6 +87,9 @@ function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D:
         BufferIn .= cache[:,1:order]
     end
 end
+"""
+Fill `InterfaceBoundaryData.BufferOut` with data from this block for sending to `InterfaceBoundaryData.BufferIn`
+"""
 function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Interface}
     cache = getproperty(D,source)
     K = getproperty(D,:K)
@@ -101,6 +106,7 @@ function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D:
     end
 end
 """
+Loops over all `DataBlock.boundary` objects in a single `DataBlock`
 """
 function _fillLocalBuffers(source::Symbol,D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     _filllocalBuffer(source,D.boundary[Left],D)
@@ -110,6 +116,9 @@ function _fillLocalBuffers(source::Symbol,D::newLocalDataBlock{TT,DIM,COORD}) wh
         _filllocalBuffer(source,D.boundary[Down],D)
     end
 end
+"""
+Loops over all `DataBlock`'s in a `DataMultiBlock`
+"""
 function _fillLocalBuffers(source::Symbol,D::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(D)
         _fillLocalBuffers(source,D[I])
@@ -118,6 +127,7 @@ end
 
 
 """
+Moves a `InterfaceBoundaryData.BufferOut` to the relevant `InterfaceBoundaryData.BufferOut` neighbouring `DataBlock.BufferIn`
 """
 function _tradeBuffer!(B::BoundaryData,DB) end
 function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM,AT,BCT<:SAT_Periodic} end
@@ -147,11 +157,17 @@ function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM
         end
     end
 end
+"""
+Loop over each `DataBlock.boundary`
+"""
 function _tradeBuffers!(D,DB)
     for J in eachindex(D.boundary)
         _tradeBuffer!(D.boundary[J],DB)
     end
 end
+"""
+Loop over each `DataMultiBlock.DataBlock`
+"""
 function _tradeBuffers!(DB::DataMultiBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     for I in eachblock(DB)
         _tradeBuffers!(DB[I],DB)
@@ -196,12 +212,6 @@ Decide which SAT to apply
 end
 
 """
-Decide which Cartesian SAT to apply
-"""
-# function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Cartesian,TT,VT,FT1,PT,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,PT,LAT} where {SIDE,AX}
-#     SAT_Dirichlet_data!(dest,BC.BufferRHS,K,BC.BoundaryOperator)
-# end
-"""
 Decide which curvilinear SAT to apply
 """
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Dirichlet{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,LAT} where {SIDE,AX}
@@ -210,9 +220,12 @@ end
 function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Neumann{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},VT,FT1,LAT} where {SIDE,AX}
     SAT_Neumann_data!(dest,BC.BufferRHS,BC.BoundaryOperator)
 end
+function applyCurvilinearSAT!(BC::BoundaryData{TT,DIM,FT,SAT_Robin{TN,:Curvilinear,TT,FT1,LAT},AT},dest::AT,K::KT,mode::SATMode{:DataMode}) where {AT,KT,TT,DIM,FT,TN<:NodeType{SIDE,AX},FT1,LAT} where {SIDE,AX}
+    SAT_Robin_data!(dest,BC.BufferRHS,BC.BoundaryOperator)
+end
 
 """
-Applying SATs in SolutionMode
+Applying periodic or interface SATs in `SolutionMode`
 """
 function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {AT}
     # applySAT!(BC.BoundaryOperator,dest,K,source,BC.BufferIn,mode)
@@ -227,6 +240,9 @@ function applyCartesianSAT!(BC::InterfaceBoundaryData,dest::AT,source::AT,K::AT,
         error("Not implemented")
     end
 end
+"""
+Apply Dirichlet, Neumann, Robin SATs in `SolutionMode`
+"""
 function applyCartesianSAT!(BC::BoundaryData{TT,DIM,FT,BCT},dest::AT,source::AT,K::AT,mode::SATMode{:SolutionMode}) where {TT,AT,DIM,FT,BCT}
     SAT = BC.BoundaryOperator
     if BCT <: SimultanousApproximationTerm{:Dirichlet}
@@ -257,6 +273,12 @@ Neumann curvilinear SAT
 """
 function applyCurvilinearSAT!(BD::BoundaryData{TT,DIM,FT,SAT_Neumann{TN,:Curvilinear,TT,VT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},VT,FT1,LAT} where {SIDE,AXIS}
     SAT_Neumann_solution!(dest,source,K[AXIS],K[3],BD.BoundaryOperator)
+end
+"""
+Neumann curvilinear SAT
+"""
+function applyCurvilinearSAT!(BD::BoundaryData{TT,DIM,FT,SAT_Robin{TN,:Curvilinear,TT,FT1,LAT},AT},dest::AT,source::AT,K::KT,mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,FT,TN<:NodeType{SIDE,AXIS},FT1,LAT} where {SIDE,AXIS}
+    SAT_Robin_solution!(dest,source,K[AXIS],K[3],BD.BoundaryOperator)
 end
 """
 Interface curvilinear SAT
@@ -525,6 +547,7 @@ end
 
 
 """
+Compute relative error
 """
 function relerr(D::newLocalDataBlock{TT}) where {TT}
     u = getarray(D,:u)
@@ -545,8 +568,6 @@ end
 function applyParallelPenalties(DB::DataMultiBlock)
     for I in eachblock(DB)
         applyParallelPenalty(DB[I])
-
-        
     end
 end
 
@@ -589,24 +610,5 @@ function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
     end
 
 end
-
-
-
-#=
-"""
-    kIminusB!
-Compute ``I-BBᵀ/||B||²`` for each point in the grid
-"""
-function IminusB!(MagField::Function,t::TT) where {TT,AT::AbstractArray{TT}}
-    for I in eachindex(G)
-        B = MagField(grid[I],t)
-        tmp = I - B*B'/norm(B)^2
-    end
-end
-=#
-
-
-# K[I] = κ(grid[I],t)
-# K[I] += IminusB(MagField,t,grid[I])
 
 
