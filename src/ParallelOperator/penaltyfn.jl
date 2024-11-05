@@ -52,14 +52,18 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
 end
 
 function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,θ::TT,
-    P::ParallelData{TT,2},grid::Grid2D{TT,MET}) where {TT,MET}
+    P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
 
     κ = P.κ
     w_f = P.w_f
     H = P.H
     J = grid.J
 
-    I   = BicubicInterpolator(P.gridx,P.gridy,u)
+    if IT <: Nothing
+        I   = BicubicInterpolator(P.gridx,P.gridy,u)
+    elseif IT <: BivariateCHSInterpolation
+        I = P.Interpolant
+    end
 
     # w_f ← P_f u + P_b u
     _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
@@ -122,9 +126,13 @@ Computes ``P_parallel u`` and stores it in `dest`.
 """
 function _compute_w! end
 function _compute_w!(itp,dest::AT,Fplane::ParGrid,Bplane::ParGrid,nx::Int,ny::Int) where {AT}
+    @show size(dest), size(Fplane.x)
     for j in 1:ny
         for i in 1:nx
             dest[i,j] = itp(Fplane.x[i,j],Fplane.y[i,j]) + itp(Bplane.x[i,j],Bplane.y[i,j])
+            if isnan(dest[i,j])
+                @show i,j, (Fplane.x[i,j], Fplane.y[i,j]), (Bplane.x[i,j], Bplane.y[i,j])
+            end
             dest[i,j] = dest[i,j]/2
         end
     end
@@ -146,6 +154,13 @@ function _compute_w!(itp,dest::AT,plane::ParGrid) where {AT}
     end
     dest
 end
+# function _compute_w!(itp::BivariateCHSInterpolation,dest::AT,FPlane::ParGrid,BPlane::ParGrid,nx::Int,ny::Int) where AT
+#     for j in 1:ny
+#         for i in 1:nx
+#             dest[i,j] = itp()
+#         end
+#     end
+# end
 
 """
     compute_parallel_operator

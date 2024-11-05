@@ -10,7 +10,8 @@ module solvers
 
     using FaADE.Derivatives: mul!,
     innerH,
-    DerivativeOperatorType, DiffusionOperator, DiffusionOperatorND
+    DerivativeOperatorType, DiffusionOperator, DiffusionOperatorND,
+    D₁!
 
     using FaADE.Grid
     

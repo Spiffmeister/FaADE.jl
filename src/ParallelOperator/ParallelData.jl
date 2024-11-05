@@ -30,6 +30,19 @@ struct ParGridLinear{TT,AT<:AbstractArray{TT},METHOD} <: ParallelMapType
     subgrid :: Matrix{Int}
 end
 
+
+"""
+    ParGridCHS{CHSIT}
+Storage for a parallel map using the `CubicHermiteSpline` package
+"""
+struct ParGridCHS{CHSIT,AT}
+    interpolant :: CHSIT
+    x           :: AT
+    y           :: AT
+    subgrid     :: Matrix{Int}
+end
+
+
 """
     ParallelGrid{TT,DIM,AT,PA}
 Stores the current, forward and backward planes for the parallel tracing.
@@ -94,7 +107,7 @@ end
 """
     ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing,remap=nothing) where {TT}
 """
-function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing,remap=nothing) where {TT}
+function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),intercept=nothing,B=nothing,interpolant=nothing,remap=nothing,periodicy=false) where {TT}
 
     intercept_fieldlines = FieldLineIntercept(intercept)
 
@@ -125,15 +138,39 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ=TT(1),inte
         # @warn "B not provided, perpendicular solve may not be performed correctly."
     end
 
-    # if typeof(interpolant) <: Nothing
+    if typeof(interpolant) <: Nothing
         Interpolator = nothing
-    # elseif typeof(interpolant) <: Symbol
+    elseif typeof(interpolant) <: Symbol
     #     if interpolant == :bicubic
     #         Interpolator(u) = BicubicInterpolator(G.gridx,G.gridy,u)
     #     elseif interpolant == :bilinear
     #         Interpolator(u) = LinearInterpolator(G.gridx,G.gridy,u)
     #     end
-    # end
+        if interpolant == :chs
+
+            nx = G.nx
+            ny = G.ny
+
+            if periodicy
+                # gridx = TT(0):G.Δx:TT(1)
+                # gridy = TT(0):G.Δy:TT(1)
+                gridx = G.gridx[:,1:ny-1][:]
+                gridy = G.gridy[:,1:nx-1][:]
+            else
+                gridx = G.gridx[:]
+                gridy = G.gridy[:]
+            end
+
+            z = zeros(TT,length(gridx))
+            dzdx = zeros(TT,length(gridx))
+            dzdy = zeros(TT,length(gridx))
+
+            Interpolator = BivariateCHSInterpolation(gridx,gridy,z,dzdx,dzdy)
+
+            gridx = G.gridx[1:end,1]
+            gridy = G.gridy[1,1:end]
+        end
+    end
 
     ParallelData{TT,2,typeof(PGrid),typeof(gridx),typeof(MF),typeof(Interpolator)}(PGrid,κ,τ,intercept_fieldlines,Interpolator,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,u,MF,[TT(0)])
 end

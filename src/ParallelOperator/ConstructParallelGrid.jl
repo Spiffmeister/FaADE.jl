@@ -61,6 +61,8 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
         Fplane = _remap_to_linear(grid,FPlane)
 
         Pgrid = ParallelGrid{eltype(Bplane.weight11),2,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
+    # elseif interpmode == :chs
+        # Bplane = _remap_to_chs(grid,BPlane)
     else
         Pgrid = ParallelGrid{eltype(BPlane.x),2,typeof(BPlane),typeof(BPlane.x)}(BPlane,FPlane)
     end
@@ -430,6 +432,26 @@ function _inverse_bilinear_interpolation(a::Tuple{TT,TT},b,c,d,q) where TT
 
     return u,v
 end
+
+
+"""
+    _construct_chs
+Constructs the `CubicHermiteSpline` object for a single volume, does not perform point location
+"""
+function _remap_to_chs(grid::Grid2D{TT,MET},plane::ParGrid) where {TT,MET}
+    z = zeros(TT,length(plane.x))
+    dzdx = zeros(TT,length(plane.x))
+    dzdy = zeros(TT,length(plane.x))
+
+
+
+    chsinterp = BivariateCHSInterpolation(grid.gridx[:],grid.gridy[:],z,dzdx,dzdy)
+
+    chsret = ParGridCHS{typeof(chsinterp)}(chsinterp,plane.x,plane.y,ones(Int,(1,1)))
+
+    return chsret
+end
+
 
 
 """

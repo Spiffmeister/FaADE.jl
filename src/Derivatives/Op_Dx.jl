@@ -66,8 +66,9 @@ end
 """
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,α::T,dim::Integer) where T
     loopdir = _SelectLoopDirection(dim)
+    ORD = Val(order)
     for (cache,U) in zip(loopdir(uₓ),loopdir(u))
-        D₁!(cache,U,n,Δ,order,α)
+        D₁!(cache,U,n,Δ,ORD,α)
     end
     uₓ
 end

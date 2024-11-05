@@ -572,6 +572,35 @@ function applyParallelPenalties(DB::DataMultiBlock)
 end
 
 
+"""
+    Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
+"""
+function _updateCHSinterp(D::newLocalDataBlock{TT}) where TT
+    rₖ = D.rₖ
+    dₖ = D.dₖ
+
+    u = D.u
+
+    Dx = D.Derivative.DO[1]
+    Dy = D.Derivative.DO[2]
+    Interp = D.Parallel.Interpolant
+
+    # periodicx = D.Parallel.
+
+    D₁!(rₖ, u, Dx.n, Dx.Δx, Dx.order, TT(0), 1)
+    D₁!(dₖ, u, Dy.n, Dy.Δx, Dy.order, TT(0), 2)
+
+    u_resize = view(u, 1:Dx.n, 1:Dy.n-1)
+    rₖ_resize = view(rₖ, 1:Dx.n, 1:Dy.n-1)
+    dₖ_resize = view(dₖ, 1:Dx.n, 1:Dy.n-1)
+
+    for I in eachindex(Interp.z)
+        Interp.z[I] = u_resize[I]
+        Interp.dzdx[I] = rₖ_resize[I]
+        Interp.dzdy[I] = dₖ_resize[I]
+    end
+end
+
 
 function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
 

@@ -8,12 +8,14 @@ module ParallelOperator
     # using Interpolations: LinearInterpolation
     using Interpolations
     using BasicInterpolators: BicubicInterpolator, LinearInterpolator
+    using CubicHermiteSpline
 
     using LinearAlgebra: norm
 
     using FaADE.Helpers
     using FaADE.Derivatives: build_H
     using FaADE.Derivatives: MassMatrix, DiagonalH, CompositeH
+    using FaADE.Derivatives: D₁!
 
     using FaADE.Grid
 
