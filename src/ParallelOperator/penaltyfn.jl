@@ -51,7 +51,7 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
     u
 end
 
-function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt::TT,θ::TT,
+function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},t::TT,Δt::TT,θ::TT,
     P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
 
     κ = P.κ
@@ -63,13 +63,15 @@ function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},Δt:
         I   = BicubicInterpolator(P.gridx,P.gridy,u)
     elseif IT <: BivariateCHSInterpolation
         I = P.Interpolant
+        IC = P.Intercept
     end
 
     # w_f ← P_f u + P_b u
-    _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
+    _compute_w!(I,IC,w_f,P.PGrid.Fplane,P.PGrid.Bplane,t,length(P.gridx),length(P.gridy))
     
     # Tune the parallel penalty
     τ = P.τ*0.1*(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    isinf(τ) ? τ = TT(1) : nothing
     P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
 
     P.w_b[1,1] = maximum(u - w_f)
@@ -114,7 +116,6 @@ function _compute_u_curvilinear!(u::AT,w_f::AT,κ::TT,τ::TT,Δt::TT,H::Composit
                 u[i,j] + 
                 +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
                 )
-
         end
     end
     u
@@ -126,12 +127,25 @@ Computes ``P_parallel u`` and stores it in `dest`.
 """
 function _compute_w! end
 function _compute_w!(itp,dest::AT,Fplane::ParGrid,Bplane::ParGrid,nx::Int,ny::Int) where {AT}
-    @show size(dest), size(Fplane.x)
+    # @show size(dest), size(Fplane.x)
+    for j in 1:ny
+        for i in 1:nx
+            dest[i,j] = itp(Fplane.x[i,j],Fplane.y[i,j]) + itp(Bplane.x[i,j],Bplane.y[i,j])
+            # if isnan(dest[i,j])
+            #     @show i,j, (Fplane.x[i,j], Fplane.y[i,j]), (Bplane.x[i,j], Bplane.y[i,j])
+            #     dest[i,j] = zero(eltype(dest))
+            # end
+            dest[i,j] = dest[i,j]/2
+        end
+    end
+    dest
+end
+function _compute_w!(itp,itc,dest::AT,Fplane::ParGrid,Bplane::ParGrid,t::TT,nx::Int,ny::Int) where {AT,TT}
     for j in 1:ny
         for i in 1:nx
             dest[i,j] = itp(Fplane.x[i,j],Fplane.y[i,j]) + itp(Bplane.x[i,j],Bplane.y[i,j])
             if isnan(dest[i,j])
-                @show i,j, (Fplane.x[i,j], Fplane.y[i,j]), (Bplane.x[i,j], Bplane.y[i,j])
+                dest[i,j] = itc(Fplane.x[i,j],Fplane.y[i,j],t) + itc(Bplane.x[i,j],Bplane.y[i,j],t)
             end
             dest[i,j] = dest[i,j]/2
         end

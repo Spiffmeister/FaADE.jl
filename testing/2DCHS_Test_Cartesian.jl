@@ -12,19 +12,9 @@ k_perp = 1.0
 
 
 
-
-coord = :Curvilinear
-
-Rin = [3e-1]; Zin=[3e-1]
-Rout = [6e-1]; Zout=[6e-1]
-
-inner = FaADE.Grid.Torus(Rin,Zin,[1],[0])
-outer = FaADE.Grid.Torus(Rout,Zout,[1],[0])
-
 nx = ny = 41
 
-X,Y = FaADE.Grid.meshgrid(inner,outer,0.0,nx,ny)
-Dom = Grid2D(X,Y,periodicy=true)
+Dom = Grid2D([0.0,1.0],[0.0,2π],nx,ny)
 
 
 
