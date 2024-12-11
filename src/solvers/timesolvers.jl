@@ -167,12 +167,16 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     # @. uglobal[1][end,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
                     # @. uglobal[2][1,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
                     setglobalu!(uglobal,DBlock) # Circle case
+                    _setglobalu!(DBlock,uglobal) #TODO: FIX THIS FUNCTION
+                    _updateCHSinterp(DBlock) # When CHS interpolation is used
 
-                    for I in eachblock(DBlock)
+                    computeglobalw!(DBlock.Para)
+
+                    # for I in eachblock(DBlock)
                         # applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
-                        computeglobalw!(DBlock[I].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)
+                        # computeglobalw!(DBlock[I].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)
                         # applyParallelPenalty!(DBlock[I].uₙ₊₁,DBlock.SC.Δt,Par,DBlock[I].grid,I)
-                    end
+                    # end
                     τ = maximum(τglobal)
                     for I in eachblock(DBlock)
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,Par,DBlock[I].grid,I)

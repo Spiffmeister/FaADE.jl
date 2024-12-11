@@ -575,32 +575,70 @@ end
 """
     Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
 """
-function _updateCHSinterp(D::newLocalDataBlock{TT}) where TT
+function _updateCHSinterp(D::newLocalDataBlock{TT,2,COORD}) where {TT,COORD}
     rₖ = D.rₖ
     dₖ = D.dₖ
 
-    u = D.u
+    u = D.uₙ₊₁
 
     Dx = D.Derivative.DO[1]
     Dy = D.Derivative.DO[2]
     Interp = D.Parallel.Interpolant
 
-    # periodicx = D.Parallel.
+    nx = Dx.n
+    ny = Dy.n
 
-    D₁!(rₖ, u, Dx.n, Dx.Δx, Dx.order, TT(0), 1)
-    D₁!(dₖ, u, Dy.n, Dy.Δx, Dy.order, TT(0), 2)
+    D₁!(rₖ, u, nx, Dx.Δx, Dx.order, TT(0), 1)
+    D₁!(dₖ, u, ny, Dy.Δx, Dy.order, TT(0), 2)
 
-    u_resize = view(u, 1:Dx.n, 1:Dy.n-1)
-    rₖ_resize = view(rₖ, 1:Dx.n, 1:Dy.n-1)
-    dₖ_resize = view(dₖ, 1:Dx.n, 1:Dy.n-1)
+    # If the domain is periodic i.e. for a hollow torus then we have to remove
+    #   some elements
+    if nx != size(u)[1]
+        nx = Dx.n-1
+    end
+    if ny != size(u)[2]
+        ny = Dy-1
+    end
 
-    for I in eachindex(Interp.z)
-        Interp.z[I] = u_resize[I]
-        Interp.dzdx[I] = rₖ_resize[I]
-        Interp.dzdy[I] = dₖ_resize[I]
+    u_resize = view(u, 1:nx, 1:ny)
+    rₖ_resize = view(rₖ, 1:nx, 1:ny)
+    dₖ_resize = view(dₖ, 1:nx, 1:ny)
+
+    if COORD == :Constant # Cartesian coordinates do not require Jacobian
+        for I in eachindex(Interp.z)
+            Interp.z[I] = u_resize[I]
+            Interp.dzdx[I] = rₖ_resize[I]
+            Interp.dzdy[I] = dₖ_resize[I]
+        end
+    else
+        grid = D.grid #TODO: Function barrier probably required for speed/allocations
+        J = grid.J
+        J_resize = view(J, 1:nx, 1:ny)
+
+        for I in eachindex(Interp.z)
+            Interp.z[I] = u_resize[I]
+            Interp.dzdx[I] = rₖ_resize[I] / J_resize[I]
+            Interp.dzdy[I] = dₖ_resize[I] / J_resize[I]
+        end
+    end
+
+end
+function _updateCHSinterp(DB::DataMultiBlock)
+    for I in eachblock(DB)
+        _updateCHSinterp(DB[I])
     end
 end
 
+"""
+    _setglobalu!
+"""
+function _setglobalu! end
+function _setglobalu!(DB::DataMultiBlock,uglobal::Vector{AT}) where AT
+    #TODO: CURRENTLY HACKED - FIX IF CHS INTERP WORKS
+    for I in eachblock(DB)
+        DB[I].uₙ₊₁ .= uglobal[I]
+    end
+end
 
 function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
 

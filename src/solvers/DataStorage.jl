@@ -814,10 +814,12 @@ Data structure for multiblock problems
 struct DataMultiBlock{TT<:Real,
         DIM,
         NB,
-        TDBLOCK <: NTuple{NB,LocalDataBlockType}
+        TDBLOCK <: NTuple{NB,LocalDataBlockType},
+        PTBLOCK <: Union{Nothing,ParallelMultiBlock}
             } <: DataBlockType{TT,DIM}
     
     Block   :: TDBLOCK
+    ParallelData    :: PTBLOCK
     SC      :: StepConfig{TT}
     nblock  :: Int64
     parallel:: Bool
@@ -825,17 +827,17 @@ struct DataMultiBlock{TT<:Real,
     function DataMultiBlock(P::PDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = (newLocalDataBlock(P,G,SC),)
-        new{TT,DIM,1,typeof(DTA)}(DTA,SC,length(DTA),false)
+        new{TT,DIM,1,typeof(DTA),typeof(P.Parallel)}(DTA,P.Parallel,SC,length(DTA),false)
     end
     function DataMultiBlock(P::PDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
         DTA = map((x)->newLocalDataBlock(P,G,x,SC),eachgrid(G))
         DTA = tuple(DTA...)
-        new{TT,DIM,length(DTA),typeof(DTA)}(DTA,SC,length(DTA),false)
+        new{TT,DIM,length(DTA),typeof(DTA),typeof(P.Parallel)}(DTA,P.Parallel,SC,length(DTA),false)
     end
     function DataMultiBlock(D::newLocalDataBlock{TT,DIM}) where {TT,DIM} #== TESTING METHOD ==#
         DTA = (D,)
-        new{TT,DIM,1,typeof(DTA)}(DTA,D.SC,length(DTA),false)
+        new{TT,DIM,1,typeof(DTA),typeof(P.Parallel)}(DTA,P.Parallel,D.SC,length(DTA),false)
     end
 end
 

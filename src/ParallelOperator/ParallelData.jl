@@ -124,7 +124,7 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ::TT=TT(1),
                 # gridx = TT(0):G.Δx:TT(1)
                 # gridy = TT(0):G.Δy:TT(1)
                 gridx = G.gridx[:,1:ny-1][:]
-                gridy = G.gridy[:,1:nx-1][:]
+                gridy = G.gridy[:,1:ny-1][:]
             else
                 gridx = G.gridx[:]
                 gridy = G.gridy[:]
@@ -138,6 +138,8 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ::TT=TT(1),
 
             if isa(intercept,Function)
                 Intercept = intercept
+            elseif isnothing(intercept)
+                Intercept = nothing
             end
 
 
@@ -159,27 +161,56 @@ Stores the parallel data for multiblock problems.
 """
 struct ParallelMultiBlock{TT<:Real,
         DIM,
-        IT} <: ParallelGridType
+        IT,
+        CT} <: ParallelGridType
     
     PData       :: Dict{Int,ParallelData{TT,DIM}}
     uglobal     :: Vector{Matrix{TT}}
-    # u           :: Matrix{TT}
     Interpolant :: IT
+    Intercept   :: CT
+    τ           :: Vector{TT}
 end
-function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpolant=:nearest) where {TT}
+function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpopts=Dict()) where {TT}
+
+    intercept = nothing
+    interpolant = nothing
+    periodicy = false
+    B = nothing
+
+    if haskey(interpopts,"intercept")
+        intercept = interpopts["intercept"]
+    end
+    if haskey(interpopts,"interpolant")
+        interpolant = interpopts["interpolant"]
+    end
+    if haskey(interpopts,"periodicy")
+        periodicy = interpopts["periodicy"]
+    end
+    if haskey(interpopts,"B")
+        B = interpopts["B"]
+    end
+
 
     PData  = Dict{Int,ParallelData}()
     for I in eachgrid(G)
-        PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=nothing,B=nothing,interpolant=nothing)
+        PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=intercept,interpolant=interpolant,periodicy=periodicy,B=B)
     end
 
     # interpolant = [(u->LinearInterpolator(G.Grids[I].gridx,G.Grids[I].gridy,u)) for I in eachgrid(G)]
-    interpolant = :nearest
+    # interpolant = :nearest
+    if interpolant == :CHS
+        TmpInterpolant = [PData[I].Interpolant for I in eachindex(PData)]
+        intercept = Tuple(TmpInterp)
+    end
+    if isa(intercept,Function)
+        TmpIntercept = [PData[I].Intercept for I in eachindex(PData)]
+        interpolant = Tuple(TmpIntercept)
+    end
 
     uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
 
     # u = zeros(TT,size(GridMultiBlock))
-    return ParallelMultiBlock{TT,2,typeof(interpolant)}(PData,uglobal,interpolant)
+    return ParallelMultiBlock{TT,2,typeof(interpolant),typeof(intercept)}(PData,uglobal,interpolant,intercept)
 end
 
 
