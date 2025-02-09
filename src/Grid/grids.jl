@@ -351,13 +351,16 @@ function _checkjoints(G::GridMultiBlock)
 end
 
 
-# function GetBoundaryIndex(grid::Grid2D,side::NodeType)
-#     if side == Left
-#     elseif side == Right
-#     elseif side == Down
-#     elseif side == Up
-#     end
-# end
+function Base.getindex(X::Matrix{TT},::NodeType{SIDE,AX}) where {SIDE,AX}
+    SIDE == :Left ? I = 1 : I = size(x)[AX]
+    if AX == 1
+		return x[I,:]
+	elseif AX == 2
+		return x[:,I]
+	else
+		error("Does not correspond to a boundary.")
+	end
+end
 
 
 

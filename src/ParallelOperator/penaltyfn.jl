@@ -99,7 +99,7 @@ end
 """
 Applies the parallel penalty for a multiblock problem.
 """
-function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Vector{ParallelData{TT,DIM,PGT,GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,GT,BT,IT,PGT}
+function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64,ParallelData{TT,DIM}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM}
 
     κ = P[I].κ
     w_f = P[I].w_f
@@ -239,21 +239,21 @@ end
 """
 function computeglobalw! end
 
-function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},grid::GridMultiBlock,t::TT,Δt::TT) where {TT,DIM,IT,CT}
+function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT,Δt::TT) where {TT,VAT,DIM,IT,CT}
 
     Interpolant = PD.Interpolant
     Intercept = PD.Intercept
     τglobal = PD.τ
 
-
-    for I in eachindex(Ipt)
+    for I in eachindex(Interpolant)
         w_f = PD.PData[I].w_f
         PData = PD.PData[I].PGrid
-
-        computeglobalw!(Interpolant,Intercept,w_f,PData,τglobal,t,Δt,I)
+        computeglobalw!(Interpolant,Intercept,w_f,uglobal[I],PData,τglobal,t,I)
     end
+    
+    τglobal .= τglobal * PD.PData[1].τ
 end
-function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,Δt::TT,I::Int) where {AT,VT,TT,IT,CT}
+function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
 
     sgiF = PGrid.Fplane.subgrid
     sgiB = PGrid.Bplane.subgrid
@@ -266,7 +266,14 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,PGrid::ParallelGr
     for J in eachindex(w_f)
         tmpf = interpolant[sgiF[J]](nnFx[J],nnFy[J])
         tmpb = interpolant[sgiB[J]](nnBx[J],nnBy[J])
-
+        # if isnan(tmpf)
+        #     @show "aaaaaa"
+        #     @show nnFx[J], nnFy[J], sgiF[J], J
+        #     @show nnBx[J], nnBy[J], sgiB[J]
+        #     @show tmpf, tmpb
+        #     # @show interpolant[sgiF[J]].x
+        #     error("aa")
+        # end
         if !(CT == Nothing)
             tmpf = intercept[sgiF[J]](tmpf,nnFx[J],nnFy[J],t)
             tmpb = intercept[sgiB[J]](tmpb,nnBx[J],nnBy[J],t)
@@ -274,8 +281,7 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,PGrid::ParallelGr
 
         w_f[J] = (tmpf + tmpb)/2
     end
-
-    τglobal[I] = PGrid.τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τglobal[I] = 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
 
 end
 

@@ -67,7 +67,7 @@ function nearestpoint(grid::GridMultiBlock,pt::Tuple{TT,TT},indextype=:linear) w
         # Return the LinearIndex in the array
         return (grid.Grids[sgi].gridx[linind],grid.Grids[sgi].gridy[linind]), linind, sgi
     elseif indextype == :cartesian
-        # Return the i,j coordinate in the array
+        # Return the point, CartesianIndex and subgrid index
         cartind = CartesianIndices(grid.Grids[sgi].gridx)[linind]
         return (grid.Grids[sgi].gridx[linind],grid.Grids[sgi].gridy[linind]), (cartind[1],cartind[2]), sgi
     else
@@ -114,37 +114,52 @@ function findgrid(grid::GridMultiBlock{TT,2,CartesianMetric},pt::Tuple{TT,TT};mo
         error("Point $(pt) is not in any grid")
     end
 end
+"""
+`findgrid` for multiblock problems with Curvilinear coordinates.
+"""
 function findgrid(grid::GridMultiBlock{TT,DIM,CurvilinearMetric},pt::Tuple{TT,TT};mode=:inside) where {TT,DIM}
+    
+    _, (i,j), sgi = nearestpoint(grid,pt,:cartesian) #return CartesianIndex
+    
 
-    _, (i,j), sgi = nearestpoint(grid,pt,:cartesian)
-    
-    
-    subgrid = grid.Grids[sgi]
+    subgrid = grid.Grids[sgi] #Pick out the Grid
 
     # If the grid point is near the boundary we have to be careful
     if (i == 1) || (i == subgrid.nx) || (j == 1) || (j == subgrid.ny)
-        try
-            findcell(subgrid,pt)
-        catch
+        i, j = findcell(subgrid,pt)
+        
+        if i == j == -1
+
             joints = grid.Joint[sgi]
 
             dist = TT(1e10)
-            for joint in joints # this will correct most instances
-                newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
-                if dist > norm(newpt .- pt)
-                    dist = norm(newpt .- pt)
+            # this will correct most instances
+            for joint in joints # Loop over this blocks joints to find the neighbours
+                
+                # newpt,newind = nearestpoint(grid.Grids[joint.index],pt)
+                
+                i,j = findcell(grid.Grids[joint.index],pt)
+                
+                if !(i == j == -1)
                     sgi = joint.index
+                    break
                 end
+
             end
+        
+        end
 
-            # It possible that the grid point lies outside the domain entirely
-            # in this case we should move it to the nearest boundary node
-            # subgrid = grid.Grids[sgi]
-            # try
-            #     findcell(subgrid,pt)
-            # catch
-            # end
+        # It possible that the grid point lies outside the domain entirely
+        # in this case we should move it to the nearest boundary node
+        # subgrid = grid.Grids[sgi]
+        # try
+        #     findcell(subgrid,pt)
+        # catch
+        # end
 
+        # if the point is outside of the domain, flag it as out of bounds
+        if (i == j == -1)
+            sgi = -1
         end
         # xside = 0
         # for ii in 1:subgrid.nx-1
@@ -161,7 +176,9 @@ function findgrid(grid::GridMultiBlock{TT,DIM,CurvilinearMetric},pt::Tuple{TT,TT
         #     @show "fuck"
         # end
     end
-
+    # if (pt[1] ≈ 0.24451026416330812) & (pt[2] ≈ 0.255555498015997)
+        # @show sgi
+    # end
 
     return sgi
 end
@@ -171,14 +188,13 @@ end
 
 """
     findcell(grid::GridMultiBlock,pt::Tuple{TT,TT})
-Find which cell bounds the point
+Find which cell bounds the point by first finding the nearest point.
 """
 function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,DIM,MET}
 
     ix = 0
     jy = 0
     subgridindex = 0
-
 
     # Find the nearest point in the grid
     if MET == CartesianMetric
@@ -237,14 +253,15 @@ function findcell(grid::GridMultiBlock{TT,DIM,MET},pt::Tuple{TT,TT}) where {TT,D
     end
 
     if ix == iy == 0
-
+        # ix = jy = -1
     end
 
     return ix, jy, subgridindex
 end
 
 """
-    findcell(grid::Grid2D,pt::Tuple{TT,TT}) where {TT}
+    findcell(grid::Grid2D,pt::Tuple{TT,TT},inds=(0,0)) where {TT}
+Find which cell the point belongs too if the nearest point is provided with the `inds` input
 """
 function findcell(grid::Grid2D,pt::Tuple{TT,TT},inds=(0,0)) where {TT}
 
@@ -318,7 +335,8 @@ function findcell(grid::Grid2D,pt::Tuple{TT,TT},inds=(0,0)) where {TT}
             ix = i
             jy = j
         else
-            error("Point $(pt) is not in any cell.")
+            # error("Point $(pt) is not in any cell.")
+            ix = jy = -1
         end
     end
 
@@ -360,4 +378,8 @@ function _checkside(a,b,c)
 end
 
 
+
+
+function _findsegment(grid::Grid2D,pt::Tuple{TT,TT}) where TT
+end
 

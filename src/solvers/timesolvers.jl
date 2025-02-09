@@ -123,9 +123,9 @@ end
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
 
     if typeof(G) <: LocalGridType
-        uglobal = [zeros(size(G))] # TESTING
-        τglobal = zeros(length(uglobal))
-        Par = [DBlock[1].Parallel]
+        # uglobal = [zeros(size(G))] # TESTING
+        # τglobal = zeros(length(uglobal))
+        # Par = [DBlock[1].Parallel]
 
     else
         uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
@@ -150,7 +150,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         theta_method(DBlock,t,Δt)
 
-        if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
+        if DBlock.SC.converged | !solverconfig.adaptive #If perpendicular push converged
             if solverconfig.parallel
                 if typeof(G) <: LocalGridType
                     _updateCHSinterp(DBlock[1])
@@ -170,16 +170,18 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     _setglobalu!(DBlock,uglobal) #TODO: FIX THIS FUNCTION
                     _updateCHSinterp(DBlock) # When CHS interpolation is used
 
-                    computeglobalw!(DBlock.Para)
+                    computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
 
                     # for I in eachblock(DBlock)
                         # applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
                         # computeglobalw!(DBlock[I].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)
                         # applyParallelPenalty!(DBlock[I].uₙ₊₁,DBlock.SC.Δt,Par,DBlock[I].grid,I)
                     # end
-                    τ = maximum(τglobal)
+                    # @show τglobal
+                    # τ = maximum(τglobal)
+                    τ = maximum(DBlock.ParallelData.τ)
                     for I in eachblock(DBlock)
-                        applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,Par,DBlock[I].grid,I)
+                        applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
                     end
                 end
             end

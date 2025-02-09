@@ -10,7 +10,7 @@ k_para = 1.0e6
 k_perp = 1.0
 
 
-nx = ny = 21
+nx = ny = 41
 
 
 
@@ -94,15 +94,20 @@ Dom = GridMultiBlock((D1,D2,D3,D4,D5),joints)
 # S = nothing
 
 u₀(x,y) = 0.0
-S = nothing
+# S = nothing
+
+S(X,t) = begin # with forcing term from Chacón paper
+    x,y = X
+    4 * (1 - (x^2 + y^2))^8
+end
 
 Bxy(X,t) = 0.0
 
 
-Dr = FaADE.SATs.SAT_Dirichlet(Bxy, D2.Δy, Up, order, D2.Δx, :Curvilinear) # Block 2 BCs
-Du = FaADE.SATs.SAT_Dirichlet(Bxy, D3.Δy, Up, order, D3.Δx, :Curvilinear) # Block 3 BCs
-Dl = FaADE.SATs.SAT_Dirichlet(Bxy, D4.Δy, Up, order, D4.Δx, :Curvilinear) # Block 4 BCs
-Dd = FaADE.SATs.SAT_Dirichlet(Bxy, D5.Δy, Up, order, D5.Δx, :Curvilinear) # Block 5 BCs
+Dr = SAT_Dirichlet(Bxy, D2.Δy, Up, order, D2.Δx, :Curvilinear) # Block 2 BCs
+Du = SAT_Dirichlet(Bxy, D3.Δy, Up, order, D3.Δx, :Curvilinear) # Block 3 BCs
+Dl = SAT_Dirichlet(Bxy, D4.Δy, Up, order, D4.Δx, :Curvilinear) # Block 4 BCs
+Dd = SAT_Dirichlet(Bxy, D5.Δy, Up, order, D5.Δx, :Curvilinear) # Block 5 BCs
 
 BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 
@@ -116,7 +121,7 @@ BD = Dict(2 => (Dr,), 3 => (Du,), 4 => (Dl,), 5 => (Dd,))
 # Magnetic field
 
 δ = 0.05
-rs = 0.5
+rs = 0.7
 function B(X,x::Array{Float64},params,t)
     X[1] = δ*x[1]*(1-x[1])*sin(x[2])#/bn
     X[2] = (2x[1] - 2*rs + δ*(1-x[1])*cos(x[2]) - δ*x[1]*cos(x[2]))#/bn
@@ -149,10 +154,10 @@ PData = FaADE.ParallelOperator.ParallelMultiBlock(gdata,Dom,order,κ=k_para,inte
 
 println("Solve")
 
-P = Problem2D(order,u₀,k_perp,k_perp,Dom,BD,parallel=PData)
+P = Problem2D(order,u₀,k_perp,k_perp,Dom,BD,parallel=PData,source=S)
 
 soln = solve(P, Dom, Δt, 1.1Δt)
-# soln = solve(P, Dom, Δt, t_f)
+soln = solve(P, Dom, Δt, t_f)
 
 
 
@@ -161,7 +166,7 @@ soln = solve(P, Dom, Δt, 1.1Δt)
 println("Poincare")
 
 include("../../BADESBP_examples/FieldLines.jl")
-poindata = FieldLines.construct_poincare(B,[0.3,0.6],[0.0,π],N_trajs=200,N_orbs=400)
+poindata = FieldLines.construct_poincare(B,[0.0,1.0],[0.0,π],N_trajs=200,N_orbs=400)
 poinrtheta = hcat([BtoX(poindata.ψ[I],poindata.θ[I]) for I in eachindex(poindata.ψ)]...)
 
 
@@ -170,7 +175,38 @@ println("Plotting")
 using GLMakie
 f = Figure()
 ax = Axis3(f[1,1])
-wireframe!(ax,Dom.gridx,Dom.gridy,soln.u[2])
-scatter!(ax,poinrtheta[1,:],poinrtheta[2,:],zeros(size(poinrtheta)[2]).-1,markersize=2.5,color=:red)
+for I in eachindex(Dom.Grids)
+    wireframe!(ax,Dom.Grids[I].gridx,Dom.Grids[I].gridy,soln.u[2][I])
+end
+scatter!(ax,poinrtheta[1,:],poinrtheta[2,:],zeros(size(poinrtheta)[2]),markersize=2.5,color=:red)
+
+
+
+
+
+hind = Int(floor(nx/2)+1)
+
+h = Figure()
+axh = Axis(h[1,1])
+lines!(axh,Dom.Grids[4].gridx[hind,:],soln.u[2][5][hind,:])
+lines!(axh,Dom.Grids[1].gridx[:,hind],soln.u[2][1][:,hind])
+
+
+
+#=
+
+
+using GLMakie
+
+g = Figure()
+axg = Axis(g[1,1])
+for I in eachindex(Dom.Grids)
+    wireframe!(axg,Dom.Grids[I].gridx,Dom.Grids[I].gridy,soln.u[2][I])
+end
+scatter!(axg,[0.7071067811865477],[0.7071067811865476],color=:red)
+g
+
+
+=#
 
 
