@@ -69,8 +69,8 @@ end
 """
 Move interface data from `getproperty(DataBlock,source)` into internal buffers `DataBlock.InterfaceBoundaryData.BufferIn`
 """
-function _filllocalBuffer(source::Symbol,B::BoundaryData,D::newLocalDataBlock) end
-function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Periodic}
+function _filllocalBuffer(source::Symbol,B::BoundaryData,D::LocalDataBlock) end
+function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Periodic}
     cache = getarray(D,source)
     BufferIn = B.BufferIn
 
@@ -90,7 +90,7 @@ end
 """
 Fill `InterfaceBoundaryData.BufferOut` with data from this block for sending to `InterfaceBoundaryData.BufferIn`
 """
-function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Interface}
+function _filllocalBuffer(source::Symbol,B::InterfaceBoundaryData{TT,DIM,BCT},D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Interface}
     cache = getproperty(D,source)
     K = getproperty(D,:K)
     SAT = B.BoundaryOperator
@@ -108,7 +108,7 @@ end
 """
 Loops over all `DataBlock.boundary` objects in a single `DataBlock`
 """
-function _fillLocalBuffers(source::Symbol,D::newLocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
+function _fillLocalBuffers(source::Symbol,D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
     _filllocalBuffer(source,D.boundary[Left],D)
     _filllocalBuffer(source,D.boundary[Right],D)
     if DIM == 2
@@ -305,11 +305,11 @@ end
 Solution and Data modes
 """
 function applySATs end
-function applySATs(dest::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #data mode
+function applySATs(dest::VT,D::LocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #data mode
     applyCartesianSAT!(D.boundary[Left],  dest, D.K, mode)
     applyCartesianSAT!(D.boundary[Right],  dest, D.K, mode)
 end
-function applySATs(dest::VT,source::VT,D::newLocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #solution mode
+function applySATs(dest::VT,source::VT,D::LocalDataBlock{TT,1,MET,VT},mode) where {TT,VT<:Vector{TT},MET} #solution mode
     applyCartesianSAT!(D.boundary[Left],  dest, source, D.K, mode)
     applyCartesianSAT!(D.boundary[Right],  dest, source, D.K, mode)
 end
@@ -317,26 +317,26 @@ end
     applySATs
 applySATs for 2D local block
 """
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #data mode
+function applySATs(dest::AT,D::LocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #data mode
     applyCurvilinearSAT!(D.boundary[Left],  dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Right], dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Up],    dest, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Down],  dest, D.K, mode)
 end
-function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #solution mode
+function applySATs(dest::AT,source::AT,D::LocalDataBlock{TT,2,:Variable,AT},mode) where {TT,AT} #solution mode
     applyCurvilinearSAT!(D.boundary[Left],  dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Right], dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Up],    dest, source, D.K, mode)
     applyCurvilinearSAT!(D.boundary[Down],  dest, source, D.K, mode)
 end
 
-function applySATs(dest::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #data mode
+function applySATs(dest::AT,D::LocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #data mode
     applyCartesianSAT!(D.boundary[Left],    dest, D.K[1], mode)
     applyCartesianSAT!(D.boundary[Right],   dest, D.K[1], mode)
     applyCartesianSAT!(D.boundary[Up],      dest, D.K[2], mode)
     applyCartesianSAT!(D.boundary[Down],    dest, D.K[2], mode)
 end
-function applySATs(dest::AT,source::AT,D::newLocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #solution mode
+function applySATs(dest::AT,source::AT,D::LocalDataBlock{TT,2,:Constant,AT},mode) where {TT,AT} #solution mode
     applyCartesianSAT!(D.boundary[Left],    dest, source, D.K[1], mode)
     applyCartesianSAT!(D.boundary[Right],   dest, source, D.K[1], mode)
     applyCartesianSAT!(D.boundary[Up],      dest, source, D.K[2], mode)
@@ -346,7 +346,7 @@ end
 
 
 
-function applyCurvilinearSATs(dest::AT,D::newLocalDataBlock{TT,2,COORD,AT},mode) where {TT,COORD,AT}
+function applyCurvilinearSATs(dest::AT,D::LocalDataBlock{TT,2,COORD,AT},mode) where {TT,COORD,AT}
     applySAT!(D.boundary[Left], dest,   source, D.K[1], D.K[3], mode)
     applySAT!(D.boundary[Right],dest,   source, D.K[1], D.K[3], mode)
     applySAT!(D.boundary[Up],   dest,   source, D.K[2], D.K[3], mode)
@@ -400,15 +400,15 @@ end
     # end
 end
 """
-    setDiffusionCoefficient!(D::newLocalDataBlock{TT,1})
+    setDiffusionCoefficient!(D::LocalDataBlock{TT,1})
 Set diffusion coefficient for 1D grids
 """
-setDiffusionCoefficient!(D::newLocalDataBlock{TT,1}) where TT = setDiffusionCoefficient!(D.κ,D.K,D.grid)
+setDiffusionCoefficient!(D::LocalDataBlock{TT,1}) where TT = setDiffusionCoefficient!(D.κ,D.K,D.grid)
 """
-    setDiffusionCoefficient!(D::newLocalDataBlock{TT,2})
+    setDiffusionCoefficient!(D::LocalDataBlock{TT,2})
 Set diffusion coefficient for 2D grids
 """
-function setDiffusionCoefficient!(D::newLocalDataBlock{TT,2}) where TT
+function setDiffusionCoefficient!(D::LocalDataBlock{TT,2}) where TT
     setDiffusionCoefficient!(D.κ[1],D.K[1],D.grid)
     setDiffusionCoefficient!(D.κ[2],D.K[2],D.grid)
     # for i in eachdim(DIM)
@@ -465,7 +465,7 @@ multiply-add for multiblock problems
 @inline function muladd!(dest::AT,source::AT,α::TT,β::TT) where {TT,AT<:AbstractArray{TT}}
     @. dest = α*dest + β*source
 end
-function muladd!(dest::Symbol,source::Symbol,D::newLocalDataBlock,α,β)
+function muladd!(dest::Symbol,source::Symbol,D::LocalDataBlock,α,β)
     W = getarray(D,dest)
     R = getarray(D,source)
     @. W = α*W + β*R
@@ -483,7 +483,7 @@ end
 function setValue(dest::AT,source::AT,α::TT) where {TT<:Real,AT<:AbstractArray{TT}}
     @. dest = α*source
 end
-function setValue(dest::Symbol,source::Symbol,D::newLocalDataBlock,α)
+function setValue(dest::Symbol,source::Symbol,D::LocalDataBlock,α)
     W = getarray(D,dest)
     R = getarray(D,source)
     @. W = α*R
@@ -501,14 +501,14 @@ end
 """
 innerprod(u::AT,v::AT,IP::innerH{TT}) where {TT,AT<:AbstractArray{TT}} = IP(u,v)
 innerprod(u::AT,J::AT,v::AT,IP::innerH{TT}) where {TT,AT<:AbstractArray{TT}} = IP(u,J,v)
-function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT,DIM,:Constant}) :: TT where {TT,DIM}
+function innerprod(u::Symbol,v::Symbol,D::LocalDataBlock{TT,DIM,:Constant}) :: TT where {TT,DIM}
     V = getarray(D,v)
     U = getarray(D,u)
     IP = getproperty(D,:innerprod)
     ret = innerprod(U,V,IP)
     return ret
 end
-function innerprod(u::Symbol,v::Symbol,D::newLocalDataBlock{TT,DIM,:Variable}) :: TT where {TT,DIM}
+function innerprod(u::Symbol,v::Symbol,D::LocalDataBlock{TT,DIM,:Variable}) :: TT where {TT,DIM}
     V = getarray(D,v)
     U = getarray(D,u)
     IP = getproperty(D,:innerprod)
@@ -529,7 +529,7 @@ end
 """
     copyto!
 """
-@inline function Base.copyto!(dest::Symbol,source::Symbol,D::newLocalDataBlock)
+@inline function Base.copyto!(dest::Symbol,source::Symbol,D::LocalDataBlock)
     d = getarray(D,dest)
     s = getarray(D,source)
     copyto!(d,s)
@@ -549,7 +549,7 @@ end
 """
 Compute relative error
 """
-function relerr(D::newLocalDataBlock{TT}) where {TT}
+function relerr(D::LocalDataBlock{TT}) where {TT}
     u = getarray(D,:u)
     v = getarray(D,:uₙ₊₁)
     cache = getarray(D,:cache)
@@ -561,7 +561,7 @@ end
 """
     applyParallelPenalty
 """
-@inline applyParallelPenalty(D::newLocalDataBlock) = applyParallelPenalty!(D.uₙ₊₁,D.u,D.SC.Δt,D.PGrid)
+@inline applyParallelPenalty(D::LocalDataBlock) = applyParallelPenalty!(D.uₙ₊₁,D.u,D.SC.Δt,D.PGrid)
 """
     applyParallelPenalties
 """
@@ -575,7 +575,7 @@ end
 """
     Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
 """
-function _updateCHSinterp(D::newLocalDataBlock{TT,2,COORD}) where {TT,COORD}
+function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD}) where {TT,COORD}
     rₖ = D.rₖ
     dₖ = D.dₖ
 
@@ -640,12 +640,17 @@ function _setglobalu!(DB::DataMultiBlock,uglobal::Vector{AT}) where AT
     end
 end
 
+"""
+    setglobalu!
+
+"""
 function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
 
     for I in eachblock(DB)
         uglobal[I] .= getarray(DB[I],:uₙ₊₁)
     end
 
+    # Hardcoded for the circle
     for I in eachblock(DB)
         if I == 1
             ug = uglobal[I]
@@ -660,7 +665,7 @@ function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
             ug[end,:]   .= (uglobal[5][1,:]     + ug[end,:])/2
         elseif I == 3
             ug = uglobal[I]
-            ug[:,1]   .= (uglobal[1][end,:] + ug[:,1])/2
+            ug[:,1]     .= (uglobal[1][end,:] + ug[:,1])/2
             ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
             ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
         elseif I == 4
@@ -672,10 +677,29 @@ function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
             ug = uglobal[I]
             ug[:,1]     .= (uglobal[1][1,:] + ug[:,1])/2
             ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
-            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
+            ug[end,:]   .= (uglobal[2][end,:] + ug[end,:])/2
         end
     end
 
 end
 
+function _average_boundaries(uglobal::Vector{AT},B::InterfaceBoundaryData) where AT
+    # We will have to first store the boundaries then pull them to average
+    #   otherwise we will run into issues with doubling up the 1/2.
+    # Each boundary object has an outgoing and incoming buffer once all the buffers are
+    #   traded we just need to grab a `uglobal` block and the `u` block and average the
+    #   buffers. This should work for any boundary configuration.
+    # The current `setglobalu!` may be incorrect
+    Myjoint = B.OutgoingJoint
+    Tojoint = B.IncomingJoint
 
+    myu = @view uglobal[Myjoint.index][Myjoint.side]
+    tojoint = @view uglobal[Tojoint.index][Tojoint.side]
+
+    
+
+end
+
+function _average_boundary_data(u,)
+    u[]
+end

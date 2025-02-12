@@ -29,7 +29,7 @@ P = newProblem1D(order,u₀,K,Dom,BD,nothing,nothing)
 
 SC = FaADE.solvers.StepConfig{Float64}()
 
-FaADE.solvers.newLocalDataBlock(P,Dom,SC)
+FaADE.solvers.LocalDataBlock(P,Dom,SC)
 
 
 
@@ -41,7 +41,7 @@ FaADE.solvers.newLocalDataBlock(P,Dom,SC)
 
 
 ##======##
-# newLocalDataBlock
+# LocalDataBlock
 ##======##
 
 

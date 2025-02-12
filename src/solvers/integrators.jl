@@ -93,7 +93,7 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     tmp
 end
 
-function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
+function A!(read::Symbol,D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
     # Compute the derivatives
     W = getarray(D,:cache)
     R = getarray(D,read)
@@ -118,7 +118,7 @@ function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
 end
 
 
-function CGRHS!(D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
+function CGRHS!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
     # Compute the derivatives
     cache = getarray(D,:cache)
     b = getarray(D,:b)
@@ -172,7 +172,7 @@ end
 
 
 
-function testA!(read::Symbol,D::newLocalDataBlock)
+function testA!(read::Symbol,D::LocalDataBlock)
     #uses whatever is stored in K[1] as the A operator
     R = getarray(D,read)
     D.cache = D.K*R

@@ -31,7 +31,7 @@ println("TESTS")
 
 @testset "small identity map" begin
     K = diagm(10,10,ones(10))
-    D = FaADE.solvers.newLocalDataBlock(P,Dom,SC,K)
+    D = FaADE.solvers.LocalDataBlock(P,Dom,SC,K)
     DB = FaADE.solvers.DataMultiBlock(D)
 
     DB[1].b = b
@@ -50,7 +50,7 @@ end
     K = rand(10,10)
     K = K*K' + I
     @testset "small random matrix with exact solution" begin
-        D = FaADE.solvers.newLocalDataBlock(P,Dom,SC,K)
+        D = FaADE.solvers.LocalDataBlock(P,Dom,SC,K)
         DB = FaADE.solvers.DataMultiBlock(D)
 
         DB[1].b = b
@@ -65,7 +65,7 @@ end
     end
 
     @testset "small random matrix zero guess" begin
-        D = FaADE.solvers.newLocalDataBlock(P,Dom,SC,K)
+        D = FaADE.solvers.LocalDataBlock(P,Dom,SC,K)
         DB = FaADE.solvers.DataMultiBlock(D)
 
         DB[1].b = b

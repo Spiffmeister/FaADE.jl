@@ -53,7 +53,7 @@ end
 """
 Parallel penalty for single block problems
 """
-function applyParallelPenalty!(u::AbstractArray{TT},u₀::AbstractArray{TT},t::TT,Δt::TT,θ::TT,
+function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
     P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
 
     κ = P.κ

@@ -573,9 +573,9 @@ end
 
 
 """
-    _newLocalDataBlockBlocks build all necessary blocks for a local data block
+    _LocalDataBlockBlocks build all necessary blocks for a local data block
 """
-function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {TT,DIM,MET,PT}
+function _LocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {TT,DIM,MET,PT}
     u       = zeros(TT,size(G))
     uₙ₊₁    = zeros(TT,size(G))
     if DIM == 1
@@ -604,10 +604,10 @@ function _newLocalDataBlockBlocks(G::LocalGridType{TT,DIM,MET},Para::PT) where {
     return u, uₙ₊₁, K , cache, rₖ, dₖ, b
 end
 """
-    newLocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT}
+    LocalDataBlock{TT,DIM,AT,KT,DCT,GT,BT,DT}
 Contains the data for a local block
 """
-mutable struct newLocalDataBlock{TT<:Real,
+mutable struct LocalDataBlock{TT<:Real,
         DIM,    # Dimension
         COORD,  # Coordinate type
         AT  <: AbstractArray{TT},
@@ -644,12 +644,12 @@ mutable struct newLocalDataBlock{TT<:Real,
     SC          :: StepConfig{TT}
 end
 """
-    newLocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType) where {TT}
+    LocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType) where {TT}
 Initialise a data block for a 1D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
+function LocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
 
@@ -671,13 +671,13 @@ function newLocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) 
     PMap = P.Parallel
     source = P.source
 
-    return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return LocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
+    LocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer) where {TT}
 Initialise a data block for a 1D multiblock problem
 """
-function newLocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::StepConfig) where {TT}
+function LocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::StepConfig) where {TT}
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G.Grids[I])
 
     K = zeros(TT,size(G.Grids[I]))
@@ -702,15 +702,15 @@ function newLocalDataBlock(P::PDEProblem{TT,1},G::GridMultiBlock,I::Integer,SC::
     D = DiffusionOperator(G.Grids[I].n,G.Grids[I].Δx,P.order,false,:Constant)
     source = P.source
 
-    return newLocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
+    return LocalDataBlock{TT,1,:Constant,typeof(u),typeof(K),typeof(P.K),typeof(G.Grids[I]),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K, P.K, G.Grids[I], BS, D,source,PMap, IP, cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType) where {TT}
+    LocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType) where {TT}
 Initialise a data block for a 2D problem with only 1 grid.
 
     *THIS METHOD IS PRIMARILY FOR TESTING*
 """
-function newLocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
+function LocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType,SC::StepConfig) where {TT}
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(G)
     
@@ -737,13 +737,13 @@ function newLocalDataBlock(P::PDEProblem{TT,2},G::LocalGridType,SC::StepConfig) 
     PMap = P.Parallel
     source = P.source
 
-    return newLocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return LocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(G),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,G,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 """
-    newLocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock,I::Integer)
+    LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock,I::Integer)
 Initialise a data block for a 2D multiblock problem
 """
-function newLocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer,SC::StepConfig) where {TT,MET}
+function LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integer,SC::StepConfig) where {TT,MET}
     LG = G.Grids[I]
 
     u, uₙ₊₁, cache, rₖ, dₖ, b = _BuildGenericLocalDataBlocks(LG)
@@ -787,19 +787,19 @@ function newLocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::In
 
     source = P.source
 
-    return newLocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
+    return LocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end
 
 
 """
-    getproperty(D::newLocalDataBlock,s::Symbol)
+    getproperty(D::LocalDataBlock,s::Symbol)
 """
-@inline function Base.getproperty(D::newLocalDataBlock,s::Symbol)
+@inline function Base.getproperty(D::LocalDataBlock,s::Symbol)
     rt = getfield(D,s)
     return rt :: typeof(rt)
 end
 """
-    getarray(D::newLocalDataBlock,s::Symbol)
+    getarray(D::LocalDataBlock,s::Symbol)
 Type stable getfield for arrays
 """
 @inline function getarray(D::LocalDataBlockType{TT,DIM,AT},s::Symbol) where {TT,DIM,AT}
@@ -826,16 +826,16 @@ struct DataMultiBlock{TT<:Real,
 
     function DataMultiBlock(P::PDEProblem{TT,DIM},G::LocalGridType{TT},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
-        DTA = (newLocalDataBlock(P,G,SC),)
+        DTA = (LocalDataBlock(P,G,SC),)
         new{TT,DIM,1,typeof(DTA),Nothing}(DTA,nothing,SC,length(DTA),false)
     end
     function DataMultiBlock(P::PDEProblem{TT,DIM},G::GridMultiBlock{TT,DIM},Δt::TT,t::TT;θ=TT(1)) where {TT,DIM}
         SC = StepConfig{TT}(t,Δt,θ)
-        DTA = map((x)->newLocalDataBlock(P,G,x,SC),eachgrid(G))
+        DTA = map((x)->LocalDataBlock(P,G,x,SC),eachgrid(G))
         DTA = tuple(DTA...)
         new{TT,DIM,length(DTA),typeof(DTA),typeof(P.Parallel)}(DTA,P.Parallel,SC,length(DTA),false)
     end
-    function DataMultiBlock(D::newLocalDataBlock{TT,DIM}) where {TT,DIM} #== TESTING METHOD ==#
+    function DataMultiBlock(D::LocalDataBlock{TT,DIM}) where {TT,DIM} #== TESTING METHOD ==#
         DTA = (D,)
         new{TT,DIM,1,typeof(DTA),typeof(P.Parallel)}(DTA,P.Parallel,D.SC,length(DTA),false)
     end
@@ -869,4 +869,4 @@ function collectΔu(DB::DataMultiBlock{TT}) where TT
         DB.SC.Δu += DB[i].SC.Δu
     end
 end
-function collectΔu(D::newLocalDataBlock) end
+function collectΔu(D::LocalDataBlock) end
