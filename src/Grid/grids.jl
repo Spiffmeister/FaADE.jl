@@ -351,7 +351,10 @@ function _checkjoints(G::GridMultiBlock)
 end
 
 
-function Base.getindex(X::Matrix{TT},::NodeType{SIDE,AX}) where {SIDE,AX}
+"""
+Used to index the side of a matrix for multi-block problems using a `joint` from the grid.
+"""
+function Base.getindex(x::Matrix,::NodeType{SIDE,AX}) where {SIDE,AX}
     SIDE == :Left ? I = 1 : I = size(x)[AX]
     if AX == 1
 		return x[I,:]

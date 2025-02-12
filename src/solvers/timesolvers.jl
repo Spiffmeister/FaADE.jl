@@ -154,7 +154,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if solverconfig.parallel
                 if typeof(G) <: LocalGridType
                     _updateCHSinterp(DBlock[1])
-                    applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.t,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
+                    applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
 
                     # uglobal[1] .= DBlock[1].uₙ₊₁ # TESTING
                     # computeglobalw!(DBlock[1].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[1].grid,1)
