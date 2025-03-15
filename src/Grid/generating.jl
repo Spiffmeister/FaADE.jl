@@ -16,12 +16,11 @@ end
 
 
 
-
+function meshgrid end
 """
-    meshgrid(S,TT,nx,ny)
 Generates the 2D grid of `nx` and `ny` points in a domain given a set of functions which bound a domain.
 """
-function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
+function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int;stretchu=u->u,stretchv=v->v)
     # TT = Float64
 
     u = LinRange(TT(0),TT(1),nx)
@@ -29,15 +28,13 @@ function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Fu
 
     S(u,v) = coordinate(cbottom,cleft,cright,ctop,u,v)
 
-    
-    
     X = zeros(nx,ny)
     Y = zeros(nx,ny)
 
     for j = 1:ny
         for i = 1:nx
             # println(S(u[i],v[j])," ",u[i],",",v[j])
-            coord = S(u[i],v[j])
+            coord = S(stretchu(u[i]),stretchv(v[j]))
             X[i,j] = coord[1]
             Y[i,j] = coord[2]
         end
@@ -48,7 +45,7 @@ end
     meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
 Construct a grid of `nx` by `ny` points in a domain bounded by the functions `cbottom`, `cleft`, `cright`, and `ctop`.
 """
-meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int) = meshgrid(Float64,cbottom,cleft,cright,ctop,nx,ny)
+meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int;stretchu=u->u,stretchv=u->u) = meshgrid(Float64,cbottom,cleft,cright,ctop,nx,ny,stretchu=stretchu,stretchv=stretchv)
 """
     meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
 Generate matrix of coordinates from vectors of coordinates this is useful for packed grids.

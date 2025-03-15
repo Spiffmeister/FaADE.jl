@@ -240,7 +240,8 @@ function SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interfa
     end
 
     # τ₀ K_{qr}D_r u
-    D₁!(DEST,C,SRC,m,SI.Δy,Val(SI.order),TT(1))
+    # ord = Val(SI.order)
+    D₁!(DEST,C,SRC,m,SI.Δy,SI.order,TT(1))
     # (K_{qr}D_r)^T (u⁺ - u⁻)
     FirstDerivativeTranspose!(DEST,BUFF,Cr,m,SI.Δy,SI.order,TT(1))
     
@@ -307,7 +308,7 @@ function SAT_Interface_cache!(dest::AT,u::AT,c::AT,cxy::AT,SI::SAT_Interface{TN,
 
     # Don't compute D^T_{qr} here
     # FirstDerivativeTranspose!(DEST,SRC,C,m,SI.Δy,SI.order,TT(1))
-    D₁!(DEST,C,SRC,m,SI.Δy,Val(SI.order),TT(1))
+    D₁!(DEST,C,SRC,m,SI.Δy,SI.order,TT(1))
 
     dest
 end

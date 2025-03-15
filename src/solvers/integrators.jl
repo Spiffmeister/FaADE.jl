@@ -1,32 +1,3 @@
-#=
-"""
-    (RK::ExplicitBlock{T,N,4})
-RK4 integrator
-"""
-function (RK::ExplicitBlock{T,N,AT,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
-    
-    DBlock.uₙ₊₁ .= DBlock.u
-
-    RHS(RK.k1,DBlock.u,         DBlock.K,t)
-    RHS(RK.k2,DBlock.u+0.5RK.k1,DBlock.K,t+0.5RK.Δt)
-    RHS(RK.k3,DBlock.u+0.5RK.k2,DBlock.K,t+0.5RK.Δt)
-    RHS(RK.k4,DBlock.u+RK.k3,   DBlock.K,t+RK.Δt)
-    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
-end
-"""
-    (ForwardEuler::ExplicitBlock{T,N,1})
-Forward Euler integrator
-"""
-function (ForwardEuler::ExplicitBlock{T,N,AT,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
-    
-    DBlock.uₙ₊₁ .= DBlock.u
-
-    RHS(RK.k1,DBlock.u,DBlock.K,t)
-    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt*RK.k1
-
-end
-=#
-
 
 """
     conj_grad!

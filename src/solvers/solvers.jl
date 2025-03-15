@@ -24,11 +24,10 @@ module solvers
 
     using FaADE.ParallelOperator: ParallelGrid, ParallelMultiBlock, ParallelData, applyParallelPenalty!, compute_parallel_operator, computeglobalw!
 
-    using FaADE.Inputs: PDEProblem, Problem1D, Problem2D#, 
+    using FaADE.Inputs: PDEProblem, Problem1D, Problem2D
 
     
     include("DataStorage.jl")
-    include("IntegeratorData.jl")
     include("SettingValues.jl")
     include("solution.jl")
     include("integrators.jl")

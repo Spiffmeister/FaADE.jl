@@ -48,7 +48,7 @@ function BoundaryData(G::Grid1D{TT},BC,order::Int64) where {TT}
 
     BoundaryData{TT,1,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,[TT(0)],1,1)
 end
-function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,order::Int64) where {TT}
+function BoundaryData(G::Grid2D{TT,COORD},BC,order::Int64) where {TT,COORD}
 
     # Store the boundary points and generate buffers for storing RHS
     if BC.side ∈ [Left,Right]
@@ -62,20 +62,20 @@ function BoundaryData(G::Grid2D{TT,CartesianMetric},BC,order::Int64) where {TT}
     X = GetBoundaryCoordinates(G,BC.side)
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
-function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT}
+# function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT}
 
-    # Store the boundary points and generate buffers for storing RHS
-    if BC.side ∈ [Left,Right]
-        n = G.ny
-        BufferRHS = zeros(TT,(1,n))
-    elseif BC.side ∈ [Up,Down]
-        n = G.nx
-        BufferRHS = zeros(TT,(n,1))
-    end
+#     # Store the boundary points and generate buffers for storing RHS
+#     if BC.side ∈ [Left,Right]
+#         n = G.ny
+#         BufferRHS = zeros(TT,(1,n))
+#     elseif BC.side ∈ [Up,Down]
+#         n = G.nx
+#         BufferRHS = zeros(TT,(n,1))
+#     end
 
-    X = GetBoundaryCoordinates(G,BC.side)
-    BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
-end
+#     X = GetBoundaryCoordinates(G,BC.side)
+#     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
+# end
 
 
 """
@@ -198,7 +198,7 @@ end
 """
 function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,K) where {TT,COORD}
     jts = G.Joint[I]
-
+    
     tmpDict = Dict{NodeType,BoundaryStorage}()
 
     COORD == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
@@ -211,10 +211,7 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
                 NeighbouringJoint = tmpJoint
                 if (_flipside(tmpJoint.side) != Joint.side)# & (Joint.index < I) # flip the normal vector if required
                     if typeof(Joint.side).parameters[1] == typeof(tmpJoint.side).parameters[1]
-                        # @show "Flipping normal"
-                        # @show I
-                        # @show Joint
-                        # @show tmpJoint
+                        # Flipping normal
                         normal = -TT(1)
                     end
                 end
@@ -664,6 +661,8 @@ function LocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) whe
     end
 
     BS = GenerateBoundaries(P,G)
+
+    BS = Tuple()
 
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)

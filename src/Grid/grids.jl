@@ -199,8 +199,8 @@ Construct a 2D grid from the boundary functions in ``x`` and ``y`` and the numbe
 
 Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate in the ``x`` direction and ``v`` is the coordinate in the ``y`` direction and where ``u`` and ``v`` are in the range ``[0,1]``.
 """
-function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer;order=nothing)
-    X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer;order=nothing,stretchu=u->u,stretchv=v->v)
+    X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny,stretchu=stretchu,stretchv=stretchv)
     Grid2D(X,Y;order=order)
 end
 
@@ -354,7 +354,7 @@ end
 """
 Used to index the side of a matrix for multi-block problems using a `joint` from the grid.
 """
-function Base.getindex(x::Matrix,::NodeType{SIDE,AX}) where {SIDE,AX}
+function Base.getindex(x::AT,::NodeType{SIDE,AX}) where {AT<:AbstractArray,SIDE,AX}
     SIDE == :Left ? I = 1 : I = size(x)[AX]
     if AX == 1
 		return x[I,:]

@@ -134,13 +134,13 @@ function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM
 function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM,AT,BCT<:SAT_Interface}
     Myjoint = B.OutgoingJoint
     Tojoint = B.IncomingJoint
-    
-    MyBuffer = B.BufferOut # Get this buffer
-    ToBuffer = DB[Myjoint.index].boundary[Tojoint.side].BufferIn # Get the buffer we are writing to
+
+    MyBuffer = B.BufferOut :: AT # Get this buffer
+    ToBuffer = DB[Myjoint.index].boundary[Tojoint.side].BufferIn :: AT # Get the buffer we are writing to
 
     if (Myjoint.side == _flipside(Tojoint.side)) 
         # if they are the same dimension and they match we can just write to array
-        ToBuffer .= MyBuffer
+        @. ToBuffer = MyBuffer
     elseif Myjoint.side == Tojoint.side
         # if they are the same dimension but they don't match we must reverse
         ToBuffer .= MyBuffer
@@ -160,10 +160,21 @@ end
 """
 Loop over each `DataBlock.boundary`
 """
-function _tradeBuffers!(D,DB)
-    for J in eachindex(D.boundary)
-        _tradeBuffer!(D.boundary[J],DB)
+function _tradeBuffers!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT},DB::DataMultiBlock{TT,DIM}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT}
+    boundary = D.boundary :: BT
+    # @show BT
+    # boundaryLeft = boundary[Left]
+    _tradeBuffer!(boundary[Left],DB)
+    _tradeBuffer!(boundary[Right],DB)
+    if DIM == 2
+        _tradeBuffer!(boundary[Down],DB)
+        _tradeBuffer!(boundary[Up],DB)
     end
+    # @show D.boundary
+    # for J in eachindex(D.boundary)
+    #     _tradeBuffer!(D.boundary[J],DB)
+    # end
+    # map(B->_tradeBuffer!(B,DB),D.boundary)
 end
 """
 Loop over each `DataMultiBlock.DataBlock`
@@ -575,9 +586,10 @@ end
 """
     Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
 """
-function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD}) where {TT,COORD}
-    rₖ = D.rₖ
-    dₖ = D.dₖ
+function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
+    
+    rₖ = D.rₖ   :: AT
+    dₖ = D.dₖ   :: AT
 
     u = D.uₙ₊₁
 
@@ -585,11 +597,32 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD}) where {TT,COORD}
     Dy = D.Derivative.DO[2]
     Interp = D.Parallel.Interpolant
 
+    grid = D.grid
+
     nx = Dx.n
     ny = Dy.n
+    #overwrite rₖ
+    # ∂u/∂x = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x ≈ D_q u + D_r u
+    QX = grid.qx    :: AT
+    RX = grid.rx    :: AT
+    QY = grid.qy    :: AT
+    RY = grid.ry    :: AT
 
-    D₁!(rₖ, u, nx, Dx.Δx, Dx.order, TT(0), 1)
-    D₁!(dₖ, u, ny, Dy.Δx, Dy.order, TT(0), 2)
+    for (cache,qx,U) in zip(eachcol(rₖ),eachcol(QX),eachcol(u))
+        D₁!(cache, qx, U, nx, Dx.Δx, Dx.order, TT(0))  ## Need q_x
+    end
+    for (cache,rx,U) in zip(eachrow(rₖ),eachrow(RX),eachrow(u))
+        D₁!(cache, rx, U, ny, Dy.Δx, Dx.order, TT(1))  ## Need r_x
+    end
+    #overwrite dₖ
+    # ∂u/∂y = ∂u/∂y ∂y/∂q + ∂u/∂y ∂y/∂r ≈ D_r u + D_q u
+    for (cache,qy,U) in zip(eachcol(dₖ),eachcol(QY),eachcol(u))
+        D₁!(cache, qy, U, nx, Dx.Δx, Dy.order, TT(0))  ## Need r_y
+    end
+    for (cache,ry,U) in zip(eachrow(dₖ),eachrow(RY),eachrow(u))
+        D₁!(cache, ry, U, ny, Dy.Δx, Dy.order, TT(1))  ## Need r_x
+    end
+    
 
     # If the domain is periodic i.e. for a hollow torus then we have to remove
     #   some elements
@@ -613,12 +646,12 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD}) where {TT,COORD}
     else
         grid = D.grid #TODO: Function barrier probably required for speed/allocations
         J = grid.J
-        J_resize = view(J, 1:nx, 1:ny)
+        # J_resize = view(J, 1:nx, 1:ny)
 
         for I in eachindex(Interp.z)
             Interp.z[I] = u_resize[I]
-            Interp.dzdx[I] = rₖ_resize[I] / J_resize[I]
-            Interp.dzdy[I] = dₖ_resize[I] / J_resize[I]
+            Interp.dzdx[I] = rₖ_resize[I] #/ J_resize[I]
+            Interp.dzdy[I] = dₖ_resize[I] #/ J_resize[I]
         end
     end
 
@@ -646,60 +679,53 @@ end
 """
 function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
 
+    # To perform the averaging at boundaries we'll trade the buffers then average them in-block
+    _fillLocalBuffers(:uₙ₊₁,DB)
+    _tradeBuffers!(DB)
+    _average_boundaries(DB)
+
+    # Now we can call them into the global space
     for I in eachblock(DB)
         uglobal[I] .= getarray(DB[I],:uₙ₊₁)
     end
 
-    # Hardcoded for the circle
+end
+
+function _average_boundaries(DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     for I in eachblock(DB)
-        if I == 1
-            ug = uglobal[I]
-            ug[:,1]     .= (uglobal[4][:,1] + ug[:,1])/2
-            ug[:,end]   .= (uglobal[2][:,1] + ug[:,end])/2
-            ug[1,:]     .= (uglobal[5][:,1] + ug[1,:])/2
-            ug[end,:]   .= (uglobal[3][:,1] + ug[end,:])/2
-        elseif I == 2
-            ug = uglobal[I]
-            ug[:,1]     .= (uglobal[1][:,end] + ug[:,1])/2
-            ug[1,:]     .= (uglobal[3][end,:]   + ug[1,:])/2
-            ug[end,:]   .= (uglobal[5][1,:]     + ug[end,:])/2
-        elseif I == 3
-            ug = uglobal[I]
-            ug[:,1]     .= (uglobal[1][end,:] + ug[:,1])/2
-            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
-            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
-        elseif I == 4
-            ug = uglobal[I]
-            ug[:,1]     .= (uglobal[1][1,:] + ug[:,1])/2
-            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
-            ug[end,:]   .= (uglobal[5][end,:] + ug[end,:])/2
-        elseif I == 5
-            ug = uglobal[I]
-            ug[:,1]     .= (uglobal[1][1,:] + ug[:,1])/2
-            ug[1,:]     .= (uglobal[3][1,:] + ug[1,:])/2
-            ug[end,:]   .= (uglobal[2][end,:] + ug[end,:])/2
-        end
+        _average_local_buffer(DB[I])
+    end
+end
+function _average_local_buffer(D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
+    _average_boundary_data(D.boundary[Left],D)
+    _average_boundary_data(D.boundary[Right],D)
+    if DIM == 2
+        _average_boundary_data(D.boundary[Up],D)
+        _average_boundary_data(D.boundary[Down],D)
+    end
+end
+function _average_boundary_data(B::BoundaryData,D::LocalDataBlock) end
+function _average_boundary_data(B::InterfaceBoundaryData{TT,DIM,BCT,AT},D::LocalDataBlock) where {TT,DIM,AT,BCT<:SAT_Periodic} end
+function _average_boundary_data(B::InterfaceBoundaryData{TT,DIM,BCT,AT},D::LocalDataBlock) where {TT,DIM,AT,BCT<:SAT_Interface}
+    MyBuffer = B.BufferOut
+    IncomingBuffer = B.BufferIn
+
+    Myjoint = B.OutgoingJoint #What side is it on for this block
+
+    Myside = Myjoint.side
+
+    if Myside == Left
+        uₙ₊₁ = @view D.uₙ₊₁[1,:]
+        @. uₙ₊₁ = (MyBuffer[1,:] + IncomingBuffer[1,:])/2
+    elseif Myside == Right
+        uₙ₊₁ = @view D.uₙ₊₁[end,:]
+        @. uₙ₊₁ = (MyBuffer[1,:] + IncomingBuffer[1,:])/2
+    elseif Myside == Up
+        uₙ₊₁ = @view D.uₙ₊₁[:,end]
+        @. uₙ₊₁ = (MyBuffer[:,1] + IncomingBuffer[:,1])/2
+    else
+        uₙ₊₁ = @view D.uₙ₊₁[:,1]
+        @. uₙ₊₁ = (MyBuffer[:,1] + IncomingBuffer[:,1])/2
     end
 
-end
-
-function _average_boundaries(uglobal::Vector{AT},B::InterfaceBoundaryData) where AT
-    # We will have to first store the boundaries then pull them to average
-    #   otherwise we will run into issues with doubling up the 1/2.
-    # Each boundary object has an outgoing and incoming buffer once all the buffers are
-    #   traded we just need to grab a `uglobal` block and the `u` block and average the
-    #   buffers. This should work for any boundary configuration.
-    # The current `setglobalu!` may be incorrect
-    Myjoint = B.OutgoingJoint
-    Tojoint = B.IncomingJoint
-
-    myu = @view uglobal[Myjoint.index][Myjoint.side]
-    tojoint = @view uglobal[Tojoint.index][Tojoint.side]
-
-    
-
-end
-
-function _average_boundary_data(u,)
-    u[]
 end

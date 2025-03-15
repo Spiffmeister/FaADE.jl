@@ -101,9 +101,11 @@ Applies the parallel penalty for a multiblock problem.
 """
 function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64,ParallelData{TT,DIM}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM}
 
-    κ = P[I].κ
-    w_f = P[I].w_f
-    H = P[I].H
+    LocalP = P[I] :: ParallelData{TT,DIM}
+
+    κ = LocalP.κ
+    w_f = LocalP.w_f
+    H = LocalP.H
     Jac = grid.J
 
     if length(Jac) > 1
@@ -246,9 +248,10 @@ function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT
     τglobal = PD.τ
 
     for I in eachindex(Interpolant)
-        w_f = PD.PData[I].w_f
-        PData = PD.PData[I].PGrid
-        computeglobalw!(Interpolant,Intercept,w_f,uglobal[I],PData,τglobal,t,I)
+        localP = PD.PData[I] :: ParallelData{TT,DIM}
+        w_f = localP.w_f
+        PGrid = localP.PGrid :: ParallelGrid
+        computeglobalw!(Interpolant,Intercept,w_f,uglobal[I],PGrid,τglobal,t,I)
     end
     
     τglobal .= τglobal * PD.PData[1].τ
@@ -266,14 +269,6 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::Para
     for J in eachindex(w_f)
         tmpf = interpolant[sgiF[J]](nnFx[J],nnFy[J])
         tmpb = interpolant[sgiB[J]](nnBx[J],nnBy[J])
-        # if isnan(tmpf)
-        #     @show "aaaaaa"
-        #     @show nnFx[J], nnFy[J], sgiF[J], J
-        #     @show nnBx[J], nnBy[J], sgiB[J]
-        #     @show tmpf, tmpb
-        #     # @show interpolant[sgiF[J]].x
-        #     error("aa")
-        # end
         if !(CT == Nothing)
             tmpf = intercept[sgiF[J]](tmpf,nnFx[J],nnFy[J],t)
             tmpb = intercept[sgiB[J]](tmpb,nnBx[J],nnBy[J],t)
