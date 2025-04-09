@@ -602,12 +602,12 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
     nx = Dx.n
     ny = Dy.n
     #overwrite rₖ
-    # ∂u/∂x = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x ≈ D_q u + D_r u
     QX = grid.qx    :: AT
     RX = grid.rx    :: AT
     QY = grid.qy    :: AT
     RY = grid.ry    :: AT
-
+    
+    # ∂u/∂x = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x ≈ q_x D_q u + r_x D_r u
     for (cache,qx,U) in zip(eachcol(rₖ),eachcol(QX),eachcol(u))
         D₁!(cache, qx, U, nx, Dx.Δx, Dx.order, TT(0))  ## Need q_x
     end
@@ -615,7 +615,7 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
         D₁!(cache, rx, U, ny, Dy.Δx, Dx.order, TT(1))  ## Need r_x
     end
     #overwrite dₖ
-    # ∂u/∂y = ∂u/∂y ∂y/∂q + ∂u/∂y ∂y/∂r ≈ D_r u + D_q u
+    # ∂u/∂y = ∂u/∂y ∂y/∂q + ∂u/∂y ∂y/∂r ≈ q_y D_q u + r_y D_r u
     for (cache,qy,U) in zip(eachcol(dₖ),eachcol(QY),eachcol(u))
         D₁!(cache, qy, U, nx, Dx.Δx, Dy.order, TT(0))  ## Need r_y
     end
@@ -657,6 +657,10 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
 
 end
 function _updateCHSinterp(DB::DataMultiBlock)
+    _fillLocalBuffers(:uₙ₊₁,DB)
+    _tradeBuffers!(DB)
+    _average_boundaries(DB)
+
     for I in eachblock(DB)
         _updateCHSinterp(DB[I])
     end
@@ -675,9 +679,8 @@ end
 
 """
     setglobalu!
-
 """
-function setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
+function _setglobalu!(uglobal::Vector{AT},DB::DataMultiBlock) where AT
 
     # To perform the averaging at boundaries we'll trade the buffers then average them in-block
     _fillLocalBuffers(:uₙ₊₁,DB)

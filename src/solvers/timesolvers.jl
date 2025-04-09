@@ -129,9 +129,9 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
     else
         uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
-        τglobal = zeros(length(uglobal))
+        # τglobal = zeros(length(uglobal))
 
-        Par = [DBlock[I].Parallel for I in eachblock(DBlock)]
+        # Par = [DBlock[I].Parallel for I in eachblock(DBlock)]
     end
     # uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
 
@@ -156,29 +156,13 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     _updateCHSinterp(DBlock[1])
                     applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
 
-                    # uglobal[1] .= DBlock[1].uₙ₊₁ # TESTING
-                    # computeglobalw!(DBlock[1].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[1].grid,1)
-                    # τ = τglobal[1]
-                    # applyParallelPenalty!(DBlock[1].uₙ₊₁,τ,DBlock.SC.Δt,Par,DBlock[1].grid,1) # TESTING
                 else
-                    # for I in eachblock(DBlock)
-                    #     uglobal[I] .= DBlock[I].uₙ₊₁
-                    # end
-                    # @. uglobal[1][end,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
-                    # @. uglobal[2][1,:] = (DBlock[1].uₙ₊₁[end,:] + DBlock[2].uₙ₊₁[1,:])/2
-                    setglobalu!(uglobal,DBlock) # Circle case
-                    _setglobalu!(DBlock,uglobal) #TODO: FIX THIS FUNCTION
+                    # setglobalu!(uglobal,DBlock) # Circle case
+                    # _setglobalu!(uglobal,DBlock)
                     _updateCHSinterp(DBlock) # When CHS interpolation is used
 
                     computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
 
-                    # for I in eachblock(DBlock)
-                        # applyParallelPenalty!(DBlock[I].uₙ₊₁,uglobal,DBlock.SC.Δt,DBlock[I].Parallel,DBlock[1].grid)
-                        # computeglobalw!(DBlock[I].uₙ₊₁,uglobal,τglobal,DBlock.SC.Δt,Par,DBlock[I].grid,I)
-                        # applyParallelPenalty!(DBlock[I].uₙ₊₁,DBlock.SC.Δt,Par,DBlock[I].grid,I)
-                    # end
-                    # @show τglobal
-                    # τ = maximum(τglobal)
                     τ = maximum(DBlock.ParallelData.τ)
                     for I in eachblock(DBlock)
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
@@ -200,8 +184,6 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t
             end
-            # @show t, DBlock.SC.Δu, maximum(DBlock[1].u .- DBlock[1].uₙ₊₁), maximum(DBlock[1].uₙ₊₁)
-            # @show maximum(abs.(DBlock[1].u .- DBlock[1].uₙ₊₁))
             
             copyto!(:u,:uₙ₊₁,DBlock)
             if solverconfig.adaptive & (Δt<300Δt₀)

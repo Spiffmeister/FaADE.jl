@@ -11,14 +11,14 @@
 Ensure the users requested order makes sense.
 """
 @inline function check_order(order::Int)
-    order ∈ [2,4,6] ? nothing : error("Order must be 2, 4 or 6")
+    order ∈ [2, 4, 6] ? nothing : error("Order must be 2, 4 or 6")
 end
 """
     check_boundary
 Some functions only work for `Left` or `Right` nodes.
 """
 @inline function check_boundary(side::NodeType)
-    side ∈ [Left,Right,Up,Down] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
+    side ∈ [Left, Right, Up, Down] ? nothing : error("Boundary types must be Left or Right, cannot be Internal")
 end
 
 """
@@ -31,8 +31,8 @@ function check_boundary_args(f::Function)
 end
 function check_boundary_args(B::NamedTuple)
     for N in eachindex(B)
-        if methods(B[N].RHS)[1].nargs - 1 == 2 
-            error("Boundary conditions should be function with inputs f(x,t) at boundary ",N)
+        if methods(B[N].RHS)[1].nargs - 1 == 2
+            error("Boundary conditions should be function with inputs f(x,t) at boundary ", N)
         end
     end
 end
@@ -45,7 +45,7 @@ end
     halforder
 Returns ``order/2``
 """
-@inline halforder(order::Int) = Int(order/2)
+@inline halforder(order::Int) = Int(order / 2)
 @inline halforder(order::Int...) = halforder.(order)
 
 """
@@ -61,7 +61,7 @@ Returns the required number of nodes needed to compute [`FaADE.Derivatives.Secon
 Returns the size of the array output by [`FaADE.Derivatives.SecondDerivative`](@ref) on the boundary.
 ``order == 2, return 1``, ``order > 2, return order+order/2``
 """
-@inline BoundaryNodeOutput(order::Int) = order == 2 ? 1 : order+halforder(order)
+@inline BoundaryNodeOutput(order::Int) = order == 2 ? 1 : order + halforder(order)
 @inline BoundaryNodeOutput(order::Int...) = BoundaryNodeOutput.(order)
 
 """
@@ -69,7 +69,7 @@ Returns the size of the array output by [`FaADE.Derivatives.SecondDerivative`](@
 Returns the number of nodes needed for the [`BoundaryData1D`](@ref) and [`BoundaryData2D`](@ref) data structures.
 ``order == 2, return 2``, ``order > 2, return order+order/2``
 """
-@inline SATNodeOutput(order::Int) = order == 2 ? 2 : order+halforder(order)
+@inline SATNodeOutput(order::Int) = order == 2 ? 2 : order + halforder(order)
 @inline SATNodeOutput(order::Int...) = SATNodeOutput.(order)
 
 
@@ -101,6 +101,6 @@ GetAxis(::NodeType{T,Ax}) where {T,Ax} = Int(Ax)
     GetDim
 Return the data structures associated dimension
 """
-function GetDim end
-GetDim(::BoundaryStorage{T,D,AT}) where {T,D,AT} = Int(D)
-GetDim(::DataBlockType{T,D,AT}) where {T,D,AT} = Int(D)
+# function GetDim end
+# GetDim(::BoundaryStorage{T,D,AT}) where {T,D,AT} = Int(D)
+# GetDim(::DataBlockType{T,D,AT}) where {T,D,AT} = Int(D)

@@ -10,6 +10,30 @@ abstract type ParallelGridType end
 """
 abstract type ParallelMapType end
 
+"""
+    Options for constructing the parallel grid
+"""
+mutable struct ParallelGridOptions
+    periodic_x              :: Bool
+    periodic_y              :: Bool
+    interpolation_mode      :: Symbol
+    coordinate_map          :: Union{Nothing,Function,Tuple}
+    inverse_coordinate_map  :: Union{Nothing,Function}
+    boundary_x              :: Union{Nothing,Function,Vector}
+    boundary_y              :: Union{Nothing,Function,Vector}
+    ParallelGridOptions(;periodic_x=false,periodic_y=true,interpolation_mode=:bicubic,coordinate_map=nothing,inverse_coordinate_map=nothing,boundary_x=nothing,boundary_y=nothing) = 
+        new(periodic_x,periodic_y,interpolation_mode,coordinate_map,inverse_coordinate_map,boundary_x,boundary_y)
+end
+
+
+
+mutable struct ParallelMapOptions
+    Intercept       :: Union{Nothing,Function}
+    Interpolant     :: Union{Symbol,Function}
+    MagneticField   :: Union{Nothing,Function}
+    ParallelMapOptions(;Intercept=nothing,Interpolant=:CubicHermiteSpline,MagneticField=nothing) = 
+        new(Intercept,Interpolant,MagneticField)
+end
 
 
 

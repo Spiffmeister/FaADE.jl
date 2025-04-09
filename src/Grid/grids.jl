@@ -87,8 +87,8 @@ struct Grid2D{TT,
     gridy   :: GT
     Δx      :: TT
     Δy      :: TT
-    nx      :: Integer
-    ny      :: Integer
+    nx      :: Int64
+    ny      :: Int64
 
     J       :: GT
     qx      :: GT

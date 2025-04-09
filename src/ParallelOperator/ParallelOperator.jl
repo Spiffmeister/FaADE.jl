@@ -4,6 +4,8 @@ Methods for constructing the parallel operator
 """
 module ParallelOperator
 
+    using Base.Threads
+
     using DifferentialEquations: ODEProblem, EnsembleProblem, EnsembleSerial, solve, Tsit5, remake
     # using Interpolations: LinearInterpolation
     using Interpolations

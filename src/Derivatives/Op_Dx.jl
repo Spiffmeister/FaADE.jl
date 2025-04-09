@@ -68,9 +68,9 @@ end
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,α::T,dim::Integer) where T
     loopdir = _SelectLoopDirection(dim)
     ORD = Val(order)
-    foreach(zip(eachslice(uₓ,dims=dim),eachslice(u,dims=dim))) do (cache,U)
+    # foreach(zip(eachslice(uₓ,dims=dim),eachslice(u,dims=dim))) do (cache,U)
     # for (cache,U) in zip(loopdir(uₓ),loopdir(u))
-    # foreach(zip(loopdir(uₓ),loopdir(u))) do (cache,U)
+    foreach(zip(loopdir(uₓ),loopdir(u))) do (cache,U)
         D₁!(cache,U,n,Δ,ORD,α)
     end
     # uₓ
