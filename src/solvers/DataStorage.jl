@@ -82,6 +82,8 @@ end
 """
     InterfaceBoundaryData
 Container for Periodic and Interface boundary conditions.
+`OutgoingJoint` is the joint FROM this block TO the other block.
+`IncomingJoint` is the joint TO this block FROM the other block.
 """
 struct InterfaceBoundaryData{
         TT<:Real,
@@ -103,14 +105,13 @@ function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint,Joint2
     InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2::Joint) where {TT}
-
     if BC.side ∈ [Left,Right]
-        n = G2.ny
+        n = G1.ny
         BufferIn    = zeros(TT,(2,n))
         BufferOut   = zeros(TT,(2,n))
 
     elseif BC.side ∈ [Up,Down]
-        n = G2.nx
+        n = G1.nx
         BufferIn    = zeros(TT,(n,2))
         BufferOut   = zeros(TT,(n,2))
     end
@@ -198,16 +199,16 @@ end
 2D multiblock version of GenerateBoundaries.
 """
 function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,K) where {TT,COORD}
-    jts = G.Joint[I]
+    Joints = G.Joint[I]
     
     tmpDict = Dict{NodeType,BoundaryStorage}()
 
     COORD == CurvilinearMetric ? sattype = :Curvilinear : sattype = :Cartesian
 
-    for Joint in jts
+    for Joint in Joints
         normal = TT(1)
         NeighbouringJoint = nothing
-        for tmpJoint in G.Joint[Joint.index]
+        for tmpJoint in G.Joint[Joint.index] # Scan all joints to work out how the other block sees this one
             if (tmpJoint.index == I)
                 NeighbouringJoint = tmpJoint
                 if (_flipside(tmpJoint.side) != Joint.side)# & (Joint.index < I) # flip the normal vector if required
@@ -220,26 +221,38 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
         end
         
         G1 = G.Grids[I]
-        G2 = G.Grids[Joint.index]
+        G2 = G.Grids[Joint.index] #Neighbouring grid
+
+        MySide = Joint.side
+        NeighbourSide = NeighbouringJoint.side
+
+        # Select the correct Δx in the neighbouring domain
+        if NeighbourSide ∈ [Left, Right]
+            Δx₂ = G2.Δx
+        elseif NeighbourSide ∈ [Up, Down]
+            Δx₂ = G2.Δy
+        end
+
         if (Joint.side == Left) || (Joint.side == Right)
             Δx₁ = G1.Δx# * G.Grids[I].qx[1]
-            Δx₂ = G2.Δx# * G.Grids[Joint.index].qx[1]
             Δy₁ = G1.Δy
 
             buffer = zeros(TT,(1,G1.ny))
 
-            @. buffer[1,:] = P.Kx * max(G1.J[1,:] * (G1.qx[1,:]^2 + G1.qy[1,:]^2), G2.J[end,:] * (G2.qx[end,:]^2 + G2.qy[end,:]^2))
+            @. buffer[1,:] = P.Kx * max(G1.J[MySide] * (G1.qx[MySide]^2 + G1.qy[MySide]^2), 
+                G2.J[NeighbourSide] * (G2.qx[NeighbourSide]^2 + G2.qy[NeighbourSide]^2))
+
         elseif (Joint.side == Down) | (Joint.side == Up)
             Δx₁ = G1.Δy
-            Δx₂ = G2.Δy
             Δy₁ = G1.Δx
 
             buffer = zeros(TT,(G1.nx,1))
 
-            @. buffer[:,1] = P.Ky * max(G1.J[:,1] * (G1.qx[:,1]^2 + G1.qy[:,1]^2), G2.J[:,end]*(G2.qx[:,end]^2 + G2.qy[:,end]^2))
+            @. buffer[:,1] = P.Ky * max(G1.J[MySide] * (G1.qx[MySide]^2 + G1.qy[MySide]^2), 
+                G2.J[NeighbourSide]*(G2.qx[NeighbourSide]^2 + G2.qy[NeighbourSide]^2))
         end
         τ₀ = maximum(buffer)
-
+        
         BC = SAT_Interface(Δx₁,Δx₂,τ₀,Joint.side,P.order,Δy=Δy₁,coordinates=sattype,normal=normal)
         tmpDict[Joint.side] = _newBoundaryCondition(G.Grids[I],G.Grids[Joint.index],BC,Joint,NeighbouringJoint)
     end

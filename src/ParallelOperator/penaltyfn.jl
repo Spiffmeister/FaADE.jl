@@ -109,7 +109,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64
 
     if length(Jac) > 1
         for j in Base.OneTo(ny)#1:grid.ny
-            for i in Base.OneTo(ny)#1:grid.nx
+            for i in Base.OneTo(nx)#1:grid.nx
                 u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
                     u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
                 )

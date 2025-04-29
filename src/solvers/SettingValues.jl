@@ -139,21 +139,21 @@ function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT},DB) where {TT,DIM
     ToBuffer = DB[Myjoint.index].boundary[Tojoint.side].BufferIn :: AT # Get the buffer we are writing to
 
     if (Myjoint.side == _flipside(Tojoint.side)) 
-        # if they are the same dimension and they match we can just write to array
+        # if they are the same dimension and they match, just write to array
         @. ToBuffer = MyBuffer
     elseif Myjoint.side == Tojoint.side
-        # if they are the same dimension but they don't match we must reverse
+        # if they are the same dimension but they don't match, reverse
         ToBuffer .= MyBuffer
-        reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
+        reverse!(ToBuffer,dims=mod1(GetAxis(Tojoint.side)+1,2))
         # reverse!(ToBuffer,dims=2)
     else
-        # if they are not the the same dimension we need to rearrange things
+        # if they are not the the same dimension, need to rearrange things
         for (BI,BO) in zip(eachrow(ToBuffer),eachcol(MyBuffer))
             BI .= BO
         end
         if typeof(Myjoint.side).parameters[1] != typeof(Tojoint.side).parameters[1]
             # If they are not the same axis we need to reverse
-            reverse!(ToBuffer,dims=mod1(typeof(Tojoint.side).parameters[2]+1,2))
+            reverse!(ToBuffer,dims=mod1(GetAxis(Tojoint.side)+1,2))
         end
     end
 end
@@ -673,7 +673,7 @@ function _setglobalu! end
 function _setglobalu!(DB::DataMultiBlock,uglobal::Vector{AT}) where AT
     #TODO: CURRENTLY HACKED - FIX IF CHS INTERP WORKS
     for I in eachblock(DB)
-        DB[I].uₙ₊₁ .= uglobal[I]
+        uglobal[I] .= DB[I].uₙ₊₁
     end
 end
 

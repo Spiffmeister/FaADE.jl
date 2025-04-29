@@ -160,6 +160,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     # setglobalu!(uglobal,DBlock) # Circle case
                     # _setglobalu!(uglobal,DBlock)
                     _updateCHSinterp(DBlock) # When CHS interpolation is used
+                    _setglobalu!(DBlock, uglobal)
 
                     computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
 
@@ -212,7 +213,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         #     sample += sample
         #     UpdateSolution!(soln,DBlock.u,t,Δt)
         # end 
-
+    
     end
     if typeof(G) <: LocalGridType
         push!(soln.u,DBlock[1].uₙ₊₁)
