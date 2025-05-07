@@ -135,11 +135,7 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ::TT=TT(1),
             dzdy = zeros(TT,length(gridx))
             Interpolator = BivariateCHSInterpolation(gridx,gridy,z,dzdx,dzdy)
 
-            if isa(intercept,Function)
-                Intercept = intercept
-            elseif isnothing(intercept)
-                Intercept = nothing
-            end
+
 
 
             gridx = G.gridx[1:end,1]
@@ -147,6 +143,12 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ::TT=TT(1),
         end
     elseif isnothing(interpolant)
         Interpolator = interpolant
+    end
+
+    if isa(intercept,Function)
+        Intercept = intercept
+    elseif isnothing(intercept)
+        Intercept = nothing
     end
 
     ParallelData{TT,2,typeof(PGrid),typeof(gridx),typeof(MF),typeof(Interpolator),typeof(Intercept)}(PGrid,κ,τ,Intercept,Interpolator,gridx,gridy,G.Δx,G.Δy,H,w_f,w_b,u,MF,[TT(0.0)])
