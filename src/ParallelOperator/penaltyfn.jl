@@ -261,6 +261,7 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::Para
         w_f[J] = (tmpf + tmpb)/2
     end
     τglobal[I] = 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    isnan(τglobal[I]) ? τglobal[I] = 0.0 : nothing
 
 end
 
@@ -334,6 +335,9 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
     end
     
     τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    if isnan(τglobal[I])
+        τglobal[I] = zero(TT)
+    end
 
 end
 

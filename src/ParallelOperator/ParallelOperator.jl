@@ -11,6 +11,7 @@ module ParallelOperator
     using Interpolations
     using BasicInterpolators: BicubicInterpolator, LinearInterpolator
     using CubicHermiteSpline
+    using DelaunayTriangulation
 
     using LinearAlgebra: norm
 

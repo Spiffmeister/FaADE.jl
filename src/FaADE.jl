@@ -14,7 +14,7 @@ module FaADE
 
     # Inbuild julia packages
     using Distributed
-    using SharedArrays
+    # using SharedArrays
     using LinearAlgebra
     # using JLD2
 
