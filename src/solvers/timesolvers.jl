@@ -153,9 +153,10 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         if DBlock.SC.converged | !solverconfig.adaptive #If perpendicular push converged
             if solverconfig.parallel
                 if typeof(G) <: LocalGridType
-                    _updateCHSinterp(DBlock[1])
+                    if !(typeof(DBlock[1].Parallel.Interpolant) <: Nothing)
+                        _updateCHSinterp(DBlock[1])
+                    end
                     applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
-
                 else
                     # setglobalu!(uglobal,DBlock) # Circle case
                     # _setglobalu!(uglobal,DBlock)

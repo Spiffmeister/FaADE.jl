@@ -6,6 +6,9 @@ Operator in the 1D case is found [here](@ref https://arxiv.org/abs/2303.15447). 
 """
 function applyParallelPenalty! end
 
+"""
+1D apply parallel penalty
+"""
 function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,1},grid::Grid1D{TT,MET}) where {TT,VT,MET}
     κ = P.κ
     w_f = P.w_f
@@ -30,12 +33,9 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
         else
             w_f[i] += TT(0)
         end
-        # w_f[i] = w_fi + w_bi
-        # w_f[i] = w_f[i]/2
     end
 
-    # Tune the parallel penalty
-    τ = P.τ/grid.Δx
+    τ = P.τ/grid.Δx # Tune the parallel penalty
 
     P.w_b[1,1] = maximum(u - w_f)
 
@@ -47,7 +47,7 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
     u
 end
 """
-Parallel penalty for single block problems
+2D Parallel penalty for single block problems
 """
 function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
     P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
@@ -61,8 +61,8 @@ function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
         I   = BicubicInterpolator(P.gridx,P.gridy,u)
     elseif IT <: BivariateCHSInterpolation
         I = P.Interpolant
-        IC = P.Intercept
     end
+    IC = P.Intercept
 
     # w_f ← P_f u + P_b u
     if isnothing(IC)
@@ -236,8 +236,9 @@ function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT
         w_f = localP.w_f
         PGrid = localP.PGrid :: ParallelGrid
         computeglobalw!(Interpolant,Intercept,w_f,uglobal[I],PGrid,τglobal,t,I)
+        # @show I,norm(w_f)
     end
-    
+    # @show norm.(uglobal)
     τglobal .= τglobal * PD.PData[1].τ
 end
 function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
