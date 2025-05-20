@@ -23,8 +23,8 @@ Generates the 2D grid of `nx` and `ny` points in a domain given a set of functio
 function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int;stretchu=u->u,stretchv=v->v)
     # TT = Float64
 
-    u = LinRange(TT(0),TT(1),nx)
-    v = LinRange(TT(0),TT(1),ny)
+    u = range(zero(TT),one(TT),nx)
+    v = range(zero(TT),one(TT),ny)
 
     S(u,v) = coordinate(cbottom,cleft,cright,ctop,u,v)
 

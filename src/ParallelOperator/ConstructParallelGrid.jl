@@ -126,7 +126,14 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
 
     PGridStorage = Dict()
 
-    for I in eachgrid(grid)
+    if remapping == :none
+        subgrid_interior = [reduce(vcat, [subgrid[i,j] for i in 1:subgrid.nx, j in 1:subgrid.ny]) for subgrid in grid.Grids]
+        subgrid_boundaries = [GetBoundaryCoordinates(subgrid,:Circular) for subgrid in grid.Grids]
+        subgrid_boundary_nodes = [_boundary_index(subgrid_interior[I],subgrid_boundaries[I],grid.Grids[I]) for I in eachindex(grid.Grids)]
+        grid_triangulation = [ triangulate(subgrid_interior[I]; boundary_nodes=subgrid_boundary_nodes[I] ) for I in eachindex(grid.Grids) ]
+    end
+
+    Threads.@threads for I in eachgrid(grid)
         # Use the single grid version for the subgrid
         Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=:ignore,ymode=:ignore,remap=coordinate_map)
 
@@ -151,9 +158,9 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
             PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
             
         elseif remapping == :none
-            sgi = _subgrid_index(grid,Pgrid.Bplane)
+            sgi = _subgrid_index(grid,Pgrid.Bplane,grid_triangulation)
             Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
-            sgi = _subgrid_index(grid,Pgrid.Fplane)
+            sgi = _subgrid_index(grid,Pgrid.Fplane,grid_triangulation)
             Fplane = ParGrid{TT,typeof(Pgrid.Fplane.x)}(Pgrid.Fplane.x,Pgrid.Fplane.y,sgi)
             PGridStorage[I] = ParallelGrid{eltype(Bplane.x),DIM,typeof(Bplane),typeof(Bplane.x)}(Bplane,Fplane)
 
@@ -536,14 +543,18 @@ end
     _subgrid_index(grid::GridMultiBlock,plane::ParGrid,I::Int)
 Find the subgrid index closest to each point in a ParGrid.
 """
-function _subgrid_index(grid::GridMultiBlock,plane::ParGrid)
+function _subgrid_index(grid::GridMultiBlock,plane::ParGrid,grid_triangulation)
     containedgrid = zeros(Int,size(plane.x))
 
-    grid_triangulation = [ triangulate(hcat(subgrid.gridx[:],subgrid.gridy[:])') for subgrid in grid.Grids ]
-
+    # Form a DelaunayTriangulation of the grid, since this is the same method used in CubicHermiteSpline it should give the correct indices
+    # subgrid_interior = [reduce(vcat, [subgrid[i,j] for i in 1:subgrid.nx, j in 1:subgrid.ny]) for subgrid in grid.Grids]
+    # subgrid_boundaries = [GetBoundaryCoordinates(subgrid,:Circular) for subgrid in grid.Grids]
+    # subgrid_boundary_nodes = [_boundary_index(subgrid_interior[I],subgrid_boundaries[I],grid.Grids[I]) for I in eachindex(grid.Grids)]
+    # grid_triangulation = [ triangulate(subgrid_interior[I]; boundary_nodes=subgrid_boundary_nodes[I] ) for I in eachindex(grid.Grids) ]
+    
+    # Loop over all grid points and use the DelaunayTriangulation to locate the grid
     for J in eachindex(plane.x)
         pt = (plane.x[J],plane.y[J])
-        # nearpt = [pt[1], pt[2]]
         gridind = _findgrid(grid_triangulation,pt)
         if gridind == 0
             nearpt, _, gridind = nearestpoint(grid,pt)
@@ -628,6 +639,9 @@ Move out of bounds points to the boundary
 end
 
 
+"""
+Find the subgrid index using the provided triangulation from `DelaunayTriangulation`.
+"""
 function _findgrid(triangulated_grids::Vector{TRI},pt::Tuple{TT,TT}) where {TT,TRI <: Triangulation}
 
     sgi = 0
@@ -642,6 +656,26 @@ function _findgrid(triangulated_grids::Vector{TRI},pt::Tuple{TT,TT}) where {TT,T
 
     return sgi
 
+end
+
+"""
+    _boundary_index(nodes,boundary,grid)
+Form a vector of the linear indices of the boundary nodes in `nodes` using the points in `boundary`.
+
+This avoids using the methods from `DelaunayTriangulation` which may not be as efficient.
+"""
+function _boundary_index(nodes,boundary,grid)
+    boundary_indices = zeros(Int64,2sum(size(grid))-3)
+    for (I,node) in enumerate(boundary)
+        for J in eachindex(nodes)
+            if node == nodes[J]
+                boundary_indices[I] = J
+                continue
+            end
+        end
+        boundary_indices[end] = boundary_indices[1]
+    end
+    return boundary_indices    
 end
 
 

@@ -330,6 +330,21 @@ function GetBoundaryCoordinates(grid::Grid2D,side::NodeType)
         return [(grid.gridx[i,end],grid.gridy[i,end]) for i in 1:grid.nx]
     end
 end
+function GetBoundaryCoordinates(grid::Grid2D,returned_order::Symbol=:Usual)
+    bounds = [GetBoundaryCoordinates(grid,side) for side in (Down,Right,Up,Left)]
+    if returned_order == :Circular
+        for I in 2:length(bounds)
+            if bounds[I][1] != bounds[I-1][end]
+                reverse!(bounds[I])
+            end
+        end
+        if bounds[end][end] != bounds[1][1]
+            reverse!(bounds[end])
+        end
+    end
+    bounds = unique(vcat(bounds...))
+    return bounds
+end
 
 
 function _checkjoints(G::GridMultiBlock)
