@@ -133,7 +133,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
         grid_triangulation = [ triangulate(subgrid_interior[I]; boundary_nodes=subgrid_boundary_nodes[I] ) for I in eachindex(grid.Grids) ]
     end
 
-    Threads.@threads for I in eachgrid(grid)
+    for I in eachgrid(grid)
         # Use the single grid version for the subgrid
         Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=:ignore,ymode=:ignore,remap=coordinate_map)
 

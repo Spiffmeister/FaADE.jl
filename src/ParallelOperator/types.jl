@@ -78,3 +78,53 @@ struct ParallelGrid{TT<:Real,
     Fplane  :: PMT
 end
 
+
+#
+# Below are some functions for IO so the parallel grid does not have to be computed every time
+#   or so they can be precomputed and stored.
+#
+
+"""
+    savegrid(fname,pargrid::ParallelGridType)
+
+Saves the `ParallelGrid` object containing the backward and forward plane information to a `jld2` file with path and filename specified by `fname`.
+"""
+function savegrid(fname::String,pargrid::PGT)  where {PGT<:ParallelGridType}
+    if PGT <: ParallelGrid
+        jldsave(fname;
+            Bx = pargrid.Bplane.x,
+            By = pargrid.Bplane.y,
+            Bsubgrid = pargrid.Bplane.subgrid,
+            Fx = pargrid.Fplane.x,
+            Fy = pargrid.Fplane.y,
+            Fsubgrid = pargrid.Fplane.subgrid,
+            type = :ParGrid)
+    end
+end
+"""
+    readgrid(fname::String)
+
+Read the `ParallelGrid` saved by [`savegrid`](@ref) into a `ParallelGridType` object.
+"""
+function readgrid(fname::String)
+    jldfile = jldopen(fname)
+    if jldfile["type"] == :ParGrid
+        x = jldfile["Bx"]
+        y = jldfile["By"]
+        subgrid = jldfile["Bsubgrid"]
+        Bplane = ParGrid{eltype(x),typeof(x)}(x,y,subgrid)
+        x = jldfile["Fx"]
+        y = jldfile["Fy"]
+        subgrid = jldfile["Fsubgrid"]
+        Fplane = ParGrid{eltype(x),typeof(x)}(x,y,subgrid)
+        return ParallelGrid{eltype(x),ndims(x),typeof(Bplane),typeof(Bplane.x)}(Bplane,Fplane)
+    end
+end
+function readgrids(fpath::String)
+    fnames = readdir(fpath)
+    gdata = Dict()
+    for (I,fname) in enumerate(fnames)
+        gdata[I] = readgrid(fname)
+    end
+    return gdata
+end

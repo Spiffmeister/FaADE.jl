@@ -196,25 +196,13 @@ function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1
     for I in eachgrid(G)
         PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=intercept,interpolant=interpolation_mode,periodicy=periodicy,B=B)
     end
-    # ParallelData = Tuple(collect(values(PData)))
-
-    # interpolant = [(u->LinearInterpolator(G.Grids[I].gridx,G.Grids[I].gridy,u)) for I in eachgrid(G)]
-    # interpolant = :nearest
-    # if interpolant == :CHS
-    # @show PData[3].Interpolant.x[1:10]
-    # @show PData[3].Interpolant.y[1:10]
-    # TmpInterpolant = [PData[I].Interpolant for I in eachindex(PData)]
-    # TmpInterpolant = [PData[I].Interpolant for I in keys(PData)]
-    # @show PData[1].Interpolant
     
     TmpInterpolant = []
     for I in 1:length(PData)
         push!(TmpInterpolant,PData[I].Interpolant)
         # @show PData[I].Interpolant
     end
-    # @show TmpInterpolant[1]
 
-    # TmpInterpolant = [PData[I].Interpolant for I in keys()]
     Interp = Tuple(TmpInterpolant)
     # end
     if isa(intercept,Function)
@@ -223,8 +211,6 @@ function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1
     end
 
     uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
-
-    # u = zeros(TT,size(GridMultiBlock))
 
     τglobal = zeros(TT,length(Interp))
 

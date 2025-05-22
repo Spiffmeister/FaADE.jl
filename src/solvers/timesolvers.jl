@@ -167,7 +167,9 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
                     τ = maximum(DBlock.ParallelData.τ)
                     for I in eachblock(DBlock)
+                        # @show norm(DBlock[I].uₙ₊₁), I
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
+                        # @show norm(DBlock[I].uₙ₊₁), I
                     end
                 end
             end
@@ -196,7 +198,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             t += Δt
 
             if !isnothing(DBlock[1].Parallel)
-                push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
+                # push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
+                push!(soln.τ_hist,τ)
             end
         else #If CG fails, reset and retry step
             # DBlock.uₙ₊₁ .= DBlock.u

@@ -74,8 +74,8 @@ abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
 
 
 
-struct SourceTerm{F<:Union{Function,Nothing}}
-    source :: F
+struct SourceTerm{ST}
+    source :: ST
 end
 
 

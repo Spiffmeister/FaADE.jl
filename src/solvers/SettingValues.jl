@@ -14,6 +14,12 @@ function addSource!(S::SourceTerm{FT},u::AT,grid::LocalGridType,t::TT,Δt::TT,θ
     end
     u
 end
+function addSource!(S::SourceTerm{FT},u::AT,grid::LocalGridType,t::TT,Δt::TT,θ::TT) where {TT,AT<:AbstractArray{TT},FT<:Matrix{TT}}
+    source = S.source :: FT
+    for I in eachindex(grid)
+        u[I] = u[I] + Δt*(1-θ)*source[I] + Δt*θ*source[I]
+    end
+end
 function addSource!(dest::Symbol,D::DataMultiBlock{TT},θ=TT(1)) where {TT}
     for I in eachblock(D)
         write = getproperty(D[I],dest)

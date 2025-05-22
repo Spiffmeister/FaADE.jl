@@ -676,8 +676,6 @@ function LocalDataBlock(P::PDEProblem{TT,1},G::LocalGridType,SC::StepConfig) whe
 
     BS = GenerateBoundaries(P,G)
 
-    BS = Tuple()
-
     IP = innerH(G.Δx,G.n,P.order)
     D = DiffusionOperator(G.n,G.Δx,P.order,false,:Constant)
     
@@ -798,7 +796,11 @@ function LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integ
     Dy = DiffusionOperator(LG.ny,LG.Δy,P.order,false,difftype)
     D = DiffusionOperatorND(Dx,Dy)
 
-    source = P.source
+    if typeof(P.source.source) <: Vector
+        source = SourceTerm{typeof(P.source.source[I])}(P.source.source[I]) #TODO: Hacked in, fix
+    else
+        source = P.source
+    end
 
     return LocalDataBlock{TT,2,sattype,typeof(u),typeof(K),typeof(PK),typeof(LG),typeof(BS),typeof(D),typeof(source),typeof(PMap)}(u,uₙ₊₁,K,PK,LG,BS,D,source,PMap,IP,cache,rₖ,dₖ,b,SC)
 end

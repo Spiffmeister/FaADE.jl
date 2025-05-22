@@ -12,6 +12,7 @@ module ParallelOperator
     using BasicInterpolators: BicubicInterpolator, LinearInterpolator
     using CubicHermiteSpline
     using DelaunayTriangulation
+    using JLD2
 
     using LinearAlgebra: norm
 
@@ -28,11 +29,13 @@ module ParallelOperator
     include("penaltyfn.jl")
 
     export ParallelGrid
+    export savegrid, readgrid
     export ParallelData, ParallelMultiBlock
 
     export construct_grid
     export applyParallelPenalty!, computeglobalw!
     export compute_parallel_operator
     export MagneticField
+
 
 end
