@@ -12,7 +12,7 @@ Inputs:
 Outputs:
 - ParallelGrid object (see [ParallelGrid](@ref))
 """
-function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ymode=:period,interpmode=:bicubic,remap=nothing,gridoptions=Dict()) where T
+function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:ignore,ymode=:ignore,interpmode=:bicubic,remap=nothing,show_config=true,gridoptions=Dict()) where T
 
     modelist = [:stop,:period,:ignore]
     xmode ∈ modelist ? nothing : error("mode unavailable")
@@ -40,6 +40,18 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:stop,ym
             xy = [remap[1](grid[I]...) for I in eachindex(grid)]
             inversemap = remap[2]
         end
+    end
+
+    if show_config
+        println("Constructing grid")
+        println("Bounds in x and y are being adjusted in mode: ", xmode, ymode)
+        if !isnothing(remap)
+            println("Incoming grid points remapped to logical coordinates.")
+        end
+        if !isnothing(inversemap)
+            println("Outgoing forward and backward points will be remapped")
+        end
+        println("Grid will be remapped for ",interpmode," interpolation mode")
     end
 
     BPlane = construct_plane(χ,xy,z[1],size(grid))
@@ -78,6 +90,8 @@ By default will return points for nearest neighbour interpolation.
 """
 function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{TT};gridoptions=Dict()) where {TT,DIM,MET}
 
+    show_config = true
+
     options = keys(gridoptions)
 
     if "coords" ∈ options
@@ -109,8 +123,8 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
         end
     end
 
-    xmode = :stop
-    ymode = :period
+    xmode = :ignore
+    ymode = :ignore
     if "xmode" ∈ options
         xmode = gridoptions["xmode"]
         if xmode ∉ [:stop,:period,:ignore]
@@ -124,6 +138,19 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
         end
     end
 
+    # Print the incoming grid config to make it more obvious when things go wrong...
+    if show_config
+        println("Constructing grid")
+        println("Bounds in x and y are being adjusted in mode: ", xmode, ymode)
+        if !isnothing(remap)
+            println("Incoming grid points remapped to logical coordinates.")
+        end
+        if !isnothing(inversemap)
+            println("Outgoing forward and backward points will be remapped")
+        end
+        println("Grid will be remapped for ",interpmode," interpolation mode")
+    end
+
     PGridStorage = Dict()
 
     if remapping == :none
@@ -135,7 +162,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
 
     for I in eachgrid(grid)
         # Use the single grid version for the subgrid
-        Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=:ignore,ymode=:ignore,remap=coordinate_map)
+        Pgrid = construct_grid(χ,grid.Grids[I],z,xmode=:ignore,ymode=:ignore,remap=coordinate_map,show_config=false)
 
         # Post processing to ensure grid points are inbounds etc...
         postprocess_plane!(Pgrid.Bplane,xbounds,ybounds,xmode,ymode,inverse_coordinate_map)
@@ -575,8 +602,12 @@ end
     postprocess_plane!(X,xbound,ybound,xmode,ymode, remap=(:xy,:xy))
 """
 function postprocess_plane!(X,xbound,ybound,xmode,ymode, remap=nothing)
-    @views out_of_bounds!(X.x,xbound,xmode)
-    @views out_of_bounds!(X.y,ybound,ymode)
+    if !(xmode == :ignore)
+        @views out_of_bounds!(X.x,xbound,xmode)
+    end
+    if !(ymode == :ignore)
+        @views out_of_bounds!(X.y,ybound,ymode)
+    end
 
     if remap == (:rθ,:xy)
     elseif typeof(remap) <: Function

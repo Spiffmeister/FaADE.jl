@@ -258,11 +258,14 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::Para
             tmpf = intercept[sgiF[J]](tmpf,nnFx[J],nnFy[J],t)
             tmpb = intercept[sgiB[J]](tmpb,nnBx[J],nnBy[J],t)
         end
-
+        
         w_f[J] = (tmpf + tmpb)/2
     end
     τglobal[I] = 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
-    isnan(τglobal[I]) ? τglobal[I] = 0.0 : nothing
+    if isnan(τglobal[I])
+        τglobal[I] = zero(TT)
+    end
+    # isnan(τglobal[I]) ? τglobal[I] = 0.0 : nothing
 
 end
 
