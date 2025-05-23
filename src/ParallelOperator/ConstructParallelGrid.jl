@@ -141,14 +141,14 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
     # Print the incoming grid config to make it more obvious when things go wrong...
     if show_config
         println("Constructing grid")
-        println("Bounds in x and y are being adjusted in mode: ", xmode, ymode)
-        if !isnothing(remap)
+        println("Bounds in x and y are being adjusted in mode: ", xmode,", ", ymode)
+        if !(remapping == :none)
             println("Incoming grid points remapped to logical coordinates.")
         end
-        if !isnothing(inversemap)
-            println("Outgoing forward and backward points will be remapped")
-        end
-        println("Grid will be remapped for ",interpmode," interpolation mode")
+        # if !isnothing(inversemap)
+        #     println("Outgoing forward and backward points will be remapped")
+        # end
+        # println("Grid will be remapped for ",interpmode," interpolation mode")
     end
 
     PGridStorage = Dict()
@@ -602,12 +602,8 @@ end
     postprocess_plane!(X,xbound,ybound,xmode,ymode, remap=(:xy,:xy))
 """
 function postprocess_plane!(X,xbound,ybound,xmode,ymode, remap=nothing)
-    if !(xmode == :ignore)
-        @views out_of_bounds!(X.x,xbound,xmode)
-    end
-    if !(ymode == :ignore)
-        @views out_of_bounds!(X.y,ybound,ymode)
-    end
+    @views out_of_bounds!(X.x,xbound,xmode)
+    @views out_of_bounds!(X.y,ybound,ymode)
 
     if remap == (:rθ,:xy)
     elseif typeof(remap) <: Function
@@ -646,8 +642,6 @@ Move out of bounds points to the boundary
             end
         end
     elseif mode == :period
-        
-        
         if bound[end] ≤ 3π/2
             for i in eachindex(X)
                 X[i] = rem2pi(X[i],RoundNearest)

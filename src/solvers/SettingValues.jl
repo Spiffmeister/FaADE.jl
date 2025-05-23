@@ -592,7 +592,7 @@ end
 """
     Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
 """
-function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
+function _update_Interpolant(D::LocalDataBlock{TT,2,COORD,AT},Interp::TINTERPOLANT,::Val{:chs}) where {TT,COORD,AT,TINTERPOLANT}
     
     rₖ = D.rₖ   :: AT
     dₖ = D.dₖ   :: AT
@@ -601,7 +601,7 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
 
     Dx = D.Derivative.DO[1]
     Dy = D.Derivative.DO[2]
-    Interp = D.Parallel.Interpolant
+    # Interp = D.Parallel.Interpolant
 
     grid = D.grid
 
@@ -662,15 +662,33 @@ function _updateCHSinterp(D::LocalDataBlock{TT,2,COORD,AT}) where {TT,COORD,AT}
     end
 
 end
-function _updateCHSinterp(DB::DataMultiBlock)
+
+
+
+
+"""
+    _update_Interpolant(ITP::BicubicInterpolator,u::AT)
+"""
+function _update_Interpolant(D::LocalDataBlock{TT,DIM,COORD,AT},Interp::TINTERPOLANT,::Val{:bicubic}) where {TT,DIM,COORD,AT,TINTERPOLANT}
+    uₙ₊₁ = D.uₙ₊₁
+    Interp.G.Z .= uₙ₊₁
+end
+
+function _update_Interpolant(DB::DataMultiBlock{TT,DIM,NB,DATABLOCK,ParallelMultiBlock{TT,DIM,TINTERPOLANT,TINTERCEPT,AT}}) where {TT,DIM,NB,DATABLOCK,TINTERPOLANT,TINTERCEPT,AT}
+    InterpolantType = Val(DB.ParallelData.InterpolantDispatch)
+    for I in eachblock(DB)
+        _update_Interpolant(DB[I],DB.ParallelData.Interpolant[I],InterpolantType)
+    end
+end
+
+function _update_ParallelMap(DB::DataMultiBlock{TT,DIM,NB,DATABLOCK,PARALLELBLOCK}) where {TT,DIM,NB,DATABLOCK,PARALLELBLOCK}
     _fillLocalBuffers(:uₙ₊₁,DB)
     _tradeBuffers!(DB)
     _average_boundaries(DB)
-
-    for I in eachblock(DB)
-        _updateCHSinterp(DB[I])
-    end
+    _update_Interpolant(DB)
+    _setglobalu!(DB,DB.ParallelData.uglobal)
 end
+
 
 """
     _setglobalu!

@@ -9,9 +9,11 @@ function applyParallelPenalty! end
 """
 1D apply parallel penalty
 """
-function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,1},grid::Grid1D{TT,MET}) where {TT,VT,MET}
+function applyParallelPenalty!(u::VT,t::TT,Δt::TT,
+        P::ParallelData{TT,1},grid::Grid1D{TT,MET}) where {TT,VT,MET}
+    
     κ = P.κ
-    w_f = P.w_f
+    w = P.w
     H = P.H
 
     I = LinearInterpolator(P.gridx,u)
@@ -19,29 +21,29 @@ function applyParallelPenalty!(u::VT,u₀::VT,Δt::TT,θ::TT,P::ParallelData{TT,
     Fplane = P.PGrid.Fplane
     Bplane = P.PGrid.Bplane
 
-    # w_f ← P_f u + P_b u
+    # w ← P_f u + P_b u
     for i in eachindex(P.gridx)
         x_f = Fplane.x[i]
         x_b = Bplane.x[i]
         if grid[1] ≤ x_f ≤ grid[grid.n]
-            w_f[i] = I(x_f)
+            w[i] = I(x_f)
         else
-            w_f[i] = TT(0)
+            w[i] = TT(0)
         end
         if grid[1] ≤ x_b ≤ grid[grid.n]
-            w_f[i] += I(x_b)
+            w[i] += I(x_b)
         else
-            w_f[i] += TT(0)
+            w[i] += TT(0)
         end
     end
 
     τ = P.τ/grid.Δx # Tune the parallel penalty
 
-    P.w_b[1,1] = maximum(u - w_f)
+    P.w_b[1,1] = maximum(u - w)
 
     for i in 1:grid.n
         u[i] = TT(1)/(TT(1) - τ*κ/TT(2) * Δt * H.H[1][i]) *
-            (u[i] - Δt * κ * τ / TT(4) * H.H[1][i] * w_f[i])
+            (u[i] - Δt * κ * τ / TT(4) * H.H[1][i] * w[i])
     end
 
     u
@@ -50,57 +52,59 @@ end
 2D Parallel penalty for single block problems
 """
 function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
-    P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
+        P::ParallelData{TT,2,PGT,GT,BT,IT},grid::Grid2D{TT,MET}) where {TT,MET,PGT,GT,BT,IT}
 
     κ = P.κ
-    w_f = P.w_f
+    w = P.w
     H = P.H
     J = grid.J
 
-    if IT <: Nothing
-        I   = BicubicInterpolator(P.gridx,P.gridy,u)
-    elseif IT <: BivariateCHSInterpolation
-        I = P.Interpolant
-    end
+    # if IT <: Nothing
+        # I   = BicubicInterpolator(P.gridx,P.gridy,u)
+        # I = P.Interpo
+    # elseif IT <: BivariateCHSInterpolation
+    # end
+    I = P.Interpolant
     IC = P.Intercept
 
-    # w_f ← P_f u + P_b u
+    # w ← P_f u + P_b u
     if isnothing(IC)
-        _compute_w!(I,w_f,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
+        _compute_w!(I,w,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
     else
-        _compute_w!(I,IC,w_f,P.PGrid.Fplane,P.PGrid.Bplane,t,length(P.gridx),length(P.gridy))
+        _compute_w!(I,IC,w,P.PGrid.Fplane,P.PGrid.Bplane,t,length(P.gridx),length(P.gridy))
     end
     
     # Tune the parallel penalty
-    τ = P.τ*0.1*(maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τ = P.τ*0.1*(maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
     isinf(τ) ? τ = TT(1) : nothing
     P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
 
-    P.w_b[1,1] = maximum(u - w_f)
+    P.w_b[1,1] = maximum(u - w)
 
     # u^{n+1} = (1+θ)Δt κ τ
     if MET == CartesianMetric
-        _compute_u!(u,w_f,κ,τ,Δt,H,length(P.gridx),length(P.gridy))
+        _compute_u!(u,w,κ,τ,Δt,H,length(P.gridx),length(P.gridy))
     else
-        _compute_u_curvilinear!(u,w_f,κ,τ,Δt,H,length(P.gridx),length(P.gridy),J)
+        _compute_u_curvilinear!(u,w,κ,τ,Δt,H,length(P.gridx),length(P.gridy),J)
     end
 
     # Replace the old parallel diffusion with the new one
     # TODO : FIX THIS FOR ADAPTIVE
-    # @. w_b = u - w_f
+    # @. w_b = u - w
 
-    # u = w_f
+    # u = w
     u
 end
 """
-Applies the parallel penalty for a multiblock problem.
+Applies the parallel penalty for a multiblock problem
 """
-function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64,ParallelData{TT,DIM}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM}
+function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,
+        P::Dict{Int64,ParallelData{TT,DIM}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM}
 
     LocalP = P[I] :: ParallelData{TT,DIM}
 
     κ = LocalP.κ
-    w_f = LocalP.w_f
+    w = LocalP.w
     H = LocalP.H
     Jac = grid.J
 
@@ -111,7 +115,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64
         for j in Base.OneTo(ny)#1:grid.ny
             for i in Base.OneTo(nx)#1:grid.nx
                 u[i,j] = 1/(1 + Δt * κ * τ / (Jac[i,j] * H[i,j])) * (
-                    u[i,j] + Δt * κ * τ * w_f[i,j] / (Jac[i,j] * H[i,j])
+                    u[i,j] + Δt * κ * τ * w[i,j] / (Jac[i,j] * H[i,j])
                 )
             end
         end
@@ -119,26 +123,26 @@ function applyParallelPenalty!(u::AbstractArray{TT},τ::TT,Δt::TT,P::Dict{Int64
         for j in Base.OneTo(ny)#1:grid.ny
             for i in Base.OneTo(nx)#1:grid.nx
                 u[i,j] = 1/(1 + Δt * κ * τ / H[i,j]) * (
-                    u[i,j] + Δt * κ * τ * w_f[i,j] / H[i,j]
+                    u[i,j] + Δt * κ * τ * w[i,j] / H[i,j]
                 )
             end
         end
     end
 
-    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    # τ = P[I].τ * 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
 
 end
 
-function _compute_u!(u::AT,w_f::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int) where {TT,AT}
+function _compute_u!(u::AT,w::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int) where {TT,AT}
     # println(norm(u))
-    # um = maximum(abs.(u .- w_f))
+    # um = maximum(abs.(u .- w))
     for j in 1:ny
         for i in 1:nx
             ### CURRENTLY IN THE PAPER
 
             u[i,j] = 1/(1 + Δt * κ * τ / (H[i,j])) * (
                 u[i,j] + 
-                +Δt*κ*τ*w_f[i,j]/(H[i,j])
+                +Δt*κ*τ*w[i,j]/(H[i,j])
                     )
 
         end
@@ -146,13 +150,13 @@ function _compute_u!(u::AT,w_f::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,n
     u
 end
 
-function _compute_u_curvilinear!(u::AT,w_f::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int,J::AT) where {TT,AT}
+function _compute_u_curvilinear!(u::AT,w::AT,κ::TT,τ::TT,Δt::TT,H::CompositeH,nx::Int,ny::Int,J::AT) where {TT,AT}
     for j in 1:ny
         for i in 1:nx
 
             u[i,j] = 1/(1 + Δt * κ * τ / (J[i,j]*H[i,j])) * (
                 u[i,j] + 
-                +Δt*κ*τ*w_f[i,j]/(J[i,j]*H[i,j])
+                +Δt*κ*τ*w[i,j]/(J[i,j]*H[i,j])
                 )
         end
     end
@@ -165,7 +169,7 @@ Computes ``P_{parallel} u`` and stores it in `dest`.
 """
 function _compute_w! end
 """
-Compute `w = (w_f + w_b)/2` when an interpolating function is provided.
+Compute `w = (w + w_b)/2` when an interpolating function is provided.
 """
 function _compute_w!(itp,dest::AT,Fplane::ParGrid,Bplane::ParGrid,nx::Int,ny::Int) where {AT}
     for j in 1:ny
@@ -233,15 +237,13 @@ function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT
         # TODO: Place a function barrier here probably, there is a type instability
         #   caused by the selection of localP
         localP = PD.PData[I] :: ParallelData{TT,DIM}
-        w_f = localP.w_f
+        w = localP.w
         PGrid = localP.PGrid :: ParallelGrid
-        computeglobalw!(Interpolant,Intercept,w_f,uglobal[I],PGrid,τglobal,t,I)
-        # @show I,norm(w_f)
+        computeglobalw!(Interpolant,Intercept,w,uglobal[I],PGrid,τglobal,t,I)
     end
-    # @show norm.(uglobal)
     τglobal .= τglobal * PD.PData[1].τ
 end
-function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
+function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
 
     sgiF = PGrid.Fplane.subgrid
     sgiB = PGrid.Bplane.subgrid
@@ -251,7 +253,7 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::Para
     nnBx = PGrid.Bplane.x
     nnBy = PGrid.Bplane.y
 
-    for J in eachindex(w_f)
+    for J in eachindex(w)
         tmpf = interpolant[sgiF[J]](nnFx[J],nnFy[J])
         tmpb = interpolant[sgiB[J]](nnBx[J],nnBy[J])
         if !(CT == Nothing)
@@ -259,9 +261,9 @@ function computeglobalw!(interpolant::IT,intercept::CT,w_f::AT,u::AT,PGrid::Para
             tmpb = intercept[sgiB[J]](tmpb,nnBx[J],nnBy[J],t)
         end
         
-        w_f[J] = (tmpf + tmpb)/2
+        w[J] = (tmpf + tmpb)/2
     end
-    τglobal[I] = 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τglobal[I] = 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
     if isnan(τglobal[I])
         τglobal[I] = zero(TT)
     end
@@ -277,7 +279,7 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
     
     Ipt = [BicubicInterpolator(P[I].gridx,P[I].gridy,uglobal[I]) for I in eachindex(uglobal)]
 
-    w_f = P[I].w_f
+    w = P[I].w
 
     sgiF = P[I].PGrid.Fplane.subgrid
     sgiB = P[I].PGrid.Bplane.subgrid
@@ -287,13 +289,13 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
     nnBx = P[I].PGrid.Bplane.x
     nnBy = P[I].PGrid.Bplane.y
 
-    for J in eachindex(w_f)
-        w_f[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
-        w_f[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
-        w_f[J] = w_f[J]/2
+    for J in eachindex(w)
+        w[J] = Ipt[sgiF[J]](nnFx[J],nnFy[J])
+        w[J] += Ipt[sgiB[J]](nnBx[J],nnBy[J])
+        w[J] = w[J]/2
     end
 
-    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
 
 end
 """
@@ -301,7 +303,7 @@ Compute the globalw for parallel blocks where a custom interpolation scheme is u
 """
 function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglobal::Vector{TT},Δt::TT,P::Vector{ParallelData{TT,DIM,ParallelGrid{TT,DIM,PMT,AT},GT,BT,IT}},grid::Grid2D{TT,MET},I) where {TT,MET,DIM,AT,GT,BT,IT, PMT<:ParGridLinear{TT,AT,METHOD}} where METHOD
     
-    w_f = P[I].w_f
+    w = P[I].w
 
     sgiF = P[I].PGrid.Fplane.subgrid
     sgiB = P[I].PGrid.Bplane.subgrid
@@ -324,21 +326,21 @@ function computeglobalw!(u::AbstractArray{TT},uglobal::Vector{Matrix{TT}},τglob
 
     if METHOD == :NearestNeighbour
         for J in eachindex(u)
-            w_f[J] = uglobal[sgiB[J]][nnBx[J]]
-            w_f[J] += uglobal[sgiF[J]][nnFx[J]]
-            w_f[J] = w_f[J]/2
+            w[J] = uglobal[sgiB[J]][nnBx[J]]
+            w[J] += uglobal[sgiF[J]][nnFx[J]]
+            w[J] = w[J]/2
         end
     elseif METHOD == :CHS
         error("This should have entered a different `computeglobalw!`. Please check the `typeof(ParallelGrid)`.")
     else # Linear Interpolation
-        for J in eachindex(w_f)
-            w_f[J] = _interpolation(uglobal[sgiB[J]], w11B, w12B, w21B, w22B, nnBx[J], nnBy[J], J)
-            w_f[J] += _interpolation(uglobal[sgiF[J]],w11F, w12F, w21F, w22F, nnFx[J], nnFy[J], J)
-            w_f[J] = w_f[J]/2
+        for J in eachindex(w)
+            w[J] = _interpolation(uglobal[sgiB[J]], w11B, w12B, w21B, w22B, nnBx[J], nnBy[J], J)
+            w[J] += _interpolation(uglobal[sgiF[J]],w11F, w12F, w21F, w22F, nnFx[J], nnFy[J], J)
+            w[J] = w[J]/2
         end
     end
     
-    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w_f))/ maximum(abs.(w_f)))^2.0
+    τglobal[I] = P[I].τ * 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
     if isnan(τglobal[I])
         τglobal[I] = zero(TT)
     end

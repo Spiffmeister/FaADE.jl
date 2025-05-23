@@ -157,19 +157,20 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                         _updateCHSinterp(DBlock[1])
                     end
                     applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
+                    τ = DBlock[1].Parallel.τ
                 else
+                    # @show DBlock.ParallelData.Interpolant[1].G.Z[50,50]
+                    # error()
+                    _update_ParallelMap(DBlock)
                     # setglobalu!(uglobal,DBlock) # Circle case
                     # _setglobalu!(uglobal,DBlock)
-                    _updateCHSinterp(DBlock) # When CHS interpolation is used
+                    # _updateCHSinterp(DBlock) # When CHS interpolation is used
                     _setglobalu!(DBlock, uglobal)
-
                     computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
 
                     τ = maximum(DBlock.ParallelData.τ)
                     for I in eachblock(DBlock)
-                        # @show norm(DBlock[I].uₙ₊₁), I
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
-                        # @show norm(DBlock[I].uₙ₊₁), I
                     end
                 end
             end
