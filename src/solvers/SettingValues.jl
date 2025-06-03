@@ -722,20 +722,24 @@ function _update_ParallelMap(DB::DataMultiBlock{TT,DIM,NB,DATABLOCK,PARALLELBLOC
     _tradeBuffers!(DB)
     _average_boundaries(DB)
     _update_Interpolant(DB)
-    _setglobalu!(DB, DB.ParallelData.uglobal)
+    _setglobalu!(DB)
 end
 
 
 """
     _setglobalu!
 """
-function _setglobalu! end
-function _setglobalu!(DB::DataMultiBlock, uglobal::Vector{AT}) where {AT}
-    #TODO: CURRENTLY HACKED - FIX IF CHS INTERP WORKS
+# function _setglobalu!(DB::DataMultiBlock, uglobal::Vector{AT}) where {AT}
+#     for I in eachblock(DB)
+#         uglobal[I] .= DB[I].uₙ₊₁
+#     end
+# end
+function _setglobalu!(DB::DataMultiBlock{TT,DIM,NB,TDBLOCK,ParallelMultiBlock}) where {TT,DIM,NB,TDBLOCK}
     for I in eachblock(DB)
         uglobal[I] .= DB[I].uₙ₊₁
     end
 end
+function _setglobalu!(DB::DataMultiBlock{TT,DIM,NB,TDBLOCK,ParallelData{TT,DIM,TPARALLELGRID,TMAGNETICFIELD,TINTERPOLANT,TINTERCEPT}}) where {TT,DIM,NB,TDBLOCK,TPARALLELGRID,TMAGNETICFIELD,TINTERPOLANT,TINTERCEPT} end
 
 """
     setglobalu!

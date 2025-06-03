@@ -2,7 +2,7 @@
     applyParallelPenalty!
 The default generated parallel penalty function for 2D (1D+parallel) problems
 
-Operator in the 1D case is found [here](@ref https://arxiv.org/abs/2303.15447). In the 2D case details can be found [here](@ref https://arxiv.org/abs/2306.00423).    
+Operator in the 1D case is found [here](https://arxiv.org/abs/2303.15447). In the 2D case details can be found [here](https://arxiv.org/abs/2306.00423).    
 """
 function applyParallelPenalty! end
 
@@ -59,19 +59,14 @@ function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
     H = P.H
     J = grid.J
 
-    # if IT <: Nothing
-        # I   = BicubicInterpolator(P.gridx,P.gridy,u)
-        # I = P.Interpo
-    # elseif IT <: BivariateCHSInterpolation
-    # end
     I = P.Interpolant
     IC = P.Intercept
 
     # w ← P_f u + P_b u
     if isnothing(IC)
-        _compute_w!(I,w,P.PGrid.Fplane,P.PGrid.Bplane,length(P.gridx),length(P.gridy))
+        _compute_w!(I,w,P.PGrid.Fplane,P.PGrid.Bplane,grid.nx,grid.ny)
     else
-        _compute_w!(I,IC,w,P.PGrid.Fplane,P.PGrid.Bplane,t,length(P.gridx),length(P.gridy))
+        _compute_w!(I,IC,w,P.PGrid.Fplane,P.PGrid.Bplane,t,grid.nx,grid.ny)
     end
     
     # Tune the parallel penalty
@@ -79,20 +74,15 @@ function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
     isinf(τ) ? τ = TT(1) : nothing
     P.τ_i[1] = τ * κ * 1/(maximum(J) * P.Δx*P.Δy * maximum(H.H[1].Boundary) * maximum(H.H[2].Boundary))
 
-    P.w_b[1,1] = maximum(u - w)
+    # P.w_b[1,1] = maximum(u - w)
 
     # u^{n+1} = (1+θ)Δt κ τ
     if MET == CartesianMetric
-        _compute_u!(u,w,κ,τ,Δt,H,length(P.gridx),length(P.gridy))
+        _compute_u!(u,w,κ,τ,Δt,H,grid.nx,grid.ny)
     else
-        _compute_u_curvilinear!(u,w,κ,τ,Δt,H,length(P.gridx),length(P.gridy),J)
+        _compute_u_curvilinear!(u,w,κ,τ,Δt,H,grid.nx,grid.ny,J)
     end
 
-    # Replace the old parallel diffusion with the new one
-    # TODO : FIX THIS FOR ADAPTIVE
-    # @. w_b = u - w
-
-    # u = w
     u
 end
 """

@@ -154,7 +154,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if solverconfig.parallel
                 if typeof(G) <: LocalGridType
                     if !(typeof(DBlock[1].Parallel.Interpolant) <: Nothing)
-                        _updateCHSinterp(DBlock[1])
+                        _update_ParallelMap(DBlock)
                     end
                     applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
                     τ = DBlock[1].Parallel.τ

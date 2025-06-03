@@ -57,4 +57,7 @@ soln = solve(P,grid,Δt,t_f)
 # The solver outputs a [`solution`](@ref FaADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 # the problem from the final state if we wanted to restart.
 # 
-# No visualisation routines are written at the moment, coming soon.
+
+using Plots
+plot(grid.grid, soln.u[2])
+

@@ -58,7 +58,7 @@ P = Problem2D(order,u₀,Kx,Ky,grid,BCs)
 # Lastly before solving we define our time step and simulation time,
 
 Δt = 0.01grid.Δx;
-t_f = 100Δt;
+t_f = 200Δt;
 
 # Finally we call the solver (currently not working with `Documenter.jl`)
 # 
@@ -70,4 +70,5 @@ soln = solve(P,grid,Δt,t_f)
 # 
 # No visualisation routines are written at the moment but we imported the `Plots.jl` package earlier so we'll use that
 
-
+using Plots
+surface(grid.gridx, grid.gridy, soln.u[2])

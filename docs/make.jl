@@ -12,7 +12,7 @@ Literate.markdown(LitPath1D,DocSrc)
 Literate.markdown(LitPath2D,DocSrc)
 Literate.markdown(LitPathBF,DocSrc)
 
-makedocs(sitename="SBP Operators Documentation",
+makedocs(sitename="FaADE Documentation",
     pages = [
         "Home" => "index.md",
         "Examples" => [

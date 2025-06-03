@@ -24,6 +24,7 @@ The below operators are for first derivatives
 
 ```@autodocs
 Modules = [FaADE.Derivatives]
+Private = false
 Pages = ["Op_Dx.jl"]
 ```
 
@@ -32,6 +33,7 @@ Pages = ["Op_Dx.jl"]
 
 ```@autodocs
 Modules = [FaADE.Derivatives]
+Private = false
 Pages = ["Op_Dxx.jl"]
 ```
 

@@ -519,7 +519,7 @@ struct DataMultiBlock{TT<:Real,
         DIM,
         NB,
         TDBLOCK <: NTuple{NB,LocalDataBlockType},
-        PTBLOCK <: Union{ParallelData,ParallelMultiBlock}
+        PTBLOCK <: Union{Nothing,ParallelData,ParallelMultiBlock}
             } <: DataBlockType{TT,DIM}
 
     Block   :: TDBLOCK
