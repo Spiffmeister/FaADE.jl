@@ -592,7 +592,7 @@ end
 """
     Updates the `BivariateCHSInterpolation` object from `CubicHermiteSpline.jl`
 """
-function _update_Interpolant(D::LocalDataBlock{TT,2,COORD,AT},Interp::TINTERPOLANT,::Val{:chs}) where {TT,COORD,AT,TINTERPOLANT}
+function _update_Interpolant(D::LocalDataBlock{TT,2,:Variable,AT},Interp::TINTERPOLANT,::Val{:chs}) where {TT,AT,TINTERPOLANT}
     
     rₖ = D.rₖ   :: AT
     dₖ = D.dₖ   :: AT
@@ -643,26 +643,60 @@ function _update_Interpolant(D::LocalDataBlock{TT,2,COORD,AT},Interp::TINTERPOLA
     rₖ_resize = view(rₖ, 1:nx, 1:ny)
     dₖ_resize = view(dₖ, 1:nx, 1:ny)
 
-    if COORD == :Constant # Cartesian coordinates do not require Jacobian
-        for I in eachindex(Interp.z)
-            Interp.z[I] = u_resize[I]
-            Interp.dzdx[I] = rₖ_resize[I]
-            Interp.dzdy[I] = dₖ_resize[I]
-        end
-    else
-        grid = D.grid #TODO: Function barrier probably required for speed/allocations
-        J = grid.J
-        # J_resize = view(J, 1:nx, 1:ny)
+    grid = D.grid #TODO: Function barrier probably required for speed/allocations
+    J = grid.J
+    # J_resize = view(J, 1:nx, 1:ny)
 
-        for I in eachindex(Interp.z)
-            Interp.z[I] = u_resize[I]
-            Interp.dzdx[I] = rₖ_resize[I] #/ J_resize[I]
-            Interp.dzdy[I] = dₖ_resize[I] #/ J_resize[I]
-        end
+    for I in eachindex(Interp.z)
+        Interp.z[I] = u_resize[I]
+        Interp.dzdx[I] = rₖ_resize[I] #/ J_resize[I]
+        Interp.dzdy[I] = dₖ_resize[I] #/ J_resize[I]
     end
 
 end
+function _update_Interpolant(D::LocalDataBlock{TT,2,:Constant,AT},Interp::TINTERPOLANT,::Val{:chs}) where {TT,AT,TINTERPOLANT}
+    
+    rₖ = D.rₖ   :: AT
+    dₖ = D.dₖ   :: AT
 
+    u = D.uₙ₊₁
+
+    Dx = D.Derivative.DO[1]
+    Dy = D.Derivative.DO[2]
+    # Interp = D.Parallel.Interpolant
+
+    grid = D.grid
+
+    nx = Dx.n
+    ny = Dy.n
+    
+    #overwrite rₖ
+    # ∂u/∂x ≈ D_x u
+    D₁!(rₖ, u, nx, Dx.Δx, Dx.order, TT(0), 1)  ## Need q_x
+    #overwrite dₖ
+    # ∂u/∂y ≈ D_y u
+    D₁!(dₖ, u, ny, Dy.Δx, Dy.order, TT(0), 2)  ## Need r_y
+    
+
+    # If the domain is periodic i.e. for a hollow torus then we have to remove
+    #   some elements
+    if nx != size(u)[1]
+        nx = Dx.n-1
+    end
+    if ny != size(u)[2]
+        ny = Dy-1
+    end
+
+    u_resize = view(u, 1:nx, 1:ny)
+    rₖ_resize = view(rₖ, 1:nx, 1:ny)
+    dₖ_resize = view(dₖ, 1:nx, 1:ny)
+
+    for I in eachindex(Interp.z)
+        Interp.z[I] = u_resize[I]
+        Interp.dzdx[I] = rₖ_resize[I]
+        Interp.dzdy[I] = dₖ_resize[I]
+    end
+end
 
 
 
