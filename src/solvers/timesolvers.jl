@@ -165,7 +165,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     # setglobalu!(uglobal,DBlock) # Circle case
                     # _setglobalu!(uglobal,DBlock)
                     # _updateCHSinterp(DBlock) # When CHS interpolation is used
-                    _setglobalu!(DBlock, uglobal)
+                    # _setglobalu!(DBlock)
                     computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
 
                     τ = maximum(DBlock.ParallelData.τ)

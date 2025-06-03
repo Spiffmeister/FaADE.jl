@@ -6,11 +6,13 @@ using Documenter, Literate,
 LitPath1D = joinpath(@__DIR__,"..","tutorials","example1D.jl")
 LitPath2D = joinpath(@__DIR__,"..","tutorials","example2D.jl")
 LitPathBF = joinpath(@__DIR__,"..","tutorials","example2Dparallel.jl")
+LitPathCF = joinpath(@__DIR__,"..","tutorials","example2DCurvilinear.jl")
 DocSrc = joinpath(@__DIR__,"src","tutorials") #.md creation path
 
 Literate.markdown(LitPath1D,DocSrc)
 Literate.markdown(LitPath2D,DocSrc)
 Literate.markdown(LitPathBF,DocSrc)
+Literate.markdown(LitPathCF,DocSrc)
 
 makedocs(sitename="FaADE Documentation",
     pages = [
@@ -19,6 +21,7 @@ makedocs(sitename="FaADE Documentation",
             "tutorials/example1D.md"
             "tutorials/example2D.md"
             "tutorials/example2Dparallel.md"
+            "tutorials/example2DCurvilinear.md"
         ],
         "Modules" => [
             "Derivative Operators" => "Derivatives.md",

@@ -734,7 +734,8 @@ end
 #         uglobal[I] .= DB[I].uₙ₊₁
 #     end
 # end
-function _setglobalu!(DB::DataMultiBlock{TT,DIM,NB,TDBLOCK,ParallelMultiBlock}) where {TT,DIM,NB,TDBLOCK}
+function _setglobalu!(DB::DataMultiBlock{TT,DIM,NB,DATABLOCK,ParallelMultiBlock{TT,DIM,TINTERPOLANT,TINTERCEPT,AT}}) where {TT,DIM,NB,DATABLOCK,TINTERPOLANT,TINTERCEPT,AT}
+    uglobal = DB.ParallelData.uglobal
     for I in eachblock(DB)
         uglobal[I] .= DB[I].uₙ₊₁
     end
