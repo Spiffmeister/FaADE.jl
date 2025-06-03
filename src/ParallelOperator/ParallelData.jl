@@ -69,7 +69,7 @@ function ParallelData(PGrid::ParallelGrid,G::Grid1D{TT},order::Int;κ=TT(1),inte
 
     Bp = zeros(TT,(1,1))
     MF = MagneticField{Nothing,:EQUILIBRIUM,TT,typeof(Bp)}(nothing,false,Bp)
-    
+
     ParallelData{TT,1,typeof(PGrid),typeof(MF),Nothing}(PGrid,κ,τ,intercept_fieldlines,nothing,Δx,Δy,H,w,u,MF,[TT(0)])
 end
 """
@@ -122,10 +122,24 @@ function ParallelData(PGrid::ParallelGrid,G::Grid2D{TT},order::Int;κ::TT=TT(1),
             Interpolator = BicubicInterpolator(gridx,gridy,zeros(size(G)))
         end
     elseif isnothing(interpolant)
-        Interpolator = interpolant
+        @warn "Since no interpolation type was specified, BivariateCHSInterpolation will be used by default."
+        nx = G.nx
+        ny = G.ny
+
+        if periodicy
+            gridx = G.gridx[:, 1:ny-1][:]
+            gridy = G.gridy[:, 1:ny-1][:]
+        else
+            gridx = G.gridx[:]
+            gridy = G.gridy[:]
+        end
+        z = zeros(TT, length(gridx))
+        dzdx = zeros(TT, length(gridx))
+        dzdy = zeros(TT, length(gridx))
+        Interpolator = BivariateCHSInterpolation(gridx, gridy, z, dzdx, dzdy)
     end
 
-    if isa(intercept,Function)
+    if isa(intercept, Function)
         Intercept = intercept
     elseif isnothing(intercept)
         Intercept = nothing
@@ -141,11 +155,11 @@ end
 Stores the parallel data for multiblock problems.
 """
 struct ParallelMultiBlock{TT<:Real,
-        DIM,
-        TINTERPOLANT,
-        TINTERCEPT,
-        AT} <: ParallelGridType
-    
+    DIM,
+    TINTERPOLANT,
+    TINTERCEPT,
+    AT} <: ParallelGridType
+
     PData       :: Dict{Int,ParallelData{TT,DIM}}
     Interpolant :: TINTERPOLANT
     Intercept   :: TINTERCEPT
@@ -153,7 +167,7 @@ struct ParallelMultiBlock{TT<:Real,
     τ           :: Vector{TT}
     InterpolantDispatch :: Symbol
 end
-function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1),interpopts=Dict()) where {TT}
+function ParallelMultiBlock(PGrid, G::GridType{TT}, order::Int; κ=TT(1), interpopts=Dict()) where {TT}
 
     intercept = nothing
     intercept_mode = Nothing
@@ -177,13 +191,21 @@ function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1
         B = interpopts["B"]
     end
 
-    
-
-    PData  = Dict{Int,ParallelData}()
-    for I in eachgrid(G)
-        PData[I] = ParallelData(PGrid[I],G.Grids[I],order,κ=κ,intercept=intercept,interpolant=interpolation_mode,periodicy=periodicy,B=B)
+    PData = Dict{Int,ParallelData}()
+    if typeof(PGrid) <: Dict
+        for I in eachgrid(G)
+            PData[I] = ParallelData(PGrid[I], G.Grids[I], order, κ=κ, intercept=intercept, interpolant=interpolation_mode, periodicy=periodicy, B=B)
+        end
+    elseif typeof(PGrid) <: ParallelGrid
+        PData[1] = ParallelData(PGrid, G, order, κ=κ, intercept=intercept, interpolant=interpolation_mode, periodicy=periodicy, B=B)
     end
-    
+
+    uglobal = if typeof(PGrid) <: Dict
+        [zeros(TT, size(grid)) for grid in G.Grids]
+    elseif typeof(PGrid) <: ParallelGrid
+        [zeros(TT, size(G))]
+    end
+
     TmpInterpolant = []
     for I in 1:length(PData)
         push!(TmpInterpolant,PData[I].Interpolant)
@@ -199,9 +221,7 @@ function ParallelMultiBlock(PGrid::Dict,G::GridMultiBlock{TT},order::Int;κ=TT(1
 
     τglobal = zeros(TT,length(Interp))
 
-    uglobal = [zeros(TT,size(grid)) for grid in G.Grids]
-
-    return ParallelMultiBlock{TT,2,typeof(Interp),typeof(intercept),typeof(uglobal[1])}(PData,Interp,intercept,uglobal,τglobal,interpolation_mode)
+    return ParallelMultiBlock{TT,2,typeof(Interp),typeof(intercept),typeof(uglobal[1])}(PData, Interp, intercept, uglobal, τglobal, interpolation_mode)
 end
 
 
@@ -248,7 +268,7 @@ function construct_parallel(PGrid::ParallelGrid,grid::Grid2D{TT},order::Int,inte
         intercept = nothing
     end
 
-    
+
 
     PData = ParallelData(PGrid,grid,order,κ=κ,B=B,intercept=intercept,interpolant=interpolant,periodicy=periodicy)
     return PData
