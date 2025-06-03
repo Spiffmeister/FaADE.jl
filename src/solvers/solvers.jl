@@ -14,19 +14,20 @@ module solvers
     D₁!
 
     using FaADE.Grid
-    
+
     using FaADE.SATs: SAT_Periodic, SAT_Periodic!,
     SAT_Dirichlet, SAT_Dirichlet_explicit!, SAT_Dirichlet_solution!, SAT_Dirichlet_data!,
     SAT_Neumann, SAT_Neumann_data!, SAT_Neumann_solution!,
     SAT_Robin, SAT_Robin_data!, SAT_Robin_solution!,
-    SAT_Interface, SAT_Interface!, SAT_Interface_cache!, SATpenalties, SimultanousApproximationTerm,  
+    SAT_Interface, SAT_Interface!, SAT_Interface_cache!, SATpenalties, SimultanousApproximationTerm,
     SATMode, DataMode, SolutionMode, ExplicitMode
 
     using FaADE.ParallelOperator: ParallelGrid, ParallelMultiBlock, ParallelData, applyParallelPenalty!, compute_parallel_operator, computeglobalw!
 
     using FaADE.Inputs: PDEProblem, Problem1D, Problem2D
 
-    
+    include("types.jl")
+    include("BoundaryStorage.jl")
     include("DataStorage.jl")
     include("SettingValues.jl")
     include("solution.jl")

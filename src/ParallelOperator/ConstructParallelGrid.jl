@@ -44,7 +44,7 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:ignore,
 
     if show_config
         println("Constructing grid")
-        println("Bounds in x and y are being adjusted in mode: ", xmode, ymode)
+        println("Bounds in x and y are being adjusted in mode: ", xmode," ", ymode)
         if !isnothing(remap)
             println("Incoming grid points remapped to logical coordinates.")
         end
@@ -65,7 +65,7 @@ function construct_grid(χ::Function,grid::Grid2D{T},z::Vector{T};xmode=:ignore,
     if interpmode == :nearest
         ix,iy = _remap_to_nearest_neighbours(grid,BPlane)
         BPlane = ParGrid{Int,typeof(ix)}(ix,iy,ones(Int,size(ix)))
-        
+
         ix,iy = _remap_to_nearest_neighbours(grid,FPlane)
         FPlane = ParGrid{Int,typeof(ix)}(ix,iy,ones(Int,size(ix)))
     elseif interpmode == :bilinear
@@ -167,7 +167,7 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
         # Post processing to ensure grid points are inbounds etc...
         postprocess_plane!(Pgrid.Bplane,xbounds,ybounds,xmode,ymode,inverse_coordinate_map)
         postprocess_plane!(Pgrid.Fplane,xbounds,ybounds,xmode,ymode,inverse_coordinate_map)
-        
+
         # If we are supposed to remap or not
         if remapping == :nearest
             Bplane = _remap_to_nearest_neighbours(grid,Pgrid.Bplane)
@@ -178,12 +178,12 @@ function construct_grid(χ::Function,grid::GridMultiBlock{TT,DIM,MET},z::Vector{
             Bplane = _remap_to_linear(grid,Pgrid.Bplane,(xbounds,ybounds),coordinate_map)
             Fplane = _remap_to_linear(grid,Pgrid.Fplane,(xbounds,ybounds),coordinate_map)
             PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
-        
+
         elseif remapping == :idw
             Bplane = _remap_to_idw(grid,Pgrid.Bplane)
             Fplane = _remap_to_idw(grid,Pgrid.Fplane)
             PGridStorage[I] = ParallelGrid{eltype(Bplane.weight11),DIM,typeof(Bplane),typeof(Bplane.weight11)}(Bplane,Fplane)
-            
+
         elseif remapping == :none
             sgi = _subgrid_index(grid,Pgrid.Bplane,grid_triangulation)
             Bplane = ParGrid{TT,typeof(Pgrid.Bplane.x)}(Pgrid.Bplane.x,Pgrid.Bplane.y,sgi)
@@ -311,7 +311,7 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CartesianMetric},plane::ParG
         iindex[I] = i; jindex[I] = j
 
         ΔxΔy = (subgrid.gridx[i+1,j] - subgrid.gridx[i,j])*(subgrid.gridy[i,j+1] - subgrid.gridy[i,j])
-        
+
         weight11[I] = (subgrid.gridx[i+1,j] - pt[1]) * (subgrid.gridy[i,j+1] - pt[2])/ΔxΔy  # bottom left
         weight12[I] = (pt[1] - subgrid.gridx[i,j]) * (subgrid.gridy[i,j+1] - pt[2])/ΔxΔy    # bottom right
         weight21[I] = (subgrid.gridx[i+1,j] - pt[1])   * (pt[2] - subgrid.gridy[i,j])/ΔxΔy    # top left
@@ -349,7 +349,7 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
         #TODO : REMOVE ALL THESE TRY CATCH
         # We should check this is the correct grid and index
         if (ind[1] == 1) || (ind[1] == grid.Grids[sgi].nx) || (ind[2] == 1) || (ind[2] == grid.Grids[sgi].ny)
-            
+
             tmpi,tmpj = findcell(grid.Grids[sgi],pt)
             # if -1 then the point is not in the domain and we need to correct it
             if tmpi == tmpj == -1
@@ -369,13 +369,13 @@ function _remap_to_linear(grid::GridMultiBlock{TT,2,CurvilinearMetric},plane::Pa
                 if i == j == -1
                     pt = firstpt
                 end
-                
+
             end
-            
+
         end
 
         i,j = findcell(grid.Grids[sgi],pt)
-        
+
         subgrid = grid.Grids[sgi]
 
         iindex[I] = i; jindex[I] = j; subgridindex[I] = sgi;
@@ -419,7 +419,7 @@ function _inverse_bilinear_interpolation(a::Tuple{TT,TT},b,c,d,q) where TT
     Q1 = (-(q[2] - 2 * b[2] + d[2]) * a[1] + (q[2] - 2 * a[2] + c[2]) * b[1] - (-d[1] - q[1]) * a[2] + (-c[1] - q[1]) * b[2] - (c[2] - d[2]) * q[1] - (-c[1] + d[1]) * q[2])
     Q2 = (-(b[2] - d[2]) * a[1] + (a[2] - c[2]) * b[1] + c[1] * b[2] - c[1] * d[2] - d[1] * a[2] + d[1] * c[2])
 
-   
+
 
     if abs(Q2) > 1e-12
         vroot = ((-Q1 + sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2), (-Q1 - sqrt(Q1^2 - 4*Q0*Q2))/(2*Q2))
@@ -492,7 +492,7 @@ function _remap_to_idw(grid::GridMultiBlock{TT,2},plane::ParGrid) where {TT}
         pt = (plane.x[I], plane.y[I])
 
         sgi[I] = findgrid(grid,pt)
-        
+
         subgrid = grid.Grids[sgi[I]]
 
         cartind = CartesianIndices(subgrid.gridx)
@@ -578,7 +578,7 @@ function _subgrid_index(grid::GridMultiBlock,plane::ParGrid,grid_triangulation)
     # subgrid_boundaries = [GetBoundaryCoordinates(subgrid,:Circular) for subgrid in grid.Grids]
     # subgrid_boundary_nodes = [_boundary_index(subgrid_interior[I],subgrid_boundaries[I],grid.Grids[I]) for I in eachindex(grid.Grids)]
     # grid_triangulation = [ triangulate(subgrid_interior[I]; boundary_nodes=subgrid_boundary_nodes[I] ) for I in eachindex(grid.Grids) ]
-    
+
     # Loop over all grid points and use the DelaunayTriangulation to locate the grid
     for J in eachindex(plane.x)
         pt = (plane.x[J],plane.y[J])
@@ -632,7 +632,7 @@ end
 Move out of bounds points to the boundary
 """
 @views function out_of_bounds!(X,bound,mode)
-    
+
     if mode == :stop
         for i in eachindex(X)
             if X[i] ≤ bound[1]
@@ -700,7 +700,5 @@ function _boundary_index(nodes,boundary,grid)
         end
         boundary_indices[end] = boundary_indices[1]
     end
-    return boundary_indices    
+    return boundary_indices
 end
-
-
