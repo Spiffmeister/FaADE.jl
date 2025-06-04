@@ -24,6 +24,7 @@ jobs:
           using Pkg
           Pkg.add("Documenter")
           Pkg.add("Literate")
+          Pkg.add("Plots")
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
       - name: Build and deploy
