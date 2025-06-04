@@ -725,7 +725,6 @@ function newLocalDataBlock(P::newPDEProblem{TT,2},G::LocalGridType,SC::StepConfi
     end
 
     typeof(P.BoundaryConditions.BoundaryLeft).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
-    sattype = :Variable
     # D = DerivativeOperator{TT,2,typeof(P.order),:Constant}(P.order,G.nx,G.ny,G.Δx,G.Δy,false,false)
     Dx = DiffusionOperator(G.nx,G.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(G.ny,G.Δy,P.order,false,difftype)
