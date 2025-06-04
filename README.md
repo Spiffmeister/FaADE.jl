@@ -8,8 +8,8 @@ _Field aligned Anisotropic Diffusion Equation solver_
 ## Installation
 
 This package is currently not on the Julia package registry. To install first
-```
-> git clone https://github.com/Spiffmeister/FaADE.jl.git
+```julia
+] add https://github.com/Spiffmeister/FaADE.jl.git
 ```
 
 ## Loading package
