@@ -6,7 +6,7 @@
 # ∂u/∂q = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x 
 
 """
-    FirstDerivativeInternal
+    FirstDerivativeInternal(u,Δx,order,index,multiplier)
 Single node 1D first derivative function. Includes 2nd, 4th and 6th order stencils.
 """
 function FirstDerivativeInternal end
@@ -23,7 +23,7 @@ end
 
 
 """
-    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::Val{O},α::T)
+    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,order::Val{O},α::T)
 In place first derivative function for internal nodes.
 """
 function FirstDerivativeInternal! end
@@ -136,7 +136,7 @@ end
 
 
 """
-    FirstDerivativeTransposeBoundary!
+    FirstDerivativeTransposeBoundary!(dest,u,Δx,NodeType,::Val{order},multiplier)
 In place 1D first derivative stencil for boundary nodes
 """
 function FirstDerivativeTransposeBoundary! end

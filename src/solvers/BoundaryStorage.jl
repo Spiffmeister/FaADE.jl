@@ -80,6 +80,13 @@ function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint,Joint2
 
     InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
+function InterfaceBoundaryData{TT}(G1::Grid1D,BC) where {TT}
+
+    BufferIn    = zeros(TT,2)
+    BufferOut   = zeros(TT,2)
+
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+end
 function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2::Joint) where {TT}
     if BC.side ∈ [Left,Right]
         n = G1.ny
@@ -118,7 +125,7 @@ function GenerateBoundaries(P::Problem1D,G::LocalGridType{TT,1}) where TT
     tmpDict = Dict()
     for BC in P.BoundaryConditions
         if typeof(BC) <: SAT_Periodic
-            tmpDict[BC.side] = _newBoundaryCondition(G,G,BC,BC.side,_flipside(BC.side),P.order)
+            tmpDict[BC.side] = _newBoundaryCondition(G,BC)
         else
             tmpDict[BC.side] = BoundaryData(G,BC,P.order)
         end

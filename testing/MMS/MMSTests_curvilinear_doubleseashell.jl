@@ -1,3 +1,6 @@
+"""
+MMS tests in a double sea-shell shape
+"""
 using LinearAlgebra
 
 using FaADE

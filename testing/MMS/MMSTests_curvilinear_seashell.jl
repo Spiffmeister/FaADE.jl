@@ -1,3 +1,6 @@
+"""
+MMS testing a single sea-shell
+"""
 using LinearAlgebra
 using Revise
 using FaADE

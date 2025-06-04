@@ -1,3 +1,6 @@
+"""
+MMS tests on a 1D problem
+"""
 using LinearAlgebra
 
 # using Plots
@@ -74,8 +77,7 @@ function comp_MMS(Dx,npts,
         P = Problem1D(order,ũ₀,K,Dom,BD,source=F)
 
         println("Solving n=",Dom.n," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
-        # soln = solve(P,Dom,Δt,2.1Δt,solver=:theta,θ=θ)
+        soln = solve(P,Dom,Δt,t_f)
 
         u_MMS = generate_MMS(ũ,Dom,soln.t[2]+Δt)
 
@@ -128,7 +130,7 @@ function time_MMS(Dx,npts,
         P = Problem1D(order,ũ₀,K,Dom,BD,source=F)
 
         println("Solving n=",Dom.n," case with Δt=",Δt)
-        soln = solve(P,Dom,Δt,t_f,solver=:theta,θ=θ)
+        soln = solve(P,Dom,Δt,t_f)
 
         u_MMS = generate_MMS(ũ,Dom,soln.t[2]+Δt)
 
@@ -346,31 +348,3 @@ end
 
 
 
-# if plots
-#     using GLMakie
-
-#     f = Figure()
-
-#     Ax = Axis(f[1,1])
-#     menu1 = Menu(f[2,1], options = ["$N" for N in npts], default="MMS")
-
-#     on(menu1.selection) do s
-#         empty!(Ax)
-#         if s == "MMS"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end])
-#         elseif s == "Computed"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.comp_soln[end].u[2])
-#         elseif s == "Error"
-#             pobj = surface!(Ax, O2_DirichletMMS.grids[end].gridx, O2_DirichletMMS.grids[end].gridy, O2_DirichletMMS.MMS_soln[end] .- O2_DirichletMMS.comp_soln[end].u[2])
-#         end
-#     end
-#     notify(menu1.selection)
-#     f
-# end
-
-# plot(O4_DirichletMMS.comp_soln[1].grid.grid,O4_DirichletMMS.comp_soln[1].u[2] .- O4_DirichletMMS.MMS_soln[1])
-# plot!(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.comp_soln[end].u[2] .- O4_DirichletMMS.MMS_soln[end])
-
-
-# plot(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.MMS_soln[end])
-# plot!(O4_DirichletMMS.comp_soln[end].grid.grid,O4_DirichletMMS.comp_soln[end].u[2])
