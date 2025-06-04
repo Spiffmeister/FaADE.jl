@@ -33,6 +33,7 @@ makedocs(sitename="FaADE Documentation",
         ]
     ],
     format=Documenter.HTML(prettyurls=false),
+    warnonly = Documenter.except(:linkcheck,:footnote),
     modules = [FaADE,FaADE.Derivatives,FaADE.Helpers,FaADE.SATs,FaADE.solvers]
     )
 	
