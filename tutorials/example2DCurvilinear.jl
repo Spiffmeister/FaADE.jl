@@ -7,7 +7,7 @@
 # ```
 # In this case we expect the parallel operator to do nothing since ``\mathbf{P}_f=\mathbf{P}_b=I``
 #
-using Revise
+
 using FaADE
 
 # 
