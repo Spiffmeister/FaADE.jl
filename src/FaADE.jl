@@ -14,7 +14,7 @@ module FaADE
 
     # Inbuild julia packages
     using Distributed
-    using SharedArrays
+    # using SharedArrays
     using LinearAlgebra
     # using JLD2
 
@@ -38,18 +38,18 @@ module FaADE
 
     using FaADE.Grid: Grid1D, Grid2D, GridMultiBlock, CartesianMetric, CurvilinearMetric, Joint
     
-    using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SimultanousApproximationTerm
+    using FaADE.SATs: SAT_Periodic, SAT_Dirichlet, SAT_Neumann, SAT_Robin, SimultanousApproximationTerm
 
     using FaADE.solvers: solve
 
-    using FaADE.ParallelOperator: construct_grid, generate_parallel_penalty, ParallelData
+    using FaADE.ParallelOperator: construct_grid, ParallelData, ParallelMultiBlock
 
     # Export the functions for direct user interaction
     export Dirichlet, Neumann, Robin, Periodic, Interface
     export Left, Internal, Right, Up, Down
     export Grid1D, Grid2D, GridMultiBlock, Joint
     export CartesianMetric, CurvilinearMetric
-    export construct_grid, generate_parallel_penalty, ParallelData
+    export construct_grid, ParallelData, ParallelMultiBlock
 
     export D₁, D₂, D₂!, D₁!
 
@@ -58,15 +58,15 @@ module FaADE
     export SimultanousApproximationTerm,
         SAT_Dirichlet,
         SAT_Neumann,
-        SAT_Periodic
-        #SAT_Robin, 
+        SAT_Periodic,
+        SAT_Robin
         #Split_domain
 
-    using FaADE.Inputs: Problem1D, Problem2D, SATBoundaries
+    using FaADE.Inputs: Problem1D, Problem2D
 
 
 
-    export Problem1D, Problem2D, SATBoundaries
+    export Problem1D, Problem2D
     
 
 

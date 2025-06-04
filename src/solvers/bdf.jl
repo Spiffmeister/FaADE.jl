@@ -24,11 +24,11 @@ end
 
 
 """
-    BDF2_Residual(DB::newLocalDataBlock{TT},Δt::TT,t::TT)
+    BDF2_Residual(DB::LocalDataBlock{TT},Δt::TT,t::TT)
 
     Compute the residual for the BDF2 integrator storing the result in rₖ and where `cache = uₙ₊₁`
 """
-function BDF2_Residual(DB::newLocalDataBlock{TT},Δt::TT,t::TT)
+function BDF2_Residual(DB::LocalDataBlock{TT},Δt::TT,t::TT)
 
     @. D.rₖ = TT(3) * D.cache - TT(4)*D.u + TT(2)*Δt*D.cache
 

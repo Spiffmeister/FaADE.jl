@@ -12,4 +12,5 @@
 !/docs/src/example*D.md
 *.jld2
 *.csv
-*/Manifest.*
+*Manifest.*
+*scratch*

@@ -3,10 +3,10 @@
 #=====================================#
 # Author: Dean Muir, Kenneth Duru
 
-
+# ∂u/∂q = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x 
 
 """
-    FirstDerivativeInternal
+    FirstDerivativeInternal(u,Δx,order,index,multiplier)
 Single node 1D first derivative function. Includes 2nd, 4th and 6th order stencils.
 """
 function FirstDerivativeInternal end
@@ -23,7 +23,7 @@ end
 
 
 """
-    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,DO::Val{O},α::T)
+    FirstDerivativeInternal!(uₓ::AT,u::AT,Δx::T,n::Int,order::Val{O},α::T)
 In place first derivative function for internal nodes.
 """
 function FirstDerivativeInternal! end
@@ -32,15 +32,15 @@ function FirstDerivativeInternal! end
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,TT(1))
     end
-    dest
+    # dest
 end
-@inline function FirstDerivativeInternal!(dest::VT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     # m = floor(Int,(O+2)/2)
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,K[i])
     end
-    dest
+    # dest
 end
 
 
@@ -70,7 +70,7 @@ end
     for i = 1:n
         @inbounds dest[i] = α*dest[i] + FirstDerivativePeriodic(u,Δx,DO,n,i,K[i])
     end
-    dest
+    # dest
 end
 
 
@@ -136,7 +136,7 @@ end
 
 
 """
-    FirstDerivativeTransposeBoundary!
+    FirstDerivativeTransposeBoundary!(dest,u,Δx,NodeType,::Val{order},multiplier)
 In place 1D first derivative stencil for boundary nodes
 """
 function FirstDerivativeTransposeBoundary! end

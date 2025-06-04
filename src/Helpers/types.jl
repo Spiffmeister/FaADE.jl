@@ -16,11 +16,10 @@ struct NodeType{T,D} end
 const Left = NodeType{:Left,1}()
 const Internal = NodeType{:Internal,0}()
 const Right = NodeType{:Right,1}()
-const Up = NodeType{:Left,2}()
-const Down = NodeType{:Right,2}()
+const Up = NodeType{:Right,2}()
+const Down = NodeType{:Left,2}()
 
-
-function _flip(NT)
+function _flipside(NT::NodeType)
     if NT == Left
         return Right
     elseif NT == Right
@@ -69,14 +68,14 @@ struct DerivativeOrder{InternalOrder,BoundarySize} end
 
 
 abstract type DataBlockType{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
-abstract type BoundaryStorage{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
+# abstract type BoundaryStorage{dtype<:AbstractFloat,N, atype<:AbstractArray{dtype}} end
 # abstract type GridType{dtype<:AbstractFloat,N} end
 abstract type ParallelGridStorage{dtype<:AbstractFloat,N} end
 
 
 
-struct SourceTerm{F<:Union{Function,Nothing}}
-    source :: F
+struct SourceTerm{ST}
+    source :: ST
 end
 
 

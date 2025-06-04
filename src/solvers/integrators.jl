@@ -1,32 +1,3 @@
-#=
-"""
-    (RK::ExplicitBlock{T,N,4})
-RK4 integrator
-"""
-function (RK::ExplicitBlock{T,N,AT,4})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
-    
-    DBlock.uₙ₊₁ .= DBlock.u
-
-    RHS(RK.k1,DBlock.u,         DBlock.K,t)
-    RHS(RK.k2,DBlock.u+0.5RK.k1,DBlock.K,t+0.5RK.Δt)
-    RHS(RK.k3,DBlock.u+0.5RK.k2,DBlock.K,t+0.5RK.Δt)
-    RHS(RK.k4,DBlock.u+RK.k3,   DBlock.K,t+RK.Δt)
-    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt/6.0 * (RK.k1 + 2RK.k2 + 2RK.k3 + RK.k4)
-end
-"""
-    (ForwardEuler::ExplicitBlock{T,N,1})
-Forward Euler integrator
-"""
-function (ForwardEuler::ExplicitBlock{T,N,AT,1})(RHS::Function,DBlock::DataBlock,t::Float64) where {T,N,AT}
-    
-    DBlock.uₙ₊₁ .= DBlock.u
-
-    RHS(RK.k1,DBlock.u,DBlock.K,t)
-    DBlock.uₙ₊₁ .+= DBlock.u + RK.Δt*RK.k1
-
-end
-=#
-
 
 """
     conj_grad!
@@ -35,27 +6,26 @@ In-place conjugate gradient method. Designed for multiblock problems
 See also [`build_H`](@ref), [`A!`](@ref), [`innerH`](@ref)
 """
 function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
-    atol=1.e-5,rtol=1.e-12,maxIT::Int=1000,warnings=false) where {TT,DIM}
+    atol=1.e-5,rtol=1.e-8,maxIT::Int=1000,warnings=true) where {TT,DIM}
 
     local rnorm::TT
     local unorm::TT
     local dₖAdₖ::TT
     local βₖ::TT
     local αₖ::TT
-
     # testA!(:u,DBlock[1]) # cache ← Au
     A!(:u,DBlock) # cache ← Au = u - θ*Δt*Du
+     
     setValue(:rₖ,:cache,DBlock) # r ← cache
     muladd!(:rₖ,:b,DBlock,α=TT(-1)) # r = b - cache
     setValue(:dₖ,:rₖ,DBlock) # d = r
-    
     i = 0
     rnorm = sqrt(innerprod(:rₖ,:rₖ,DBlock)) #√(rₖ,rₖ)ₕ
     # unorm = max(sqrt(innerprod(:u,:u,DBlock)),1e-14) #√(uₙ₊₁,uₙ₊₁)ₕ
     bnorm = max(sqrt(innerprod(:b,:b,DBlock)),1e-14) #√(b,b)ₕ
     while (rnorm ≥ rtol*bnorm) & (i < maxIT)
         # testA!(:dₖ,DBlock[1]) # cache ← Adₖ
-        A!(:dₖ,DBlock[1]) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
+        A!(:dₖ,DBlock) # cache ← Adₖ = dₖ - θ*Δt*D(dₖ)
         dₖAdₖ = innerprod(:dₖ,:cache,DBlock) #αₖ = (dₖ,Ddₖ)
         αₖ = rnorm^2 / dₖAdₖ
 
@@ -75,16 +45,13 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
         muladd!(:dₖ,:rₖ,DBlock,α=βₖ/rnorm^2) #dₖ = rₖ + βₖ/rnorm^2 * dₖ
         
         rnorm = sqrt(βₖ)
-        # println(rnorm)
         i += 1
     end
     if (rnorm>rtol*bnorm) & warnings
         DBlock.SC.converged = false
         warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
         @warn warnstr
-    end 
-    # warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
-    # @warn warnstr
+    end
 end
 
 """
@@ -97,7 +64,7 @@ function A!(PDE!::Function,tmp::AT,uⱼ::AT,Δt::TT,k::KT) where {TT,AT,KT}
     tmp
 end
 
-function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
+function A!(read::Symbol,D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
     # Compute the derivatives
     W = getarray(D,:cache)
     R = getarray(D,read)
@@ -110,18 +77,19 @@ function A!(read::Symbol,D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST
     end
     
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
-
     W
 end
 function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
-    fillBuffers(source,DB)
+    # fillBuffers(source,DB)
+    _fillLocalBuffers(source,DB)
+    _tradeBuffers!(DB)
     for i in eachblock(DB)
         A!(source,DB[i])
     end
 end
 
 
-function CGRHS!(D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
+function CGRHS!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
     # Compute the derivatives
     cache = getarray(D,:cache)
     b = getarray(D,:b)
@@ -139,11 +107,12 @@ function CGRHS!(D::newLocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) whe
     if COORD == :Variable
         @. b = b/D.grid.J
     end
-    
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
-    fillBuffers(:u,DB)
+    # fillBuffers(:u,DB)
+    _fillLocalBuffers(:u,DB)
+    _tradeBuffers!(DB)
     for i in eachblock(DB)
         CGRHS!(DB[i])
     end
@@ -174,7 +143,7 @@ end
 
 
 
-function testA!(read::Symbol,D::newLocalDataBlock)
+function testA!(read::Symbol,D::LocalDataBlock)
     #uses whatever is stored in K[1] as the A operator
     R = getarray(D,read)
     D.cache = D.K*R

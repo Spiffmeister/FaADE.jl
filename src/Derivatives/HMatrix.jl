@@ -43,19 +43,19 @@ end
 
 
 """
-    mul!(u::VT,H::DiagonalH{TT},v::VT)
+    mul(u::VT,H::DiagonalH{TT},v::VT)
 """
-function mul!(u::VT,H::DiagonalH{TT},v::VT) where {TT,VT<:AbstractVector{TT}}
+function mul(u::VT,H::DiagonalH{TT},v::VT) where {TT,VT<:AbstractVector{TT}}
     tmp = TT(0)
-    for i = 1:B.n
+    for i = 1:H.n
         tmp += u[i] * H[i] * v[i]
     end
     return tmp
 end
 """
-    mul!(u::VT,H::DiagonalH{TT},v::VT)
+    mul(u::VT,H::CompositeH{DIM,TT},v::VT)
 """
-function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
+function mul(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
     tmp = TT(0)
     for j = 1:H.sz[2]
         for i = 1:H.sz[1]
@@ -64,10 +64,7 @@ function mul!(u::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray
     end
     return tmp
 end
-"""
-    mul!(u::VT,H::DiagonalH{TT},v::VT)
-"""
-function mul!(u::AT,J::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
+function mul(u::AT,J::AT,H::CompositeH{DIM,TT},v::AT) where {DIM,TT,AT<:AbstractArray{TT}}
     tmp = TT(0)
     for j = 1:H.sz[2]
         for i = 1:H.sz[1]
@@ -81,7 +78,7 @@ end
 """
     innerH{T,N,VT<:AbstractVector{T}}
 Method for a 1 or 2 dimensional H inner product.
-        
+
 Inputs:
 - [`GridType`](@ref)
 - Order of method
@@ -202,4 +199,3 @@ function Base.getindex(H::CompositeH{2,TT,VT,HTYPE},i::Int,j::Int) where {TT,VT<
     Hy = H.H[2] :: HTYPE
     return Hx[i]*Hy[j]
 end
-

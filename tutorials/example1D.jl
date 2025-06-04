@@ -19,7 +19,7 @@ using FaADE
 # ```
 #
 # 
-# We first create a domain to solve the PDE using [`Grid1D`](@ref FaADE.Helpers.Grid1D),
+# We first create a domain to solve the PDE using [`Grid1D`](@ref),
 # 
 𝒟 = [0.0,1.0]
 n = 41
@@ -31,16 +31,16 @@ u₀(x) = exp.(-(x.-0.5).^2 ./ 0.02)
 # Create a few more things we'll need for the PDE and the solver such as the order (2) and the solver (conjugate gradient implicit euler)
 order = 2;
 
-# The boundary conditions are defined by creating [`Boundary`](@ref FaADE.Helpers.Boundary) objects, which will then be fed to the PDE structure
+# The boundary conditions are defined by creating [`SimultanousApproximationTerm`](@ref FaADE.SATs.SimultanousApproximationTerm) objects, which will then be fed to the PDE structure
 BoundaryLeft = SAT_Dirichlet(t->0.0, grid.Δx, Left, order)
 BoundaryRight = SAT_Neumann(t->0.0, grid.Δx, Right, order)
 
-BCs = SATBoundaries(BoundaryLeft, BoundaryRight)
+BCs = (BoundaryLeft, BoundaryRight)
 
 # We will set the diffusion coefficient to 1 eveywhere in the domain
 K = 1.0
 
-# Now we can create a PDE object to pass to the solver, in this case a [`Problem1D`](@ref FaADE.Helpers.Problem1D),
+# Now we can create a [`PDEProblem`](@ref FaADE.Inputs.PDEProblem) object to pass to the solver,
 
 P = Problem1D(order,u₀,K,grid,BCs)
 
@@ -57,4 +57,7 @@ soln = solve(P,grid,Δt,t_f)
 # The solver outputs a [`solution`](@ref FaADE.solvers.solution) data structure, with everything packaged in that we would need to reconstruct
 # the problem from the final state if we wanted to restart.
 # 
-# No visualisation routines are written at the moment, coming soon.
+
+using Plots
+plot(grid.grid, soln.u[2])
+

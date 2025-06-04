@@ -7,14 +7,18 @@
 
 
 """
-    SolverData{method,adaptive}
+    SolverData{method,TT}
 """
-struct SolverData{method,TT} 
+struct SolverData{TT} 
     adaptive    :: Bool
     target      :: TT
     parallel    :: Bool
-    function SolverData{TT}(;adaptive=false,target=0,method=:cgie,parallel=false) where TT
-        new{method,TT}(adaptive,target,parallel)
+
+    @doc """
+        SolverData{TT}(;adaptive=false,target=0,method=:cgie,parallel=false) where TT
+    """
+    function SolverData{TT}(;adaptive=false,target=0,parallel=false) where TT
+        new{TT}(adaptive,target,parallel)
     end
 end
 
@@ -26,10 +30,11 @@ end
 """
     solve
 Solve the 1D or 2D PDE on the given grid.
-
-```julia
-solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;solver::Symbol=:cn,adaptive::Bool=false,θ=TT(1),target=TT(0))
-```
+"""
+function solve end
+"""
+    solve(P::PDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
+        solver::Symbol=:cn,adaptive::Bool=false,θ=TT(1),target=TT(0)) where {TT,DIM}
 
 Inputs:
 - Prob: [`Problem1D`](@ref) or [`Problem2D`](@ref)
@@ -41,48 +46,40 @@ Inputs:
 Optional inputs:
 - `adaptive::Bool=false` `true` or `false` - Adaptive time stepping
 """
-function solve end
-function solve(P::newPDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;
-        solver::Symbol=:cn,adaptive::Bool=false,θ=TT(1),target=TT(0)) where {TT,DIM}
+function solve(P::PDEProblem{TT,DIM},G::GridType{TT,DIM},Δt::TT,t_f::TT;adaptive::Bool=false,θ=TT(1/2),target=TT(0)) where {TT,DIM}
 
     P.Parallel === nothing ? parallel = false : parallel = true 
-    if solver ∈ [:cgie,:cn,:theta]
-        if solver == :cgie
-            θ == TT(1)
-        elseif solver == :cn
-            θ = TT(1/2)
-        elseif solver == :theta
-            θ = θ
+    SD = SolverData{TT}(adaptive=adaptive,parallel=parallel,target=target)
+    DBlock = DataMultiBlock(P,G,Δt,0.0,θ=θ)
+    soln = solution(G,0.0,Δt,P)
+
+    if typeof(G) <: LocalGridType
+        DBlock[1].u .= soln.u[1]
+        # DBlock[1].uₙ₊₁ .= soln.u[1]
+    elseif typeof(G) <: GridMultiBlock
+        for I in eachblock(DBlock)
+            DBlock[I].u .= soln.u[1][I]
+            # DBlock[I].uₙ₊₁ .= soln.u[1][I]
         end
-        SD = SolverData{TT}(adaptive=adaptive,method=solver,parallel=parallel,target=target)
-        DBlock = DataMultiBlock(P,G,Δt,0.0,θ=θ)
-        soln = solution(G,0.0,Δt,P)
-
-        if typeof(G) <: LocalGridType
-            DBlock[1].u .= soln.u[1]
-            # DBlock[1].uₙ₊₁ .= soln.u[1]
-        elseif typeof(G) <: GridMultiBlock
-            for I in eachblock(DBlock)
-                DBlock[I].u .= soln.u[1][I]
-                # DBlock[I].uₙ₊₁ .= soln.u[1][I]
-            end
-        end
-
-        
-        if parallel
-            for I in eachblock(DBlock)
-                compute_parallel_operator(DBlock[I].Parallel.w_b,DBlock[I].u,DBlock[I].Parallel)
-            end
-        end
-
-
-        # implicitsolve(P,G,Δt,t_f,SD)
-        implicitsolve(soln,DBlock,G,Δt,t_f,SD)
-    else
-        error("solver not defined, try :cgie or :cn")
     end
+
+    
+    # if parallel
+    #     for I in eachblock(DBlock)
+    #         compute_parallel_operator(DBlock[I].Parallel.w_b,DBlock[I].u,DBlock[I].Parallel)
+    #     end
+    # end
+
+
+    # implicitsolve(P,G,Δt,t_f,SD)
+    implicitsolve(soln,DBlock,G,Δt,t_f,SD)
 end
 
+"""
+    restart(S::solution{TT,GT,PT};adaptive=false,Δt=TT(0),t_f=TT(0),K=(TT(0),TT(0)),K_para=TT(0),θ=TT(0.5)) where {TT,GT,PT}
+
+
+"""
 function restart(S::solution{TT,GT,PT};adaptive=false,Δt=TT(0),t_f=TT(0),K=(TT(0),TT(0)),K_para=TT(0),θ=TT(0.5)) where {TT,GT,PT}
 
     S.problem.Parallel == nothing ? parallel = false : parallel = true
@@ -122,8 +119,21 @@ function restart(S::solution{TT,GT,PT};adaptive=false,Δt=TT(0),t_f=TT(0),K=(TT(
     implicitsolve(soln,DBlock,S.grid,Δt,t_f,SD)
 end
 
-# function implicitsolve(P::newPDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
+# function implicitsolve(P::PDEProblem{TT,DIM},G::GridType,Δt::TT,t_f::TT,solverconfig::SolverData{:cgie}) where {TT,DIM}
 function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) where {TT}
+
+    if typeof(G) <: LocalGridType
+        # uglobal = [zeros(size(G))] # TESTING
+        # τglobal = zeros(length(uglobal))
+        # Par = [DBlock[1].Parallel]
+
+    else
+        uglobal = [zeros(size(G.Grids[I])) for I in eachgrid(G)]
+        # τglobal = zeros(length(uglobal))
+
+        # Par = [DBlock[I].Parallel for I in eachblock(DBlock)]
+    end
+    # uglobal = [zeros(TT,size(G.Grids[I])) for I in eachgrid(G)]
 
     target_state = solverconfig.target
 
@@ -140,12 +150,29 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
 
         theta_method(DBlock,t,Δt)
 
-        if DBlock.SC.converged | !solverconfig.adaptive #If CG converges
+        if DBlock.SC.converged | !solverconfig.adaptive #If perpendicular push converged
             if solverconfig.parallel
-                # println("b4",norm(DBlock[1].uₙ₊₁))
-                # @show norm(DBlock[1].u)
-                applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock[1].u,DBlock.SC.Δt,DBlock.SC.θ,DBlock[1].Parallel,DBlock[1].grid)
-                # println("afta",norm(DBlock[1].uₙ₊₁))
+                if typeof(G) <: LocalGridType
+                    if !(typeof(DBlock[1].Parallel.Interpolant) <: Nothing)
+                        _update_ParallelMap(DBlock)
+                    end
+                    applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
+                    τ = DBlock[1].Parallel.τ
+                else
+                    # @show DBlock.ParallelData.Interpolant[1].G.Z[50,50]
+                    # error()
+                    _update_ParallelMap(DBlock)
+                    # setglobalu!(uglobal,DBlock) # Circle case
+                    # _setglobalu!(uglobal,DBlock)
+                    # _updateCHSinterp(DBlock) # When CHS interpolation is used
+                    # _setglobalu!(DBlock)
+                    computeglobalw!(DBlock.ParallelData,uglobal,t,Δt)
+
+                    τ = maximum(DBlock.ParallelData.τ)
+                    for I in eachblock(DBlock)
+                        applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
+                    end
+                end
             end
 
             # USED FOR DETERMINING EQUILIBRIUM
@@ -162,8 +189,6 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             if (DBlock.SC.Δu ≤ target_state) & (t_f == Inf)
                 t_f = t
             end
-            # @show t, DBlock.SC.Δu, maximum(DBlock[1].u .- DBlock[1].uₙ₊₁), maximum(DBlock[1].uₙ₊₁)
-            # @show maximum(abs.(DBlock[1].u .- DBlock[1].uₙ₊₁))
             
             copyto!(:u,:uₙ₊₁,DBlock)
             if solverconfig.adaptive & (Δt<300Δt₀)
@@ -174,7 +199,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
             t += Δt
 
             if !isnothing(DBlock[1].Parallel)
-                push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
+                # push!(soln.τ_hist,DBlock[1].Parallel.τ_i[1])
+                push!(soln.τ_hist,τ)
             end
         else #If CG fails, reset and retry step
             # DBlock.uₙ₊₁ .= DBlock.u
@@ -192,7 +218,7 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
         #     sample += sample
         #     UpdateSolution!(soln,DBlock.u,t,Δt)
         # end 
-
+    
     end
     if typeof(G) <: LocalGridType
         push!(soln.u,DBlock[1].uₙ₊₁)

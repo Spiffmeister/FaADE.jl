@@ -6,6 +6,9 @@
 function coordinate(cbottom::Function,cleft::Function,cright::Function,ctop::Function,u::TT,v::TT) where TT
     S = (one(TT)-v)*cbottom(u) + v*ctop(u) + (one(TT)-u)*cleft(v) + u*cright(v) - 
         (u*v*ctop(one(TT)) + u*(one(TT)-v)*cbottom(one(TT)) + v*(one(TT)-u)*ctop(zero(TT)) + (one(TT)-u)*(one(TT)-v)*cbottom(zero(TT)))
+    # if u == 1
+    #     @show S
+    # end
     return S
 end
 
@@ -13,30 +16,27 @@ end
 
 
 
-
+function meshgrid end
 """
-    meshgrid(S,TT,nx,ny)
 Generates the 2D grid of `nx` and `ny` points in a domain given a set of functions which bound a domain.
 """
-function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
+function meshgrid(TT,cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int;stretchu=u->u,stretchv=v->v)
     # TT = Float64
 
-    u = LinRange(TT(0),TT(1),nx)
-    v = LinRange(TT(0),TT(1),ny)
+    u = range(zero(TT),one(TT),nx)
+    v = range(zero(TT),one(TT),ny)
 
     S(u,v) = coordinate(cbottom,cleft,cright,ctop,u,v)
 
-    
-    
     X = zeros(nx,ny)
     Y = zeros(nx,ny)
 
     for j = 1:ny
         for i = 1:nx
             # println(S(u[i],v[j])," ",u[i],",",v[j])
-
-            X[i,j] = S(u[i],v[j])[1]
-            Y[i,j] = S(u[i],v[j])[2]
+            coord = S(stretchu(u[i]),stretchv(v[j]))
+            X[i,j] = coord[1]
+            Y[i,j] = coord[2]
         end
     end
     return X,Y
@@ -45,7 +45,7 @@ end
     meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int)
 Construct a grid of `nx` by `ny` points in a domain bounded by the functions `cbottom`, `cleft`, `cright`, and `ctop`.
 """
-meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int) = meshgrid(Float64,cbottom,cleft,cright,ctop,nx,ny)
+meshgrid(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Int,ny::Int;stretchu=u->u,stretchv=u->u) = meshgrid(Float64,cbottom,cleft,cright,ctop,nx,ny,stretchu=stretchu,stretchv=stretchv)
 """
     meshgrid(𝒟x::Vector{TT},𝒟y::Vector{TT}) where TT
 Generate matrix of coordinates from vectors of coordinates this is useful for packed grids.

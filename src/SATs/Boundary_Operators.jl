@@ -80,7 +80,7 @@ end
 """
     BoundaryDerivative
 
-Used to construct `E₀D₁` or `EₙD₁`.
+Used to construct `E₀D₁` or `EₙD₁`. Does not take into account the normal vector.
 """
 function BoundaryDerivative end
 function BoundaryDerivative(::NodeType{:Left},Δx::Real,order::Int)
@@ -115,13 +115,13 @@ TODO: Remove inlineing
 """
 function SATpenalties end
 @inline function SATpenalties(::BoundaryConditionType{:Robin},a,Δx::Float64,order::Int64)
-    h = hval(order)
+    h = _hval(order)
 
     τ = 1.0/(a * h * Δx) # τ=1/a H^{-1}
     return τ
 end
 @inline function SATpenalties(::BoundaryConditionType{:Periodic},Δx::Real,order::Int64)
-    h = hval(order)
+    h = _hval(order)
 
     α₀ = 0.5/(h*Δx)
     τ₁ = -0.5/Δx #1/h accounted for in BoundaryDerivativeTranspose
@@ -129,16 +129,18 @@ end
 
     return α₀,τ₁,τ₀
 end
-@inline function SATpenalties(::BoundaryConditionType{:Interface},Δx⁺,Δx⁻,order⁺,order⁻)
+@inline function SATpenalties(::BoundaryConditionType{:Interface},Δx₁,Δx₂,order)
 
-    h⁻ = hval(order⁻)
-    h⁺ = hval(order⁺)
+    h = _hval(order)
 
-    α₀ = -0.5/(h⁻*Δx⁻)
-    τ₁ = 0.5/(Δx⁺)
-    τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
+    τ₁ = -0.5/(h*Δx₁)
+    # τ₁ = -0.0
+    τ₂ = 0.5 #1/h accounted for in BoundaryDerivativeTranspose
+    # τ₀(c) = max(c/2(h⁻*Δx⁻),c/2(h⁺*Δx⁺))
+    τ₀(c) = -(1.0 + 1.0) * 1.0 * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
+    # τ₀(c1,c2) = -(1.0 + 1.0/max(c1,c2)) * max(c1,c2) * 1/2 * 1/min(h*Δx₁,h*Δx₂)^2 # L_0 term
 
-    return α₀,τ₁,τ₀
+    return τ₀,τ₁,τ₂
 end
 
 
@@ -147,13 +149,9 @@ end
 
 
 """
-    hval(order::Int64)
-
-Returns the value of ``h^{-1}`` for the penalties
-
-TODO: Remove inlineing
+Returns the value of ``H^{-1}`` for the penalties
 """
-@inline function hval(order::Int64)
+function _hval(order::Int64)
     if order == 2
         return 0.5
     elseif order == 4

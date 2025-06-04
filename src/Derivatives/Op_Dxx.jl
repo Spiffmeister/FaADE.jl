@@ -6,8 +6,7 @@
 
 
 """
-    D₂
-Not in place second derivative operators
+Second derivative variable coefficient SBP operator
 """
 function D₂ end
 """
@@ -32,13 +31,15 @@ end
 
 
 """
-    D₂!
 1D and 2D in place second derivative operator.
 
-Internally uses [`SecondDerivativeInternal`](@ref) and [`SecondDerivativeInternal`](@ref).
+Internally uses [`SecondDerivativeInternal!`](@ref).
 """
 function D₂! end
 ### 1D second derviative function
+"""
+    D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Val,α::T) where T
+"""
 function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector{T},n::Integer,Δx::T,order::Val,α::T) where T
     SecondDerivativeInternal!(uₓₓ,u,c,Δx,n,order,α)
     SecondDerivativeBoundary!(uₓₓ,u,c,Δx,Left,order,α)
@@ -47,7 +48,7 @@ function D₂!(uₓₓ::AbstractVector{T},u::AbstractVector{T},c::AbstractVector
 end
 ### Multidimensional second derivative SBP operator, select the axis to differentiate across by dim
 function D₂!(uₓₓ::AT,u::AT,c::AT,n::Integer,Δ::T,order::Val,α::T,dim::Integer) where {T,AT<:AbstractArray{T}}
-    loopdir = SelectLoopDirection(dim)    
+    loopdir = _SelectLoopDirection(dim)    
     for (cache,U,C) in zip(loopdir(uₓₓ),loopdir(u),loopdir(c))
         D₂!(cache,U,C,n,Δ,order,α)
     end

@@ -87,8 +87,8 @@ struct Grid2D{TT,
     gridy   :: GT
     Δx      :: TT
     Δy      :: TT
-    nx      :: Integer
-    ny      :: Integer
+    nx      :: Int64
+    ny      :: Int64
 
     J       :: GT
     qx      :: GT
@@ -100,16 +100,21 @@ end
     Grid2D(𝒟x::Vector,𝒟y::Vector,nx::Integer,ny::Integer)
 Construct a 2D grid from the domain boundaries in ``x`` and ``y`` and the number of nodes in ``x`` and ``y``.
 """
-function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer) where TT
+function Grid2D(𝒟x::Vector{TT},𝒟y::Vector{TT},nx::Integer,ny::Integer;coord=CartesianMetric) where TT
     gx = Grid1D(𝒟x,nx)
     gy = Grid1D(𝒟y,ny)
 
     X = repeat(gx.grid,1,ny)
     Y = repeat(gy.grid',nx,1)
 
-    J = qx = qy = rx = ry = ones(eltype(gx.grid),(1,1))
+    if coord == CartesianMetric
+        J = qx = qy = rx = ry = ones(eltype(gx.grid),(1,1))
+    else
+        J = qx = ry = ones(TT,size(X))
+        qy = rx = zeros(TT,size(X))
+    end
 
-    return Grid2D{TT,CartesianMetric,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
+    return Grid2D{TT,coord,typeof(X)}(X, Y, gx.Δx, gy.Δx, gx.n, gy.n,
         J, qx, qy, rx, ry)
 end
 """
@@ -194,18 +199,24 @@ Construct a 2D grid from the boundary functions in ``x`` and ``y`` and the numbe
 
 Curves ``c`` are parameterised by ``u`` and ``v`` where ``u`` is the coordinate in the ``x`` direction and ``v`` is the coordinate in the ``y`` direction and where ``u`` and ``v`` are in the range ``[0,1]``.
 """
-function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer,order=2)
-    X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny)
+function Grid2D(cbottom::Function,cleft::Function,cright::Function,ctop::Function,nx::Integer,ny::Integer;order=nothing,stretchu=u->u,stretchv=v->v)
+    X,Y = meshgrid(cbottom,cleft,cright,ctop,nx,ny,stretchu=stretchu,stretchv=stretchv)
     Grid2D(X,Y;order=order)
 end
 
 
 
 
-
+"""
+    Joint
+Specifies the joining surface between two grids.
+"""
 struct Joint
     index   :: Int64
     side    :: NodeType
+    # pair    :: NodeType
+
+    # Joint(index::Int64,side::NodeType;pair::NodeType) = new(index,side,pair)
 end
 
 
@@ -215,8 +226,8 @@ end
     GridMultiBlock{TT,DIM,MET,TG,TJ,IT} <: GridType{TT,DIM,MET}
 Grid data for multiblock problems
 
-Grabbing a particular subgrid can be done by ``G.Grids[i]`` which indexes in the order the grids are given. 
-Indexing can be performed by ``G[i]`` for 1D or ``G[i,j]`` for 2D multiblock problems.
+Grabbing a particular subgrid can be done by `G.Grids[i]` which indexes in the order the grids are given. 
+Indexing can be performed by `G[i]` for 1D or `G[i,j]` for 2D multiblock problems.
 `GridMultiBlock.Joint` contains the information on how to connect grids. If periodic boundary conditions are being used, do not specify the joint across that boundary.
 
 Example grid creation,
@@ -246,17 +257,15 @@ struct GridMultiBlock{TT  <: Real,
     ngrids  :: Int
 end
 """
-    GridMultiBlock(grids::Vector{Grid1D{TT,MET}}) where {TT,MET}
+    GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
 Multiblock grid for 1D grids, assumes the grids are stacked one after the other from left to right
 """
 function GridMultiBlock(grids::LocalGridType{TT,1,MET}...) where {TT,MET}
     if length(grids) == 2
-        J = (Joint(2,Right),Joint(1,Left))
+        J = ((Joint(2,Right),),(Joint(1,Left),))
     elseif length(grids) > 2
-        for i = 2:length(grids)-1
-            J = [(Joint(i-1,Right),Joint(i+1,Left))...]
-        end
-        J = tuple(Joint(2,Right),J...,Joint(length(grids)-1,Left))
+        J = [(Joint(i-1,Left),Joint(i+1,Right)) for i = 2:length(grids)-1]
+        J = tuple((Joint(2,Right),),J...,(Joint(length(grids)-1,Left),))
     end
     inds = [sum([grids[j].n for j in 1:i]) for i in 1:length(grids)]
     return GridMultiBlock{TT,1,MET,typeof(grids),typeof(J),typeof(inds)}(grids,J,inds,length(inds))
@@ -271,9 +280,9 @@ For a stacked grid (i.e. a series of grids in a row) one can run,
     D2  = Grid2D([0.5,1.0],[0.0,1.0],5,5)
     D3  = Grid2D([1.0,1.5],[0.0,1.0],5,5)
 
-    glayout = ([(2,Right)],
-                [(1,Left),(3,Right)],
-                [(2,Left)])
+    glayout = (((2,Right),),
+                ((1,Left),(3,Right)),
+                ((2,Left),))
 
     G = GridMultiBlock((D1,D2,D3),glayout)
 ```
@@ -282,7 +291,12 @@ TODO: Add example for non-stacked grids
 TODO: Add checking that there are no hanging nodes
 """
 function GridMultiBlock(grids::Tuple{Vararg{Grid2D{TT,MET,GT},N}},joints) where {N,TT,GT,MET}
-    inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]    
+    # inds = [sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]
+    # inds = [sum([grids[j].nx])]
+    indx = vcat([sum([grids[j].nx] for j in 1:i) for i in 1:length(grids)]...)
+    indy = vcat([sum([grids[j].ny] for j in 1:i) for i in 1:length(grids)]...)
+    # _checkjoints(joints)
+    inds = [indx,indy]
     return GridMultiBlock{TT,2, MET,typeof(grids),typeof(joints),typeof(inds)}(grids,joints,inds,length(inds))
 end
 
@@ -300,6 +314,71 @@ GetMinΔ(grid::Grid2D) = min(grid.Δx,grid.Δy)
     GetMetricType
 """
 GetMetricType(G::GridType{TT,DIM,COORD}) where {TT,DIM,COORD} = COORD
+
+
+
+
+
+function GetBoundaryCoordinates(grid::Grid2D,side::NodeType)
+    if side == Left
+        return [(grid.gridx[1,i],grid.gridy[1,i]) for i in 1:grid.ny]
+    elseif side == Right
+        return [(grid.gridx[end,i],grid.gridy[end,i]) for i in 1:grid.ny]
+    elseif side == Down
+        return [(grid.gridx[i,1],grid.gridy[i,1]) for i in 1:grid.nx]
+    elseif side == Up
+        return [(grid.gridx[i,end],grid.gridy[i,end]) for i in 1:grid.nx]
+    end
+end
+function GetBoundaryCoordinates(grid::Grid2D,returned_order::Symbol=:Usual)
+    bounds = [GetBoundaryCoordinates(grid,side) for side in (Down,Right,Up,Left)]
+    if returned_order == :Circular
+        for I in 2:length(bounds)
+            if bounds[I][1] != bounds[I-1][end]
+                reverse!(bounds[I])
+            end
+        end
+        if bounds[end][end] != bounds[1][1]
+            reverse!(bounds[end])
+        end
+    end
+    bounds = unique(vcat(bounds...))
+    return bounds
+end
+
+
+function _checkjoints(G::GridMultiBlock)
+    joints = G.Joint
+    warnprint = false
+    for (I,BLOCK) in enumerate(joints)
+        for JOINT in BLOCK
+            for joint in joints[JOINT.index]
+                if (joint.index == I) & (joint.side != Helpers._flipside(JOINT.side))
+                    @warn "Blocks $I and $(JOINT.index) have side mismatch. Block $I has block $(JOINT.index) as $(JOINT.side) but block $(JOINT.index) has block $I as $(joint.side)"
+                    warnprint = true
+                end
+            end
+        end
+    end
+    if warnprint
+        @warn "The above issues may be caused by certain grid layouts, solver will attempt to work out the correct normal vectors (typically normals defined by blocks with higher index take higher precidence)."
+    end
+end
+
+
+"""
+Used to index the side of a matrix for multi-block problems using a `joint` from the grid.
+"""
+function Base.getindex(x::AT,::NodeType{SIDE,AX}) where {AT<:AbstractArray,SIDE,AX}
+    SIDE == :Left ? I = 1 : I = size(x)[AX]
+    if AX == 1
+		return x[I,:]
+	elseif AX == 2
+		return x[:,I]
+	else
+		error("Does not correspond to a boundary.")
+	end
+end
 
 
 
@@ -334,7 +413,19 @@ end
 """
 Base.size(G::Grid1D) = (G.n,)
 Base.size(G::Grid2D) = (G.nx,G.ny)
-function Base.size(G::GridMultiBlock{TT}) where {TT}
+
+"""
+    size(G::GridMultiBlock{TT,1})
+"""
+function Base.size(G::GridMultiBlock{TT,1}) where {TT}
+    sz = (0,)
+    for i = 1:G.ngrids
+        sz = sz .+ size(G.Grids[i])
+    end
+    return sz
+end
+
+function Base.size(G::GridMultiBlock{TT,2}) where {TT}
     sz = (0,0)
     for i = 1:G.ngrids
         sz = sz .+ size(G.Grids[i])
@@ -360,9 +451,14 @@ Base.ndims(G::GridType{TT,DIM,AT}) where {TT,DIM,AT} = DIM
 Base.eachindex(G::GridType) = eachindex(1:length(G))
 
 """
-    Base.eachindex(G::GridMultiBlock)
+    eachgrid(G::GridMultiBlock)
 """
 eachgrid(G::GridMultiBlock) = Base.OneTo(length(G.Grids))
+
+"""
+    eachjoint(G::GridMultiBlock)
+"""
+eachjoint(G::GridMultiBlock) = Base.OneTo(length(G.Joint))
 
 """
     Base.lastindex(G::GridType)
