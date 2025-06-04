@@ -1,9 +1,5 @@
 using LinearAlgebra
-using Revise
 using FaADE
-# using BenchmarkTools
-# using ProfileView
-# using Cthulhu
 
 
 # Simulation parameters
@@ -13,8 +9,7 @@ K = 1.0
 nx = ny = 41
 
 Δt = 1e-3
-t = 0.76
-# t = 10Δt
+t = 1e-1
 
 ωt = 1.0
 ωx = 1.0
@@ -87,28 +82,28 @@ Dom = GridMultiBlock((D1,D2,D3,D4,D6,D7,D8),joints)
 
 
 # Block 1 BCs
-Dl1 = FaADE.SATs.SAT_Dirichlet(Bx0,D1.Δx,Left,  order)
-Dd1 = FaADE.SATs.SAT_Dirichlet(By0,D1.Δy,Down,  order)
+Dl1 = SAT_Dirichlet(Bx0,D1.Δx,Left,  order)
+Dd1 = SAT_Dirichlet(By0,D1.Δy,Down,  order)
 # Block 2 BCs
-Dd2 = FaADE.SATs.SAT_Dirichlet(By0,D2.Δy,Down,  order)
-Du2 = FaADE.SATs.SAT_Dirichlet(Byml,D2.Δy,Up,   order) # Bottom of missing block
+Dd2 = SAT_Dirichlet(By0,D2.Δy,Down,  order)
+Du2 = SAT_Dirichlet(Byml,D2.Δy,Up,   order) # Bottom of missing block
 # Block 3 BCs
-Dd3 = FaADE.SATs.SAT_Dirichlet(By0,D2.Δx,Down,  order)
-Dr3 = FaADE.SATs.SAT_Dirichlet(Bxl,D2.Δy,Right, order)
+Dd3 = SAT_Dirichlet(By0,D2.Δx,Down,  order)
+Dr3 = SAT_Dirichlet(Bxl,D2.Δy,Right, order)
 # Block 4 BCs
-Dl4 = FaADE.SATs.SAT_Dirichlet(Bx0,D4.Δx,Left,  order)
-Dr4 = FaADE.SATs.SAT_Dirichlet(Bxml,D4.Δx,Right,order) # Left of missing block
+Dl4 = SAT_Dirichlet(Bx0,D4.Δx,Left,  order)
+Dr4 = SAT_Dirichlet(Bxml,D4.Δx,Right,order) # Left of missing block
 # Block 6 BCs
-Dl6 = FaADE.SATs.SAT_Dirichlet(Bxh,D6.Δx,Left, order) # Right of missing block
-Dr6 = FaADE.SATs.SAT_Dirichlet(Bxl,D6.Δx,Right, order)
-Du6 = FaADE.SATs.SAT_Dirichlet(Byh,D6.Δy,Up,    order) # Bottom of wedge
+Dl6 = SAT_Dirichlet(Bxh,D6.Δx,Left, order) # Right of missing block
+Dr6 = SAT_Dirichlet(Bxl,D6.Δx,Right, order)
+Du6 = SAT_Dirichlet(Byh,D6.Δy,Up,    order) # Bottom of wedge
 # Block 7 BCs
-Dl7 = FaADE.SATs.SAT_Dirichlet(Bx0,D7.Δx,Left,  order)
-Du7 = FaADE.SATs.SAT_Dirichlet(Byl,D7.Δx,Up,    order)
+Dl7 = SAT_Dirichlet(Bx0,D7.Δx,Left,  order)
+Du7 = SAT_Dirichlet(Byl,D7.Δx,Up,    order)
 # Block 8 BCs
-Du8 = FaADE.SATs.SAT_Dirichlet(Byl,D8.Δy,Up,    order)
-Dd8 = FaADE.SATs.SAT_Dirichlet(Byh,D8.Δy,Down,  order) # Top of missing block
-Dr8 = FaADE.SATs.SAT_Dirichlet(Bxh,D8.Δx,Right, order) # Left of wedge
+Du8 = SAT_Dirichlet(Byl,D8.Δy,Up,    order)
+Dd8 = SAT_Dirichlet(Byh,D8.Δy,Down,  order) # Top of missing block
+Dr8 = SAT_Dirichlet(Bxh,D8.Δx,Right, order) # Left of wedge
 
 
 BD= Dict(1 => (Dl1,Dd1), 
@@ -130,10 +125,8 @@ soln = solve(P,Dom,Δt,t)
 
 
 
-
-
-println("Plotting")
-using GLMakie
+# println("Plotting")
+# using GLMakie
 
 # e = zeros(size(Dom))
 # for I in eachindex(Dom)
@@ -141,32 +134,27 @@ using GLMakie
 # end
 # u0 = [u₀(Dom[i]...) for i in eachindex(Dom)]
 
-colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
+# colourrange = (minimum(minimum.(soln.u[2])),maximum(maximum.(soln.u[2])))
+
+# f = Figure()
+# ax = Axis3(f[1,1])
+# for I in eachindex(Dom.Grids)
+#     surface!(ax,Dom.Grids[I].gridx,Dom.Grids[I].gridy,soln.u[2][I],colorbar=false,colorrange=colourrange)
+#     scatter!(ax,Dom.Grids[I].gridx[:],Dom.Grids[I].gridy[:],colourrange[1]*ones(length(Dom.Grids[I])),label="Block $I",markersize=1.5)
+# end
 
 
-f = Figure()
-ax = Axis3(f[1,1])
-for I in eachindex(Dom.Grids)
-    surface!(ax,Dom.Grids[I].gridx,Dom.Grids[I].gridy,soln.u[2][I],colorbar=false,colorrange=colourrange)
-    scatter!(ax,Dom.Grids[I].gridx[:],Dom.Grids[I].gridy[:],colourrange[1]*ones(length(Dom.Grids[I])),label="Block $I",markersize=1.5)
-    # lines!(ax,Dom.Grids[I].gridx[:,end],Dom.Grids[I].gridy[:,end],  soln.u[2][I][:,end],color=(:black,0.5),linestyle=:dash)
-    # lines!(ax,Dom.Grids[I].gridx[:,1],  Dom.Grids[I].gridy[:,1],    soln.u[2][I][:,1]  ,color=(:black,0.5),linestyle=:dash)
-    # lines!(ax,Dom.Grids[I].gridx[end,:],Dom.Grids[I].gridy[end,:],  soln.u[2][I][end,:],color=(:black,0.5),linestyle=:dash)
-    # lines!(ax,Dom.Grids[I].gridx[1,:],  Dom.Grids[I].gridy[1,:],    soln.u[2][I][1,:]  ,color=(:black,0.5),linestyle=:dash)
-end
-f
+
+# gridfig = Figure()
+# gax = Axis(gridfig[1,1])
+# for I in eachindex(Dom.Grids)
+#     scatter!(gax,Dom.Grids[I].gridx[:],Dom.Grids[I].gridy[:],label="Block $I")
+# end
+# axislegend(gax)
 
 
-# p3 = surface(Dom.gridx,Dom.gridy,soln.u[2] .- e)
 
-gridfig = Figure()
-gax = Axis(gridfig[1,1])
-for I in eachindex(Dom.Grids)
-    scatter!(gax,Dom.Grids[I].gridx[:],Dom.Grids[I].gridy[:],label="Block $I")
-end
-axislegend(gax)
-
-g = Figure()
-gax = Axis(g[1,1])
-lines!(gax,Dom.Grids[1].gridx[:,end],soln.u[2][1][end,:],label="Block 1")
-lines!(gax,Dom.Grids[1].gridx[:,1],soln.u[2][2][1,:],label="Block 2")
+# g = Figure()
+# gax = Axis(g[1,1])
+# lines!(gax,Dom.Grids[1].gridx[:,end],soln.u[2][1][end,:],label="Block 1")
+# lines!(gax,Dom.Grids[1].gridx[:,1],soln.u[2][2][1,:],label="Block 2")
