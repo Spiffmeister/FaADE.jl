@@ -216,9 +216,11 @@ end
     computeglobalw!
 """
 function computeglobalw! end
-
+"""
+For multiblock problems
+"""
 function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT,Δt::TT) where {TT,VAT,DIM,IT,CT}
-
+# @show uglobal[1][25,25]
     Interpolant = PD.Interpolant
     Intercept = PD.Intercept
     τglobal = PD.τ
@@ -231,6 +233,7 @@ function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT
         PGrid = localP.PGrid :: ParallelGrid
         computeglobalw!(Interpolant,Intercept,w,uglobal[I],PGrid,τglobal,t,I)
     end
+    # @show τglobal, PD.PData[1].τ
     τglobal .= τglobal * PD.PData[1].τ
 end
 function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
@@ -253,11 +256,20 @@ function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::Parall
         
         w[J] = (tmpf + tmpb)/2
     end
-    τglobal[I] = 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
-    if isnan(τglobal[I])
-        τglobal[I] = zero(TT)
-    end
+    tmp = findmax(abs,w)[1]
+    iszero(tmp) ? tmp = one(TT) : nothing
+    # τglobal[I] = 0.1 * (maximum(abs.(u - w))/ tmp)^2.0
+    τglobal[I] = 0.1
+    # @show (maximum(abs.(u - w))),  maximum(abs.(w)),  maximum(u)
+    # @show τglobal
+    # if iszero(τglobal[I])
+    #     τglobal[I] = 1e-1
+    # end
+    # if !isfinite(τglobal[I])
+    #     τglobal[I] = zero(TT)
+    # end
     # isnan(τglobal[I]) ? τglobal[I] = 0.0 : nothing
+    # @show τglobal
 
 end
 

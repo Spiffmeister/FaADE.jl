@@ -55,7 +55,7 @@ function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::Val,α::T) where {T,AT<:A
     FirstDerivativeInternal!(uₓ,u,Δx,n,order,α)
     FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
-function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Int,α::T) where {T,AT<:AbstractVector{T}}
+function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Integer,α::T) where {T,AT<:AbstractVector{T}}
     O = Val(order)
     FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,O,α)
     FirstDerivativeInternal!(uₓ,c,u,Δx,n,O,α)
