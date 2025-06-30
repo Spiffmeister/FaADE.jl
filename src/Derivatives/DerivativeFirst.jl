@@ -27,14 +27,14 @@ end
 In place first derivative function for internal nodes.
 """
 function FirstDerivativeInternal! end
-@inline function FirstDerivativeInternal!(dest::VT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::VT,u::AT,Δx::TT,n::Integer,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},VT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,TT(1))
     end
     # dest
 end
-@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Int,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Integer,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     # m = floor(Int,(O+2)/2)
     for i = m:n-m+1

@@ -1,4 +1,23 @@
 
+
+# struct BoundaryBlock{
+#         LEFTBOUNDARY    <: BoundaryStorage{TT,0,AT},
+#         RIGHTBOUNDARY   <: BoundaryStorage{TT,0,AT},
+#         DOWNBOUNDARY    <: BoundaryStorage{TT,0,AT},
+#         UPBOUNDARY      <: BoundaryStorage{TT,0,AT}} <: BoundaryStorage{TT,0,AT}
+#     Left    :: LEFTBOUNDARY
+#     Right   :: RIGHTBOUNDARY
+#     DOWN    :: DOWNBOUNDARY
+#     UP      :: UPBOUNDARY
+
+#     function BoundaryBlock(LB::LBST,RB::RBST,DB::DBST,UB::UBST) where {LBST,RBST,DBST,UBST}
+#         new{LBST,RBST,DBST,UBST}(LB,RB,DB,UB)
+#     end
+    # BoundaryBlock(LB::LBST,RB::RBST,DB::DBST,UB::UBST) where {LBST <: BoundaryStorage{TT,0,AT},RBST,DBST,UBST} where {TT,AT} = new{TT,0,AT}(LB,RB,DB,UB)
+# end
+
+
+
 struct BoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
 
 """
@@ -264,11 +283,34 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
         end
     end
 
-    return tmpDict
-    # return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
+    # return tmpDict
+    return (tmpDict[Left],tmpDict[Right],tmpDict[Down],tmpDict[Up])
+    # return (Left = tmpDict[Left], Right = tmpDict[Right], Up = tmpDict[Up], Down = tmpDict[Down])
+    # return BoundaryBlock(tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
 end
 
 _newBoundaryCondition(G1::GridType{TT},BC::SimultanousApproximationTerm{:Periodic}) where TT  = InterfaceBoundaryData{TT}(G1,BC)
 _newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},Joint1,Joint2) where TT = InterfaceBoundaryData{TT}(G1,G2,BC,Joint1,Joint2)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},order) where TT = BoundaryData(G,BC,order)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},order) where TT   = BoundaryData(G,BC,order)
+
+
+
+@inline function getarray(BS::BoundaryStorage{TT,N,AT},s::Symbol)  where {TT,N,AT}
+    rt = getfield(BS,s)
+    return rt :: AT
+end
+
+
+
+@inline function _boundarytoindex(nt::NT) where NT
+    if nt == Left
+        return 1
+    elseif nt == Right
+        return 2
+    elseif nt == Down
+        return 3
+    elseif nt == Up
+        return 4
+    end
+end

@@ -52,11 +52,11 @@ function setBoundaryCondition!(BC::InterfaceBoundaryData, args...) end
 Calling boundaries for data blocks
 """
 function setBoundaryConditions!(D::LocalDataBlockType{TT,DIM}) where {TT,DIM}
-    setBoundaryCondition!(D.boundary[Left], D.SC.Δt, D.SC.t, D.SC.θ)
-    setBoundaryCondition!(D.boundary[Right], D.SC.Δt, D.SC.t, D.SC.θ)
+    setBoundaryCondition!(D.boundary[1], D.SC.Δt, D.SC.t, D.SC.θ)
+    setBoundaryCondition!(D.boundary[2], D.SC.Δt, D.SC.t, D.SC.θ)
     if DIM == 2
-        setBoundaryCondition!(D.boundary[Up], D.SC.Δt, D.SC.t, D.SC.θ)
-        setBoundaryCondition!(D.boundary[Down], D.SC.Δt, D.SC.t, D.SC.θ)
+        setBoundaryCondition!(D.boundary[4], D.SC.Δt, D.SC.t, D.SC.θ)
+        setBoundaryCondition!(D.boundary[3], D.SC.Δt, D.SC.t, D.SC.θ)
     end
 end
 """
@@ -96,8 +96,8 @@ end
 """
 Fill `InterfaceBoundaryData.BufferOut` with data from this block for sending to `InterfaceBoundaryData.BufferIn`
 """
-function _filllocalBuffer(source::Symbol, B::InterfaceBoundaryData{TT,DIM,BCT}, D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD,BCT<:SAT_Interface}
-    cache = getproperty(D, source)
+function _filllocalBuffer(source::Symbol, B::InterfaceBoundaryData{TT,DIM,BCT}, D::LocalDataBlock{TT,DIM,COORD,AT}) where {TT,DIM,COORD,AT,BCT<:SAT_Interface}
+    cache = getproperty(D, source) :: AT
     K = getproperty(D, :K)
     SAT = B.BoundaryOperator
 
@@ -115,11 +115,11 @@ end
 Loops over all `DataBlock.boundary` objects in a single `DataBlock`
 """
 function _fillLocalBuffers(source::Symbol, D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
-    _filllocalBuffer(source, D.boundary[Left], D)
-    _filllocalBuffer(source, D.boundary[Right], D)
+    _filllocalBuffer(source, D.boundary[1], D)
+    _filllocalBuffer(source, D.boundary[2], D)
     if DIM == 2
-        _filllocalBuffer(source, D.boundary[Up], D)
-        _filllocalBuffer(source, D.boundary[Down], D)
+        _filllocalBuffer(source, D.boundary[4], D)
+        _filllocalBuffer(source, D.boundary[3], D)
     end
 end
 """
@@ -137,31 +137,43 @@ Moves a `InterfaceBoundaryData.BufferOut` to the relevant `InterfaceBoundaryData
 """
 function _tradeBuffer!(B::BoundaryData, DB) end
 function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB) where {TT,DIM,AT,BCT<:SAT_Periodic} end
-function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB) where {TT,DIM,AT,BCT<:SAT_Interface}
-    Myjoint = B.OutgoingJoint
-    Tojoint = B.IncomingJoint
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,Tuple{LBT,RBT,DBT,UBT},DT,ST,PT}) where {TT,DIM,BCT,AT,COORD,KT,DCT,GT,LBT,RBT,DBT,UBT,DT,ST,PT}
+# @show BT
+    MyBuffer = B.BufferOut :: AT
+    
+    Myside = B.OutgoingJoint.side :: NodeType
+    Toside = B.IncomingJoint.side :: NodeType
 
-    MyBuffer = B.BufferOut::AT # Get this buffer
-    ToBuffer = DB[Myjoint.index].boundary[Tojoint.side].BufferIn::AT # Get the buffer we are writing to
+    side = _boundarytoindex(Toside)
+# @show side
+    ToBoundary = D.boundary[side]
+    ToBuffer = ToBoundary.BufferIn
 
-    if (Myjoint.side == _flipside(Tojoint.side))
+    if (Myside == _flipside(Toside))
         # if they are the same dimension and they match, just write to array
         @. ToBuffer = MyBuffer
-    elseif Myjoint.side == Tojoint.side
+    elseif Myside == Toside
         # if they are the same dimension but they don't match, reverse
         ToBuffer .= MyBuffer
-        reverse!(ToBuffer, dims=mod1(GetAxis(Tojoint.side) + 1, 2))
+        dims = mod1(GetAxis(Toside) + 1, 2) :: Integer
+        reverse!(ToBuffer, dims=dims)
         # reverse!(ToBuffer,dims=2)
     else
         # if they are not the the same dimension, need to rearrange things
         for (BI, BO) in zip(eachrow(ToBuffer), eachcol(MyBuffer))
             BI .= BO
         end
-        if typeof(Myjoint.side).parameters[1] != typeof(Tojoint.side).parameters[1]
+        if typeof(Myside).parameters[1] != typeof(Toside).parameters[1]
             # If they are not the same axis we need to reverse
-            reverse!(ToBuffer, dims=mod1(GetAxis(Tojoint.side) + 1, 2))
+            reverse!(ToBuffer, dims=mod1(GetAxis(Toside) + 1, 2))
         end
     end
+    ToBuffer
+end
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,AT,BCT<:SAT_Interface}
+    Myjoint = B.OutgoingJoint
+    D = DB[Myjoint.index]
+    _tradeBuffer!(B,D)
 end
 """
 Loop over each `DataBlock.boundary`
@@ -169,18 +181,13 @@ Loop over each `DataBlock.boundary`
 function _tradeBuffers!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT}
     boundary = D.boundary::BT
     # @show BT
-    # boundaryLeft = boundary[Left]
-    _tradeBuffer!(boundary[Left], DB)
-    _tradeBuffer!(boundary[Right], DB)
+    # boundaryLeft = boundary[1]
+    _tradeBuffer!(boundary[1], DB)
+    _tradeBuffer!(boundary[2], DB)
     if DIM == 2
-        _tradeBuffer!(boundary[Down], DB)
-        _tradeBuffer!(boundary[Up], DB)
+        _tradeBuffer!(boundary[3], DB)
+        _tradeBuffer!(boundary[4], DB)
     end
-    # @show D.boundary
-    # for J in eachindex(D.boundary)
-    #     _tradeBuffer!(D.boundary[J],DB)
-    # end
-    # map(B->_tradeBuffer!(B,DB),D.boundary)
 end
 """
 Loop over each `DataMultiBlock.DataBlock`
@@ -323,51 +330,51 @@ Solution and Data modes
 """
 function applySATs end
 function applySATs(dest::VT, D::LocalDataBlock{TT,1,MET,VT}, mode) where {TT,VT<:Vector{TT},MET} #data mode
-    applyCartesianSAT!(D.boundary[Left], dest, D.K, mode)
-    applyCartesianSAT!(D.boundary[Right], dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[1], dest, D.K, mode)
+    applyCartesianSAT!(D.boundary[2], dest, D.K, mode)
 end
 function applySATs(dest::VT, source::VT, D::LocalDataBlock{TT,1,MET,VT}, mode) where {TT,VT<:Vector{TT},MET} #solution mode
-    applyCartesianSAT!(D.boundary[Left], dest, source, D.K, mode)
-    applyCartesianSAT!(D.boundary[Right], dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[1], dest, source, D.K, mode)
+    applyCartesianSAT!(D.boundary[2], dest, source, D.K, mode)
 end
 """
     applySATs
 applySATs for 2D local block
 """
 function applySATs(dest::AT, D::LocalDataBlock{TT,2,:Variable,AT}, mode) where {TT,AT} #data mode
-    applyCurvilinearSAT!(D.boundary[Left], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Right], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Up], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Down], dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[1], dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[2], dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[4], dest, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[3], dest, D.K, mode)
 end
 function applySATs(dest::AT, source::AT, D::LocalDataBlock{TT,2,:Variable,AT}, mode) where {TT,AT} #solution mode
-    applyCurvilinearSAT!(D.boundary[Left], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Right], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Up], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[Down], dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[1], dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[2], dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[4], dest, source, D.K, mode)
+    applyCurvilinearSAT!(D.boundary[3], dest, source, D.K, mode)
 end
 
 function applySATs(dest::AT, D::LocalDataBlock{TT,2,:Constant,AT}, mode) where {TT,AT} #data mode
-    applyCartesianSAT!(D.boundary[Left], dest, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[Right], dest, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[Up], dest, D.K[2], mode)
-    applyCartesianSAT!(D.boundary[Down], dest, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[1], dest, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[2], dest, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[4], dest, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[3], dest, D.K[2], mode)
 end
 function applySATs(dest::AT, source::AT, D::LocalDataBlock{TT,2,:Constant,AT}, mode) where {TT,AT} #solution mode
-    applyCartesianSAT!(D.boundary[Left], dest, source, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[Right], dest, source, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[Up], dest, source, D.K[2], mode)
-    applyCartesianSAT!(D.boundary[Down], dest, source, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[1], dest, source, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[2], dest, source, D.K[1], mode)
+    applyCartesianSAT!(D.boundary[4], dest, source, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[3], dest, source, D.K[2], mode)
 end
 
 
 
 
 function applyCurvilinearSATs(dest::AT, D::LocalDataBlock{TT,2,COORD,AT}, mode) where {TT,COORD,AT}
-    applySAT!(D.boundary[Left], dest, source, D.K[1], D.K[3], mode)
-    applySAT!(D.boundary[Right], dest, source, D.K[1], D.K[3], mode)
-    applySAT!(D.boundary[Up], dest, source, D.K[2], D.K[3], mode)
-    applySAT!(D.boundary[Down], dest, source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[1], dest, source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[2], dest, source, D.K[1], D.K[3], mode)
+    applySAT!(D.boundary[4], dest, source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[3], dest, source, D.K[2], D.K[3], mode)
 end
 
 
@@ -765,11 +772,11 @@ function _average_boundaries(DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
     end
 end
 function _average_local_buffer(D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
-    _average_boundary_data(D.boundary[Left], D)
-    _average_boundary_data(D.boundary[Right], D)
+    _average_boundary_data(D.boundary[1], D)
+    _average_boundary_data(D.boundary[2], D)
     if DIM == 2
-        _average_boundary_data(D.boundary[Up], D)
-        _average_boundary_data(D.boundary[Down], D)
+        _average_boundary_data(D.boundary[4], D)
+        _average_boundary_data(D.boundary[3], D)
     end
 end
 function _average_boundary_data(B::BoundaryData, D::LocalDataBlock) end
@@ -779,21 +786,25 @@ function _average_boundary_data(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::Loca
     IncomingBuffer = B.BufferIn
 
     Myjoint = B.OutgoingJoint #What side is it on for this block
-
     Myside = Myjoint.side
 
     if Myside == Left
-        uₙ₊₁ = @view D.uₙ₊₁[1, :]
-        @. uₙ₊₁ = (MyBuffer[1, :] + IncomingBuffer[1, :]) / 2
+        uₙ₊₁    = @view D.uₙ₊₁[1, :]
+        MyBuff  = @view MyBuffer[1,:]
+        IncBuff = @view IncomingBuffer[1,:]
     elseif Myside == Right
-        uₙ₊₁ = @view D.uₙ₊₁[end, :]
-        @. uₙ₊₁ = (MyBuffer[1, :] + IncomingBuffer[1, :]) / 2
+        uₙ₊₁    = @view D.uₙ₊₁[end, :]
+        MyBuff  = @view MyBuffer[1,:]
+        IncBuff = @view IncomingBuffer[1,:]
     elseif Myside == Up
         uₙ₊₁ = @view D.uₙ₊₁[:, end]
-        @. uₙ₊₁ = (MyBuffer[:, 1] + IncomingBuffer[:, 1]) / 2
+        MyBuff  = @view MyBuffer[:,1]
+        IncBuff = @view IncomingBuffer[:,1]
     else
         uₙ₊₁ = @view D.uₙ₊₁[:, 1]
-        @. uₙ₊₁ = (MyBuffer[:, 1] + IncomingBuffer[:, 1]) / 2
+        MyBuff  = @view MyBuffer[:,1]
+        IncBuff = @view IncomingBuffer[:,1]
     end
+    @. uₙ₊₁ = (MyBuff + IncBuff) / 2
 
 end

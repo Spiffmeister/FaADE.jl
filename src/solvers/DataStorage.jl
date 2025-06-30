@@ -467,11 +467,13 @@ function LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integ
         difftype = :Constant
     end
 
-    typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    # typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    typeof(BS[1].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     # sattype = :Constant
     # @show sattype, I, typeof(BS[Left].BoundaryOperator)
     # @show typeof(BS[Left].BoundaryOperator).parameters
-    for (side,boundary) in BS
+    # for (side,boundary) in BS
+    for boundary in BS
         # @show typeof(boundary)
         # @show :Variable ∈ typeof(BC.Boundary).parameters
         if :Variable ∈ typeof(boundary.BoundaryOperator).parameters
@@ -510,6 +512,10 @@ Type stable getfield for arrays
     rt = getfield(D,s)
     return rt :: AT
 end
+
+@inline function getside(B::NamedTuple)
+end
+
 
 """
     DataMultiBlock
