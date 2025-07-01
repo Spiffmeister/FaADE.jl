@@ -137,15 +137,13 @@ Moves a `InterfaceBoundaryData.BufferOut` to the relevant `InterfaceBoundaryData
 """
 function _tradeBuffer!(B::BoundaryData, DB) end
 function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB) where {TT,DIM,AT,BCT<:SAT_Periodic} end
-function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,Tuple{LBT,RBT,DBT,UBT},DT,ST,PT}) where {TT,DIM,BCT,AT,COORD,KT,DCT,GT,LBT,RBT,DBT,UBT,DT,ST,PT}
-# @show BT
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock{TT,DIM,COORD,AT}) where {TT,DIM,BCT,AT,COORD}
     MyBuffer = B.BufferOut :: AT
     
     Myside = B.OutgoingJoint.side :: NodeType
     Toside = B.IncomingJoint.side :: NodeType
 
     side = _boundarytoindex(Toside)
-# @show side
     ToBoundary = D.boundary[side]
     ToBuffer = ToBoundary.BufferIn
 
@@ -155,9 +153,8 @@ function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBloc
     elseif Myside == Toside
         # if they are the same dimension but they don't match, reverse
         ToBuffer .= MyBuffer
-        dims = mod1(GetAxis(Toside) + 1, 2) :: Integer
+        dims = mod1(GetAxis(Toside) + 1, 2)
         reverse!(ToBuffer, dims=dims)
-        # reverse!(ToBuffer,dims=2)
     else
         # if they are not the the same dimension, need to rearrange things
         for (BI, BO) in zip(eachrow(ToBuffer), eachcol(MyBuffer))
@@ -170,7 +167,7 @@ function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBloc
     end
     ToBuffer
 end
-function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,AT,BCT<:SAT_Interface}
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB::DataMultiBlock{TT,DIM,NB,TDBLOCK}) where {TT,DIM,AT,BCT<:SAT_Interface,NB,TDBLOCK}
     Myjoint = B.OutgoingJoint
     D = DB[Myjoint.index]
     _tradeBuffer!(B,D)
@@ -179,9 +176,10 @@ end
 Loop over each `DataBlock.boundary`
 """
 function _tradeBuffers!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT}
-    boundary = D.boundary::BT
-    # @show BT
-    # boundaryLeft = boundary[1]
+    boundary = D.boundary
+    # for I in eachindex(boundary)
+    #     _tradeBuffer!(boundary[I],DB)
+    # end
     _tradeBuffer!(boundary[1], DB)
     _tradeBuffer!(boundary[2], DB)
     if DIM == 2
@@ -192,7 +190,7 @@ end
 """
 Loop over each `DataMultiBlock.DataBlock`
 """
-function _tradeBuffers!(DB::DataMultiBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
+function _tradeBuffers!(DB::DataMultiBlock)
     for I in eachblock(DB)
         _tradeBuffers!(DB[I], DB)
     end
@@ -782,29 +780,12 @@ end
 function _average_boundary_data(B::BoundaryData, D::LocalDataBlock) end
 function _average_boundary_data(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock) where {TT,DIM,AT,BCT<:SAT_Periodic} end
 function _average_boundary_data(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock) where {TT,DIM,AT,BCT<:SAT_Interface}
-    MyBuffer = B.BufferOut
-    IncomingBuffer = B.BufferIn
-
-    Myjoint = B.OutgoingJoint #What side is it on for this block
-    Myside = Myjoint.side
-
-    if Myside == Left
-        uₙ₊₁    = @view D.uₙ₊₁[1, :]
-        MyBuff  = @view MyBuffer[1,:]
-        IncBuff = @view IncomingBuffer[1,:]
-    elseif Myside == Right
-        uₙ₊₁    = @view D.uₙ₊₁[end, :]
-        MyBuff  = @view MyBuffer[1,:]
-        IncBuff = @view IncomingBuffer[1,:]
-    elseif Myside == Up
-        uₙ₊₁ = @view D.uₙ₊₁[:, end]
-        MyBuff  = @view MyBuffer[:,1]
-        IncBuff = @view IncomingBuffer[:,1]
-    else
-        uₙ₊₁ = @view D.uₙ₊₁[:, 1]
-        MyBuff  = @view MyBuffer[:,1]
-        IncBuff = @view IncomingBuffer[:,1]
-    end
-    @. uₙ₊₁ = (MyBuff + IncBuff) / 2
-
+    _average_buffer_to_boundary(B, D, B.OutgoingJoint.side)
 end
+
+
+_average_buffer_to_boundary(B,D,::NodeType{:Left,1})    = @views D.uₙ₊₁[1,:]    .= (B.BufferOut[1,:] .+ B.BufferIn[1,:]) ./ 2
+_average_buffer_to_boundary(B,D,::NodeType{:Right,1})   = @views D.uₙ₊₁[end,:]  .= (B.BufferOut[1,:] .+ B.BufferIn[1,:]) ./ 2
+_average_buffer_to_boundary(B,D,::NodeType{:Left,2})    = @views D.uₙ₊₁[:,1]    .= (B.BufferOut[:,1] .+ B.BufferIn[:,1]) ./ 2
+_average_buffer_to_boundary(B,D,::NodeType{:Right,2})   = @views D.uₙ₊₁[:,end]  .= (B.BufferOut[:,1] .+ B.BufferIn[:,1]) ./ 2
+

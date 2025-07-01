@@ -19,20 +19,10 @@ const Right = NodeType{:Right,1}()
 const Up = NodeType{:Right,2}()
 const Down = NodeType{:Left,2}()
 
-function _flipside(NT::NodeType)
-    if NT == Left
-        return Right
-    elseif NT == Right
-        return Left
-    elseif NT == Up
-        return Down
-    elseif NT == Down
-        return Up
-    else
-        return NT
-    end
-end
-
+_flipside(::NodeType{:Left,1})  = Right
+_flipside(::NodeType{:Right,1}) = Left
+_flipside(::NodeType{:Left,2})  = Up
+_flipside(::NodeType{:Right,2}) = Down
 
 """
     BoundaryCondition

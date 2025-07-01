@@ -79,7 +79,7 @@ function A!(read::Symbol,D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
     W
 end
-function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
+function A!(source::Symbol,DB::DataMultiBlock)
     # fillBuffers(source,DB)
     _fillLocalBuffers(source,DB)
     _tradeBuffers!(DB)
@@ -137,7 +137,9 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     # b = Δt (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
     CGRHS!(DBlock)
     # Compute uₙ₊₁ = (I - D)^{-1} b
+    # @show DBlock[1].uₙ₊₁[25]
     conj_grad!(DBlock)
+    # @show DBlock[1].uₙ₊₁[25]
 end
 
 

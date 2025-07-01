@@ -84,29 +84,31 @@ struct InterfaceBoundaryData{
         TT<:Real,
         DIM,
         BCT,
-        AT} <: BoundaryStorage{TT,0,AT}
+        AT,
+        NT1,
+        NT2} <: BoundaryStorage{TT,0,AT}
 
     BoundaryOperator:: BCT
     BufferOut       :: AT
     BufferIn        :: AT
-    OutgoingJoint   :: Joint
-    IncomingJoint   :: Joint
+    OutgoingJoint   :: Joint{NT1}
+    IncomingJoint   :: Joint{NT2}
 end
-function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint,Joint2::Joint) where {TT}
+function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
 
     BufferIn    = zeros(TT,2)
     BufferOut   = zeros(TT,2)
 
-    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid1D,BC) where {TT}
 
     BufferIn    = zeros(TT,2)
     BufferOut   = zeros(TT,2)
 
-    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut),typeof(Left),typeof(Left)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
 end
-function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2::Joint) where {TT}
+function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
     if BC.side ∈ [Left,Right]
         n = G1.ny
         BufferIn    = zeros(TT,(2,n))
@@ -118,7 +120,7 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2
         BufferOut   = zeros(TT,(n,2))
     end
 
-    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
     if BC.side ∈ [Left,Right]
@@ -132,7 +134,7 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
         BufferOut   = zeros(TT,(n,BC.order))
     end
 
-    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),typeof(Left),typeof(Left)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
 end
 
 
@@ -303,14 +305,7 @@ end
 
 
 
-@inline function _boundarytoindex(nt::NT) where NT
-    if nt == Left
-        return 1
-    elseif nt == Right
-        return 2
-    elseif nt == Down
-        return 3
-    elseif nt == Up
-        return 4
-    end
-end
+_boundarytoindex(::NodeType{:Left,1})   = 1
+_boundarytoindex(::NodeType{:Right,1})  = 2
+_boundarytoindex(::NodeType{:Left,2})   = 3
+_boundarytoindex(::NodeType{:Right,2})  = 4
