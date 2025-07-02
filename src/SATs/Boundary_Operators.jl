@@ -35,12 +35,6 @@ function _DerivativeTranspose(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
     elseif order == 6
         error("order 6 not set")
     end
-
-    # if TN == :Left
-    #     return DT
-    # else
-    #     return reverse(DT)
-    # end
 end
 function _InverseMassMatrix(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
     if order == 2

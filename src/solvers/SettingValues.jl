@@ -29,7 +29,7 @@ end
 
 
 """
-    BoundaryConditions
+    setBoundaryCondition!
 Sets the value of the boundary.
 """
 function setBoundaryCondition! end
@@ -415,11 +415,6 @@ end
     for I in eachindex(grid)
         K[I] = κ(grid[I]...)
     end
-    # for i = 1:grid.nx
-    #     for j = 1:grid.ny
-    #         K[i,j] = κ(grid[i,j]...)
-    #     end
-    # end
 end
 """
     setDiffusionCoefficient!(D::LocalDataBlock{TT,1})
@@ -559,7 +554,6 @@ end
 @inline function Base.copyto!(dest::Symbol, source::Symbol, D::DataMultiBlock)
     for I in eachblock(D)
         d = getproperty(D[I], dest)
-        # d .= getproperty(D[I],source)
         s = getproperty(D[I], source)
         copyto!(d, s)
     end
@@ -734,11 +728,6 @@ end
 """
     _setglobalu!
 """
-# function _setglobalu!(DB::DataMultiBlock, uglobal::Vector{AT}) where {AT}
-#     for I in eachblock(DB)
-#         uglobal[I] .= DB[I].uₙ₊₁
-#     end
-# end
 function _setglobalu!(DB::DataMultiBlock{TT,DIM,NB,DATABLOCK,ParallelMultiBlock{TT,DIM,TINTERPOLANT,TINTERCEPT,AT}}) where {TT,DIM,NB,DATABLOCK,TINTERPOLANT,TINTERCEPT,AT}
     uglobal = DB.ParallelData.uglobal
     for I in eachblock(DB)

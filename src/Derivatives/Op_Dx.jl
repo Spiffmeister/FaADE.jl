@@ -55,7 +55,7 @@ function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::Val,α::T) where {T,AT<:A
     FirstDerivativeInternal!(uₓ,u,Δx,n,order,α)
     FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
-function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Integer,α::T) where {T,AT<:AbstractVector{T}}
+function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Integer,α::T,β=T(1)) where {T,AT<:AbstractVector{T}}
     O = Val(order)
     FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,O,α)
     FirstDerivativeInternal!(uₓ,c,u,Δx,n,O,α)
@@ -68,8 +68,6 @@ end
 function D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,α::T,dim::Integer) where T
     loopdir = _SelectLoopDirection(dim)
     ORD = Val(order)
-    # foreach(zip(eachslice(uₓ,dims=dim),eachslice(u,dims=dim))) do (cache,U)
-    # for (cache,U) in zip(loopdir(uₓ),loopdir(u))
     foreach(zip(loopdir(uₓ),loopdir(u))) do (cache,U)
         D₁!(cache,U,n,Δ,ORD,α)
     end

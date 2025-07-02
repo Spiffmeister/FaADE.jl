@@ -1,23 +1,5 @@
 
 
-# struct BoundaryBlock{
-#         LEFTBOUNDARY    <: BoundaryStorage{TT,0,AT},
-#         RIGHTBOUNDARY   <: BoundaryStorage{TT,0,AT},
-#         DOWNBOUNDARY    <: BoundaryStorage{TT,0,AT},
-#         UPBOUNDARY      <: BoundaryStorage{TT,0,AT}} <: BoundaryStorage{TT,0,AT}
-#     Left    :: LEFTBOUNDARY
-#     Right   :: RIGHTBOUNDARY
-#     DOWN    :: DOWNBOUNDARY
-#     UP      :: UPBOUNDARY
-
-#     function BoundaryBlock(LB::LBST,RB::RBST,DB::DBST,UB::UBST) where {LBST,RBST,DBST,UBST}
-#         new{LBST,RBST,DBST,UBST}(LB,RB,DB,UB)
-#     end
-    # BoundaryBlock(LB::LBST,RB::RBST,DB::DBST,UB::UBST) where {LBST <: BoundaryStorage{TT,0,AT},RBST,DBST,UBST} where {TT,AT} = new{TT,0,AT}(LB,RB,DB,UB)
-# end
-
-
-
 struct BoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
 
 """
@@ -58,20 +40,7 @@ function BoundaryData(G::Grid2D{TT,COORD},BC,order::Int64) where {TT,COORD}
     X = GetBoundaryCoordinates(G,BC.side)
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
-# function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT}
 
-#     # Store the boundary points and generate buffers for storing RHS
-#     if BC.side ∈ [Left,Right]
-#         n = G.ny
-#         BufferRHS = zeros(TT,(1,n))
-#     elseif BC.side ∈ [Up,Down]
-#         n = G.nx
-#         BufferRHS = zeros(TT,(n,1))
-#     end
-
-#     X = GetBoundaryCoordinates(G,BC.side)
-#     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
-# end
 
 
 """
@@ -88,11 +57,13 @@ struct InterfaceBoundaryData{
         NT1,
         NT2} <: BoundaryStorage{TT,0,AT}
 
-    BoundaryOperator:: BCT
-    BufferOut       :: AT
-    BufferIn        :: AT
-    OutgoingJoint   :: Joint{NT1}
-    IncomingJoint   :: Joint{NT2}
+    BoundaryOperator    :: BCT
+    BufferOut           :: AT
+    # BufferOutDerivative :: AT
+    BufferIn            :: AT
+    # BufferInDerivative  :: AT
+    OutgoingJoint       :: Joint{NT1}
+    IncomingJoint       :: Joint{NT2}
 end
 function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
 
@@ -110,17 +81,18 @@ function InterfaceBoundaryData{TT}(G1::Grid1D,BC) where {TT}
 end
 function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
     if BC.side ∈ [Left,Right]
-        n = G1.ny
-        BufferIn    = zeros(TT,(2,n))
-        BufferOut   = zeros(TT,(2,n))
-
+        sz = (2,G1.ny)
     elseif BC.side ∈ [Up,Down]
-        n = G1.nx
-        BufferIn    = zeros(TT,(n,2))
-        BufferOut   = zeros(TT,(n,2))
+        sz = (G1.nx,2)
     end
 
+    BufferIn = zeros(TT,sz)
+    # BufferInDerivative = zeros(TT,sz)
+    BufferOut = zeros(TT,sz)
+    # BufferOutDerivative = zeros(TT,sz)
+
     InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    # InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferOutDerivative,BufferIn,BufferInDerivative,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
     if BC.side ∈ [Left,Right]

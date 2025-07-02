@@ -34,11 +34,11 @@ function FirstDerivativeInternal! end
     end
     # dest
 end
-@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Integer,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT},O}
+@inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Integer,DO::Val{O},α::TT,β=TT(1)) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
     # m = floor(Int,(O+2)/2)
     for i = m:n-m+1
-        @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,K[i])
+        @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,β*K[i])
     end
     # dest
 end
@@ -59,18 +59,9 @@ end
     @inbounds β*(-T(1/60)*u[_prev(i-2,n)] + T(3/20)*u[_prev(i-1,n)] - T(3/4)*u[_prev(i,n)] + T(3/4)*u[_next(i,n)] - T(3/20)*u[_next(i+1,n)] + T(1/60)*u[_next(i+2,n)])/Δx
 end
 @inline function FirstDerivativePeriodic!(dest::VT,K::VT,u::VT,Δx::TT,DO::Val,n::Int,α::TT) where {TT,VT<:AbstractVector{TT}}
-
-    # for i = 2:n-1
-    #     dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,K[i])
-    # end
-
-    # dest[1] = α*dest[1] + K[1]*(u[2] - u[n-1])/(TT(2)*Δx)
-    # dest[n] = α*dest[n] + K[n]*(u[2] - u[n-1])/(TT(2)*Δx)
-
     for i = 1:n
         @inbounds dest[i] = α*dest[i] + FirstDerivativePeriodic(u,Δx,DO,n,i,K[i])
     end
-    # dest
 end
 
 
@@ -200,7 +191,7 @@ function FirstDerivativeTranspose!(dest::VT,u::AT,n::Int,Δx::TT,order::Int,α::
     dest
 end
 
-function FirstDerivativeTranspose!(dest::VT,u::AT,c::AT,n::Int,Δx::TT,order::Int,α::TT) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
+function FirstDerivativeTranspose!(dest::VT,u::AT,c::AT,n::Int,Δx::TT,order::Int,α::TT,β=TT(1)) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + c[i]*FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
