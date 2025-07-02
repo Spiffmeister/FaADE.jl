@@ -36,11 +36,9 @@ function FirstDerivativeInternal! end
 end
 @inline function FirstDerivativeInternal!(dest::AT,K::AT,u::AT,Δx::TT,n::Integer,DO::Val{O},α::TT,β=TT(1)) where {TT,AT<:AbstractVector{TT},O}
     O == 2 ? m = O : m = O+1
-    # m = floor(Int,(O+2)/2)
     for i = m:n-m+1
         @inbounds dest[i] = α*dest[i] + FirstDerivativeInternal(u,Δx,DO,i,β*K[i])
     end
-    # dest
 end
 
 
@@ -101,28 +99,28 @@ end
     FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,DO::Val{O},α::TT) where {TT,AT<:AbstractVector{TT}}
 ``u_x \\leftarrow \\alpha u_x + K d_x u``
 """
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{2},α::TT,β=TT(1)) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
-    uₓ[j] = α*uₓ[j] + K[j]*TT(i)*(u[j+i] - u[j])/Δx
+    uₓ[j] = α*uₓ[j] + β*K[j]*TT(i)*(u[j+i] - u[j])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{4},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{4},α::TT,β=TT(1)) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
-    uₓ[j]       = α*uₓ[j]   + K[j]      *TT(i)*(TT(-24/17)*u[j] + TT(59/34)*u[j+i]   + TT(-4/17)*u[j+2i]   + TT(-3/34)*u[j+3i])/Δx
-    uₓ[j+i]     = α*uₓ[j+i] + K[j+i]    *TT(i)*(TT(-1/2)*u[j]   + TT(1/2)*u[j+2i])/Δx
-    uₓ[j+2i]    = α*uₓ[j+2i]+ K[j+2i]   *TT(i)*(TT(4/43)*u[j]  + TT(-59/86)*u[j+i]   + TT(59/86)*u[j+3i]  + TT(-4/43)*u[j+4i])/Δx
-    uₓ[j+3i]    = α*uₓ[j+3i]+ K[j+3i]   *TT(i)*(TT(3/98)*u[j]  + TT(-59/98)*u[j+2i]  + TT(32/49)*u[j+4i]  + TT(-4/49)*u[j+5i])/Δx
+    uₓ[j]       = α*uₓ[j]   + β*K[j]      *TT(i)*(TT(-24/17)*u[j] + TT(59/34)*u[j+i]   + TT(-4/17)*u[j+2i]   + TT(-3/34)*u[j+3i])/Δx
+    uₓ[j+i]     = α*uₓ[j+i] + β*K[j+i]    *TT(i)*(TT(-1/2)*u[j]   + TT(1/2)*u[j+2i])/Δx
+    uₓ[j+2i]    = α*uₓ[j+2i]+ β*K[j+2i]   *TT(i)*(TT(4/43)*u[j]  + TT(-59/86)*u[j+i]   + TT(59/86)*u[j+3i]  + TT(-4/43)*u[j+4i])/Δx
+    uₓ[j+3i]    = α*uₓ[j+3i]+ β*K[j+3i]   *TT(i)*(TT(3/98)*u[j]  + TT(-59/98)*u[j+2i]  + TT(32/49)*u[j+4i]  + TT(-4/49)*u[j+5i])/Δx
 end
-@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{6},α::TT) where {TT,AT<:AbstractVector{TT}}
+@inline function FirstDerivativeBoundary!(uₓ::AT,K::AT,u::AT,Δx::TT,NT::NodeType,::Val{6},α::TT,β=TT(1)) where {TT,AT<:AbstractVector{TT}}
     NT == Left ? i = 1 : i = -1
     NT == Left ? j = 1 : j = length(u)
-    uₓ[j]       = α*uₓ[j]   + K[j]      *TT(i)*( TT(-1.582533518939116)*u[j] + TT(2.033378678700676)*u[j+i] - TT(0.141512858744873)*u[j+2i] + TT(-0.450398306578272)*u[j+3i] + TT(0.104488069284042)*u[j+4i] + TT(0.036577936277544)*u[j+5i] )/Δx
-    uₓ[j+i]     = α*uₓ[j+i] + K[j+i]    *TT(i)*( TT(-0.462059195631158)*u[j] + TT(0.287258622978251)*u[j+2i] +TT(0.258816087376832)*u[j+3i] + TT(-0.069112065532624)*u[j+4i] - TT(0.014903449191300)*u[j+5i] )/Δx
-    uₓ[j+2i]    = α*uₓ[j+2i]+ K[j+2i]   *TT(i)*( TT(0.071247104721830)* u[j] - TT(0.636451095137907)*u[j+i] + TT(0.606235523609147)*u[j+3i] + TT(-0.022902190275815)*u[j+4i] - TT(0.018129342917256)*u[j+5i] )/Δx
-    uₓ[j+3i]    = α*uₓ[j+3i]+ K[j+3i]   *TT(i)*( TT(0.114713313798970)* u[j] - TT(0.290087484386815)*u[j+i] - TT(0.306681191361148)*u[j+2i] + TT(0.520262285050482)*u[j+4i]  - TT(0.051642265516119)*u[j+5i] + TT(0.013435342414630)*u[j+6i] )/Δx
-    uₓ[j+4i]    = α*uₓ[j+4i]+ K[j+4i]   *TT(i)*( TT(-0.036210680656541)*u[j] + TT(0.105400944933782)*u[j+i] + TT(0.015764336127392)*u[j+2i] + TT(-0.707905442575989)*u[j+3i] + TT(0.769199413962647)*u[j+5i] - TT(0.164529643265203)*u[j+6i] + T(0.018281071473911)*u[j+7i] )/Δx
-    uₓ[j+5i]    = α*uₓ[j+5i]+ K[j+5i]   *TT(i)*( TT(-0.011398193015050)*u[j] + TT(0.020437334208704)*u[j+i] + TT(0.011220896474665)*u[j+2i] + TT( 0.063183694641876)*u[j+3i] - TT(0.691649024426814)*u[j+4i] + TT(0.739709139060752)*u[j+6i] + TT(-0.147941827812150)*u[j+7i] + TT(0.016437980868017)*u[j+8i] )/Δx
+    uₓ[j]       = α*uₓ[j]   + β*K[j]      *TT(i)*( TT(-1.582533518939116)*u[j] + TT(2.033378678700676)*u[j+i] - TT(0.141512858744873)*u[j+2i] + TT(-0.450398306578272)*u[j+3i] + TT(0.104488069284042)*u[j+4i] + TT(0.036577936277544)*u[j+5i] )/Δx
+    uₓ[j+i]     = α*uₓ[j+i] + β*K[j+i]    *TT(i)*( TT(-0.462059195631158)*u[j] + TT(0.287258622978251)*u[j+2i] +TT(0.258816087376832)*u[j+3i] + TT(-0.069112065532624)*u[j+4i] - TT(0.014903449191300)*u[j+5i] )/Δx
+    uₓ[j+2i]    = α*uₓ[j+2i]+ β*K[j+2i]   *TT(i)*( TT(0.071247104721830)* u[j] - TT(0.636451095137907)*u[j+i] + TT(0.606235523609147)*u[j+3i] + TT(-0.022902190275815)*u[j+4i] - TT(0.018129342917256)*u[j+5i] )/Δx
+    uₓ[j+3i]    = α*uₓ[j+3i]+ β*K[j+3i]   *TT(i)*( TT(0.114713313798970)* u[j] - TT(0.290087484386815)*u[j+i] - TT(0.306681191361148)*u[j+2i] + TT(0.520262285050482)*u[j+4i]  - TT(0.051642265516119)*u[j+5i] + TT(0.013435342414630)*u[j+6i] )/Δx
+    uₓ[j+4i]    = α*uₓ[j+4i]+ β*K[j+4i]   *TT(i)*( TT(-0.036210680656541)*u[j] + TT(0.105400944933782)*u[j+i] + TT(0.015764336127392)*u[j+2i] + TT(-0.707905442575989)*u[j+3i] + TT(0.769199413962647)*u[j+5i] - TT(0.164529643265203)*u[j+6i] + T(0.018281071473911)*u[j+7i] )/Δx
+    uₓ[j+5i]    = α*uₓ[j+5i]+ β*K[j+5i]   *TT(i)*( TT(-0.011398193015050)*u[j] + TT(0.020437334208704)*u[j+i] + TT(0.011220896474665)*u[j+2i] + TT( 0.063183694641876)*u[j+3i] - TT(0.691649024426814)*u[j+4i] + TT(0.739709139060752)*u[j+6i] + TT(-0.147941827812150)*u[j+7i] + TT(0.016437980868017)*u[j+8i] )/Δx
 end
 
 
@@ -152,24 +150,24 @@ function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,Δx::TT,NT::NodeType{
 
     dest
 end
-function FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT) where {TT,VT,AT,TN}
+function FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{2},α::TT,β=TT(1)) where {TT,VT,AT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
 
-    dest[j]     = α*dest[j] + TT(i)*c[j]*(TT(-1)*u[j] + TT(-1)*u[j+i])
+    dest[j]     = α*dest[j] + TT(i)*β*c[j]*(TT(-1)*u[j] + TT(-1)*u[j+i])
 
     dest
 end
-function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT) where {TT,VT,AT,TN}
+function  FirstDerivativeTransposeBoundary!(dest::VT,u::AT,c::AT,Δx::TT,NT::NodeType{TN},::Val{4},α::TT,β=TT(1)) where {TT,VT,AT,TN}
     TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = length(u)
     
-    dest[j]     = α*dest[j] +    TT(i)*c[j]     *( TT(-24//17)*u[j]+  TT(-1//2)*u[j+i] +  TT(4//43)*u[j+2i] + TT(3//98)*u[j+3i] )/Δx
-    dest[j+i]   = α*dest[j+i] +  TT(i)*c[j+i]   *( TT(59//34)*u[j] +                                          TT(-59//86)*u[j+2i] )/Δx
-    dest[j+2i]  = α*dest[j+2i] + TT(i)*c[j+2i]  *( TT(-4//17)*u[j] +  TT(1//2)* u[j+i] +                      TT(-59//98)*u[j+3i] +   TT(-1//12)*u[j+4i] )/Δx
-    dest[j+3i]  = α*dest[j+3i] + TT(i)*c[j+3i]  *( TT(-3//37)*u[j] +                      TT(59//86)*u[j+2i]+                         TT(2//3)*u[j+4i] +  TT(-1//12)*u[j+5i])/Δx 
-    dest[j+4i]  = α*dest[j+4i] + TT(i)*c[j+4i]  *(                                        TT(-4//43)*u[j+2i]+ TT(32//49)*u[j+3i] +                       TT(2//3)*u[j+5i] +   TT(-1//12)*u[j+6i] )/Δx
-    dest[j+5i]  = α*dest[j+5i] + TT(i)*c[j+5i]  *(                                                            TT(-4//49)*u[j+3i] +    TT(2//3)*u[j+4i] +                      TT(2//3)*u[j+6i] + TT(-1//12)*u[j+7i] )/Δx 
+    dest[j]     = α*dest[j] +    TT(i)*β*c[j]     *( TT(-24//17)*u[j]+  TT(-1//2)*u[j+i] +  TT(4//43)*u[j+2i] + TT(3//98)*u[j+3i] )/Δx
+    dest[j+i]   = α*dest[j+i] +  TT(i)*β*c[j+i]   *( TT(59//34)*u[j] +                                          TT(-59//86)*u[j+2i] )/Δx
+    dest[j+2i]  = α*dest[j+2i] + TT(i)*β*c[j+2i]  *( TT(-4//17)*u[j] +  TT(1//2)* u[j+i] +                      TT(-59//98)*u[j+3i] +   TT(-1//12)*u[j+4i] )/Δx
+    dest[j+3i]  = α*dest[j+3i] + TT(i)*β*c[j+3i]  *( TT(-3//37)*u[j] +                      TT(59//86)*u[j+2i]+                         TT(2//3)*u[j+4i] +  TT(-1//12)*u[j+5i])/Δx 
+    dest[j+4i]  = α*dest[j+4i] + TT(i)*β*c[j+4i]  *(                                        TT(-4//43)*u[j+2i]+ TT(32//49)*u[j+3i] +                       TT(2//3)*u[j+5i] +   TT(-1//12)*u[j+6i] )/Δx
+    dest[j+5i]  = α*dest[j+5i] + TT(i)*β*c[j+5i]  *(                                                            TT(-4//49)*u[j+3i] +    TT(2//3)*u[j+4i] +                      TT(2//3)*u[j+6i] + TT(-1//12)*u[j+7i] )/Δx 
 
     dest
 end
@@ -194,9 +192,9 @@ end
 function FirstDerivativeTranspose!(dest::VT,u::AT,c::AT,n::Int,Δx::TT,order::Int,α::TT,β=TT(1)) where {TT,VT<:AbstractVector{TT},AT<:AbstractVector{TT}}
     order == 2 ? m = 2 : m = 7
     for i = m:n-m+1
-        @inbounds dest[i] = α*dest[i] + c[i]*FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
+        @inbounds dest[i] = α*dest[i] + β*c[i]*FirstDerivativeInternal(u,Δx,Val(order),i,TT(1))
     end
-    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Left,   Val(order),α)
-    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Right,  Val(order),α)
+    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Left,   Val(order),α,β)
+    FirstDerivativeTransposeBoundary!(dest,u,c,Δx,Right,  Val(order),α,β)
     dest
 end
