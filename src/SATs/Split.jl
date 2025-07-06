@@ -41,6 +41,7 @@ struct SAT_Interface{
         TN<:NodeType,
         COORD,
         TT<:Real,
+        ORDER,
         TV<:Vector{TT},
         F1<:Function} <: SimultanousApproximationTerm{:Interface}
 
@@ -110,7 +111,7 @@ struct SAT_Interface{
 
         # τ₀, τ₁, τ₂ = SATpenalties(Interface,Δx₁,Δx₂,order)
 
-        new{typeof(side),coordinates,TT,Vector{TT},typeof(loopaxis)}(side,AX,order,
+        new{typeof(side),coordinates,TT,order,Vector{TT},typeof(loopaxis)}(side,AX,order,
             D₁ᵀE₀,D₁ᵀEₙ,E₀D₁,EₙD₁,τ₀,τ₁,τ₂,loopaxis,Δy,coordinates,normal)
     end
 end
@@ -208,24 +209,39 @@ function SAT_Interface!(dest::AT,u::AT,cx::AT,cxy::AT,buffer::AT,SI::SAT_Interfa
     dest
 end
 
-function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Left,1}}
+function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Left,1},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[1,:], cxy[1,:], u[1,:], m, SI.Δy, SI.order, TT(1), -SI.τ₁)
-    @views FirstDerivativeTranspose!(dest[1,:], buffer[1,:], cxy[1,:], m, SI.Δy, SI.order, TT(1), SI.τ₂)
+    # @views D₁!(dest[1,:], cxy[1,:], u[1,:], m, SI.Δy, SI.order, TT(1), -SI.τ₁)
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[1,:],cxy[1,:],u[1,:],SI.Δy,Left,order,TT(1),-SI.τ₁)
+    @views FirstDerivativeInternal!(dest[1,:],cxy[1,:],u[1,:],SI.Δy,m,order,TT(1),-SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[1,:],cxy[1,:],u[1,:],SI.Δy,Right,order,TT(1),-SI.τ₁)
+    @views FirstDerivativeTranspose!(dest[1,:], buffer[1,:], cxy[1,:], m, SI.Δy, SI.order,TT(1), SI.τ₂)
 end
-function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Right,1}}
+function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Right,1},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[end,:], cxy[end,:], u[end,:], m, SI.Δy, SI.order, TT(1), SI.τ₁)
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[end,:],cxy[end,:],u[end,:],SI.Δy,Left,order,TT(1),SI.τ₁)
+    @views FirstDerivativeInternal!(dest[end,:],cxy[end,:],u[end,:],SI.Δy,m,order,TT(1),SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[end,:],cxy[end,:],u[end,:],SI.Δy,Right,order,TT(1),SI.τ₁)
     @views FirstDerivativeTranspose!(dest[end,:], buffer[1,:], cxy[end,:], m, SI.Δy, SI.order, TT(1), SI.τ₂)
 end
-function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Left,2}}
+function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Left,2},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[:,1], cxy[:,1], u[:,1], m, SI.Δy, SI.order, TT(1), -SI.τ₁)
+    order = Val(ORDER)
+    # @views D₁!(dest[:,1], cxy[:,1], u[:,1], m, SI.Δy, SI.order, TT(1), -SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[:,1],cxy[:,1],u[:,1],SI.Δy,Left,order,TT(1),-SI.τ₁)
+    @views FirstDerivativeInternal!(dest[:,1],cxy[:,1],u[:,1],SI.Δy,m,order,TT(1),-SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[:,1],cxy[:,1],u[:,1],SI.Δy,Right,order,TT(1),-SI.τ₁)
     @views FirstDerivativeTranspose!(dest[:,1], buffer[:,1], cxy[:,1], m, SI.Δy, SI.order, TT(1), SI.τ₂)
 end
-function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Right,2}}
+function SAT_Interface_crossderivative!(dest::AT,u::AT,cxy::AT,buffer::AT,SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Right,2},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[:,end], cxy[:,end], u[:,end], m, SI.Δy, SI.order, TT(1), SI.τ₁)
+    order = Val(ORDER)
+    # @views D₁!(dest[:,end], cxy[:,end], u[:,end], m, SI.Δy, SI.order, TT(1), SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[:,end],cxy[:,end],u[:,end],SI.Δy,Left,order,TT(1),SI.τ₁)
+    @views FirstDerivativeInternal!(dest[:,end],cxy[:,end],u[:,end],SI.Δy,m,order,TT(1),SI.τ₁)
+    @views FirstDerivativeBoundary!(dest[:,end],cxy[:,end],u[:,end],SI.Δy,Right,order,TT(1),SI.τ₁)
     @views FirstDerivativeTranspose!(dest[:,end], buffer[:,1], cxy[:,end], m, SI.Δy, SI.order, TT(1), SI.τ₂)
 end
 
@@ -278,21 +294,37 @@ end
 
 
 
-function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Left,1}}
+function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Left,1},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[2,:],cxy[1,:],u[1,:],m,SI.Δy,SI.order,TT(1))
+    # @views D₁!(dest[2,:],cxy[1,:],u[1,:],m,SI.Δy,SI.order,TT(1))
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[2,:],cxy[1,:],u[1,:],SI.Δy,Left,order,TT(1))
+    @views FirstDerivativeInternal!(dest[2,:],cxy[1,:],u[1,:],SI.Δy,m,order,TT(1))
+    @views FirstDerivativeBoundary!(dest[2,:],cxy[1,:],u[1,:],SI.Δy,Right,order,TT(1))
 end
-function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Right,1}}
+function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Right,1},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[2,:],cxy[end,:],u[end,:],m,SI.Δy,SI.order,TT(1))
+    # @views D₁!(dest[2,:],cxy[end,:],u[end,:],m,SI.Δy,SI.order,TT(1))
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[2,:],cxy[end,:],u[end,:],SI.Δy,Left,order,TT(1))
+    @views FirstDerivativeInternal!(dest[2,:],cxy[end,:],u[end,:],SI.Δy,m,order,TT(1))
+    @views FirstDerivativeBoundary!(dest[2,:],cxy[end,:],u[end,:],SI.Δy,Right,order,TT(1))
 end
-function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Left,2}}
+function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Left,2},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[:,2],cxy[:,1],u[:,1],m,SI.Δy,SI.order,TT(1))
+    # @views D₁!(dest[:,2],cxy[:,1],u[:,1],m,SI.Δy,SI.order,TT(1))
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[:,2],cxy[:,1],u[:,1],SI.Δy,Left,order,TT(1))
+    @views FirstDerivativeInternal!(dest[:,2],cxy[:,1],u[:,1],SI.Δy,m,order,TT(1))
+    @views FirstDerivativeBoundary!(dest[:,2],cxy[:,1],u[:,1],SI.Δy,Right,order,TT(1))
 end
-function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT}) where {TT,AT,TN<:NodeType{:Right,2}}
+function SAT_Interface_cache_crossderivative!(dest::AT, u::AT, cxy::AT, SI::SAT_Interface{TN,:Curvilinear,TT,ORDER}) where {TT,AT,TN<:NodeType{:Right,2},ORDER}
     m = size(dest,mod1(SI.axis+1,2))
-    @views D₁!(dest[:,2],cxy[:,end],u[:,end],m,SI.Δy,SI.order,TT(1))
+    # @views D₁!(dest[:,2],cxy[:,end],u[:,end],m,SI.Δy,SI.order,TT(1))
+    order = Val(ORDER)
+    @views FirstDerivativeBoundary!(dest[:,2],cxy[:,end],u[:,end],SI.Δy,Left,order,TT(1))
+    @views FirstDerivativeInternal!(dest[:,2],cxy[:,end],u[:,end],SI.Δy,m,order,TT(1))
+    @views FirstDerivativeBoundary!(dest[:,2],cxy[:,end],u[:,end],SI.Δy,Right,order,TT(1))
 end
 
 

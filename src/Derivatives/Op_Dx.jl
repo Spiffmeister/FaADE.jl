@@ -50,17 +50,20 @@ function D₁! end
     D₁!(uₓ::AbstractVector{T},u::AbstractVector{T},n::Integer,Δx::T,order::Integer)
 1D [`D₁!`](@ref).
 """
+D₁!(uₓ::AT,u::AT,n::Integer,Δx::TT,order::Integer,α::TT) where {TT,AT<:AbstractVector{TT}} = D₁!(uₓ,u,n,Δx,Val(order),α)
 function D₁!(uₓ::AT,u::AT,n::Integer,Δx::T,order::Val,α::T) where {T,AT<:AbstractVector{T}}
     FirstDerivativeBoundary!(uₓ,u,Δx,Left,order,α)
     FirstDerivativeInternal!(uₓ,u,Δx,n,order,α)
     FirstDerivativeBoundary!(uₓ,u,Δx,Right,order,α)
 end
-function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Integer,α::T,β=T(1)) where {T,AT<:AbstractVector{T}}
-    O = Val(order)
-    FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,O,α,β)
-    FirstDerivativeInternal!(uₓ,c,u,Δx,n,O,α,β)
-    FirstDerivativeBoundary!(uₓ,c,u,Δx,Right,O,α,β)
+D₁!(dest::AT,c::AT,u::AT,n::Integer,Δx::TT,order::Integer,α::TT,β=TT(1)) where {TT,AT} = D₁!(dest,c,u,n,Δx,Val(order),α,β)
+function D₁!(uₓ::AT,c::AT,u::AT,n::Integer,Δx::T,order::Val{ORDER},α::T,β=T(1)) where {T,AT<:AbstractVector{T},ORDER}
+    # O = Val(order)
+    FirstDerivativeBoundary!(uₓ,c,u,Δx,Left,order,α,β)
+    FirstDerivativeInternal!(uₓ,c,u,Δx,n,order,α,β)
+    FirstDerivativeBoundary!(uₓ,c,u,Δx,Right,order,α,β)
 end
+
 """
     D₁!(uₓ::AbstractArray{T},u::AbstractArray{T},n::Integer,Δ::T,order::Integer,α::T,dim::Integer) where T
 1D implementation for 2D problems for [`D₁!`](@ref).

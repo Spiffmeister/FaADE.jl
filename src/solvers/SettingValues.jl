@@ -137,11 +137,11 @@ Moves a `InterfaceBoundaryData.BufferOut` to the relevant `InterfaceBoundaryData
 """
 function _tradeBuffer!(B::BoundaryData, DB) end
 function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, DB) where {TT,DIM,AT,BCT<:SAT_Periodic} end
-function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT,AT}, D::LocalDataBlock{TT,DIM,COORD,AT}) where {TT,DIM,BCT,AT,COORD}
-    MyBuffer = B.BufferOut :: AT
+function _tradeBuffer!(B::InterfaceBoundaryData{TT,DIM,BCT}, D::LocalDataBlock) where {TT,DIM,BCT}
+    MyBuffer = B.BufferOut
     
-    Myside = B.OutgoingJoint.side :: NodeType
-    Toside = B.IncomingJoint.side :: NodeType
+    Myside = B.OutgoingJoint.side
+    Toside = B.IncomingJoint.side
 
     side = _boundarytoindex(Toside)
     ToBoundary = D.boundary[side]
@@ -175,17 +175,8 @@ end
 """
 Loop over each `DataBlock.boundary`
 """
-function _tradeBuffers!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT}
-    boundary = D.boundary
-    # for I in eachindex(boundary)
-    #     _tradeBuffer!(boundary[I],DB)
-    # end
-    _tradeBuffer!(boundary[1], DB)
-    _tradeBuffer!(boundary[2], DB)
-    if DIM == 2
-        _tradeBuffer!(boundary[3], DB)
-        _tradeBuffer!(boundary[4], DB)
-    end
+function _tradeBuffers!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}, DB::DataMultiBlock{TT,DIM}) where {TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}
+    foreach(boundary -> _tradeBuffer!(boundary,DB), D.boundary)
 end
 """
 Loop over each `DataMultiBlock.DataBlock`
@@ -311,7 +302,7 @@ end
 """
 Interface curvilinear SAT
 """
-function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,VT,FT},AT}, dest::AT, source::AT, K::KT, mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},VT,FT} where {SIDE,AXIS}
+function applyCurvilinearSAT!(BC::InterfaceBoundaryData{TT,DIM,SAT_Interface{TN,:Curvilinear,TT,ORDER,VT,FT},AT}, dest::AT, source::AT, K::KT, mode::SATMode{:SolutionMode}) where {TT,AT,KT<:Vector{AT},DIM,TN<:NodeType{SIDE,AXIS},ORDER,VT,FT} where {SIDE,AXIS}
     SAT_Interface!(dest, source, K[AXIS], K[3], BC.BufferIn, BC.BoundaryOperator, mode)
 end
 
@@ -340,29 +331,23 @@ end
 applySATs for 2D local block
 """
 function applySATs(dest::AT, D::LocalDataBlock{TT,2,:Variable,AT}, mode) where {TT,AT} #data mode
-    applyCurvilinearSAT!(D.boundary[1], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[2], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[4], dest, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[3], dest, D.K, mode)
+    foreach(boundary -> applyCurvilinearSAT!(boundary,dest,D.K,mode), D.boundary)
 end
 function applySATs(dest::AT, source::AT, D::LocalDataBlock{TT,2,:Variable,AT}, mode) where {TT,AT} #solution mode
-    applyCurvilinearSAT!(D.boundary[1], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[2], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[4], dest, source, D.K, mode)
-    applyCurvilinearSAT!(D.boundary[3], dest, source, D.K, mode)
+    foreach(boundary -> applyCurvilinearSAT!(boundary,dest,source,D.K,mode), D.boundary)
 end
 
 function applySATs(dest::AT, D::LocalDataBlock{TT,2,:Constant,AT}, mode) where {TT,AT} #data mode
     applyCartesianSAT!(D.boundary[1], dest, D.K[1], mode)
     applyCartesianSAT!(D.boundary[2], dest, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[4], dest, D.K[2], mode)
     applyCartesianSAT!(D.boundary[3], dest, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[4], dest, D.K[2], mode)
 end
 function applySATs(dest::AT, source::AT, D::LocalDataBlock{TT,2,:Constant,AT}, mode) where {TT,AT} #solution mode
     applyCartesianSAT!(D.boundary[1], dest, source, D.K[1], mode)
     applyCartesianSAT!(D.boundary[2], dest, source, D.K[1], mode)
-    applyCartesianSAT!(D.boundary[4], dest, source, D.K[2], mode)
     applyCartesianSAT!(D.boundary[3], dest, source, D.K[2], mode)
+    applyCartesianSAT!(D.boundary[4], dest, source, D.K[2], mode)
 end
 
 
@@ -371,8 +356,8 @@ end
 function applyCurvilinearSATs(dest::AT, D::LocalDataBlock{TT,2,COORD,AT}, mode) where {TT,COORD,AT}
     applySAT!(D.boundary[1], dest, source, D.K[1], D.K[3], mode)
     applySAT!(D.boundary[2], dest, source, D.K[1], D.K[3], mode)
-    applySAT!(D.boundary[4], dest, source, D.K[2], D.K[3], mode)
     applySAT!(D.boundary[3], dest, source, D.K[2], D.K[3], mode)
+    applySAT!(D.boundary[4], dest, source, D.K[2], D.K[3], mode)
 end
 
 
@@ -445,37 +430,6 @@ end
 
 
 """
-    copyUtoSAT!
-Moves data from the solution `u` at a given boundary to the `SAT_` field in `BoundaryStorage` structs. Or moves all data to `SAT_` fields.
-"""
-function copyUtoSAT! end
-function copyUtoSAT!(SAT::AT, u::AT, side::NodeType, order::Int) where {AT}
-    nnodes = SATNodeOutput(order)
-    if side == Left
-        SAT .= u[1:nnodes, :]
-    elseif side == Right
-        SAT .= u[end-nnodes+1:end, :]
-    elseif side == Up
-        SAT .= u[:, 1:nnodes]
-    elseif side == Down
-        SAT .= u[:, end-nnodes+1:end]
-    end
-end
-function copyUtoSAT!(Bound::BoundaryStorage{T,N,AT}, u::AT, order::Int) where {T,N,AT}
-    copyUtoSAT!(Bound.SAT_Left, u, Left, order)
-    copyUtoSAT!(Bound.SAT_Right, u, Right, order)
-    if typeof(Bound) <: BoundaryStorage{T,2,AT}
-        copyUtoSAT!(Bound.SAT_Up, u, Up, order)
-        copyUtoSAT!(Bound.SAT_Down, u, Down, order)
-    end
-end
-function copyUtoSAT!(D::DataMultiBlock{TT,DIM,DT}, order::Int) where {TT,DIM,DT<:LocalDataBlockType}
-    copyUtoSAT!(D.Data.boundary, D.Data.u, order)
-end
-
-
-
-"""
     muladd!(dest,source,α,β)
 multiply-add for multiblock problems
 """
@@ -504,7 +458,6 @@ function setValue(dest::Symbol, source::Symbol, D::LocalDataBlock, α)
     W = getarray(D, dest)
     R = getarray(D, source)
     @. W = α * R
-    # setValue(W,R,α)
     W
 end
 function setValue(dest::Symbol, source::Symbol, D::DataMultiBlock{TT}, α=TT(1)) where {TT}
@@ -611,6 +564,8 @@ function _update_Interpolant(D::LocalDataBlock{TT,2,:Variable,AT},Interp::TINTER
     RX = grid.rx::AT
     QY = grid.qy::AT
     RY = grid.ry::AT
+
+
 
     # ∂u/∂x = ∂u/∂q ∂q/∂x + ∂u/∂r ∂r/∂x ≈ q_x D_q u + r_x D_r u
     for (cache, qx, U) in zip(eachcol(rₖ), eachcol(QX), eachcol(u))
@@ -753,12 +708,12 @@ function _setglobalu!(uglobal::Vector{AT}, DB::DataMultiBlock) where {AT}
 
 end
 
-function _average_boundaries(DB::DataMultiBlock{TT,DIM}) where {TT,DIM}
+function _average_boundaries(DB::DataMultiBlock)
     for I in eachblock(DB)
         _average_local_buffer(DB[I])
     end
 end
-function _average_local_buffer(D::LocalDataBlock{TT,DIM,COORD}) where {TT,DIM,COORD}
+function _average_local_buffer(D::LocalDataBlock{TT,DIM}) where {TT,DIM}
     _average_boundary_data(D.boundary[1], D)
     _average_boundary_data(D.boundary[2], D)
     if DIM == 2
