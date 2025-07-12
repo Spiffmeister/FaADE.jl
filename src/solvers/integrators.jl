@@ -49,7 +49,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     end
     if (rnorm>rtol*bnorm) & warnings
         DBlock.SC.converged = false
-        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
+        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," abs error = ",rnorm," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
