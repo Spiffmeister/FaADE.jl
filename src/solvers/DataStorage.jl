@@ -148,7 +148,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,1,MET},Para::PT) where {TT,ME
     return K
 end
 function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::PT) where {TT,PT<:ParallelData}
-
+    
     existb = true
     try
         existb = !(typeof(Para.MagneticField).parameters[1] == Nothing)
@@ -164,7 +164,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
         end
     end
 
-    K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+    K = [zeros(TT,size(G)) for _ in 1:3]
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)
@@ -181,7 +181,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
             else
                 Kx = P.Kx
                 Ky = P.Ky
-                Kxy = 0.0
+                Kxy = P.Kx
             end
             K[1][i] = Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
             K[2][i] = Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
@@ -210,11 +210,10 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
     end
 
     if existb
-        K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+        K = [zeros(TT,size(G)) for _ in 1:3]
     else
         K = [zeros(TT,size(G)), zeros(TT,size(G))]
     end
-    # K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)

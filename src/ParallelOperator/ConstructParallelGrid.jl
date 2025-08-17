@@ -9,6 +9,12 @@ Inputs:
 - GridType
 - z values of planes to trace to
 
+Optional inputs:
+ - `xmode` and `ymode` are either `:stop`, `:period` or `:ignore`
+    - `:ignore` (default) simply returns the point as is
+    - `:stop` sets the maximum and minimum allowed values for the traced point to `xbound` or `ybound`
+    - `:period` ensures the field line tracing understands that the direction is periodic
+
 Outputs:
 - ParallelGrid object (see [ParallelGrid](@ref))
 """

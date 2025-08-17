@@ -61,7 +61,7 @@ function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
 
     I = P.Interpolant
     IC = P.Intercept
-
+# @show I
     # w ← P_f u + P_b u
     if isnothing(IC)
         _compute_w!(I,w,P.PGrid.Fplane,P.PGrid.Bplane,grid.nx,grid.ny)

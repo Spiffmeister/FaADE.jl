@@ -1,6 +1,4 @@
-"""
-Example of a periodic box with an island at position specified by xₛ and a width of δ
-"""
+# Example of a periodic box with an island at position specified by xₛ and a width of δ
 using Revise
 using FaADE
 

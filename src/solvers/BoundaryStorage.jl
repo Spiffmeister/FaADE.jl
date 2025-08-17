@@ -169,7 +169,7 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
         end
     end
 
-    return tmpDict
+    return (tmpDict[Left], tmpDict[Right], tmpDict[Down], tmpDict[Up])
 end
 """
 2D multiblock version of GenerateBoundaries.
