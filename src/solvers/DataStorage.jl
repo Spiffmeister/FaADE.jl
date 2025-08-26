@@ -175,9 +175,9 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
                     @warn "The field is singular at $(G[i])"
                     NB = TT(1)
                 end
-                Kx = P.Kx * (TT(1) - B[1]^2/NB)
-                Ky = P.Ky * (TT(1) - B[2]^2/NB)
-                Kxy = -P.Kx * B[1]*B[2]/NB
+                Kx = P.Kx * (TT(1) - B[1]^2/NB) # 1 - B₁² / ||B||²
+                Ky = P.Ky * (TT(1) - B[2]^2/NB) # 1 - B₂² / ||B||²
+                Kxy = -P.Kx * B[1]*B[2]/NB # - B₁ B₂ / ||B||² ## Off diagonal  terms in diffusion coefficient matrix ## κ_perp (I - B Bᵀ / ||B||²)
             else
                 Kx = P.Kx
                 Ky = P.Ky

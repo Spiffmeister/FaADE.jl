@@ -258,8 +258,8 @@ function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::Parall
     end
     tmp = findmax(abs,w)[1]
     iszero(tmp) ? tmp = one(TT) : nothing
-    # τglobal[I] = 0.1 * (maximum(abs.(u - w))/ tmp)^2.0
-    τglobal[I] = 0.1
+    τglobal[I] = 0.1 * (maximum(abs.(u - w))/ tmp)^2.0
+    # τglobal[I] = 0.1
     # @show (maximum(abs.(u - w))),  maximum(abs.(w)),  maximum(u)
     # @show τglobal
     # if iszero(τglobal[I])
