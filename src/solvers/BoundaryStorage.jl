@@ -163,7 +163,9 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
                 else
                     typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[2][:,1]) : τ = minimum(K[2][:,end])
                 end
-                BC.τ₀[1] = -(10 + 1/τ)
+                # BC.τ₀[1] = -(10 + 1/τ)
+                iszero(τ) ? nothing : BC.τ₀[1] = -(10 + 1/τ)
+
             end
             tmpDict[BC.side] = BoundaryData(G,BC,P.order)
         end
@@ -247,7 +249,8 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
                     else
                         typeof(BC.side).parameters[1] == :Left ? τ = maximum(K[2][:,1]) : τ = maximum(K[2][:,end])
                     end
-                    BC.τ₀[1] = -(10 + 1/τ)
+                    iszero(τ) ? nothing : BC.τ₀[1] = -(10 + 1/τ)
+                    # BC.τ₀[1] = -(10 + 1/τ)
                 end
                 tmpDict[BC.side] = BoundaryData(G.Grids[I],BC,P.order)
 

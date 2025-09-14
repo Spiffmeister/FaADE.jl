@@ -14,6 +14,7 @@ module Grid
     include("generating.jl")
     include("grids.jl")
     include("gridtools.jl")
+    include("utils.jl")
 
     export GridType, LocalGridType
     export CartesianMetric, CurvilinearMetric
