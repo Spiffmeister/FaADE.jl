@@ -597,6 +597,7 @@ function _update_Interpolant(D::LocalDataBlock{TT,2,:Variable,AT},Interp::TINTER
     rₖ_resize = view(rₖ, 1:nx, 1:ny)
     dₖ_resize = view(dₖ, 1:nx, 1:ny)
 
+
     grid = D.grid #TODO: Function barrier probably required for speed/allocations
     J = grid.J
     # J_resize = view(J, 1:nx, 1:ny)
@@ -626,10 +627,10 @@ function _update_Interpolant(D::LocalDataBlock{TT,2,:Constant,AT},Interp::TINTER
     
     #overwrite rₖ
     # ∂u/∂x ≈ D_x u
-    D₁!(rₖ, u, nx, Dx.Δx, Dx.order, TT(0), 1)  ## Need q_x
+    D₁!(rₖ, u, nx, Dx.Δx, Dx.order, TT(0), 1)
     #overwrite dₖ
     # ∂u/∂y ≈ D_y u
-    D₁!(dₖ, u, ny, Dy.Δx, Dy.order, TT(0), 2)  ## Need r_y
+    D₁!(dₖ, u, ny, Dy.Δx, Dy.order, TT(0), 2)
     
 
     # If the domain is periodic i.e. for a hollow torus then we have to remove

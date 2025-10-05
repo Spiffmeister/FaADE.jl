@@ -159,21 +159,14 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
                     applyParallelPenalty!(DBlock[1].uₙ₊₁,DBlock.SC.t,DBlock.SC.Δt,DBlock[1].Parallel,DBlock[1].grid)
                     τ = DBlock[1].Parallel.τ
                 else
-                    # @show DBlock.ParallelData.Interpolant[1].G.Z[50,50]
-                    # error()
                     _update_ParallelMap(DBlock)
-                    # setglobalu!(uglobal,DBlock) # Circle case
-                    # _setglobalu!(uglobal,DBlock)
-                    # _updateCHSinterp(DBlock) # When CHS interpolation is used
-                    # _setglobalu!(DBlock)
-                    # @show DBlock.ParallelData.uglobal[1][25,25]
                     computeglobalw!(DBlock.ParallelData,DBlock.ParallelData.uglobal,t,Δt)
 
-                    # @show DBlock.ParallelData.τ
                     τ = maximum(DBlock.ParallelData.τ)
                     for I in eachblock(DBlock)
                         applyParallelPenalty!(DBlock[I].uₙ₊₁,τ,DBlock.SC.Δt,DBlock.ParallelData.PData,DBlock[I].grid,I)
                     end
+
                 end
             end
 
@@ -235,6 +228,8 @@ function implicitsolve(soln,DBlock,G,Δt::TT,t_f::TT,solverconfig::SolverData) w
     push!(soln.t,t)
     push!(soln.Δt,Δt)
 
-    return soln
+    kout = [DBlock.Block[I].K for I in eachindex(DBlock.Block)]
+    
+    return soln#, kout
 
 end

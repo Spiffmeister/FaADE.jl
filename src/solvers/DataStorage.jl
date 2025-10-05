@@ -185,7 +185,6 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
             end
             K[1][i] = Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
             K[2][i] = Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-
             K[3][i] = Kxy * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
     end
@@ -469,19 +468,13 @@ function LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integ
     # typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     typeof(BS[1].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     # sattype = :Constant
-    # @show sattype, I, typeof(BS[Left].BoundaryOperator)
-    # @show typeof(BS[Left].BoundaryOperator).parameters
     # for (side,boundary) in BS
     for boundary in BS
-        # @show typeof(boundary)
-        # @show :Variable ∈ typeof(BC.Boundary).parameters
         if :Variable ∈ typeof(boundary.BoundaryOperator).parameters
             sattype = :Variable
         end
     end
 
-    # @show typeof(BS[1].Boundary)
-    # @show sattype, I
     Dx = DiffusionOperator(LG.nx,LG.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(LG.ny,LG.Δy,P.order,false,difftype)
     D = DiffusionOperatorND(Dx,Dy)

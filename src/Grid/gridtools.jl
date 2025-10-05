@@ -149,36 +149,11 @@ function findgrid(grid::GridMultiBlock{TT,DIM,CurvilinearMetric},pt::Tuple{TT,TT
         
         end
 
-        # It possible that the grid point lies outside the domain entirely
-        # in this case we should move it to the nearest boundary node
-        # subgrid = grid.Grids[sgi]
-        # try
-        #     findcell(subgrid,pt)
-        # catch
-        # end
-
         # if the point is outside of the domain, flag it as out of bounds
         if (i == j == -1)
             sgi = -1
         end
-        # xside = 0
-        # for ii in 1:subgrid.nx-1
-        #     xside += sign(_checkside(subgrid[ii,1],subgrid[ii+1,1],pt))
-        #     xside += sign(_checkside(subgrid[ii,subgrid.ny],subgrid[ii+1,subgrid.ny],pt))
-        # end
-        # yside = 0
-        # for jj in 1:subgrid.ny-1
-        #     yside += _checkside(subgrid[1,jj],subgrid[1,jj+1],pt)
-        #     yside += _checkside(subgrid[subgrid.nx,jj],subgrid[subgrid.nx,jj+1],pt)
-        # end
-        # if abs(xside == subgrid.nx) && abs(yside == subgrid.ny)
-        # else
-        #     @show "fuck"
-        # end
     end
-    # if (pt[1] ≈ 0.24451026416330812) & (pt[2] ≈ 0.255555498015997)
-        # @show sgi
-    # end
 
     return sgi
 end

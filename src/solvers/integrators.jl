@@ -110,7 +110,7 @@ function CGRHS!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where 
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
-    # fillBuffers(:u,DB)
+    # fillBuffers(:u,DB)    
     _fillLocalBuffers(:u,DB)
     _tradeBuffers!(DB)
     for i in eachblock(DB)
@@ -137,9 +137,7 @@ function theta_method(DBlock::DataMultiBlock,t::TT,Δt::TT) where TT
     # b = Δt (SAT_{data}^{n+1} + SAT_{data}^{n}) + Δt/2 (S^{n+1} + S^{n})
     CGRHS!(DBlock)
     # Compute uₙ₊₁ = (I - D)^{-1} b
-    # @show DBlock[1].uₙ₊₁[25]
     conj_grad!(DBlock)
-    # @show DBlock[1].uₙ₊₁[25]
 end
 
 
