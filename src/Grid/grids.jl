@@ -211,9 +211,9 @@ end
     Joint
 Specifies the joining surface between two grids.
 """
-struct Joint
+struct Joint{NT <: NodeType}
     index   :: Int64
-    side    :: NodeType
+    side    :: NT
     # pair    :: NodeType
 
     # Joint(index::Int64,side::NodeType;pair::NodeType) = new(index,side,pair)

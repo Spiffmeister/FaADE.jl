@@ -1,6 +1,4 @@
-"""
-Example of a circular domain an island at position specified by xₛ and a width of δ. A forcing term is also added similar to [Chac\'on, L. et. al. (2014)](https://linkinghub.elsevier.com/retrieve/pii/S0021999114003258).
-"""
+# Example of a circular domain an island at position specified by xₛ and a width of δ. A forcing term is also added similar to [Chac\'on, L. et. al. (2014)](https://linkinghub.elsevier.com/retrieve/pii/S0021999114003258).
 using Revise
 using FaADE
 

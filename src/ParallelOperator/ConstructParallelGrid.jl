@@ -9,6 +9,12 @@ Inputs:
 - GridType
 - z values of planes to trace to
 
+Optional inputs:
+ - `xmode` and `ymode` are either `:stop`, `:period` or `:ignore`
+    - `:ignore` (default) simply returns the point as is
+    - `:stop` sets the maximum and minimum allowed values for the traced point to `xbound` or `ybound`
+    - `:period` ensures the field line tracing understands that the direction is periodic
+
 Outputs:
 - ParallelGrid object (see [ParallelGrid](@ref))
 """
@@ -210,7 +216,7 @@ function construct_plane(χ::Function,X::AbstractArray{Vector{T}},z,n;periods=1)
     P = ODEProblem(χ,X[1],(T(0),T(periods)*z))
     EP = EnsembleProblem(P,prob_func=prob_fn)
 
-    sim = solve(EP,Tsit5(),EnsembleSerial(),trajectories=prod(n),reltol=1e-6,
+    sim = solve(EP,Tsit5(),EnsembleThreads(),trajectories=prod(n),reltol=1e-6,
         save_on=false,save_end=true)
 
     planex = zeros(T,n)

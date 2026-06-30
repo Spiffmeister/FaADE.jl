@@ -35,12 +35,6 @@ function _DerivativeTranspose(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
     elseif order == 6
         error("order 6 not set")
     end
-
-    # if TN == :Left
-    #     return DT
-    # else
-    #     return reverse(DT)
-    # end
 end
 function _InverseMassMatrix(order::Int,Δx::TT,::NodeType{TN}) where {TT,TN}
     if order == 2
@@ -125,7 +119,11 @@ end
 
     α₀ = 0.5/(h*Δx)
     τ₁ = -0.5/Δx #1/h accounted for in BoundaryDerivativeTranspose
-    τ₀(c) = -(1.0+1.0/max(c[1],c[end]))*max(c[1],c[end])/(2*(h*Δx)^2)
+    τ₀(c) = begin
+        cmax = max(c[1],c[end])
+        cmax = iszero(cmax) ? 1.0 : cmax
+        -(1.0+1.0/cmax)*cmax/(2*(h*Δx)^2)
+    end
 
     return α₀,τ₁,τ₀
 end

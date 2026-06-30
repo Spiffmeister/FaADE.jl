@@ -143,12 +143,12 @@ function SAT_Periodic!(dest::AT,u::AT,cx::AT,cxy::AT,SP::SAT_Periodic{TN,:Curvil
 
     if SP.side == Left
         DEST = view(dest,   1,1:m)
-        SRC = view(u[1,1:m]-u[n,1:m], :,:)
-        C = view(cxy[1,1:m]-cxy[n,1:m],:,:)
+        SRC = view(-u[1,:]+u[n,:], :,1)
+        C = view(-cxy[1,:]+cxy[n,:],:,1)
     elseif SP.side == Right
         DEST = view(dest,   n,1:m)
-        SRC = view(u[n,1:m]-u[1,1:m],:,:)
-        C = view(cxy[n,1:m]-cxy[1,1:m],:,:)
+        SRC = view(u[1,:]-u[n,:],:,1)
+        C = view(cxy[1,:]-cxy[n,:],:,1)
     elseif SP.side == Up
         DEST = view(dest,   1:m,1)
         SRC = view(u[:,1]-u[:,n], :,1)

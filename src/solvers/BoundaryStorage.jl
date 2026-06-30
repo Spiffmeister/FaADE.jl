@@ -1,4 +1,5 @@
 
+
 struct BoundaryNull <: BoundaryStorage{Float64,0,Vector{Float64}} end
 
 """
@@ -39,20 +40,7 @@ function BoundaryData(G::Grid2D{TT,COORD},BC,order::Int64) where {TT,COORD}
     X = GetBoundaryCoordinates(G,BC.side)
     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
 end
-# function BoundaryData(G::Grid2D{TT,CurvilinearMetric},BC,order::Int64) where {TT}
 
-#     # Store the boundary points and generate buffers for storing RHS
-#     if BC.side ∈ [Left,Right]
-#         n = G.ny
-#         BufferRHS = zeros(TT,(1,n))
-#     elseif BC.side ∈ [Up,Down]
-#         n = G.nx
-#         BufferRHS = zeros(TT,(n,1))
-#     end
-
-#     X = GetBoundaryCoordinates(G,BC.side)
-#     BoundaryData{TT,2,typeof(BC.RHS),typeof(BC),typeof(BufferRHS)}(BC,BC.RHS,BufferRHS,X,n,2)
-# end
 
 
 """
@@ -65,41 +53,46 @@ struct InterfaceBoundaryData{
         TT<:Real,
         DIM,
         BCT,
-        AT} <: BoundaryStorage{TT,0,AT}
+        AT,
+        NT1,
+        NT2} <: BoundaryStorage{TT,0,AT}
 
-    BoundaryOperator:: BCT
-    BufferOut       :: AT
-    BufferIn        :: AT
-    OutgoingJoint   :: Joint
-    IncomingJoint   :: Joint
+    BoundaryOperator    :: BCT
+    BufferOut           :: AT
+    # BufferOutDerivative :: AT
+    BufferIn            :: AT
+    # BufferInDerivative  :: AT
+    OutgoingJoint       :: Joint{NT1}
+    IncomingJoint       :: Joint{NT2}
 end
-function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint,Joint2::Joint) where {TT}
+function InterfaceBoundaryData{TT}(G1::Grid1D,G2::Grid1D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
 
     BufferIn    = zeros(TT,2)
     BufferOut   = zeros(TT,2)
 
-    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferIn,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid1D,BC) where {TT}
 
     BufferIn    = zeros(TT,2)
     BufferOut   = zeros(TT,2)
 
-    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+    InterfaceBoundaryData{TT,1,typeof(BC),typeof(BufferOut),typeof(Left),typeof(Left)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
 end
-function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint,Joint2::Joint) where {TT}
+function InterfaceBoundaryData{TT}(G1::Grid2D,G2::Grid2D,BC,Joint1::Joint{NT1},Joint2::Joint{NT2}) where {TT,NT1,NT2}
     if BC.side ∈ [Left,Right]
-        n = G1.ny
-        BufferIn    = zeros(TT,(2,n))
-        BufferOut   = zeros(TT,(2,n))
-
+        sz = (2,G1.ny)
     elseif BC.side ∈ [Up,Down]
-        n = G1.nx
-        BufferIn    = zeros(TT,(n,2))
-        BufferOut   = zeros(TT,(n,2))
+        sz = (G1.nx,2)
     end
 
-    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    BufferIn = zeros(TT,sz)
+    # BufferInDerivative = zeros(TT,sz)
+    BufferOut = zeros(TT,sz)
+    # BufferOutDerivative = zeros(TT,sz)
+
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferIn,Joint1,Joint2)
+    # InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),NT1,NT2}(BC,BufferOut,BufferOutDerivative,BufferIn,BufferInDerivative,Joint1,Joint2)
 end
 function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
     if BC.side ∈ [Left,Right]
@@ -113,7 +106,7 @@ function InterfaceBoundaryData{TT}(G1::Grid2D,BC) where {TT}
         BufferOut   = zeros(TT,(n,BC.order))
     end
 
-    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
+    InterfaceBoundaryData{TT,2,typeof(BC),typeof(BufferOut),typeof(Left),typeof(Left)}(BC,BufferOut,BufferIn,Joint(0,Left),Joint(0,Left))
 end
 
 
@@ -170,13 +163,15 @@ function GenerateBoundaries(P::Problem2D,G::LocalGridType{TT,2},K) where TT
                 else
                     typeof(BC.side).parameters[1] == :Left ? τ = minimum(K[2][:,1]) : τ = minimum(K[2][:,end])
                 end
-                BC.τ₀[1] = -(10 + 1/τ)
+                # BC.τ₀[1] = -(10 + 1/τ)
+                iszero(τ) ? nothing : BC.τ₀[1] = -(10 + 1/τ)
+
             end
             tmpDict[BC.side] = BoundaryData(G,BC,P.order)
         end
     end
 
-    return tmpDict
+    return (tmpDict[Left], tmpDict[Right], tmpDict[Down], tmpDict[Up])
 end
 """
 2D multiblock version of GenerateBoundaries.
@@ -254,7 +249,8 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
                     else
                         typeof(BC.side).parameters[1] == :Left ? τ = maximum(K[2][:,1]) : τ = maximum(K[2][:,end])
                     end
-                    BC.τ₀[1] = -(10 + 1/τ)
+                    iszero(τ) ? nothing : BC.τ₀[1] = -(10 + 1/τ)
+                    # BC.τ₀[1] = -(10 + 1/τ)
                 end
                 tmpDict[BC.side] = BoundaryData(G.Grids[I],BC,P.order)
 
@@ -264,11 +260,27 @@ function GenerateBoundaries(P::Problem2D,G::GridMultiBlock{TT,2,COORD},I::Int64,
         end
     end
 
-    return tmpDict
-    # return (tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
+    # return tmpDict
+    return (tmpDict[Left],tmpDict[Right],tmpDict[Down],tmpDict[Up])
+    # return (Left = tmpDict[Left], Right = tmpDict[Right], Up = tmpDict[Up], Down = tmpDict[Down])
+    # return BoundaryBlock(tmpDict[Left],tmpDict[Right],tmpDict[Up],tmpDict[Down])
 end
 
 _newBoundaryCondition(G1::GridType{TT},BC::SimultanousApproximationTerm{:Periodic}) where TT  = InterfaceBoundaryData{TT}(G1,BC)
 _newBoundaryCondition(G1::GridType{TT},G2::GridType{TT},BC::SimultanousApproximationTerm{:Interface},Joint1,Joint2) where TT = InterfaceBoundaryData{TT}(G1,G2,BC,Joint1,Joint2)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Dirichlet},order) where TT = BoundaryData(G,BC,order)
 _newBoundaryCondition(G::GridType{TT},BC::SimultanousApproximationTerm{:Neumann},order) where TT   = BoundaryData(G,BC,order)
+
+
+
+@inline function getarray(BS::BoundaryStorage{TT,N,AT},s::Symbol)  where {TT,N,AT}
+    rt = getfield(BS,s)
+    return rt :: AT
+end
+
+
+
+_boundarytoindex(::NodeType{:Left,1})   = 1
+_boundarytoindex(::NodeType{:Right,1})  = 2
+_boundarytoindex(::NodeType{:Left,2})   = 3
+_boundarytoindex(::NodeType{:Right,2})  = 4

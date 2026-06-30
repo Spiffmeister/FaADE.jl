@@ -61,7 +61,6 @@ function applyParallelPenalty!(u::AbstractArray{TT},t::TT,Δt::TT,
 
     I = P.Interpolant
     IC = P.Intercept
-
     # w ← P_f u + P_b u
     if isnothing(IC)
         _compute_w!(I,w,P.PGrid.Fplane,P.PGrid.Bplane,grid.nx,grid.ny)
@@ -216,13 +215,13 @@ end
     computeglobalw!
 """
 function computeglobalw! end
-
+"""
+For multiblock problems
+"""
 function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT,Δt::TT) where {TT,VAT,DIM,IT,CT}
-
     Interpolant = PD.Interpolant
     Intercept = PD.Intercept
     τglobal = PD.τ
-
     Threads.@threads for I in eachindex(Interpolant)
         # TODO: Place a function barrier here probably, there is a type instability
         #   caused by the selection of localP
@@ -234,7 +233,6 @@ function computeglobalw!(PD::ParallelMultiBlock{TT,DIM,IT,CT},uglobal::VAT,t::TT
     τglobal .= τglobal * PD.PData[1].τ
 end
 function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::ParallelGrid,τglobal::VT,t::TT,I::Int) where {AT,VT,TT,IT,CT}
-
     sgiF = PGrid.Fplane.subgrid
     sgiB = PGrid.Bplane.subgrid
 
@@ -252,12 +250,12 @@ function computeglobalw!(interpolant::IT,intercept::CT,w::AT,u::AT,PGrid::Parall
         end
         
         w[J] = (tmpf + tmpb)/2
+
     end
-    τglobal[I] = 0.1 * (maximum(abs.(u - w))/ maximum(abs.(w)))^2.0
-    if isnan(τglobal[I])
-        τglobal[I] = zero(TT)
-    end
-    # isnan(τglobal[I]) ? τglobal[I] = 0.0 : nothing
+    tmp = findmax(abs,w)[1]
+    iszero(tmp) ? tmp = one(TT) : nothing
+    τglobal[I] = 0.1 * (maximum(abs.(u - w))/ tmp)^2.0
+    # τglobal[I] = 0.1
 
 end
 

@@ -6,7 +6,7 @@ module ParallelOperator
 
     using Base.Threads
 
-    using DifferentialEquations: ODEProblem, EnsembleProblem, EnsembleSerial, solve, Tsit5, remake
+    using DifferentialEquations: ODEProblem, EnsembleProblem, EnsembleSerial, EnsembleThreads, solve, Tsit5, remake
     # using Interpolations: LinearInterpolation
     using Interpolations
     using BasicInterpolators: BicubicInterpolator, LinearInterpolator

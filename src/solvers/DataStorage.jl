@@ -148,7 +148,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,1,MET},Para::PT) where {TT,ME
     return K
 end
 function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::PT) where {TT,PT<:ParallelData}
-
+    
     existb = true
     try
         existb = !(typeof(Para.MagneticField).parameters[1] == Nothing)
@@ -164,7 +164,7 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
         end
     end
 
-    K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+    K = [zeros(TT,size(G)) for _ in 1:3]
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)
@@ -175,17 +175,16 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CurvilinearMetric},P,Para::
                     @warn "The field is singular at $(G[i])"
                     NB = TT(1)
                 end
-                Kx = P.Kx * (TT(1) - B[1]^2/NB)
-                Ky = P.Ky * (TT(1) - B[2]^2/NB)
-                Kxy = -P.Kx * B[1]*B[2]/NB
+                Kx = P.Kx * (TT(1) - B[1]^2/NB) # 1 - B₁² / ||B||²
+                Ky = P.Ky * (TT(1) - B[2]^2/NB) # 1 - B₂² / ||B||²
+                Kxy = -P.Kx * B[1]*B[2]/NB # - B₁ B₂ / ||B||² ## Off diagonal  terms in diffusion coefficient matrix ## κ_perp (I - B Bᵀ / ||B||²)
             else
                 Kx = P.Kx
                 Ky = P.Ky
-                Kxy = 0.0
+                Kxy = P.Kx
             end
             K[1][i] = Kx * G.J[i] * (G.qx[i]^2 + G.qy[i]^2)
             K[2][i] = Ky * G.J[i] * (G.rx[i]^2 + G.ry[i]^2)
-
             K[3][i] = Kxy * G.J[i] * (G.qx[i]*G.rx[i] + G.qy[i]*G.ry[i])
         end
     end
@@ -210,11 +209,10 @@ function _BuildDiffusionMatrix(G::LocalGridType{TT,2,CartesianMetric},P,Para::PT
     end
 
     if existb
-        K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
+        K = [zeros(TT,size(G)) for _ in 1:3]
     else
         K = [zeros(TT,size(G)), zeros(TT,size(G))]
     end
-    # K = [zeros(TT,size(G)), zeros(TT,size(G)), zeros(TT,size(G))]
 
     if typeof(P.Kx) <: Real
         for i in eachindex(G)
@@ -467,20 +465,16 @@ function LocalDataBlock(P::PDEProblem{TT,2},G::GridMultiBlock{TT,2,MET},I::Integ
         difftype = :Constant
     end
 
-    typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    # typeof(BS[Left].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
+    typeof(BS[1].BoundaryOperator).parameters[2] == :Cartesian ? sattype = :Constant : sattype = :Variable
     # sattype = :Constant
-    # @show sattype, I, typeof(BS[Left].BoundaryOperator)
-    # @show typeof(BS[Left].BoundaryOperator).parameters
-    for (side,boundary) in BS
-        # @show typeof(boundary)
-        # @show :Variable ∈ typeof(BC.Boundary).parameters
+    # for (side,boundary) in BS
+    for boundary in BS
         if :Variable ∈ typeof(boundary.BoundaryOperator).parameters
             sattype = :Variable
         end
     end
 
-    # @show typeof(BS[1].Boundary)
-    # @show sattype, I
     Dx = DiffusionOperator(LG.nx,LG.Δx,P.order,false,difftype)
     Dy = DiffusionOperator(LG.ny,LG.Δy,P.order,false,difftype)
     D = DiffusionOperatorND(Dx,Dy)
@@ -510,6 +504,10 @@ Type stable getfield for arrays
     rt = getfield(D,s)
     return rt :: AT
 end
+
+@inline function getside(B::NamedTuple)
+end
+
 
 """
     DataMultiBlock

@@ -209,11 +209,10 @@ function ParallelMultiBlock(PGrid, G::GridType{TT}, order::Int; κ=TT(1), interp
     TmpInterpolant = []
     for I in 1:length(PData)
         push!(TmpInterpolant,PData[I].Interpolant)
-        # @show PData[I].Interpolant
     end
 
     Interp = Tuple(TmpInterpolant)
-    # end
+    
     if isa(intercept,Function)
         TmpIntercept = [PData[I].Intercept for I in eachindex(PData)]
         intercept = Tuple(TmpIntercept)

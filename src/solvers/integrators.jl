@@ -49,7 +49,7 @@ function conj_grad!(DBlock::DataMultiBlock{TT,DIM};
     end
     if (rnorm>rtol*bnorm) & warnings
         DBlock.SC.converged = false
-        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
+        warnstr = string("CG did not converge at t=",DBlock.SC.t," with Δt=",DBlock.SC.Δt," i=",i," abs error = ",rnorm," rel error=",rnorm/bnorm,", rel tolerance=",rtol,".")
         @warn warnstr
     end
 end
@@ -79,7 +79,7 @@ function A!(read::Symbol,D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT
     @. W = R - D.SC.θ*D.SC.Δt*W #(I - θΔtD⟂)u
     W
 end
-function A!(source::Symbol,DB::DataMultiBlock{TT}) where {TT}
+function A!(source::Symbol,DB::DataMultiBlock)
     # fillBuffers(source,DB)
     _fillLocalBuffers(source,DB)
     _tradeBuffers!(DB)
@@ -110,7 +110,7 @@ function CGRHS!(D::LocalDataBlock{TT,DIM,COORD,AT,KT,DCT,GT,BT,DT,ST,PT}) where 
     addSource!(D.source,b,D.grid,D.SC.t,D.SC.Δt,D.SC.θ) # + source
 end
 function CGRHS!(DB::DataMultiBlock{TT}) where {TT}
-    # fillBuffers(:u,DB)
+    # fillBuffers(:u,DB)    
     _fillLocalBuffers(:u,DB)
     _tradeBuffers!(DB)
     for i in eachblock(DB)

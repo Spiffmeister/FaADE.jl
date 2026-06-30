@@ -1,6 +1,4 @@
-"""
-Example of a hollow toroidal domain with an island at position specified by xₛ and a width of δ.
-"""
+# Example of a hollow toroidal domain with an island at position specified by xₛ and a width of δ.
 using FaADE
 
 
