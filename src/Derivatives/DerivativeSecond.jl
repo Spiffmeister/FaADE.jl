@@ -99,8 +99,9 @@ function SecondDerivativeBoundary! end
 @inline function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
         Δx::TT,::NodeType{TN},::Val{2},α::TT) where {TT,TN}
+    TN == :Left ? i = 1 : i = -1
     TN == :Left ? j = 1 : j = lastindex(uₓₓ)
-    uₓₓ[j] = α*uₓₓ[j]
+    uₓₓ[j] = α*uₓₓ[j] + (c[j+i] - c[j]) * (u[j+i] - u[j])/Δx^2
 end
 function SecondDerivativeBoundary!(uₓₓ::AbstractArray{TT},
         u::AbstractArray{TT},c::AbstractArray{TT},
